@@ -55,7 +55,7 @@ Prinzip aus Go-Projekt beibehalten: **funktionaler Kern, Seiteneffekte an Rände
 | Events | `timer:tick`, `timer:complete`, `timer:stopped`, `app:reload`, `sync:*`, `todoist:*` | gleiche Namen, typisierte specta-Events |
 | Timer | Goroutine-Ticker zählt Ticks | **Zeitstempel-basiert** (s. 1.4) + tokio-Interval nur für Tick-Events |
 | Notifications | osascript/beeep/notify-send | `tauri-plugin-notification` (Desktop + Mobile, Mobile mit **Schedule**) |
-| Keychain | go-keyring | Trait `SecretStore`: Desktop `keyring`-crate; iOS `keyring` (apple-native); Android eigenes Mini-Plugin (Kotlin, Android Keystore/EncryptedSharedPreferences) |
+| Keychain | go-keyring | Trait `SecretStore` auf `keyring-core` mit je einem Store pro Plattform (macOS/iOS apple-native, Windows, Linux Secret Service, Android `android-native-keyring-store`, ADR 0005). Go-Einträge werden nicht übernommen |
 | OAuth | Loopback 127.0.0.1:42813 + Browser | Desktop: Loopback bleibt (`tauri-plugin-opener` + tokio TCP-Listener, PKCE). Mobile: später `tauri-plugin-deep-link` |
 | Dateidialoge | Wails Dialog | `tauri-plugin-dialog` (+ `tauri-plugin-fs`) |
 | Tray, Mini-Timer-Fenster, Shortcuts | Wails | `tauri` tray-icon + 2. WebviewWindow, nur `#[cfg(desktop)]`; Shortcuts im Frontend (keydown) |
@@ -192,7 +192,7 @@ Jede Phase endet mit grünen Checks (s. 5) und lauffähigem Build.
 - WebDAV-Testserver in Tests: wiremock (integration) + Docker `rclone serve webdav` für E2E.
 
 ### Phase 7 – Google Drive + Todoist (Desktop) (≈ 2 Wochen)
-- OAuth2 PKCE Loopback, Tokens im SecretStore (Service-Namen wie Go: `nunc-todoist`, Drive-Name aus `sync_drive.go` übernehmen → bestehende Keychain-Einträge weiter nutzbar).
+- OAuth2 PKCE Loopback, Tokens im SecretStore (eigene Service-Namen; Konten werden nach dem Umstieg neu verbunden, Go-Keychain-Einträge werden nicht übernommen).
 - Drive: Ordner `nunc/`, `nunc-sync.json`, `drive.file`-Scope, Import-Dialog auf neuem Gerät, Konflikt-Hinweise.
 - Todoist: REST v2 (prüfen, ob inzwischen API v1 nötig — vor Phase verifizieren), Mapping-Tabelle, serialisierter Sync, Close statt Delete.
 - In Mobile-UI ausgeblendet (Szenarien `@desktop`).
@@ -215,7 +215,7 @@ Google Drive + Todoist auf Mobile (Deep-Link-OAuth, Plattform-Client-IDs), Home-
 | Risiko | Maßnahme |
 |---|---|
 | Timer im Hintergrund (Mobile) | Zeitstempel-Modell + geplante Notifications; Spike in Phase 1 |
-| Secure Storage Android | Eigenes kleines Tauri-Mobile-Plugin (Kotlin); Spike Phase 1 |
+| Secure Storage Android | `android-native-keyring-store` (Spike M0-10 bestätigt, kein eigenes Plugin nötig) |
 | `tauri-driver` ohne macOS-Support | E2E-Desktop in CI auf Linux/Windows; macOS manuell + `@ui`-Ebene deckt Logik ab |
 | Schema-Kompatibilität bricht | Nur additive Migrationen; `compat_go.feature` mit echten Go-Fixtures in CI |
 | `.ogg` auf iOS | `.mp3`-Assets |

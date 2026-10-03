@@ -14,7 +14,8 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 - Fachliche Quelle: `../nunc-go/` (REQUIREMENTS.md, STORIES.md, DESIGN.md, `internal/**/_test.go`).
   Der Go-Code gewinnt gegenüber veralteter Doku (`nunc-go/CLAUDE.md` nennt Wails v2 und kennt Sync nicht).
 - **Datenkompatibilität zur Go-App ist Pflicht:** gleiches SQLite-Schema (Migrationen 001–005), gleiches
-  `nunc-sync.json`, Go-Backups müssen restorebar sein.
+  `nunc-sync.json`, Go-Backups müssen restorebar sein. **Ausnahme Secrets:** Tokens/Passwörter der Go-App
+  (Keychain) werden nicht übernommen, Konten werden neu verbunden.
 
 ## Stack und Layout
 
@@ -115,8 +116,8 @@ oder specta-Typen `cargo test -p nunc export_bindings` ausführen und `src/bindi
 - `tauri-plugin-notification` (iOS): `Schedule.at` parst das UTC-Datum als Ortszeit und lehnt es still ab,
   `sendNotification` verschluckt Fehler (ADR 0004). Nicht unverändert verwenden.
 - Android: `USE_EXACT_ALARM` ist nötig, sonst feuern Timer-Notifications Minuten zu spät (ADR 0004).
-- Keychain-Tests berühren die Login-Keychain und können einen Dialog auslösen; sie sind `#[ignore]`. Keine echten
-  Einträge der Go-App auslesen oder ausgeben (ADR 0005).
+- Keychain-Tests berühren die Login-Keychain und können einen Dialog auslösen; sie sind `#[ignore]` und nutzen nur
+  eigene Wegwerf-Einträge. Secrets der Go-App werden nicht übernommen (ADR 0005).
 - Headless-iOS-Simulator: kein `Simulator.app`, `simctl` kann nicht tippen; UI-Interaktion braucht XCUITest oder ein
   Gerät.
 
