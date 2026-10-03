@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  # Lint + Tests (Linux). Erzeugt den Cucumber-Report als Artefakt.
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Linux-Abhängigkeiten für Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libsoup-3.0-dev libssl-dev libxdo-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: npm ci
+
+      - name: Frontend – typecheck, lint
+        run: |
+          npm run typecheck
+          npm run lint
+
+      - name: Frontend – Unit-Tests und BDD (@ui)
+        run: >
+          npx vitest run --passWithNoTests
+          --reporter=default --reporter=junit
+          --outputFile.junit=${{ github.workspace }}/target/bdd/ui.xml
+
+      - name: Rust – fmt, clippy
+        run: |
+          cargo fmt --check
+          cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Rust – Tests und BDD (@domain)
+        env:
+          NUNC_BDD_REPORT: ${{ github.workspace }}/target/bdd/domain.json
+        run: cargo test --workspace
+
+      - name: Typ-Bridge aktuell?
+        run: |
+          cargo test -p nunc export_bindings
+          git diff --exit-code src/bindings.ts
+
+      - name: Cucumber-Report hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-report
+          path: target/bdd/
+          if-no-files-found: warn
+
+  # Desktop-Build-Matrix (ohne Installer, die entstehen in M8)
+  desktop:
+    needs: checks
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Linux-Abhängigkeiten für Tauri
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libsoup-3.0-dev libssl-dev libxdo-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: npm ci
+
+      - run: npm run tauri build -- --debug --no-bundle
+
+  android:
+    needs: checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: NDK-Pfad setzen
+        run: echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+
+      - run: npm ci
+
+      - name: Debug-APK (arm64)
+        run: npm run tauri android build -- --debug --target aarch64 --apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: src-tauri/gen/android/app/build/outputs/apk/universal/debug/*.apk
+
+  ios:
+    needs: checks
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: xcodegen
+        run: brew install xcodegen
+
+      - run: npm ci
+
+      # unsigned, Simulator-Ziel: kein Zertifikat nötig
+      - name: iOS-Simulator-Build
+        run: npm run tauri ios build -- --debug --target aarch64-sim
+
+      - name: App-Bundle packen
+        run: ditto -c -k --keepParent src-tauri/gen/apple/build/arm64-sim/nunc.app nunc-ios-sim.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-app
+          path: nunc-ios-sim.zip

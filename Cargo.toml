@@ -19,7 +19,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 specta-typescript = "0.0.12"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
-cucumber = "0.23"
+cucumber = { version = "0.23", features = ["output-json"] }
 tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
 
 # interne Crates

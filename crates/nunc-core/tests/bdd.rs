@@ -3,7 +3,7 @@
 //! Aufruf: `cargo test -p nunc-core --test bdd`
 //! Szenarien mit `@wip` werden übersprungen.
 
-use cucumber::{World, given, then, when};
+use cucumber::{World, WriterExt as _, given, then, when, writer};
 
 #[derive(Debug, Default, World)]
 struct DomainWorld {
@@ -25,16 +25,39 @@ fn result_is(world: &mut DomainWorld, expected: i64) {
     assert_eq!(world.value, expected);
 }
 
+const FEATURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../features");
+
+/// Nur `@domain`-Szenarien, `@wip` wird übersprungen.
+fn selected(
+    feature: &cucumber::gherkin::Feature,
+    _rule: Option<&cucumber::gherkin::Rule>,
+    scenario: &cucumber::gherkin::Scenario,
+) -> bool {
+    let has = |tag: &str| feature.tags.iter().chain(&scenario.tags).any(|t| t == tag);
+    has("domain") && !has("wip")
+}
+
+/// Mit `NUNC_BDD_REPORT=<datei>` wird zusätzlich ein Cucumber-JSON-Report geschrieben (CI-Artefakt, absoluter Pfad empfohlen: `cargo test` läuft im Crate-Verzeichnis).
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    DomainWorld::cucumber()
-        .fail_on_skipped()
-        .filter_run_and_exit(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/../../features"),
-            |feature, _, scenario| {
-                let has = |tag: &str| feature.tags.iter().chain(&scenario.tags).any(|t| t == tag);
-                has("domain") && !has("wip")
-            },
-        )
-        .await;
+    let cucumber = DomainWorld::cucumber().fail_on_skipped();
+    match std::env::var_os("NUNC_BDD_REPORT") {
+        Some(path) => {
+            let path = std::path::PathBuf::from(path);
+            if let Some(dir) = path.parent() {
+                std::fs::create_dir_all(dir).expect("Report-Verzeichnis anlegen");
+            }
+            let file = std::fs::File::create(path).expect("Report-Datei anlegen");
+            cucumber
+                .with_writer(
+                    writer::Basic::stdout()
+                        .summarized()
+                        .tee::<DomainWorld, _>(writer::Json::for_tee(file))
+                        .normalized(),
+                )
+                .filter_run_and_exit(FEATURES, selected)
+                .await;
+        }
+        None => cucumber.filter_run_and_exit(FEATURES, selected).await,
+    }
 }

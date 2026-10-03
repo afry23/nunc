@@ -804,7 +804,9 @@ version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96a87e18d925b19ebe0fd47ea45316abd216d81ec0879c2448c3f9a0e9da62be"
 dependencies = [
+ "Inflector",
  "anyhow",
+ "base64 0.22.1",
  "clap",
  "console",
  "cucumber-codegen",
@@ -818,10 +820,14 @@ dependencies = [
  "inventory",
  "itertools",
  "linked-hash-map",
+ "mime",
  "pin-project",
  "ref-cast",
  "regex",
  "sealed",
+ "serde",
+ "serde_json",
+ "serde_with",
  "smart-default",
 ]
 
