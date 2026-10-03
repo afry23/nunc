@@ -8,6 +8,7 @@ pub mod export;
 pub mod flowtime;
 pub mod model;
 pub mod stats;
+pub mod sync_merge;
 pub mod timer;
 pub mod todo_query;
 pub mod todotxt;

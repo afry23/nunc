@@ -4,6 +4,7 @@
 mod session;
 mod settings;
 mod stats;
+mod sync;
 mod timer;
 mod todo;
 
@@ -13,6 +14,7 @@ pub use stats::{
     ContextStats, DailyStats, MonthlyStats, ProjectStats, StatsPeriod, StatsRequest, StatsResponse,
     TodoStats, WeekdayStats,
 };
+pub use sync::{SyncFile, SyncSession, SyncTodo};
 pub use timer::{TimerMode, TimerState};
 pub use todo::Todo;
 
