@@ -1,0 +1,83 @@
+@import "tailwindcss";
+@import "@fontsource-variable/manrope";
+@import "@fontsource-variable/inter";
+
+/* Design System "The Focused Monolith" – Quelle: nunc-go/DESIGN.md */
+@theme {
+  --color-surface: #131313;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-surface-container-low: #1c1b1b;
+  --color-surface-container-high: #2a2a2a;
+  --color-surface-container-highest: #353534;
+  --color-surface-variant: #353534;
+  --color-surface-bright: #393939;
+  --color-primary: #4de082;
+  --color-on-primary: #003919;
+  --color-on-primary-container: #00944b;
+  --color-primary-fixed: #6bfe9c;
+  --color-secondary-container: #3e495d;
+  --color-secondary-fixed-dim: #bcc7de;
+  --color-on-secondary: #263143;
+  --color-on-surface: #e5e2e1;
+  --color-on-surface-variant: #c6c6cd;
+  --color-outline-variant: #45464d;
+
+  /* Timer-Modi */
+  --color-pomodoro: #ef4444;
+  --color-flowtime: #a855f7;
+  --color-shortbrk: #22c55e;
+  --color-longbrk: #3b82f6;
+
+  --font-display: "Manrope Variable", system-ui, sans-serif;
+  --font-body: "Inter Variable", system-ui, sans-serif;
+  --tracking-label: 0.05rem;
+
+  --shadow-ambient: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-surface);
+    color: var(--color-on-surface);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .display-lg {
+    font-family: var(--font-display);
+    font-size: 3.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .headline-md {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+  .label-md {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-label);
+  }
+  .glass {
+    background-color: rgb(53 53 52 / 0.7);
+    backdrop-filter: blur(20px);
+  }
+  /* "The Breath": 4 s Oszillation surface -> surface-container-low */
+  .timer-breathing {
+    animation: breath 4s ease-in-out infinite;
+  }
+}
+
+@keyframes breath {
+  0%,
+  100% {
+    background-color: var(--color-surface);
+  }
+  50% {
+    background-color: var(--color-surface-container-low);
+  }
+}

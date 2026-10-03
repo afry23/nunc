@@ -1,0 +1,10 @@
+target
+dist
+node_modules
+src-tauri
+crates
+coverage
+package-lock.json
+src/bindings.ts
+src-tauri/gen
+*.md
