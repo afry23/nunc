@@ -1,6 +1,6 @@
 # ADR 0004 – Timer-Modell und Hintergrundverhalten (Spike M0-09)
 
-- Status: akzeptiert (Android verifiziert, iOS-Benachrichtigung noch offen)
+- Status: akzeptiert (Android und iOS-Simulator verifiziert, echtes iOS-Gerät offen)
 - Datum: 2026-10-03
 - Prototyp: Branch `spike/m0-09-background-timer`
 
@@ -26,11 +26,21 @@ Android-Emulator `Medium_Phone_API_35` (Android-API 37, arm64), Debug-APK, `POST
 | App-Prozess hart beendet (`kill -9`) | Alarm bleibt im AlarmManager, Notification pünktlich. Relaunch vor Ablauf zeigt korrekte Restzeit (14,4 s statt erwarteter ~14,2 s), Relaunch nach Ablauf `0`. |
 | Resume aus Hintergrund (Prozess lebt) | `visibilitychange` feuert, Restzeit wird aus `endAt − Date.now()` neu berechnet; keine Drift durch gedrosselte JS-Timer. |
 
-iOS (Simulator iPhone 17, iOS 27, `tauri ios dev`): Prototyp-App startet und rendert, Zeitstempel-Logik
-identisch (reines JS). Die Zustellung geplanter Notifications ist **nicht verifiziert**: der Simulator läuft
-headless (kein `Simulator.app`, `simctl` kennt kein Tippen, `simctl privacy` kann Notifications nicht
-freigeben), der Berechtigungsdialog und Home-Taste lassen sich ohne UI-Test nicht auslösen.
-Nebenbefund: im WebView erscheinen oben/unten weiße Streifen (Safe-Areas, Hintergrundfarbe) → M5-01/M4-01.
+iOS (Simulator iPhone 17, iOS 27, `tauri ios dev`, Zeitzone UTC+2):
+
+| Szenario | Ergebnis |
+|---|---|
+| `sendNotification({ schedule: Schedule.at(...) })` unverändert | **Schlägt still fehl.** Die iOS-Seite des Plugins (2.5.1) parst das vom Rust-Teil gelieferte UTC-Datum mit einem `DateFormatter` ohne Zeitzone, also als Ortszeit. In Zeitzonen östlich von UTC liegt der Termin dadurch in der Vergangenheit → `NotificationError.pastScheduledTime`, in Zeitzonen westlich von UTC käme die Notification entsprechend Stunden zu spät. Es erscheint nichts, auch kein Fehler in der UI. |
+| Dasselbe Datum um den Zeitzonen-Offset korrigiert (`end − getTimezoneOffset()·60 000 ms`) | Notification mit App im Hintergrund (Einstellungen in den Vordergrund geholt) **auf die Sekunde pünktlich** (Banner 14:23:44 bei Ziel 14:23:43.9); `pending()` liefert die geplante Notification. |
+
+Ursache der Stille: `sendNotification` ruft intern `new window.Notification(...)` auf, einen nicht awaiteten
+Shim. Ablehnungen des Backends landen als unbehandelte Promise-Rejection und sind mit `try/catch` um
+`sendNotification` nicht sichtbar. Fehler lassen sich nur über `invoke("plugin:notification|notify", …)`
+bzw. später über den eigenen `TauriNotifier` (Rust, `show()`) abfangen.
+
+Der Simulator läuft headless; das Backgrounding wurde über `simctl launch com.apple.Preferences`
+ausgelöst, die Berechtigung war im Simulator bereits erteilt (Dialog-Verhalten daher nicht geprüft).
+Echtes Gerät steht weiterhin aus (Focus-Modi, Low-Power-Mode).
 
 Nicht getestet: `am force-stop` (löscht Alarme laut Android-Verhalten, App gilt dann als „gestoppt"),
 Reboot (Plugin bringt `LocalNotificationRestoreReceiver` mit), herstellerspezifische Akku-Optimierung
@@ -58,7 +68,12 @@ Reboot (Plugin bringt `LocalNotificationRestoreReceiver` mit), herstellerspezifi
 - **Play-Store-Policy:** `USE_EXACT_ALARM` ist auf Alarm-/Timer-/Kalender-Apps beschränkt. Ein Pomodoro-Timer
   fällt darunter; in der Play-Console-Deklaration (M8-05) begründen. Fallback: `SCHEDULE_EXACT_ALARM` +
   Hinweisbanner, falls abgelehnt.
-- **iOS-Notification nicht verifiziert** (siehe oben).
+- **iOS-Plugin-Bug (Zeitzone):** Notifications dürfen auf iOS nicht über `Schedule.at` des unveränderten Plugins
+  geplant werden. Optionen: (a) Datum im `TauriNotifier` vor dem Plugin-Aufruf um den lokalen UTC-Offset
+  verschieben (funktioniert, aber zu DST-Wechseln hin ungenau), (b) Plugin per `[patch.crates-io]` mit
+  `dateFormatter.timeZone = UTC` patchen und den Fix upstream melden (empfohlen), (c) `Schedule.interval`/
+  eigener Swift-Befehl. Entscheidung in M3-02/M5-03; bis dahin Test im Spike-Branch reproduzierbar.
+- iOS-Gerät: Verifikation auf echtem Gerät (Fokus-Modi, Low-Power-Mode, Berechtigungsdialog) vor M5-03.
   Erwartung: lokale `UNCalendarNotificationTrigger`-Notifications feuern auch bei suspendierter App;
   Verifikation auf Simulator/Gerät nachholen, bevor M5 startet.
 - Die Notification liefert nur den Hinweis, nicht den Sound/Zustandswechsel. Nach dem Öffnen muss die App
