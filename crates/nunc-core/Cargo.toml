@@ -10,3 +10,11 @@ license.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 chrono.workspace = true
+
+[dev-dependencies]
+cucumber.workspace = true
+tokio = { workspace = true, features = ["rt", "macros"] }
+
+[[test]]
+name = "bdd"
+harness = false
