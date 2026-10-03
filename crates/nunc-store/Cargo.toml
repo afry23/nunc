@@ -1,0 +1,12 @@
+[package]
+name = "nunc-store"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Persistenz: SQLite (rusqlite), Migrationen, Backup"
+license.workspace = true
+
+[dependencies]
+nunc-core.workspace = true
+rusqlite.workspace = true
+thiserror.workspace = true

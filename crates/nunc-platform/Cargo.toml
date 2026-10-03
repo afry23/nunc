@@ -1,0 +1,11 @@
+[package]
+name = "nunc-platform"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Plattform-Traits: Clock, EventSink, Notifier, SecretStore"
+license.workspace = true
+
+[dependencies]
+nunc-core.workspace = true
+thiserror.workspace = true
