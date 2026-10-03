@@ -4,4 +4,5 @@
 //! `Clock` hereingereicht (Feature `clock` von `chrono` ist hier bewusst nicht aktiviert).
 
 pub mod model;
+pub mod todo_query;
 pub mod todotxt;

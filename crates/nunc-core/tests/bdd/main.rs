@@ -6,6 +6,7 @@
 
 use cucumber::{World, WriterExt as _, given, then, when, writer};
 
+mod todo_query;
 mod todotxt;
 
 /// Gemeinsamer Zustand aller `@domain`-Szenarien. Jeder Themenbereich legt seine Felder hier ab und
@@ -13,6 +14,7 @@ mod todotxt;
 #[derive(Debug, Default, World)]
 pub struct DomainWorld {
     value: i64,
+    todo_query: todo_query::State,
     todotxt: todotxt::State,
 }
 
