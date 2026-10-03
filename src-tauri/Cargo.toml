@@ -27,4 +27,6 @@ nunc-core.workspace = true
 nunc-store.workspace = true
 nunc-sync.workspace = true
 nunc-platform.workspace = true
-
+specta.workspace = true
+specta-typescript.workspace = true
+tauri-specta.workspace = true
