@@ -13,10 +13,11 @@ license = "GPL-3.0-or-later"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
-chrono = { version = "0.4", default-features = false, features = ["std", "serde", "clock"] }
+# ohne "clock": die Fachlogik kann damit nicht selbst Utc::now() aufrufen (Clock wird injiziert)
+chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
 rusqlite = { version = "0.37", features = ["bundled"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
-specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+specta = { version = "=2.0.0-rc.25", features = ["derive", "chrono"] }
 specta-typescript = "0.0.12"
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 cucumber = { version = "0.23", features = ["output-json"] }

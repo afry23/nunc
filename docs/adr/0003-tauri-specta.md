@@ -30,3 +30,13 @@ Generator (zusätzlicher Build-Schritt).
 - Rust ist die Quelle der Wahrheit für die API; Änderungen an Commands erfordern ein neu generiertes `bindings.ts`.
 - Events werden mit `Event`-Derive typisiert und über `mount_events` registriert (mit den Timer-Events in M3).
 - RC-Status des Crates: Updates bewusst und einzeln durchführen, Migration auf eine stabile Version beobachten.
+
+## Typregeln für exportierte Strukturen (aus M1-01)
+
+- **Keine `i64`/`u64`/`usize` in exportierten Typen:** specta-typescript verweigert den Export („BigInt forbidden“),
+  weil JSON-Zahlen in JavaScript ab 2^53 Genauigkeit verlieren. IDs und Zähler sind daher `i32`/`u32`
+  (SQLite-Rowids zu `i32` mit geprüfter Umwandlung im Store, ein Überlauf ist ein Fehler, kein stilles Abschneiden).
+- **`f64` wird als `number | null` exportiert** (NaN/∞ werden in JSON zu `null`). Das betrifft `flowtimeRatio`;
+  das Frontend fällt bei `null` auf den Standardwert zurück.
+- Daten: `chrono::NaiveDate` → `string` (`YYYY-MM-DD`), `DateTime<Utc>` → `string` (RFC 3339); dafür braucht `specta`
+  das Feature `chrono`.
