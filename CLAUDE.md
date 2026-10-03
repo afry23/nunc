@@ -83,7 +83,7 @@ cargo test -p nunc-core --test bdd      # @domain (NUNC_BDD_REPORT=/abs/pfad.jso
 npm run test:bdd                        # @ui
 ```
 
-Step-Definitions: Rust in `crates/*/tests/bdd.rs`, TypeScript in `tests/steps/` (`tests/helpers/ipc.ts` →
+Step-Definitions: Rust in `crates/*/tests/bdd/` (`main.rs` mit gemeinsamer `DomainWorld`, ein Modul pro Themenbereich), TypeScript in `tests/steps/` (`tests/helpers/ipc.ts` →
 `mockBackend({ app_info: () => … })`). Details: ADR 0006.
 
 ## Pflicht-Checks (nach jeder Änderung, alle müssen sauber durchlaufen)

@@ -1,13 +1,19 @@
 //! BDD-Runner für `@domain`-Szenarien (reine Fachlogik, keine I/O).
 //!
 //! Aufruf: `cargo test -p nunc-core --test bdd`
+//! Step-Definitions: ein Modul pro Themenbereich neben dieser Datei (`tests/bdd/*.rs`).
 //! Szenarien mit `@wip` werden übersprungen.
 
 use cucumber::{World, WriterExt as _, given, then, when, writer};
 
+mod todotxt;
+
+/// Gemeinsamer Zustand aller `@domain`-Szenarien. Jeder Themenbereich legt seine Felder hier ab und
+/// definiert seine Steps in einem eigenen Modul.
 #[derive(Debug, Default, World)]
-struct DomainWorld {
+pub struct DomainWorld {
     value: i64,
+    todotxt: todotxt::State,
 }
 
 #[given(expr = "the number {int}")]
