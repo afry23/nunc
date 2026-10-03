@@ -6,6 +6,7 @@
 pub mod clock;
 pub mod flowtime;
 pub mod model;
+pub mod stats;
 pub mod timer;
 pub mod todo_query;
 pub mod todotxt;

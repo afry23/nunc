@@ -11,7 +11,7 @@ use crate::DomainWorld;
 
 #[derive(Debug, Default)]
 pub struct State {
-    todos: Vec<Todo>,
+    pub(crate) todos: Vec<Todo>,
     filter: TodoFilter,
     result: Vec<Todo>,
 }
