@@ -17,3 +17,10 @@ pub fn app_info() -> AppInfo {
         version: env!("CARGO_PKG_VERSION").to_owned(),
     }
 }
+
+/// Spike M0-10: Schreiben/Lesen/Löschen im Tresor der Plattform.
+#[tauri::command]
+#[specta::specta]
+pub fn secret_selftest() -> Result<String, String> {
+    nunc_platform::secret::selftest().map_err(|e| e.to_string())
+}

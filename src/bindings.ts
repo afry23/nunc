@@ -6,6 +6,8 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	/**  Name und Version der App (Beispiel-Command für die Typ-Bridge). */
 	appInfo: () => __TAURI_INVOKE<AppInfo>("app_info"),
+	/**  Spike M0-10: Schreiben/Lesen/Löschen im Tresor der Plattform. */
+	secretSelftest: () => typedError<string, string>(__TAURI_INVOKE("secret_selftest")),
 };
 
 /* Types */
@@ -13,4 +15,14 @@ export type AppInfo = {
 	name: string,
 	version: string,
 };
+
+/* Tauri Specta runtime */
+async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {
+    try {
+        return { status: "ok", data: await result };
+    } catch (e) {
+        if (e instanceof Error) throw e;
+        return { status: "error", error: e as any };
+    }
+}
 

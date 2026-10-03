@@ -6,7 +6,7 @@ use tauri_specta::{Builder, collect_commands};
 const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/bindings.ts");
 
 fn specta_builder() -> Builder<tauri::Wry> {
-    Builder::<tauri::Wry>::new().commands(collect_commands![commands::app_info])
+    Builder::<tauri::Wry>::new().commands(collect_commands![commands::app_info, commands::secret_selftest])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
