@@ -14,3 +14,124 @@ export type AppInfo = {
 	version: string,
 };
 
+/**  Kennzahlen für einen Kalendertag. */
+export type DailyStats = {
+	date: string,
+	/**  Abgeschlossene Pomodoros. */
+	pomodoroCount: number,
+	workMinutes: number,
+	breakMinutes: number,
+};
+
+/**  Arbeitszeit pro `+project`-Tag. */
+export type ProjectStats = {
+	project: string,
+	workMinutes: number,
+};
+
+/**  Gespeichertes Arbeits- oder Pausenintervall. */
+export type Session = {
+	id: number,
+	mode: TimerMode,
+	sessionType: SessionType,
+	status: SessionStatus,
+	startedAt: string,
+	endedAt: string | null,
+	/**  Zieldauer in Minuten (nur Pomodoro). */
+	plannedMin: number | null,
+	/**  Tatsächlich verstrichene Minuten. */
+	actualMin: number | null,
+	todoId: number | null,
+	/**  Empfohlene bzw. genutzte Pausendauer in Minuten. */
+	breakMin: number | null,
+};
+
+/**  Ergebnis einer Session. */
+export type SessionStatus = "completed" | "aborted" | "skipped";
+
+/**  Art eines Intervalls innerhalb eines Zyklus. */
+export type SessionType = "work" | "short_break" | "long_break";
+
+/**
+ *  Alle Benutzereinstellungen. Standardwerte siehe [`Settings::default`] (identisch zu
+ *  `models.DefaultSettings()` der Go-App).
+ */
+export type Settings = {
+	pomodoroMin: number,
+	shortBreakMin: number,
+	longBreakMin: number,
+	longBreakAfter: number,
+	autoStartBreaks: boolean,
+	autoStartNextPomodoro: boolean,
+	notificationsEnabled: boolean,
+	soundEnabled: boolean,
+	/**  0–100. */
+	soundVolume: number,
+	soundEndPomodoro: string,
+	soundEndBreak: string,
+	activeMode: TimerMode,
+	systemTrayEnabled: boolean,
+	/**  `YYYY-MM-DD`, leer wenn noch nie gesichert. */
+	lastBackupDate: string,
+	/**  Eigener Backup-Ordner, leer = Standard des Betriebssystems. */
+	backupDir: string,
+	/**  `false` = Sync pausiert (Zugangsdaten bleiben, kein Zugriff). */
+	syncEnabled: boolean,
+	syncProvider: SyncProvider,
+	/**  Work-to-Rest-Verhältnis, 0.1–0.5. */
+	flowtimeRatio: number | null,
+	/**  Mindest-Arbeitszeit in Minuten (1–60), ab der eine Pause empfohlen wird. */
+	flowtimeMinFlowStateMin: number,
+};
+
+/**  Zeitliche Auflösung einer Statistikabfrage. */
+export type StatsPeriod = "day" | "week" | "month" | "year";
+
+/**  Parameter einer Statistikabfrage (Datumsgrenzen inklusive). */
+export type StatsRequest = {
+	period: StatsPeriod,
+	startDate: string,
+	endDate: string,
+};
+
+/**  Statistik-Antwort an das Frontend. */
+export type StatsResponse = {
+	daily: DailyStats[],
+	projects: ProjectStats[],
+	totalPomodoros: number,
+	totalWorkMin: number,
+	/**  Aufeinanderfolgende Tage mit mindestens einem Pomodoro. */
+	currentStreak: number,
+	longestStreak: number,
+};
+
+/**  Aktiver Sync-Provider (exklusiv). */
+export type SyncProvider = "none" | "google_drive" | "webdav";
+
+/**  Zeitmess-Technik. */
+export type TimerMode = "pomodoro" | "flowtime";
+
+/**  Betriebszustand des Timers. */
+export type TimerState = "idle" | "running" | "paused";
+
+/**
+ *  Ein todo.txt-Eintrag.
+ * 
+ *  `description` enthält wie in der Go-App die Tags (`Bericht +work @desk`); `project_tags` und
+ *  `context_tags` behalten ihr Präfix (`+work`, `@desk`).
+ */
+export type Todo = {
+	id: number,
+	rawText: string,
+	/**  `A`–`Z`, `null` wenn keine Priorität gesetzt ist. */
+	priority: string | null,
+	completed: boolean,
+	completedAt: string | null,
+	createdAt: string | null,
+	description: string,
+	projectTags: string[],
+	contextTags: string[],
+	pomodoroCount: number,
+	position: number,
+};
+

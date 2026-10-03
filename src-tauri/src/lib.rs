@@ -6,7 +6,17 @@ use tauri_specta::{Builder, collect_commands};
 const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/bindings.ts");
 
 fn specta_builder() -> Builder<tauri::Wry> {
-    Builder::<tauri::Wry>::new().commands(collect_commands![commands::app_info])
+    use nunc_core::model::{Session, Settings, StatsRequest, StatsResponse, TimerState, Todo};
+
+    Builder::<tauri::Wry>::new()
+        .commands(collect_commands![commands::app_info])
+        // Domänentypen schon jetzt exportieren; Commands (M3) referenzieren sie später ohnehin.
+        .typ::<Todo>()
+        .typ::<Session>()
+        .typ::<Settings>()
+        .typ::<StatsRequest>()
+        .typ::<StatsResponse>()
+        .typ::<TimerState>()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

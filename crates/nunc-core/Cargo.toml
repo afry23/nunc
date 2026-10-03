@@ -10,8 +10,10 @@ license.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 chrono.workspace = true
+specta.workspace = true
 
 [dev-dependencies]
+serde_json.workspace = true
 cucumber.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }
 
