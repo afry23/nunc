@@ -50,6 +50,50 @@ pub struct Settings {
     pub flowtime_min_flow_state_min: u32,
 }
 
+/// Eine verletzte Einstellungsgrenze.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsIssue {
+    /// JSON-Name des Feldes (`flowtimeRatio`).
+    pub field: String,
+    /// Erlaubter Bereich als Text (`0.1–0.5`).
+    pub expected: String,
+}
+
+impl Settings {
+    /// Prüft die festgelegten Wertebereiche (REQUIREMENTS 5): Flowtime-Verhältnis 0,1–0,5, Mindest-Flow-Zeit
+    /// 1–60 Minuten, Lautstärke 0–100, Pomodoro-Dauer mindestens eine Minute. Pausenlängen und
+    /// `long_break_after` dürfen 0 sein (keine bzw. nie eine lange Pause). Liefert **alle** Verstöße.
+    pub fn validate(&self) -> Result<(), Vec<SettingsIssue>> {
+        let mut issues = Vec::new();
+        let mut check = |ok: bool, field: &str, expected: &str| {
+            if !ok {
+                issues.push(SettingsIssue {
+                    field: field.to_owned(),
+                    expected: expected.to_owned(),
+                });
+            }
+        };
+        check(self.pomodoro_min >= 1, "pomodoroMin", "≥ 1");
+        check(self.sound_volume <= 100, "soundVolume", "0–100");
+        check(
+            (0.1..=0.5).contains(&self.flowtime_ratio),
+            "flowtimeRatio",
+            "0.1–0.5",
+        );
+        check(
+            (1..=60).contains(&self.flowtime_min_flow_state_min),
+            "flowtimeMinFlowStateMin",
+            "1–60",
+        );
+        if issues.is_empty() {
+            Ok(())
+        } else {
+            Err(issues)
+        }
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -79,6 +123,43 @@ impl Default for Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_ratio_that_is_not_a_number_is_invalid() {
+        let settings = Settings {
+            flowtime_ratio: f64::NAN,
+            ..Settings::default()
+        };
+        let issues = settings.validate().unwrap_err();
+        assert_eq!(issues.len(), 1);
+        assert_eq!(issues[0].field, "flowtimeRatio");
+    }
+
+    #[test]
+    fn all_violations_are_reported_together() {
+        let settings = Settings {
+            pomodoro_min: 0,
+            sound_volume: 101,
+            flowtime_ratio: 0.9,
+            flowtime_min_flow_state_min: 0,
+            ..Settings::default()
+        };
+        let fields: Vec<_> = settings
+            .validate()
+            .unwrap_err()
+            .into_iter()
+            .map(|i| i.field)
+            .collect();
+        assert_eq!(
+            fields,
+            [
+                "pomodoroMin",
+                "soundVolume",
+                "flowtimeRatio",
+                "flowtimeMinFlowStateMin"
+            ]
+        );
+    }
 
     #[test]
     fn defaults_match_the_go_app() {
