@@ -26,7 +26,7 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 | DB | SQLite über `rusqlite` (bundled), WAL, Foreign Keys |
 | Typen Rust↔TS | `tauri-specta` → `src/bindings.ts` |
 | Frontend | React 19, TypeScript strict, Vite, Tailwind v4, TanStack Router, Zustand |
-| Tests | cucumber-rs (`@domain`, `@integration`), Vitest + quickpickle + Testing Library (`@ui`), proptest |
+| Tests | cucumber-rs (`@domain`, `@integration`), Vitest + quickpickle + Testing Library (`@ui`), proptest, cargo-mutants |
 
 ```
 crates/nunc-core      pure Fachlogik, kein I/O, kein tokio
@@ -95,6 +95,16 @@ cargo test --workspace            # inkl. cucumber (@domain/@integration)
 npm run typecheck && npm run lint && npm run test
 npm run tauri build -- --debug --no-bundle   # ab M3: ohne Warnungen
 ```
+
+Zusätzlich bei Änderungen an **Fachlogik** (`nunc-core`, `nunc-store`, `nunc-sync`), vor dem PR:
+
+```bash
+git diff main...HEAD > /tmp/pr.diff
+cargo mutants --in-diff /tmp/pr.diff -p nunc-core -p nunc-store -p nunc-sync
+```
+
+Überlebende Mutanten heißen: Szenario oder `Examples`-Zeile fehlt. Ergänzen statt ausschließen; nur äquivalente
+Mutanten begründet ausnehmen (ADR 0007). Ziel: Mutation-Score `nunc-core` ≥ 80 %, `nunc-store` ≥ 70 %.
 
 Warnungen nicht per Ignore-Kommentar unterdrücken, außer mit dokumentiertem Grund. Nach Änderungen an Commands
 oder specta-Typen `cargo test -p nunc export_bindings` ausführen und `src/bindings.ts` mit committen (CI prüft das).

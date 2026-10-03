@@ -9,3 +9,5 @@ src/bindings.ts
 src-tauri/gen
 *.md
 tests/fixtures
+mutants.out
+mutants.out.old

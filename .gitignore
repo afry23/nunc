@@ -60,3 +60,7 @@ lcov.info
 
 # Test-Fixtures dürfen Datenbanken enthalten
 !tests/fixtures/*.db
+
+# Mutation-Tests
+mutants.out
+mutants.out.old
