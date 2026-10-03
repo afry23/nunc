@@ -79,3 +79,18 @@ Reboot (Plugin bringt `LocalNotificationRestoreReceiver` mit), herstellerspezifi
 - Die Notification liefert nur den Hinweis, nicht den Sound/Zustandswechsel. Nach dem Öffnen muss die App
   den abgelaufenen Timer verbuchen (Session `completed`) – Teil von M3-04.
 - Laufender Timer außerhalb der App (Foreground-Service, Live Activity) bleibt Backlog nach 1.0.
+
+## Umsetzung (M1-04, `nunc-core::timer`)
+
+- `Timer` ist ein serialisierbarer, reiner Zustandsautomat: `start`, `start_break`, `pause`, `resume`, `stop`,
+  `tick`, `snapshot`; `now` kommt immer als Parameter. Gearbeitet = `accumulated_ms` (beendete Laufabschnitte)
+  + `now − running_since`. `tick(now)` beendet einen abgelaufenen Countdown **zum rechnerischen Endzeitpunkt**
+  (`running_since + Rest`), auch Stunden später (App war zu oder im Hintergrund).
+- Ergebnisse sind Daten (`Finish`: Session zum Speichern, Pausenvorschlag, zu erhöhender Todo-Zähler,
+  `AutoStart`), die der Dienst am Rand ausführt (DB, Events, Notification, Auto-Start).
+- Von der Go-App übernommen: 50-%-Regel (`< 50 %` → `aborted`, sonst `completed`, jeweils ohne Zähler/Pause), lange
+  Pause nach N **abgelaufenen** Pomodoros, Flowtime-Stop = abgeschlossen mit Pausenempfehlung, Pause beenden = `skipped`.
+- Bewusste Abweichungen: Ein Pausenvorschlag verfällt, sobald eine neue Arbeit startet oder die Pause endet
+  (Go ließ ihn stehen); `auto_start_next_pomodoro` wird ausgewertet (Go speicherte nur die Einstellung);
+  `long_break_after = 0` heißt nie lange Pause; Pausendauer 0 ergibt keinen Vorschlag.
+- `Clock` (Trait) liegt in `nunc-core::clock`, `SystemClock` folgt in `nunc-platform` (M3-02).
