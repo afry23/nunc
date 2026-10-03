@@ -14,7 +14,7 @@ Ein Ordner `features/` für alle Runner, getrennt über Tags:
 
 | Ebene | Runner | Tag |
 |---|---|---|
-| Fachlogik | `cucumber` 0.23 (cucumber-rs) in `crates/nunc-core/tests/bdd.rs`, `harness = false` | `@domain` |
+| Fachlogik | `cucumber` 0.23 (cucumber-rs) in `crates/nunc-core/tests/bdd/main.rs`, `harness = false` (Step-Module daneben) | `@domain` |
 | Persistenz/Sync | derselbe Runner in `nunc-store`/`nunc-sync` (In-Memory-SQLite, wiremock) | `@integration` |
 | UI | Vitest + `quickpickle` + Testing Library, IPC über `mockIPC` | `@ui` |
 | E2E | WebdriverIO + `tauri-driver` (Desktop, Linux/Windows), Maestro (Mobile) | `@e2e` |
