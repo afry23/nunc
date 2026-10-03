@@ -13,7 +13,7 @@ use crate::DomainWorld;
 #[derive(Debug)]
 pub struct State {
     pub(crate) sessions: Vec<Session>,
-    today: NaiveDate,
+    pub(crate) today: NaiveDate,
     pub(crate) range: (NaiveDate, NaiveDate),
     pub(crate) offset_hours: i32,
     result: Option<StatsResponse>,
