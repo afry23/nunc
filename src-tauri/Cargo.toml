@@ -30,3 +30,4 @@ nunc-platform.workspace = true
 specta.workspace = true
 specta-typescript.workspace = true
 tauri-specta.workspace = true
+tauri-plugin-notification = "2.5.1"
