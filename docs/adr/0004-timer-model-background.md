@@ -1,6 +1,6 @@
 # ADR 0004 – Timer-Modell und Hintergrundverhalten (Spike M0-09)
 
-- Status: akzeptiert (Android verifiziert, iOS offen)
+- Status: akzeptiert (Android verifiziert, iOS-Benachrichtigung noch offen)
 - Datum: 2026-10-03
 - Prototyp: Branch `spike/m0-09-background-timer`
 
@@ -25,6 +25,12 @@ Android-Emulator `Medium_Phone_API_35` (Android-API 37, arm64), Debug-APK, `POST
 | Mit `USE_EXACT_ALARM` + erzwungener Deep-Idle (`dumpsys deviceidle force-idle`) | Notification pünktlich (< 1 s). |
 | App-Prozess hart beendet (`kill -9`) | Alarm bleibt im AlarmManager, Notification pünktlich. Relaunch vor Ablauf zeigt korrekte Restzeit (14,4 s statt erwarteter ~14,2 s), Relaunch nach Ablauf `0`. |
 | Resume aus Hintergrund (Prozess lebt) | `visibilitychange` feuert, Restzeit wird aus `endAt − Date.now()` neu berechnet; keine Drift durch gedrosselte JS-Timer. |
+
+iOS (Simulator iPhone 17, iOS 27, `tauri ios dev`): Prototyp-App startet und rendert, Zeitstempel-Logik
+identisch (reines JS). Die Zustellung geplanter Notifications ist **nicht verifiziert**: der Simulator läuft
+headless (kein `Simulator.app`, `simctl` kennt kein Tippen, `simctl privacy` kann Notifications nicht
+freigeben), der Berechtigungsdialog und Home-Taste lassen sich ohne UI-Test nicht auslösen.
+Nebenbefund: im WebView erscheinen oben/unten weiße Streifen (Safe-Areas, Hintergrundfarbe) → M5-01/M4-01.
 
 Nicht getestet: `am force-stop` (löscht Alarme laut Android-Verhalten, App gilt dann als „gestoppt"),
 Reboot (Plugin bringt `LocalNotificationRestoreReceiver` mit), herstellerspezifische Akku-Optimierung
@@ -52,7 +58,7 @@ Reboot (Plugin bringt `LocalNotificationRestoreReceiver` mit), herstellerspezifi
 - **Play-Store-Policy:** `USE_EXACT_ALARM` ist auf Alarm-/Timer-/Kalender-Apps beschränkt. Ein Pomodoro-Timer
   fällt darunter; in der Play-Console-Deklaration (M8-05) begründen. Fallback: `SCHEDULE_EXACT_ALARM` +
   Hinweisbanner, falls abgelehnt.
-- **iOS nicht verifiziert** (Xcode-Lizenz/`xcode-select` auf der Entwicklermaschine fehlt, siehe M0-08).
+- **iOS-Notification nicht verifiziert** (siehe oben).
   Erwartung: lokale `UNCalendarNotificationTrigger`-Notifications feuern auch bei suspendierter App;
   Verifikation auf Simulator/Gerät nachholen, bevor M5 startet.
 - Die Notification liefert nur den Hinweis, nicht den Sound/Zustandswechsel. Nach dem Öffnen muss die App
