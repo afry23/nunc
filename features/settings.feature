@@ -1,6 +1,50 @@
 Feature: Settings
   Source: REQUIREMENTS 5; nunc-go settings_test.go
 
+  @domain @REQ-5
+  Scenario: The default settings are valid
+    When I validate the settings
+    Then the settings are valid
+
+  @domain @REQ-5
+  Scenario Outline: The pomodoro duration must be at least one minute
+    Given the setting "pomodoroMin" is "<minutes>"
+    When I validate the settings
+    Then <result>
+
+    Examples:
+      | minutes | result                                         |
+      | 1       | the settings are valid                         |
+      | 25      | the settings are valid                         |
+      | 0       | the settings are invalid because of "pomodoroMin" |
+
+  @domain @REQ-5
+  Scenario Outline: The sound volume is limited to 100 percent
+    Given the setting "soundVolume" is "<volume>"
+    When I validate the settings
+    Then <result>
+
+    Examples:
+      | volume | result                                           |
+      | 0      | the settings are valid                           |
+      | 100    | the settings are valid                           |
+      | 101    | the settings are invalid because of "soundVolume" |
+
+  @domain @REQ-5
+  Scenario: Break lengths and the long break interval may be zero
+    Given the setting "shortBreakMin" is "0"
+    And the setting "longBreakMin" is "0"
+    And the setting "longBreakAfter" is "0"
+    When I validate the settings
+    Then the settings are valid
+
+  @domain @REQ-5
+  Scenario: All violations are reported together
+    Given the setting "pomodoroMin" is "0"
+    And the setting "soundVolume" is "150"
+    When I validate the settings
+    Then the settings are invalid because of "pomodoroMin soundVolume"
+
   @integration @REQ-5 @wip
   Scenario: Defaults are returned for a fresh database
 

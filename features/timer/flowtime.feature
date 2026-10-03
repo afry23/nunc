@@ -43,8 +43,36 @@ Feature: Flowtime break recommendation
     And I stop the timer
     Then the suggested break is a short_break of 3 minutes
 
-  @domain @US-FT-02 @wip
-  Scenario: Ratio limits 0.1 and 0.5 are accepted and values outside are rejected
+  @domain @US-FT-02
+  Scenario Outline: Ratio limits 0.1 and 0.5 are accepted and values outside are rejected
+    Given the setting "flowtimeRatio" is "<ratio>"
+    When I validate the settings
+    Then <result>
+
+    Examples:
+      | ratio | result                                               |
+      | 0.1   | the settings are valid                               |
+      | 0.25  | the settings are valid                               |
+      | 0.5   | the settings are valid                               |
+      | 0.09  | the settings are invalid because of "flowtimeRatio"  |
+      | 0.51  | the settings are invalid because of "flowtimeRatio"  |
+      | 0     | the settings are invalid because of "flowtimeRatio"  |
+      | -0.2  | the settings are invalid because of "flowtimeRatio"  |
+      | 1     | the settings are invalid because of "flowtimeRatio"  |
+
+  @domain @US-FT-02
+  Scenario Outline: The minimum flow state must be between 1 and 60 minutes
+    Given the setting "flowtimeMinFlowStateMin" is "<minutes>"
+    When I validate the settings
+    Then <result>
+
+    Examples:
+      | minutes | result                                                        |
+      | 1       | the settings are valid                                        |
+      | 15      | the settings are valid                                        |
+      | 60      | the settings are valid                                        |
+      | 0       | the settings are invalid because of "flowtimeMinFlowStateMin" |
+      | 61      | the settings are invalid because of "flowtimeMinFlowStateMin" |
 
   @domain @US-FT-02
   Scenario: Flowtime counts up instead of down
