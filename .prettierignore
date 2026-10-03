@@ -8,3 +8,4 @@ package-lock.json
 src/bindings.ts
 src-tauri/gen
 *.md
+tests/fixtures

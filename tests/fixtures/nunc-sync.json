@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "synced_at": "2026-09-29T07:00:00Z",
+  "device_id": "fixture-device-a",
+  "todos": [
+    {
+      "sync_id": "t-0001",
+      "device_id": "fixture-device-a",
+      "raw_text": "(A) 2026-09-20 Write quarterly report +work @desk",
+      "priority": "A",
+      "completed": false,
+      "created_at": "2026-09-20",
+      "description": "Write quarterly report +work @desk",
+      "project_tags": [
+        "+work"
+      ],
+      "context_tags": [
+        "@desk"
+      ],
+      "pomodoro_count": 5,
+      "position": 1,
+      "updated_at": "2026-09-28T09:00:00Z",
+      "deleted": false
+    },
+    {
+      "sync_id": "t-0002",
+      "device_id": "fixture-device-a",
+      "raw_text": "(B) 2026-09-21 Call dentist @phone",
+      "priority": "B",
+      "completed": false,
+      "created_at": "2026-09-21",
+      "description": "Call dentist @phone",
+      "project_tags": [],
+      "context_tags": [
+        "@phone"
+      ],
+      "pomodoro_count": 1,
+      "position": 2,
+      "updated_at": "2026-09-27T16:30:00Z",
+      "deleted": false
+    },
+    {
+      "sync_id": "t-0003",
+      "device_id": "fixture-device-a",
+      "raw_text": "2026-09-22 Buy groceries +home @errands",
+      "completed": false,
+      "created_at": "2026-09-22",
+      "description": "Buy groceries +home @errands",
+      "project_tags": [
+        "+home"
+      ],
+      "context_tags": [
+        "@errands"
+      ],
+      "pomodoro_count": 0,
+      "position": 3,
+      "updated_at": "2026-09-22T08:00:00Z",
+      "deleted": false
+    },
+    {
+      "sync_id": "t-0004",
+      "device_id": "fixture-device-a",
+      "raw_text": "x 2026-09-25 2026-09-18 Plan sprint +work",
+      "completed": true,
+      "completed_at": "2026-09-25",
+      "created_at": "2026-09-18",
+      "description": "Plan sprint +work",
+      "project_tags": [
+        "+work"
+      ],
+      "context_tags": [],
+      "pomodoro_count": 3,
+      "position": 4,
+      "updated_at": "2026-09-25T17:00:00Z",
+      "deleted": false
+    },
+    {
+      "sync_id": "t-0005",
+      "device_id": "fixture-device-a",
+      "raw_text": "(C) Read Rust book +learning +rust @evening",
+      "priority": "C",
+      "completed": false,
+      "description": "Read Rust book +learning +rust @evening",
+      "project_tags": [
+        "+learning",
+        "+rust"
+      ],
+      "context_tags": [
+        "@evening"
+      ],
+      "pomodoro_count": 2,
+      "position": 5,
+      "updated_at": "2026-09-24T20:00:00Z",
+      "deleted": false
+    },
+    {
+      "sync_id": "t-0006",
+      "device_id": "fixture-device-a",
+      "raw_text": "Old idea that was deleted",
+      "completed": false,
+      "description": "Old idea that was deleted",
+      "project_tags": [],
+      "context_tags": [],
+      "pomodoro_count": 0,
+      "position": 6,
+      "updated_at": "2026-09-23T12:00:00Z",
+      "deleted": true
+    }
+  ],
+  "sessions": [
+    {
+      "device_id": "fixture-device-a",
+      "mode": "pomodoro",
+      "session_type": "work",
+      "status": "completed",
+      "started_at": "2026-09-22T09:00:00Z",
+      "ended_at": "2026-09-22T09:30:00Z",
+      "planned_min": 30,
+      "actual_min": 30,
+      "break_min": 6
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "pomodoro",
+      "session_type": "short_break",
+      "status": "completed",
+      "started_at": "2026-09-22T09:30:00Z",
+      "ended_at": "2026-09-22T09:36:00Z",
+      "planned_min": 6,
+      "actual_min": 6,
+      "break_min": 0
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "pomodoro",
+      "session_type": "work",
+      "status": "completed",
+      "started_at": "2026-09-22T09:40:00Z",
+      "ended_at": "2026-09-22T10:10:00Z",
+      "planned_min": 30,
+      "actual_min": 30,
+      "break_min": 6
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "pomodoro",
+      "session_type": "work",
+      "status": "aborted",
+      "started_at": "2026-09-23T14:00:00Z",
+      "ended_at": "2026-09-23T14:08:00Z",
+      "planned_min": 30,
+      "actual_min": 8,
+      "break_min": 0
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "pomodoro",
+      "session_type": "work",
+      "status": "completed",
+      "started_at": "2026-09-24T08:00:00Z",
+      "ended_at": "2026-09-24T08:30:00Z",
+      "planned_min": 30,
+      "actual_min": 30,
+      "break_min": 6
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "pomodoro",
+      "session_type": "work",
+      "status": "completed",
+      "started_at": "2026-09-25T10:00:00Z",
+      "ended_at": "2026-09-25T10:30:00Z",
+      "planned_min": 30,
+      "actual_min": 30,
+      "break_min": 6
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "pomodoro",
+      "session_type": "work",
+      "status": "completed",
+      "started_at": "2026-09-25T10:36:00Z",
+      "ended_at": "2026-09-25T11:06:00Z",
+      "planned_min": 30,
+      "actual_min": 30,
+      "break_min": 25
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "pomodoro",
+      "session_type": "long_break",
+      "status": "skipped",
+      "started_at": "2026-09-25T11:06:00Z",
+      "ended_at": "2026-09-25T11:10:00Z",
+      "planned_min": 25,
+      "actual_min": 4,
+      "break_min": 0
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "flowtime",
+      "session_type": "work",
+      "status": "completed",
+      "started_at": "2026-09-26T09:00:00Z",
+      "ended_at": "2026-09-26T09:50:00Z",
+      "planned_min": 0,
+      "actual_min": 50,
+      "break_min": 12
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "flowtime",
+      "session_type": "work",
+      "status": "completed",
+      "started_at": "2026-09-27T13:00:00Z",
+      "ended_at": "2026-09-27T13:12:00Z",
+      "planned_min": 0,
+      "actual_min": 12,
+      "break_min": 0
+    },
+    {
+      "device_id": "fixture-device-a",
+      "mode": "flowtime",
+      "session_type": "work",
+      "status": "completed",
+      "started_at": "2026-09-28T09:00:00Z",
+      "ended_at": "2026-09-28T10:00:00Z",
+      "planned_min": 0,
+      "actual_min": 60,
+      "break_min": 15
+    }
+  ]
+}
