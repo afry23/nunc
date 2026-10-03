@@ -7,6 +7,7 @@
 use cucumber::{World, WriterExt as _, given, then, when, writer};
 
 mod settings;
+mod stats;
 mod timer;
 mod todo_query;
 mod todotxt;
@@ -17,6 +18,7 @@ mod todotxt;
 pub struct DomainWorld {
     value: i64,
     settings: settings::State,
+    stats: stats::State,
     timer: timer::State,
     todo_query: todo_query::State,
     todotxt: todotxt::State,

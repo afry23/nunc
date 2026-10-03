@@ -49,15 +49,70 @@ pub struct ProjectStats {
     pub work_minutes: u32,
 }
 
-/// Statistik-Antwort an das Frontend.
+/// Arbeitszeit pro `@context`-Tag.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
+pub struct ContextStats {
+    pub context: String,
+    pub work_minutes: u32,
+}
+
+/// Abgeschlossene Pomodoros und Arbeitszeit eines Todos im Zeitraum.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TodoStats {
+    pub todo_id: i32,
+    pub description: String,
+    pub pomodoro_count: u32,
+    pub work_minutes: u32,
+}
+
+/// Kennzahlen je Wochentag (`0` = Montag … `6` = Sonntag) im Zeitraum.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct WeekdayStats {
+    pub weekday: u8,
+    pub pomodoro_count: u32,
+    pub work_minutes: u32,
+}
+
+/// Kennzahlen je Kalendermonat im Zeitraum.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct MonthlyStats {
+    pub year: i32,
+    pub month: u32,
+    pub pomodoro_count: u32,
+    pub work_minutes: u32,
+}
+
+/// Statistik-Antwort an das Frontend.
+///
+/// `daily`, `projects`, `contexts`, `top_todos`, `weekdays` und `monthly` beziehen sich auf den angefragten
+/// Zeitraum; die Summen, Durchschnitte und Serien auf alle Sessions bzw. auf „heute“.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct StatsResponse {
+    /// Nur Tage mit Sessions, aufsteigend.
     pub daily: Vec<DailyStats>,
+    /// Absteigend nach Arbeitszeit, dann nach Name.
     pub projects: Vec<ProjectStats>,
+    pub contexts: Vec<ContextStats>,
+    /// Die zehn Todos mit den meisten abgeschlossenen Pomodoros.
+    pub top_todos: Vec<TodoStats>,
+    /// Immer sieben Einträge, Montag bis Sonntag.
+    pub weekdays: Vec<WeekdayStats>,
+    /// Nur Monate mit Sessions, aufsteigend.
+    pub monthly: Vec<MonthlyStats>,
+    /// Abgeschlossene Pomodoros insgesamt.
     pub total_pomodoros: u32,
+    /// Arbeitszeit insgesamt in Minuten.
     pub total_work_min: u32,
-    /// Aufeinanderfolgende Tage mit mindestens einem Pomodoro.
+    /// Pomodoros pro Tag in den letzten 7 Tagen (inklusive heute).
+    pub average_pomodoros_7: f64,
+    /// Pomodoros pro Tag in den letzten 30 Tagen (inklusive heute).
+    pub average_pomodoros_30: f64,
+    /// Aufeinanderfolgende Tage mit mindestens einem Pomodoro, endend heute oder gestern.
     pub current_streak: u32,
     pub longest_streak: u32,
 }
@@ -95,7 +150,7 @@ mod tests {
     }
 
     #[test]
-    fn response_serializes_with_the_go_json_keys() {
+    fn response_serializes_with_camel_case_keys() {
         let resp = StatsResponse {
             daily: vec![DailyStats {
                 date: NaiveDate::from_ymd_opt(2026, 9, 22).unwrap(),
@@ -107,8 +162,31 @@ mod tests {
                 project: "+work".into(),
                 work_minutes: 60,
             }],
+            contexts: vec![ContextStats {
+                context: "@desk".into(),
+                work_minutes: 60,
+            }],
+            top_todos: vec![TodoStats {
+                todo_id: 1,
+                description: "Report".into(),
+                pomodoro_count: 2,
+                work_minutes: 60,
+            }],
+            weekdays: vec![WeekdayStats {
+                weekday: 0,
+                pomodoro_count: 2,
+                work_minutes: 60,
+            }],
+            monthly: vec![MonthlyStats {
+                year: 2026,
+                month: 9,
+                pomodoro_count: 2,
+                work_minutes: 60,
+            }],
             total_pomodoros: 2,
             total_work_min: 60,
+            average_pomodoros_7: 0.5,
+            average_pomodoros_30: 0.25,
             current_streak: 1,
             longest_streak: 3,
         };
@@ -116,8 +194,14 @@ mod tests {
         assert_eq!(v["daily"][0]["pomodoroCount"], 2);
         assert_eq!(v["daily"][0]["breakMinutes"], 6);
         assert_eq!(v["projects"][0]["workMinutes"], 60);
+        assert_eq!(v["contexts"][0]["context"], "@desk");
+        assert_eq!(v["topTodos"][0]["todoId"], 1);
+        assert_eq!(v["weekdays"][0]["weekday"], 0);
+        assert_eq!(v["monthly"][0]["month"], 9);
         assert_eq!(v["totalPomodoros"], 2);
         assert_eq!(v["totalWorkMin"], 60);
+        assert_eq!(v["averagePomodoros7"], 0.5);
+        assert_eq!(v["averagePomodoros30"], 0.25);
         assert_eq!(v["currentStreak"], 1);
         assert_eq!(v["longestStreak"], 3);
     }

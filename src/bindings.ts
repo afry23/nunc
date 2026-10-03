@@ -14,6 +14,12 @@ export type AppInfo = {
 	version: string,
 };
 
+/**  Arbeitszeit pro `@context`-Tag. */
+export type ContextStats = {
+	context: string,
+	workMinutes: number,
+};
+
 /**  Kennzahlen für einen Kalendertag. */
 export type DailyStats = {
 	date: string,
@@ -21,6 +27,14 @@ export type DailyStats = {
 	pomodoroCount: number,
 	workMinutes: number,
 	breakMinutes: number,
+};
+
+/**  Kennzahlen je Kalendermonat im Zeitraum. */
+export type MonthlyStats = {
+	year: number,
+	month: number,
+	pomodoroCount: number,
+	workMinutes: number,
 };
 
 /**  Arbeitszeit pro `+project`-Tag. */
@@ -94,13 +108,33 @@ export type StatsRequest = {
 	endDate: string,
 };
 
-/**  Statistik-Antwort an das Frontend. */
+/**
+ *  Statistik-Antwort an das Frontend.
+ * 
+ *  `daily`, `projects`, `contexts`, `top_todos`, `weekdays` und `monthly` beziehen sich auf den angefragten
+ *  Zeitraum; die Summen, Durchschnitte und Serien auf alle Sessions bzw. auf „heute“.
+ */
 export type StatsResponse = {
+	/**  Nur Tage mit Sessions, aufsteigend. */
 	daily: DailyStats[],
+	/**  Absteigend nach Arbeitszeit, dann nach Name. */
 	projects: ProjectStats[],
+	contexts: ContextStats[],
+	/**  Die zehn Todos mit den meisten abgeschlossenen Pomodoros. */
+	topTodos: TodoStats[],
+	/**  Immer sieben Einträge, Montag bis Sonntag. */
+	weekdays: WeekdayStats[],
+	/**  Nur Monate mit Sessions, aufsteigend. */
+	monthly: MonthlyStats[],
+	/**  Abgeschlossene Pomodoros insgesamt. */
 	totalPomodoros: number,
+	/**  Arbeitszeit insgesamt in Minuten. */
 	totalWorkMin: number,
-	/**  Aufeinanderfolgende Tage mit mindestens einem Pomodoro. */
+	/**  Pomodoros pro Tag in den letzten 7 Tagen (inklusive heute). */
+	averagePomodoros7: number | null,
+	/**  Pomodoros pro Tag in den letzten 30 Tagen (inklusive heute). */
+	averagePomodoros30: number | null,
+	/**  Aufeinanderfolgende Tage mit mindestens einem Pomodoro, endend heute oder gestern. */
 	currentStreak: number,
 	longestStreak: number,
 };
@@ -133,5 +167,20 @@ export type Todo = {
 	contextTags: string[],
 	pomodoroCount: number,
 	position: number,
+};
+
+/**  Abgeschlossene Pomodoros und Arbeitszeit eines Todos im Zeitraum. */
+export type TodoStats = {
+	todoId: number,
+	description: string,
+	pomodoroCount: number,
+	workMinutes: number,
+};
+
+/**  Kennzahlen je Wochentag (`0` = Montag … `6` = Sonntag) im Zeitraum. */
+export type WeekdayStats = {
+	weekday: number,
+	pomodoroCount: number,
+	workMinutes: number,
 };
 
