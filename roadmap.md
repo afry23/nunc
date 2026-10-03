@@ -60,6 +60,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 - [ ] `npm run typecheck` · `npm run lint` · `npm run test`
 - [ ] `npm run tauri build` ohne Warnungen (ab M3)
 - [ ] keine Schema-Änderung ohne neue, additive Migration
+- [ ] Fachlogik-Tickets (M1–M2, M6–M7): `cargo mutants --in-diff` ohne unbegründet überlebende Mutanten (ADR 0007)
 
 ---
 
@@ -82,6 +83,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 | M0-11 | CI | Workflow (Gitea/GitHub Actions): Lint + Tests (Linux), Build-Matrix macOS/Windows/Linux, Android-APK (Debug), iOS-Build (macOS-Runner, unsigned); Artefakt: Cucumber-Report | M0-06, M0-07 |
 | M0-12 | Projekt-Doku | `CLAUDE.md` (Architekturregeln, BDD-Workflow, Pflicht-Checks, „Do Not“-Liste aus Go-Projekt adaptiert), `docs/adr/0001…` (Tauri 2, rusqlite, specta, Timer-Modell, SecretStore, BDD-Toolchain) | M0-09, M0-10 |
 | M0-13 | Feature-Katalog | Alle Features aus `PLAN.md §2.1` als Dateien mit Szenario-Titeln anlegen (`@wip`), Story-Tags; Go-Fixtures erzeugen: `tests/fixtures/go-v5.db`, `nunc-sync.json`, WebDAV-Sync-Datei | M0-06 |
+| M0-14 | Mutation-Tests (Rust) | `cargo-mutants` für `nunc-core`/`nunc-store`/`nunc-sync` (`.cargo/mutants.toml`), CI-Workflow `mutation.yml` (PR: `--in-diff`, wöchentlich voll), `npm run mutate:rust`, ADR 0007. TypeScript/Stryker zurückgestellt: nicht kompatibel mit Vitest 5 | M0-06 |
 
 **Exit-Kriterien M0:** CI grün; `tauri dev` auf macOS, Android-Emulator, iOS-Simulator startet leere Shell; beide Spikes entschieden.
 
@@ -109,7 +111,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 | M1-10 | Backup-Policy | `services/backup.go`, `backup_rotate_test.go`, `backup_status_test.go` | `backup/rotation.feature` |
 | M1-11 | Property-Tests | `proptest`: Parser-Roundtrip, Merge idempotent/kommutativ | – |
 
-**Exit-Kriterien M1:** `cargo test -p nunc-core` grün, Coverage ≥ 90 % (`cargo llvm-cov`).
+**Exit-Kriterien M1:** `cargo test -p nunc-core` grün, Coverage ≥ 90 % (`cargo llvm-cov`), Mutation-Score ≥ 80 % (`cargo mutants -p nunc-core`).
 
 ---
 
@@ -128,7 +130,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 | M2-07 | Legacy-Pfad-Übernahme | erster Start: `…/nunc/nunc.db` (Go) erkennen → in `app_config_dir` kopieren, Backup-Ordner-Setting übernehmen | `compat_go.feature` |
 | M2-08 | Kompatibilitäts-Szenarien | Go-Fixture-DB öffnen/restoren; Go-Backups restorebar; Rust-DB von Go lesbar (manueller Check mit `nunc-go`) | `compat_go.feature` |
 
-**Exit-Kriterien M2:** Backup aus laufender Go-App lässt sich per Test restoren; Coverage `nunc-store` ≥ 80 %.
+**Exit-Kriterien M2:** Backup aus laufender Go-App lässt sich per Test restoren; Coverage `nunc-store` ≥ 80 %, Mutation-Score ≥ 70 %.
 
 ---
 

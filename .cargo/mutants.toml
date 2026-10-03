@@ -1,0 +1,20 @@
+# cargo-mutants: Mutation-Tests für die Rust-Fachlogik (ADR 0007).
+# Aufruf: `cargo mutants -p nunc-core -p nunc-store` (Ergebnis in mutants.out/)
+
+# Nur Code mit Fachlogik mutieren. Tauri-Glue und OS-Adapter sind per Mutation nicht sinnvoll testbar.
+exclude_globs = [
+  "src-tauri/**",
+  "crates/nunc-platform/**",
+  "**/tests/**",
+]
+
+# Reine Darstellungs-/Diagnosecode erzeugt Rauschen ohne Aussagekraft.
+exclude_re = [
+  "impl (Debug|Display) for",
+  "<impl Debug",
+  "<impl Display",
+]
+
+# BDD-Runner (harness = false) und Unit-Tests laufen zusammen pro Mutant.
+timeout_multiplier = 3.0
+minimum_test_timeout = 30
