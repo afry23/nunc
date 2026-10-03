@@ -13,7 +13,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
 pub fn run() {
     let builder = specta_builder();
 
-    #[cfg(debug_assertions)]
+    // Nur auf dem Entwicklungsrechner: auf Mobilgeräten existiert der Host-Pfad nicht.
+    #[cfg(all(debug_assertions, desktop))]
     export_bindings(&builder);
 
     tauri::Builder::default()
@@ -27,6 +28,7 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
+#[cfg(any(desktop, test))]
 fn export_bindings(builder: &Builder<tauri::Wry>) {
     builder
         .export(specta_typescript::Typescript::default(), BINDINGS_PATH)
@@ -37,6 +39,7 @@ fn export_bindings(builder: &Builder<tauri::Wry>) {
 mod tests {
     /// Erzeugt `src/bindings.ts` ohne die App zu starten: `cargo test -p nunc export_bindings`.
     #[test]
+    #[cfg(any(desktop, test))]
     fn export_bindings() {
         super::export_bindings(&super::specta_builder());
     }
