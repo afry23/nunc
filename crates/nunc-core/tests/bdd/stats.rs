@@ -12,10 +12,10 @@ use crate::DomainWorld;
 
 #[derive(Debug)]
 pub struct State {
-    sessions: Vec<Session>,
+    pub(crate) sessions: Vec<Session>,
     today: NaiveDate,
-    range: (NaiveDate, NaiveDate),
-    offset_hours: i32,
+    pub(crate) range: (NaiveDate, NaiveDate),
+    pub(crate) offset_hours: i32,
     result: Option<StatsResponse>,
 }
 
@@ -32,18 +32,18 @@ impl Default for State {
     }
 }
 
-fn day(text: &str) -> NaiveDate {
+pub(crate) fn day(text: &str) -> NaiveDate {
     NaiveDate::parse_from_str(text, "%Y-%m-%d")
         .unwrap_or_else(|_| panic!("Datum {text:?} ungültig"))
 }
 
-fn instant(text: &str) -> DateTime<Utc> {
+pub(crate) fn instant(text: &str) -> DateTime<Utc> {
     let naive =
         NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M").expect("Zeit YYYY-MM-DD HH:MM");
     Utc.from_utc_datetime(&naive)
 }
 
-fn rows(step: &Step) -> Vec<Vec<String>> {
+pub(crate) fn rows(step: &Step) -> Vec<Vec<String>> {
     step.table.as_ref().expect("Tabelle fehlt").rows[1..].to_vec()
 }
 
@@ -64,7 +64,7 @@ fn session(
     mode: &str,
     kind: &str,
     status: &str,
-    minutes: u32,
+    minutes: Option<u32>,
     todo: Option<i32>,
 ) -> Session {
     Session {
@@ -75,26 +75,46 @@ fn session(
         started_at: start,
         ended_at: None,
         planned_min: None,
-        actual_min: Some(minutes),
+        actual_min: minutes,
         todo_id: todo,
         break_min: None,
     }
 }
 
-/// Spalten: `start` (UTC), `mode`, `type`, `status`, `minutes`, `todo` (leer = keines).
+/// Spalten: `start` (UTC), `mode`, `type`, `status`, `minutes` (leer = unbekannt), `todo` (leer = keines),
+/// optional `end` (UTC).
 #[given("the sessions:")]
 fn sessions(world: &mut DomainWorld, step: &Step) {
-    world.stats.sessions = rows(step)
+    let table = step.table.as_ref().expect("Tabelle fehlt");
+    let header = &table.rows[0];
+    let column = |name: &str| header.iter().position(|h| h == name);
+    let need = |name: &str| column(name).unwrap_or_else(|| panic!("Spalte {name} fehlt"));
+    let (start, mode, kind, status, minutes, todo) = (
+        need("start"),
+        need("mode"),
+        need("type"),
+        need("status"),
+        need("minutes"),
+        need("todo"),
+    );
+    let end = column("end");
+
+    world.stats.sessions = table.rows[1..]
         .iter()
         .map(|row| {
-            session(
-                instant(&row[0]),
-                &row[1],
-                &row[2],
-                &row[3],
-                row[4].parse().expect("Minuten"),
-                row[5].parse().ok(),
-            )
+            let mut session = session(
+                instant(&row[start]),
+                &row[mode],
+                &row[kind],
+                &row[status],
+                row[minutes].parse().ok(),
+                row[todo].parse().ok(),
+            );
+            session.ended_at = end
+                .map(|i| row[i].as_str())
+                .filter(|text| !text.is_empty())
+                .map(instant);
+            session
         })
         .collect();
 }
@@ -109,7 +129,7 @@ fn pomodoros_on(world: &mut DomainWorld, dates: String) {
                 "pomodoro",
                 "work",
                 "completed",
-                25,
+                Some(25),
                 None,
             )
         })
