@@ -78,7 +78,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 | M0-07 | BDD-Runner Frontend | Vitest + `@testing-library/react` + `quickpickle`, Tag-Filter `@ui`; `mockIPC` aus `@tauri-apps/api/mocks` als Test-Helper; Dummy-Feature grün | M0-04 |
 | M0-08 | Mobile initialisieren | `npm run tauri android init`, `npm run tauri ios init`; `TAURI_DEV_HOST`-Setup prüfen (bereits in `vite.config.ts`); Capabilities splitten: `desktop.json` (`platforms: [macOS, windows, linux]`), `mobile.json` (`[android, iOS]`); Template-App läuft im Emulator/Simulator | M0-03 |
 | M0-09 | **Spike: Hintergrund-Timer** (Timebox 2 T.) | Prototyp: Zeitstempel-Timer + `tauri-plugin-notification` geplante Notification; App in Hintergrund → Notification pünktlich? Resume → korrekter Stand? Android Exact-Alarm-Permission prüfen. Ergebnis als ADR | M0-08 |
-| M0-10 | **Spike: SecretStore** (Timebox 2 T.) | Desktop `keyring`; iOS `keyring` (apple-native); Android: Mini-Plugin (Kotlin, Keystore). Lesen bestehender Go-Keychain-Einträge (`nunc-todoist`, WebDAV, Drive) auf macOS testen. Ergebnis als ADR | M0-08 |
+| M0-10 | **Spike: SecretStore** (Timebox 2 T.) | Desktop `keyring`; iOS `keyring` (apple-native); Android: `android-native-keyring-store` (statt eigenem Kotlin-Plugin). Go-Keychain-Einträge müssen **nicht** gelesen werden (Neustart der Konfiguration, siehe ADR 0005). Ergebnis als ADR | M0-08 |
 | M0-11 | CI | Workflow (Gitea/GitHub Actions): Lint + Tests (Linux), Build-Matrix macOS/Windows/Linux, Android-APK (Debug), iOS-Build (macOS-Runner, unsigned); Artefakt: Cucumber-Report | M0-06, M0-07 |
 | M0-12 | Projekt-Doku | `CLAUDE.md` (Architekturregeln, BDD-Workflow, Pflicht-Checks, „Do Not“-Liste aus Go-Projekt adaptiert), `docs/adr/0001…` (Tauri 2, rusqlite, specta, Timer-Modell, SecretStore, BDD-Toolchain) | M0-09, M0-10 |
 | M0-13 | Feature-Katalog | Alle Features aus `PLAN.md §2.1` als Dateien mit Szenario-Titeln anlegen (`@wip`), Story-Tags; Go-Fixtures erzeugen: `tests/fixtures/go-v5.db`, `nunc-sync.json`, WebDAV-Sync-Datei | M0-06 |
@@ -220,7 +220,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 | M7-04 | Todoist-API verifizieren | Prüfen, ob REST v2 noch gültig ist oder auf aktuelle API migriert werden muss; Ergebnis in ADR | – |
 | M7-05 | Todoist-Client & Sync | Tasks/Projekte/Labels, Mapping-Tabelle `todoist_mappings`, Close statt Delete, serialisiert, Trigger Start + nach Todo-Änderung | `todoist/sync.feature` |
 | M7-06 | Todoist-UI | Verbinden/Trennen (Bestätigung), Konto-Anzeige (E-Mail, Avatar), Status `✓ Todoist: HH:MM` / `⟳` / `⚠` | `todoist/auth.feature` |
-| M7-07 | Keychain-Kontinuität | Bestehende Go-Keychain-Einträge (Service-Namen aus `sync_drive.go`, `todoist/auth.go`) weiterverwenden → kein Re-Login nach Umstieg | `compat_go.feature` |
+| M7-07 | ~~Keychain-Kontinuität~~ | **Entfällt:** Die App ersetzt die Go-App, Konten (Drive, Todoist, WebDAV) werden neu verbunden; alte Go-Keychain-Einträge werden nicht übernommen | – |
 
 **Exit-Kriterien M7:** Feature-Parität mit `nunc-go` auf Desktop → Go-App kann abgelöst werden.
 
