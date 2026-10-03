@@ -1,0 +1,185 @@
+// Fixture-Generator: erzeugt Go-App-Daten (Schema v5) für die Rust-Tests.
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
+	"nunc/internal/db"
+	"nunc/internal/models"
+	"nunc/internal/services"
+)
+
+const deviceA = "fixture-device-a"
+const deviceB = "fixture-device-b"
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+type todoSpec struct {
+	raw         string
+	syncID      string
+	updatedAt   string
+	pomodoros   int
+	completed   bool
+	completedAt string
+	createdAt   string
+	deleted     bool
+}
+
+func main() {
+	out := os.Args[1]
+	dbPath := filepath.Join(out, "go-v5.db")
+	_ = os.Remove(dbPath)
+	_ = os.Remove(dbPath + "-wal")
+	_ = os.Remove(dbPath + "-shm")
+
+	d, err := db.OpenDB(dbPath)
+	must(err)
+
+	settings, err := services.NewSettingsService(d)
+	must(err)
+	s := settings.Get()
+	s.PomodoroMin = 30
+	s.ShortBreakMin = 6
+	s.LongBreakAfter = 3
+	s.SoundVolume = 55
+	s.FlowtimeRatio = 0.25
+	s.FlowtimeMinFlowStateMin = 20
+	s.LastBackupDate = "2026-09-29"
+	s.SyncProvider = "webdav"
+	must(settings.Save(s))
+	_, err = settings.GetOrCreateDeviceID()
+	must(err)
+	_, err = d.Exec(`UPDATE settings SET value = ? WHERE key = 'device_id'`, deviceA)
+	must(err)
+
+	todos := services.NewTodoService(d)
+	specs := []todoSpec{
+		{raw: "(A) 2026-09-20 Write quarterly report +work @desk", syncID: "t-0001", updatedAt: "2026-09-28T09:00:00Z", pomodoros: 5, createdAt: "2026-09-20"},
+		{raw: "(B) 2026-09-21 Call dentist @phone", syncID: "t-0002", updatedAt: "2026-09-27T16:30:00Z", pomodoros: 1, createdAt: "2026-09-21"},
+		{raw: "2026-09-22 Buy groceries +home @errands", syncID: "t-0003", updatedAt: "2026-09-22T08:00:00Z", createdAt: "2026-09-22"},
+		{raw: "x 2026-09-25 2026-09-18 Plan sprint +work", syncID: "t-0004", updatedAt: "2026-09-25T17:00:00Z", pomodoros: 3, completed: true, completedAt: "2026-09-25", createdAt: "2026-09-18"},
+		{raw: "(C) Read Rust book +learning +rust @evening", syncID: "t-0005", updatedAt: "2026-09-24T20:00:00Z", pomodoros: 2},
+		{raw: "Old idea that was deleted", syncID: "t-0006", updatedAt: "2026-09-23T12:00:00Z", deleted: true},
+	}
+	var added []models.Todo
+	for _, sp := range specs {
+		t, err := todos.Add(sp.raw)
+		must(err)
+		added = append(added, t)
+		if sp.completed {
+			_, err = todos.SetCompleted(t.ID, true)
+			must(err)
+		}
+		deleted := 0
+		if sp.deleted {
+			deleted = 1
+		}
+		_, err = d.Exec(`UPDATE todos SET raw_text=?, sync_id=?, updated_at=?, pomodoro_count=?, deleted=?,
+			created_at=NULLIF(?, ''), completed_at=NULLIF(?, '') WHERE id=?`,
+			sp.raw, sp.syncID, sp.updatedAt, sp.pomodoros, deleted, sp.createdAt, sp.completedAt, t.ID)
+		must(err)
+	}
+
+	type sess struct {
+		mode, typ, status, start, end string
+		planned, actual, brk          int
+		todo                          int
+	}
+	sessions := []sess{
+		{"pomodoro", "work", "completed", "2026-09-22T09:00:00Z", "2026-09-22T09:30:00Z", 30, 30, 6, 1},
+		{"pomodoro", "short_break", "completed", "2026-09-22T09:30:00Z", "2026-09-22T09:36:00Z", 6, 6, 0, 0},
+		{"pomodoro", "work", "completed", "2026-09-22T09:40:00Z", "2026-09-22T10:10:00Z", 30, 30, 6, 1},
+		{"pomodoro", "work", "aborted", "2026-09-23T14:00:00Z", "2026-09-23T14:08:00Z", 30, 8, 0, 2},
+		{"pomodoro", "work", "completed", "2026-09-24T08:00:00Z", "2026-09-24T08:30:00Z", 30, 30, 6, 1},
+		{"pomodoro", "work", "completed", "2026-09-25T10:00:00Z", "2026-09-25T10:30:00Z", 30, 30, 6, 4},
+		{"pomodoro", "work", "completed", "2026-09-25T10:36:00Z", "2026-09-25T11:06:00Z", 30, 30, 25, 4},
+		{"pomodoro", "long_break", "skipped", "2026-09-25T11:06:00Z", "2026-09-25T11:10:00Z", 25, 4, 0, 0},
+		{"flowtime", "work", "completed", "2026-09-26T09:00:00Z", "2026-09-26T09:50:00Z", 0, 50, 12, 1},
+		{"flowtime", "work", "completed", "2026-09-27T13:00:00Z", "2026-09-27T13:12:00Z", 0, 12, 0, 5},
+		{"flowtime", "work", "completed", "2026-09-28T09:00:00Z", "2026-09-28T10:00:00Z", 0, 60, 15, 1},
+	}
+	for _, x := range sessions {
+		var todo any
+		if x.todo != 0 {
+			todo = x.todo
+		}
+		_, err = d.Exec(`INSERT INTO sessions (mode, session_type, status, started_at, ended_at, planned_min, actual_min, todo_id, break_min, sync_device_id)
+			VALUES (?,?,?,?,?,?,?,?,?,?)`, x.mode, x.typ, x.status, x.start, x.end, x.planned, x.actual, todo, x.brk, deviceA)
+		must(err)
+	}
+	_, err = d.Exec(`UPDATE schema_migrations SET applied_at = '2026-09-01 00:00:00'`)
+	must(err)
+	_, err = d.Exec(`PRAGMA wal_checkpoint(TRUNCATE)`)
+	must(err)
+	must(d.Close())
+
+	// Sync-Datei von Gerät A (Format wie sync.go/sync_webdav.go, MarshalIndent)
+	var syncTodos []models.SyncTodo
+	for i, sp := range specs {
+		t := added[i]
+		completedAt := sp.completedAt
+		syncTodos = append(syncTodos, models.SyncTodo{
+			SyncID: sp.syncID, DeviceID: deviceA, RawText: sp.raw, Priority: t.Priority,
+			Completed: sp.completed, CompletedAt: completedAt, CreatedAt: sp.createdAt,
+			Description: t.Description, ProjectTags: nz(t.ProjectTags), ContextTags: nz(t.ContextTags),
+			PomodoroCount: sp.pomodoros, Position: i + 1, UpdatedAt: sp.updatedAt, Deleted: sp.deleted,
+		})
+	}
+	var syncSessions []models.SyncSession
+	for _, x := range sessions {
+		syncSessions = append(syncSessions, models.SyncSession{
+			DeviceID: deviceA, Mode: x.mode, SessionType: x.typ, Status: x.status,
+			StartedAt: x.start, EndedAt: x.end, PlannedMin: x.planned, ActualMin: x.actual, BreakMin: x.brk,
+		})
+	}
+	write(filepath.Join(out, "nunc-sync.json"), models.SyncFile{
+		SchemaVersion: 1, SyncedAt: mustTime("2026-09-29T07:00:00Z"), DeviceID: deviceA,
+		Todos: syncTodos, Sessions: syncSessions,
+	})
+
+	// WebDAV-Sync-Datei von Gerät B: Konflikte (t-0002 neuer, t-0003 älter), neues Todo, gelöschtes Todo, neue Sessions
+	b := []models.SyncTodo{
+		{SyncID: "t-0002", DeviceID: deviceB, RawText: "(A) 2026-09-21 Call dentist tomorrow @phone", Priority: "A", CreatedAt: "2026-09-21", Description: "Call dentist tomorrow", ProjectTags: []string{}, ContextTags: []string{"@phone"}, PomodoroCount: 1, Position: 2, UpdatedAt: "2026-09-29T08:00:00Z"},
+		{SyncID: "t-0003", DeviceID: deviceB, RawText: "2026-09-22 Buy groceries", CreatedAt: "2026-09-22", Description: "Buy groceries", ProjectTags: []string{}, ContextTags: []string{}, Position: 3, UpdatedAt: "2026-09-21T08:00:00Z"},
+		{SyncID: "t-0005", DeviceID: deviceB, RawText: "(C) Read Rust book +learning +rust @evening", Priority: "C", Description: "Read Rust book", ProjectTags: []string{"+learning", "+rust"}, ContextTags: []string{"@evening"}, PomodoroCount: 2, Position: 5, UpdatedAt: "2026-09-29T09:00:00Z", Deleted: true},
+		{SyncID: "t-0100", DeviceID: deviceB, RawText: "2026-09-29 Water the plants @home", CreatedAt: "2026-09-29", Description: "Water the plants", ProjectTags: []string{}, ContextTags: []string{"@home"}, Position: 7, UpdatedAt: "2026-09-29T06:30:00Z"},
+	}
+	bs := []models.SyncSession{
+		{DeviceID: deviceB, Mode: "pomodoro", SessionType: "work", Status: "completed", StartedAt: "2026-09-29T06:00:00Z", EndedAt: "2026-09-29T06:25:00Z", PlannedMin: 25, ActualMin: 25, BreakMin: 5},
+		{DeviceID: deviceB, Mode: "pomodoro", SessionType: "short_break", Status: "completed", StartedAt: "2026-09-29T06:25:00Z", EndedAt: "2026-09-29T06:30:00Z", PlannedMin: 5, ActualMin: 5},
+	}
+	// eine Session, die Gerät A schon kennt (Duplikat, darf nicht doppelt erscheinen)
+	bs = append(bs, syncSessions[0])
+	must(os.MkdirAll(filepath.Join(out, "webdav"), 0o755))
+	write(filepath.Join(out, "webdav", "nunc-sync.json"), models.SyncFile{
+		SchemaVersion: 1, SyncedAt: mustTime("2026-09-29T09:05:00Z"), DeviceID: deviceB, Todos: b, Sessions: bs,
+	})
+	fmt.Println("ok")
+}
+
+func nz(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
+
+func write(path string, v any) {
+	data, err := json.MarshalIndent(v, "", "  ")
+	must(err)
+	must(os.WriteFile(path, append(data, '\n'), 0o644))
+}
+
+func mustTime(v string) time.Time {
+	t, err := time.Parse(time.RFC3339, v)
+	must(err)
+	return t
+}
