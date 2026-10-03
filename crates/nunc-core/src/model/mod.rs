@@ -8,7 +8,7 @@ mod timer;
 mod todo;
 
 pub use session::{Session, SessionStatus, SessionType};
-pub use settings::{Settings, SyncProvider};
+pub use settings::{Settings, SettingsIssue, SyncProvider};
 pub use stats::{
     ContextStats, DailyStats, MonthlyStats, ProjectStats, StatsPeriod, StatsRequest, StatsResponse,
     TodoStats, WeekdayStats,
