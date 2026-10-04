@@ -104,12 +104,10 @@ jobs:
 
       - run: npm run tauri build -- --debug --no-bundle
 
-  # Desktop-E2E-Smoke (WebdriverIO + tauri-driver, Linux). Noch nicht auf CI verifiziert: bis der erste Lauf
-  # grün ist, blockiert der Job den Merge nicht.
+  # Desktop-E2E-Smoke (WebdriverIO + tauri-driver, Linux)
   e2e-desktop:
     needs: checks
     runs-on: ubuntu-24.04
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
