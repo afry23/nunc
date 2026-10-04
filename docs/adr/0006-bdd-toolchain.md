@@ -30,7 +30,14 @@ Festlegungen aus der Einrichtung:
 - **Backend-Mock im UI-Test:** `tests/helpers/ipc.ts` (`mockBackend`, `resetBackend`) – unbekannte Commands werfen,
   damit fehlende Mocks auffallen.
 - Reports als CI-Artefakt `cucumber-report` (`target/bdd/domain.json`, `ui.xml`) für die Living Documentation.
-- Rust-Unit-Tests und `proptest` ergänzen, wo Gherkin zu kleinteilig wäre (Parser-Roundtrip, Merge-Eigenschaften).
+- Rust-Unit-Tests ergänzen, wo Gherkin zu kleinteilig wäre.
+- **Eigenschaftstests:** Szenarien mit `@property` nennen die Eigenschaft und die Zahl der Fälle
+  (`Then the property "merging todos is idempotent" holds for 200 random cases`); die Strategien und Regeln liegen
+  in `crates/nunc-core/tests/bdd/properties.rs` (proptest, `failure_persistence` aus). Ein Gegenbeispiel steht
+  verkleinert in der Fehlermeldung und gehört dann als konkretes Beispiel in das passende Feature. Aktuell:
+  todo.txt-Roundtrip und Stabilität für beliebigen Text, Merge (idempotent, kommutativ bei verschiedenen
+  Zeitpunkten, nie älter, keine verlorene Identität), Serien, Rotation, Timer (zufällige Befehlsfolgen), CSV-Rücklesen,
+  Statistik (reihenfolgeunabhängig). Sie laufen im normalen BDD-Lauf mit und damit auch bei jedem Mutanten.
 
 Alternativen: reine `#[test]`-Tabellen (keine gemeinsame, lesbare Spezifikation), Cypress-Cucumber/Playwright
 (schwer mit Tauri-IPC), `cucumber-js` (zweite Runner-Welt neben Vitest).

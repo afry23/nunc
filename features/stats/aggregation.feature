@@ -185,6 +185,10 @@ Feature: Statistics aggregation
     When I calculate the statistics
     Then there are no statistics
 
+  @domain @property @REQ-10
+  Scenario: The statistics do not depend on the order of the sessions
+    Then the property "the statistics do not depend on the order of the sessions" holds for 150 random cases
+
   @integration @REQ-10 @wip
   Scenario: An empty database yields zeroed statistics
 
