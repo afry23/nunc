@@ -290,8 +290,20 @@ Feature: Sync merge
       | dev-b | 2026-03-01T10:00:00Z | 25 |
     And 1 sessions are new from the remote
 
-  @domain @US-S04 @property @wip
+  @domain @property @US-S04
   Scenario: Merging is idempotent
+    Then the property "merging todos is idempotent" holds for 200 random cases
+    And the property "merging sessions is idempotent" holds for 200 random cases
 
-  @domain @US-S04 @property @wip
+  @domain @property @US-S04
   Scenario: Merging is commutative apart from conflict counts
+    Then the property "merging todos is commutative for distinct timestamps" holds for 200 random cases
+    And the property "merging sessions is commutative for unique sessions" holds for 200 random cases
+
+  @domain @property @US-S04
+  Scenario: A merged todo is never older than either version
+    Then the property "a merged todo is never older than either version" holds for 200 random cases
+
+  @domain @property @US-S04
+  Scenario: A merge keeps every identity
+    Then the property "a merge keeps every identity" holds for 200 random cases

@@ -75,7 +75,7 @@ Zeitstempel neu berechnet. Tick-Events (`timer:tick`) sind nur Anzeige im Vorder
 4. `@wip` entfernen, Pflicht-Checks ausführen, committen.
 
 Tags: `@domain` (Rust, pure), `@integration` (Rust, In-Memory-SQLite + wiremock), `@ui` (Vitest, `mockIPC`),
-`@e2e`, `@desktop`/`@mobile`, `@wip`. `@wip`-Szenarien werden von den Runnern übersprungen. Keine
+`@e2e`, `@desktop`/`@mobile`, `@property` (Eigenschaftstest über zufällige Eingaben, ADR 0006), `@wip`. `@wip`-Szenarien werden von den Runnern übersprungen. Keine
 undefined/pending Steps (der Rust-Runner bricht bei übersprungenen Steps ab).
 
 ```bash

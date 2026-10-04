@@ -8,6 +8,7 @@ use cucumber::{World, WriterExt as _, given, then, when, writer};
 
 mod backup;
 mod export;
+mod properties;
 mod settings;
 mod stats;
 mod sync_merge;

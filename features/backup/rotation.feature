@@ -121,3 +121,7 @@ Feature: Backup rotation
       | 1   | nunc-backup-2025-06-01.db                       |
       | 2   |                                                 |
       | 3   |                                                 |
+
+  @domain @property @US-B02
+  Scenario: Rotation keeps exactly the newest backups
+    Then the property "rotation keeps exactly the newest backups" holds for 300 random cases

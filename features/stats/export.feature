@@ -147,6 +147,10 @@ Feature: Session export
       2025-06-02,01:30:00,01:55:00,25,pomodoro,completed,,,,work
       """
 
+  @domain @property @REQ-11
+  Scenario: The CSV export can be read back for any text
+    Then the property "the CSV export can be read back for any text" holds for 200 random cases
+
   @ui @REQ-11 @wip
   Scenario: The export button offers CSV and JSON
 

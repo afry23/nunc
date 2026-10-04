@@ -310,6 +310,10 @@ Feature: Pomodoro timer
     And the timer ticks
     Then nothing starts automatically
 
+  @domain @property @REQ-2.1
+  Scenario: Random commands keep the timer consistent
+    Then the property "random commands keep the timer consistent" holds for 150 random cases
+
   @ui @REQ-3 @wip
   Scenario: The ring shows the remaining time as MM:SS
 

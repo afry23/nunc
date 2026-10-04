@@ -185,3 +185,11 @@ Feature: todo.txt parsing and serialization
       | x 2025-01-15 Call dentist @phone            |
       | x Call dentist                              |
       | Plan  trip   with  spaces +a @b             |
+
+  @domain @property @REQ-4.1
+  Scenario: Any well-formed todo survives serializing and parsing
+    Then the property "any well-formed todo survives serializing and parsing" holds for 300 random cases
+
+  @domain @property @REQ-4.1
+  Scenario: Parsing and serializing is stable for any text
+    Then the property "parsing and serializing is stable for any text" holds for 300 random cases
