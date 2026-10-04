@@ -16,6 +16,7 @@ mod timer;
 mod todo_query;
 mod todoist;
 mod todotxt;
+mod todotxt_file;
 
 /// Gemeinsamer Zustand aller `@domain`-Szenarien. Jeder Themenbereich legt seine Felder hier ab und
 /// definiert seine Steps in einem eigenen Modul.
@@ -31,6 +32,7 @@ pub struct DomainWorld {
     todo_query: todo_query::State,
     todoist: todoist::State,
     todotxt: todotxt::State,
+    todotxt_file: todotxt_file::State,
 }
 
 #[given(expr = "the number {int}")]

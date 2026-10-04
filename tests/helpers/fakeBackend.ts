@@ -103,6 +103,9 @@ export interface FakeBackend extends BackendMock {
   permissionAnswer: "granted" | "denied";
   /** Ergebnis von `save_export_to_file` (`null` = Dialog abgebrochen). */
   exportPath: string | null;
+  /** Ergebnis von `import_todotxt_file` (`null` = Dialog abgebrochen) und von `save_todotxt_file`. */
+  todotxtImport: { added: number; duplicates: number } | null;
+  todotxtExportPath: string | null;
   /** Backups im Backup-Ordner (neueste zuerst); Status und Liste leiten sich daraus ab. */
   backups: BackupEntry[];
   /** Todo-Zeilen je Backup-Pfad, die ein Restore einspielt. */
@@ -182,6 +185,8 @@ export function createFakeBackend(): FakeBackend {
     stats: { ...EMPTY_STATS },
     suggestedBreak: null,
     exportPath: "/tmp/export.csv" as string | null,
+    todotxtImport: null as { added: number; duplicates: number } | null,
+    todotxtExportPath: null as string | null,
     notificationPermission: "granted",
     permissionAnswer: "granted",
     backups: [],
@@ -393,6 +398,8 @@ export function createFakeBackend(): FakeBackend {
     get_suggested_break: () => fake.suggestedBreak,
     get_stats: () => fake.stats,
     save_export_to_file: () => fake.exportPath,
+    import_todotxt_file: () => fake.todotxtImport,
+    save_todotxt_file: () => fake.todotxtExportPath,
     show_main_window: () => null,
     get_backup_status: () => backupStatus(fake.backups, fake.backupsOutdated),
     list_backups: () => fake.backups,

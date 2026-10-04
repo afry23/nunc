@@ -46,6 +46,8 @@ export function TodoView() {
     setShowCompleted,
     setSort,
     reorderVisible,
+    importFile,
+    exportFile,
   } = useTodoStore.getState();
   const [draft, setDraft] = useState("");
 
@@ -103,7 +105,9 @@ export function TodoView() {
           </h1>
           <p className="text-on-surface-variant">{t("todos.subtitle")}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => void importFile()}>{t("todos.import")}</Button>
+          <Button onClick={() => void exportFile()}>{t("todos.export")}</Button>
           <label htmlFor="todo-sort" className="sr-only">
             {t("todos.sort.label")}
           </label>

@@ -6,7 +6,8 @@ import {
   type Todo,
   type TodoSort,
 } from "../lib/api";
-import { mergeOrder, moveItem } from "../lib/todos";
+import { t } from "../i18n";
+import { describeImport, mergeOrder, moveItem } from "../lib/todos";
 import { useUiStore } from "./uiStore";
 
 export type TodoFilterState = {
@@ -49,6 +50,10 @@ interface TodoStoreState {
   clearFilters: () => Promise<void>;
   setShowCompleted: (show: boolean) => Promise<void>;
   setSort: (sort: TodoSort, direction?: SortDirection) => Promise<void>;
+  /** Fragt nach einer todo.txt-Datei und legt ihre neuen Zeilen an; zeigt das Ergebnis als Hinweis. */
+  importFile: () => Promise<void>;
+  /** Speichert alle Aufgaben in eine todo.txt-Datei; zeigt den Pfad als Hinweis. */
+  exportFile: () => Promise<void>;
 }
 
 export const useTodoStore = create<TodoStoreState>((set, get) => {
@@ -98,6 +103,19 @@ export const useTodoStore = create<TodoStoreState>((set, get) => {
     sort: "manual",
     direction: "ascending",
     load: () => guard(reload),
+    importFile: () =>
+      guard(async () => {
+        const result = await unwrap(commands.importTodotxtFile());
+        if (!result) return;
+        useUiStore.getState().notify(describeImport(result));
+        await reload();
+      }),
+    exportFile: () =>
+      guard(async () => {
+        const path = await unwrap(commands.saveTodotxtFile());
+        if (path)
+          useUiStore.getState().notify(t("todos.exportSaved", { path }));
+      }),
     add: async (rawText) => {
       try {
         await unwrap(commands.addTodo(rawText));

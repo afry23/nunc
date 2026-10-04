@@ -1,4 +1,5 @@
-import type { Todo } from "../bindings";
+import type { Todo, TodoImportResult } from "../bindings";
+import { t } from "../i18n";
 
 export type Segment = { text: string; kind: "plain" | "project" | "context" };
 
@@ -86,4 +87,16 @@ export function priorityTone(
   if (priority === "A") return "high";
   if (priority === "B") return "medium";
   return priority ? "low" : "none";
+}
+
+/** Meldung zum Ergebnis eines Imports: „3 Aufgaben importiert, 1 Duplikat übersprungen.“ */
+export function describeImport({
+  added,
+  duplicates,
+}: TodoImportResult): string {
+  if (added === 0 && duplicates === 0) return t("todos.import.none");
+  const parts = [t("todos.import.added", { count: added })];
+  if (duplicates > 0)
+    parts.push(t("todos.import.duplicates", { count: duplicates }));
+  return `${parts.join(", ")}.`;
 }

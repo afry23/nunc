@@ -18,6 +18,7 @@ mod compat;
 mod legacy;
 mod settings;
 mod todos;
+mod todotxt_file;
 
 /// Gemeinsamer Zustand der `@integration`-Szenarien.
 #[derive(Debug, Default, World)]
@@ -36,6 +37,7 @@ pub struct StoreWorld {
     sync_counter: u32,
     backup: backup::State,
     legacy: legacy::State,
+    todotxt: todotxt_file::State,
 }
 
 /// Uhrzeit `HH:MM:SS` am festen Testtag (UTC).

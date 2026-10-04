@@ -9,6 +9,7 @@ pub mod stats;
 pub mod sync;
 pub mod timer;
 pub mod todos;
+pub mod todotxt;
 
 #[cfg(test)]
 mod tests;

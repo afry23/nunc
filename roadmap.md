@@ -357,6 +357,12 @@ Play-Console- und TestFlight-Upload, Windows-/Mobil-Messung, Maestro. Entscheidu
 
 ---
 
+## Erweiterungen nach M8
+
+| Thema | Notiz |
+|---|---|
+| todo.txt Import/Export (`@REQ-4.4`) | Dateidialog in der Aufgaben-Ansicht (Desktop und Mobil), Import fügt nur neue Zeilen an (Dubletten über den Zeilentext, Leerzeilen, BOM und `\r\n` werden toleriert, UTF-8, höchstens 5 MB), Export schreibt alle aktiven Aufgaben in manueller Reihenfolge. Kern: `nunc-core::todotxt_file`, Store: `import_todotxt` (eine Transaktion), Commands `import_todotxt_file`/`save_todotxt_file`. Die Dialoge sind nicht per Mock-Runtime testbar (manuell prüfen, besonders `content://`-Ziele auf Android). |
+
 ## Nach 1.0 (Backlog)
 
 | Thema | Notiz |

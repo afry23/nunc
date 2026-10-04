@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Todo } from "../bindings";
 import {
+  describeImport,
   collectTags,
   mergeOrder,
   moveItem,
@@ -91,5 +92,31 @@ describe("priorityTone", () => {
     expect(priorityTone("B")).toBe("medium");
     expect(priorityTone("C")).toBe("low");
     expect(priorityTone(null)).toBe("none");
+  });
+});
+
+describe("describeImport", () => {
+  it("nennt neue Aufgaben und Duplikate in der richtigen Zahl", () => {
+    expect(describeImport({ added: 3, duplicates: 1 })).toBe(
+      "3 Aufgaben importiert, 1 Duplikat übersprungen.",
+    );
+    expect(describeImport({ added: 1, duplicates: 2 })).toBe(
+      "1 Aufgabe importiert, 2 Duplikate übersprungen.",
+    );
+  });
+
+  it("lässt die Duplikate weg, wenn es keine gab", () => {
+    expect(describeImport({ added: 2, duplicates: 0 })).toBe(
+      "2 Aufgaben importiert.",
+    );
+  });
+
+  it("meldet eine Datei ohne neue Zeilen", () => {
+    expect(describeImport({ added: 0, duplicates: 0 })).toBe(
+      "Die Datei enthält keine neuen Aufgaben.",
+    );
+    expect(describeImport({ added: 0, duplicates: 4 })).toBe(
+      "0 Aufgaben importiert, 4 Duplikate übersprungen.",
+    );
   });
 });
