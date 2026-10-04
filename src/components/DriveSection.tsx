@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 import { openExternal } from "../lib/links";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useSyncStore } from "../stores/syncStore";
@@ -5,6 +6,7 @@ import { Button, Toggle } from "./ui";
 
 /** Verbindung zu Google Drive: anmelden, abmelden, pausieren, Ablageort (nur Desktop). */
 export function DriveSection() {
+  const t = useT();
   const drive = useSyncStore((s) => s.drive);
   const connecting = useSyncStore((s) => s.connecting);
   const error = useSyncStore((s) => s.connectError);
@@ -18,10 +20,10 @@ export function DriveSection() {
       <h3 className="font-semibold">Google Drive</h3>
       {!drive.connected ? (
         <>
-          <p data-testid="drive-state">Nicht verbunden</p>
+          <p data-testid="drive-state">{t("drive.notConnected")}</p>
           {!drive.configured && (
             <p className="text-sm text-orange-300">
-              In diesem Build sind keine Google-Zugangsdaten hinterlegt.
+              {t("drive.noCredentials")}
             </p>
           )}
           {error && (
@@ -36,27 +38,23 @@ export function DriveSection() {
               aria-busy={connecting}
               onClick={() => void connectDrive()}
             >
-              {connecting
-                ? "Warte auf den Browser …"
-                : "Mit Google Drive verbinden"}
+              {connecting ? t("drive.waiting") : t("drive.connect")}
             </Button>
           </div>
         </>
       ) : (
         <>
           <p data-testid="drive-state">
-            {drive.email ? `Verbunden als ${drive.email}` : "Verbunden"}
+            {drive.email
+              ? t("drive.connectedAs", { email: drive.email })
+              : t("drive.connected")}
           </p>
           <p className="text-sm text-on-surface-variant">
-            Ablage in Google Drive: nunc/nunc-sync.json
+            {t("drive.location")}
           </p>
           <Toggle
-            label="Synchronisierung aktiv"
-            description={
-              enabled
-                ? undefined
-                : "Pausiert: Lokale Daten bleiben erhalten. Die Sync-Datei auf Google Drive wird nicht gelöscht."
-            }
+            label={t("drive.syncEnabled")}
+            description={enabled ? undefined : t("drive.paused")}
             checked={enabled}
             onChange={(value) => void patch({ syncEnabled: value })}
           />
@@ -66,11 +64,11 @@ export function DriveSection() {
                 variant="ghost"
                 onClick={() => void openExternal(drive.folderUrl ?? "")}
               >
-                In Drive öffnen
+                {t("drive.open")}
               </Button>
             )}
             <Button variant="danger" onClick={() => void disconnectDrive()}>
-              Verbindung trennen
+              {t("drive.disconnect")}
             </Button>
           </div>
         </>

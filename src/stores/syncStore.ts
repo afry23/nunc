@@ -1,5 +1,7 @@
 import { create } from "zustand";
+import { t } from "../i18n";
 import {
+  errorMessage,
   commands,
   unwrap,
   type ConnectionTestResult,
@@ -105,7 +107,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       await get().loadDrive();
     } catch (error) {
       set({
-        connectError: error instanceof Error ? error.message : "Fehler",
+        connectError:
+          error instanceof Error ? errorMessage(error) : t("common.error"),
       });
     } finally {
       set({ connecting: false });
@@ -124,8 +127,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     set({ importOffer: { ...offer, phase: "running" } });
     const result = await get().syncNow();
     const summary = result
-      ? (describeSyncResult(result) ?? "Es gab nichts zu importieren.")
-      : "Der Import ist fehlgeschlagen. Die Meldung steht in der Statusleiste.";
+      ? (describeSyncResult(result) ?? t("sync.import.nothing"))
+      : t("sync.import.failed");
     set({ importOffer: { ...offer, phase: "done", summary } });
     await get().loadDrive();
   },

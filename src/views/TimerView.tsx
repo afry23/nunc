@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Button, Segmented } from "../components/ui";
+import { useT } from "../i18n";
 import { NotificationHint } from "../components/NotificationHint";
 import { RingTimer } from "../components/RingTimer";
 import type { TimerMode } from "../lib/api";
@@ -9,12 +10,12 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
 
-const MODES: { value: TimerMode; label: string }[] = [
-  { value: "pomodoro", label: "Pomodoro" },
-  { value: "flowtime", label: "Flowtime" },
-];
-
 export function TimerView() {
+  const t = useT();
+  const modes: { value: TimerMode; label: string }[] = [
+    { value: "pomodoro", label: t("timer.mode.pomodoro") },
+    { value: "flowtime", label: t("timer.mode.flowtime") },
+  ];
   const snapshot = useTimerStore((s) => s.snapshot);
   const suggestedBreak = useTimerStore((s) => s.suggestedBreak);
   // solange der Dialog den Vorschlag zeigt, entfällt der Hinweis darunter
@@ -56,15 +57,15 @@ export function TimerView() {
       className="mx-auto flex max-w-xl flex-col items-center gap-8 px-6 py-10"
     >
       <h1 id="timer-heading" className="sr-only">
-        Timer
+        {t("timer.title")}
       </h1>
 
       <NotificationHint />
 
       <Segmented
-        label="Timer-Modus"
+        label={t("timer.mode.label")}
         value={mode}
-        options={MODES}
+        options={modes}
         disabled={!idle}
         onChange={(value) => void patchSettings({ activeMode: value })}
       />
@@ -78,7 +79,7 @@ export function TimerView() {
             className="min-w-48 py-4 text-lg"
             onClick={() => void start(mode)}
           >
-            Start
+            {t("timer.start")}
           </Button>
         )}
         {snapshot.state === "running" && (
@@ -87,7 +88,7 @@ export function TimerView() {
             className="min-w-36"
             onClick={() => void pause()}
           >
-            Pause
+            {t("timer.pause")}
           </Button>
         )}
         {snapshot.state === "paused" && (
@@ -96,7 +97,7 @@ export function TimerView() {
             className="min-w-36"
             onClick={() => void resume()}
           >
-            Fortsetzen
+            {t("timer.resume")}
           </Button>
         )}
         {!idle && (
@@ -105,7 +106,7 @@ export function TimerView() {
             className="min-w-36"
             onClick={() => void stop()}
           >
-            {onBreak ? "Überspringen" : "Stop"}
+            {onBreak ? t("timer.skip") : t("timer.stop")}
           </Button>
         )}
       </div>
@@ -113,13 +114,16 @@ export function TimerView() {
       {idle && suggestedBreak && !dialogOpen && (
         <div className="flex w-full items-center justify-between gap-4 rounded-xl bg-surface-container-low p-4">
           <p>
-            Empfohlene Pause: <strong>{suggestedBreak.minutes} Minuten</strong>{" "}
+            {t("timer.suggested")}{" "}
+            <strong>
+              {t("timer.minutes", { count: suggestedBreak.minutes })}
+            </strong>{" "}
             <span className="text-on-surface-variant">
               ({sessionLabel(mode, suggestedBreak.sessionType)})
             </span>
           </p>
           <Button variant="secondary" onClick={() => void startBreak()}>
-            Pause starten
+            {t("timer.startBreak")}
           </Button>
         </div>
       )}
@@ -129,7 +133,7 @@ export function TimerView() {
           htmlFor="active-todo"
           className="label-md mb-2 block text-center text-on-surface-variant"
         >
-          Aktive Aufgabe
+          {t("timer.activeTodo")}
         </label>
         {idle ? (
           <select
@@ -142,7 +146,7 @@ export function TimerView() {
             }
             className="min-h-12 w-full rounded-lg bg-surface-container-highest px-4 text-on-surface focus:bg-secondary-container"
           >
-            <option value="">Keine Aufgabe</option>
+            <option value="">{t("timer.noTodo")}</option>
             {openTodos.map((todo) => (
               <option key={todo.id} value={todo.id}>
                 {titleOf(todo)}
@@ -155,7 +159,7 @@ export function TimerView() {
             id="active-todo"
             className="min-h-12 rounded-lg bg-surface-container-low px-4 py-3 text-center"
           >
-            {activeTodo ? titleOf(activeTodo) : "Keine Aufgabe"}
+            {activeTodo ? titleOf(activeTodo) : t("timer.noTodo")}
           </p>
         )}
       </div>

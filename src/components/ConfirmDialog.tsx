@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useT } from "../i18n";
 import { Button } from "./ui";
 
 /** Bestätigungsdialog (modal). Escape und „Abbrechen“ schließen ohne Wirkung; der Fokus liegt zuerst auf „Abbrechen“. */
@@ -19,6 +20,7 @@ export function ConfirmDialog({
   onCancel: () => void;
   children: ReactNode;
 }) {
+  const t = useT();
   const titleId = useId();
   const cancel = useRef<HTMLButtonElement>(null);
   useEffect(() => cancel.current?.focus(), []);
@@ -45,7 +47,7 @@ export function ConfirmDialog({
         </div>
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button ref={cancel} variant="ghost" onClick={onCancel}>
-            Abbrechen
+            {t("common.cancel")}
           </Button>
           <Button
             variant={danger ? "danger" : "primary"}

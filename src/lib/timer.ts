@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import type { SessionType, TimerMode, TimerSnapshot } from "../bindings";
 
 /** CSS-Farbe (Design-Token) je Modus und Sessiontyp. */
@@ -17,9 +18,9 @@ export function sessionLabel(
   mode: TimerMode,
   sessionType: SessionType,
 ): string {
-  if (sessionType === "short_break") return "Kurze Pause";
-  if (sessionType === "long_break") return "Lange Pause";
-  return mode === "flowtime" ? "Flowtime" : "Fokus";
+  if (sessionType === "short_break") return t("session.shortBreak");
+  if (sessionType === "long_break") return t("session.longBreak");
+  return mode === "flowtime" ? t("session.flowtime") : t("session.focus");
 }
 
 /** Fortschritt des Rings 0–1. Countdown: verstrichener Anteil; Stoppuhr: aktuelle Stunde. */
@@ -41,14 +42,14 @@ export function ringDash(radius: number, progress: number): string {
 
 /** Ansage für Screenreader; ändert sich nur pro Minute, damit nicht jede Sekunde vorgelesen wird. */
 export function spokenRemaining(snapshot: TimerSnapshot): string {
-  if (snapshot.state === "idle") return "Timer bereit";
-  const minutes = Math.floor(snapshot.remaining / 60);
-  const unit = minutes === 1 ? "Minute" : "Minuten";
+  if (snapshot.state === "idle") return t("timer.spoken.idle");
+  const count = Math.floor(snapshot.remaining / 60);
   const what = sessionLabel(snapshot.mode, snapshot.sessionType);
-  const paused = snapshot.state === "paused" ? ", pausiert" : "";
-  if (snapshot.total === 0)
-    return `${what}: ${minutes} ${unit} gelaufen${paused}`;
-  return `${what}: noch ${minutes} ${unit}${paused}`;
+  const paused = snapshot.state === "paused" ? t("timer.spoken.paused") : "";
+  return t(
+    snapshot.total === 0 ? "timer.spoken.elapsed" : "timer.spoken.remaining",
+    { what, count, paused },
+  );
 }
 
 /** Ringdurchmesser des Mini-Timers: passt in das Fenster (Platz für Tasten darunter), 90–200 px. */

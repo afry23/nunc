@@ -5,18 +5,26 @@ import { NotificationHint } from "../components/NotificationHint";
 import { SyncSection } from "../components/SyncSection";
 import { TodoistSection } from "../components/TodoistSection";
 import { Button, SectionLabel, Toggle } from "../components/ui";
-import { LANGUAGES, useT, type LanguageSetting } from "../i18n";
+import {
+  LANGUAGES,
+  t as translateNow,
+  useT,
+  type LanguageSetting,
+} from "../i18n";
 import type { Settings } from "../lib/api";
 import { ratioAnchor, ratioBadge } from "../lib/format";
 import { isMobile } from "../lib/platform";
-import { SOUND_LABELS, SOUND_NAMES, playSound } from "../lib/sound";
+import { soundLabel, SOUND_NAMES, playSound } from "../lib/sound";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useUiStore } from "../stores/uiStore";
 
 export function SettingsView() {
+  const t = useT();
   const stored = useSettingsStore((s) => s.settings);
   if (!stored)
-    return <p className="p-10 text-on-surface-variant">Lade Einstellungen …</p>;
+    return (
+      <p className="p-10 text-on-surface-variant">{t("settings.loading")}</p>
+    );
   // `key` setzt den Entwurf zurück, sobald andere Werte gespeichert sind (z. B. nach einem Restore)
   return (
     <>
@@ -41,7 +49,8 @@ function SettingsForm({ stored }: { stored: Settings }) {
     setDraft((d) => ({ ...d, [key]: value }));
 
   const submit = async (): Promise<void> => {
-    if (await save(draft)) notify("Einstellungen gespeichert.");
+    // nach dem Speichern gilt eventuell eine neue Sprache: den aktuellen Stand benutzen, nicht den alten `t`
+    if (await save(draft)) notify(translateNow("settings.saved"));
   };
 
   return (
@@ -55,17 +64,17 @@ function SettingsForm({ stored }: { stored: Settings }) {
     >
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <SectionLabel>Konfiguration</SectionLabel>
+          <SectionLabel>{t("settings.eyebrow")}</SectionLabel>
           <h1 id="settings-heading" className="headline-md">
-            Einstellungen
+            {t("settings.title")}
           </h1>
         </div>
         <div className="flex gap-2">
           <Button disabled={!dirty} onClick={() => setDraft(stored)}>
-            Verwerfen
+            {t("settings.discard")}
           </Button>
           <Button type="submit" variant="primary" disabled={!dirty}>
-            Speichern
+            {t("common.save")}
           </Button>
         </div>
       </header>
@@ -79,27 +88,27 @@ function SettingsForm({ stored }: { stored: Settings }) {
         </p>
       )}
 
-      <Section title="Pomodoro">
+      <Section title={t("settings.pomodoro")}>
         <div className="grid gap-4 sm:grid-cols-3">
           <NumberCard
-            label="Arbeitszeit"
-            unit="min"
+            label={t("settings.work")}
+            unit={t("settings.unit.min")}
             min={1}
             max={180}
             value={draft.pomodoroMin}
             onChange={(v) => set("pomodoroMin", v)}
           />
           <NumberCard
-            label="Kurze Pause"
-            unit="min"
+            label={t("settings.shortBreak")}
+            unit={t("settings.unit.min")}
             min={0}
             max={60}
             value={draft.shortBreakMin}
             onChange={(v) => set("shortBreakMin", v)}
           />
           <NumberCard
-            label="Lange Pause"
-            unit="min"
+            label={t("settings.longBreak")}
+            unit={t("settings.unit.min")}
             min={0}
             max={120}
             value={draft.longBreakMin}
@@ -108,8 +117,8 @@ function SettingsForm({ stored }: { stored: Settings }) {
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <NumberCard
-            label="Lange Pause nach"
-            unit="Pomodoros"
+            label={t("settings.longBreakAfter")}
+            unit={t("settings.unit.pomodoros")}
             min={0}
             max={20}
             value={draft.longBreakAfter}
@@ -118,29 +127,25 @@ function SettingsForm({ stored }: { stored: Settings }) {
         </div>
         <div className="grid gap-4 rounded-2xl bg-surface-container-low p-5 sm:grid-cols-2">
           <Toggle
-            label="Pausen automatisch starten"
+            label={t("settings.autoBreaks")}
             checked={draft.autoStartBreaks}
             onChange={(v) => set("autoStartBreaks", v)}
           />
           <Toggle
-            label="Nächsten Pomodoro automatisch starten"
+            label={t("settings.autoNext")}
             checked={draft.autoStartNextPomodoro}
             onChange={(v) => set("autoStartNextPomodoro", v)}
           />
         </div>
       </Section>
 
-      <Section title="Flowtime">
+      <Section title={t("settings.flowtime")}>
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="flex flex-col gap-4 text-on-surface-variant">
-            <p>
-              Flowtime ist die flexible Alternative zum Pomodoro: Du arbeitest,
-              solange der Fokus hält, und bekommst danach eine Pause passend zum
-              Verhältnis.
-            </p>
+            <p>{t("settings.flowtime.intro")}</p>
             <p className="flex items-center gap-2 rounded-xl bg-surface-container-low p-4 text-orange-300">
               <InfoIcon />
-              Die Pausenlänge wird dynamisch aus der Arbeitszeit berechnet.
+              {t("settings.flowtime.dynamic")}
             </p>
           </div>
           <div className="flex flex-col gap-6 rounded-2xl bg-surface-container-low p-5">
@@ -149,9 +154,9 @@ function SettingsForm({ stored }: { stored: Settings }) {
               onChange={(v) => set("flowtimeRatio", v)}
             />
             <NumberCard
-              label="Minimale Flow-Zeit"
-              unit="min"
-              hint="Davor wird keine Pause empfohlen."
+              label={t("settings.flowtime.minFlow")}
+              unit={t("settings.unit.min")}
+              hint={t("settings.flowtime.minFlowHint")}
               min={1}
               max={60}
               value={draft.flowtimeMinFlowStateMin}
@@ -161,25 +166,25 @@ function SettingsForm({ stored }: { stored: Settings }) {
         </div>
       </Section>
 
-      <Section title="Benachrichtigungen und Ton">
+      <Section title={t("settings.sound")}>
         <NotificationHint withRequest />
         <div className="flex flex-col gap-4 rounded-2xl bg-surface-container-low p-5">
           <Toggle
-            label="Benachrichtigungen"
-            description="Hinweis, wenn der Timer endet"
+            label={t("settings.notifications")}
+            description={t("settings.notifications.hint")}
             checked={draft.notificationsEnabled}
             onChange={(v) => set("notificationsEnabled", v)}
           />
           <Toggle
-            label="Signalton"
-            description="Ton beim Ende einer Session"
+            label={t("settings.beep")}
+            description={t("settings.beep.hint")}
             checked={draft.soundEnabled}
             onChange={(v) => set("soundEnabled", v)}
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-2">
               <span className="font-semibold">
-                Lautstärke: {draft.soundVolume} %
+                {t("settings.volume", { volume: draft.soundVolume })}
               </span>
               <input
                 type="range"
@@ -197,14 +202,14 @@ function SettingsForm({ stored }: { stored: Settings }) {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <SoundSelect
-              label="Ton am Ende eines Pomodoros"
+              label={t("settings.sound.pomodoro")}
               value={draft.soundEndPomodoro}
               volume={draft.soundVolume}
               disabled={!draft.soundEnabled}
               onChange={(v) => set("soundEndPomodoro", v)}
             />
             <SoundSelect
-              label="Ton am Ende einer Pause"
+              label={t("settings.sound.break")}
               value={draft.soundEndBreak}
               volume={draft.soundVolume}
               disabled={!draft.soundEnabled}
@@ -214,34 +219,36 @@ function SettingsForm({ stored }: { stored: Settings }) {
         </div>
       </Section>
 
-      <Section title={t("language.label")}>
-        <label className="flex flex-col gap-2 rounded-2xl bg-surface-container-low p-5">
-          <span className="font-semibold">{t("language.label")}</span>
-          <select
-            value={draft.language}
-            onChange={(event) =>
-              set("language", event.target.value as LanguageSetting)
-            }
-            className="min-h-11 rounded-lg bg-surface-container-highest px-3"
-          >
-            {LANGUAGES.map(({ value, native }) => (
-              <option key={value} value={value}>
-                {native ?? t("language.system")}
-              </option>
-            ))}
-          </select>
+      <Section title={t("language.section")}>
+        <div className="flex flex-col gap-2 rounded-2xl bg-surface-container-low p-5">
+          <label className="flex flex-col gap-2">
+            <span className="font-semibold">{t("language.label")}</span>
+            <select
+              value={draft.language}
+              onChange={(event) =>
+                set("language", event.target.value as LanguageSetting)
+              }
+              className="min-h-11 rounded-lg bg-surface-container-highest px-3"
+            >
+              {LANGUAGES.map(({ value, native }) => (
+                <option key={value} value={value}>
+                  {native ?? t("language.system")}
+                </option>
+              ))}
+            </select>
+          </label>
           <span className="text-sm text-on-surface-variant">
             {t("language.hint")}
           </span>
-        </label>
+        </div>
       </Section>
 
       {!isMobile() && (
-        <Section title="System">
+        <Section title={t("settings.system")}>
           <div className="rounded-2xl bg-surface-container-low p-5">
             <Toggle
-              label="Symbol im Infobereich (Tray)"
-              description="Das Fenster schließt in den Tray statt die App zu beenden"
+              label={t("settings.tray")}
+              description={t("settings.tray.hint")}
               checked={draft.systemTrayEnabled}
               onChange={(v) => set("systemTrayEnabled", v)}
             />
@@ -310,11 +317,12 @@ function RatioSlider({
   value: number;
   onChange: (value: number) => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <label htmlFor="flowtime-ratio" className="font-semibold">
-          Arbeit-zu-Pause-Verhältnis
+          {t("settings.ratio")}
         </label>
         <span
           data-testid="ratio-badge"
@@ -361,6 +369,7 @@ function SoundSelect({
   disabled: boolean;
   onChange: (value: string) => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-2">
       <label className="flex flex-col gap-2">
@@ -373,7 +382,7 @@ function SoundSelect({
         >
           {SOUND_NAMES.map((name) => (
             <option key={name} value={name}>
-              {SOUND_LABELS[name]}
+              {soundLabel(name)}
             </option>
           ))}
         </select>
@@ -383,7 +392,7 @@ function SoundSelect({
         disabled={disabled}
         onClick={() => playSound(value, volume)}
       >
-        Probehören
+        {t("settings.preview")}
       </Button>
     </div>
   );

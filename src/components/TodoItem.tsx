@@ -1,6 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, type FormEvent } from "react";
+import { useT } from "../i18n";
 import type { Todo } from "../lib/api";
 import { useSwipeToComplete } from "../hooks/useSwipeToComplete";
 import { priorityTone, splitSegments, titleOf } from "../lib/todos";
@@ -34,6 +35,7 @@ export function TodoItem({
   isFirst: boolean;
   isLast: boolean;
 }) {
+  const t = useT();
   const { toggle, remove, update, move } = useTodoStore.getState();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(todo.rawText);
@@ -97,7 +99,7 @@ export function TodoItem({
           <button
             type="button"
             ref={setActivatorNodeRef}
-            aria-label={`Verschieben: ${title}`}
+            aria-label={t("todos.item.move", { title })}
             className="inline-flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-bright"
             {...attributes}
             {...listeners}
@@ -111,7 +113,7 @@ export function TodoItem({
             type="checkbox"
             checked={todo.completed}
             onChange={() => void toggle(todo.id)}
-            aria-label={`Erledigt: ${title}`}
+            aria-label={t("todos.item.done", { title })}
             className="size-6 accent-[var(--color-primary)]"
           />
         </label>
@@ -131,7 +133,7 @@ export function TodoItem({
                   setEditing(false);
                 }
               }}
-              aria-label={`Aufgabe bearbeiten: ${title}`}
+              aria-label={t("todos.item.editLabel", { title })}
               className="min-h-11 flex-1 rounded-sm bg-surface-container-highest px-3 focus:bg-secondary-container"
             />
           </form>
@@ -143,7 +145,9 @@ export function TodoItem({
             {todo.priority && (
               <span
                 className={`font-semibold ${TONE_CLASS[tone]}`}
-                aria-label={`Priorität ${todo.priority}`}
+                aria-label={t("todos.item.priority", {
+                  priority: todo.priority,
+                })}
               >
                 ({todo.priority})
               </span>
@@ -170,7 +174,9 @@ export function TodoItem({
         {todo.pomodoroCount > 0 && (
           <span
             className="shrink-0 rounded-lg bg-surface-container-high px-2 py-1 text-sm tabular-nums"
-            aria-label={`${todo.pomodoroCount} Pomodoros`}
+            aria-label={t("todos.item.pomodoros", {
+              count: todo.pomodoroCount,
+            })}
           >
             🍅 {todo.pomodoroCount}
           </span>
@@ -180,14 +186,14 @@ export function TodoItem({
           {canReorder && (
             <>
               <IconButton
-                label={`Nach oben: ${title}`}
+                label={t("todos.item.up", { title })}
                 disabled={isFirst}
                 onClick={() => void move(todo.id, -1)}
               >
                 <ChevronUpIcon />
               </IconButton>
               <IconButton
-                label={`Nach unten: ${title}`}
+                label={t("todos.item.down", { title })}
                 disabled={isLast}
                 onClick={() => void move(todo.id, 1)}
               >
@@ -195,11 +201,14 @@ export function TodoItem({
               </IconButton>
             </>
           )}
-          <IconButton label={`Bearbeiten: ${title}`} onClick={startEditing}>
+          <IconButton
+            label={t("todos.item.edit", { title })}
+            onClick={startEditing}
+          >
             <PencilIcon />
           </IconButton>
           <IconButton
-            label={`Löschen: ${title}`}
+            label={t("todos.item.delete", { title })}
             onClick={() => void remove(todo.id)}
           >
             <TrashIcon />

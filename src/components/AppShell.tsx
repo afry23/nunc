@@ -3,6 +3,7 @@ import { useKeyboardInset } from "../hooks/useKeyboardInset";
 import { useIsWide } from "../hooks/useMediaQuery";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useShortcuts } from "../hooks/useShortcuts";
+import { useT } from "../i18n";
 import { shouldRefresh } from "../lib/gestures";
 import { reloadAll } from "../stores/backend";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -24,6 +25,7 @@ const refresh = (): void => {
 
 /** Rahmen der Hauptansichten: Seitenleiste (≥ 768 px) oder Tab-Leiste, Meldungen, Pausenvorschlag. */
 export function AppShell() {
+  const t = useT();
   const wide = useIsWide();
   const running = useTimerStore((s) => s.snapshot.state === "running");
   const keyboardOpen = useKeyboardInset();
@@ -39,7 +41,7 @@ export function AppShell() {
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface-container-high focus:px-4 focus:py-2"
       >
-        Zum Inhalt springen
+        {t("nav.skip")}
       </a>
       {wide && <Sidebar />}
       <main
@@ -58,9 +60,7 @@ export function AppShell() {
           className="glass fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-sm"
           style={{ marginTop: pull }}
         >
-          {shouldRefresh(pull)
-            ? "Loslassen zum Aktualisieren"
-            : "Zum Aktualisieren ziehen"}
+          {shouldRefresh(pull) ? t("shell.pull.release") : t("shell.pull.pull")}
         </p>
       )}
       <Toast />

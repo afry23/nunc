@@ -83,3 +83,31 @@ describe("errorMessage", () => {
     expect(errorMessage("x")).toBe("Unknown error");
   });
 });
+
+describe("Platzhalter und Mehrzahl", () => {
+  afterEach(() => setLanguage("de"));
+
+  it("wählt die Form nach der Anzahl und ersetzt Platzhalter", () => {
+    expect(translate("de", "sync.result.sessions", { count: 1 })).toBe(
+      "1 Session",
+    );
+    expect(translate("de", "sync.result.sessions", { count: 3 })).toBe(
+      "3 Sessions",
+    );
+    expect(translate("en", "stats.days", { count: 1 })).toBe("1 day");
+    expect(translate("en", "stats.days", { count: 0 })).toBe("0 days");
+    expect(translate("de", "todos.item.edit", { title: "Bericht" })).toBe(
+      "Bearbeiten: Bericht",
+    );
+  });
+
+  it("formatiert Zahlen und Datum je Sprache", async () => {
+    const { formatBytes, shortDate } = await import("../lib/format");
+    setLanguage("en");
+    expect(formatBytes(3.4 * 1024 * 1024)).toBe("3.4 MB");
+    expect(shortDate("2026-10-04")).toBe("04/10");
+    setLanguage("de");
+    expect(formatBytes(3.4 * 1024 * 1024)).toBe("3,4 MB");
+    expect(shortDate("2026-10-04")).toBe("04.10.");
+  });
+});

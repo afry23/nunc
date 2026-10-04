@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useT } from "../i18n";
 import { isMobile } from "../lib/platform";
 import type { SyncProvider } from "../lib/api";
 import { isWebDavComplete } from "../lib/sync";
@@ -12,14 +13,9 @@ import { DriveSection } from "./DriveSection";
 import { ImportDialog } from "./ImportDialog";
 import { WebDavForm } from "./WebDavForm";
 
-const PROVIDER_LABELS: Record<SyncProvider, string> = {
-  none: "Kein Sync",
-  google_drive: "Google Drive",
-  webdav: "WebDAV",
-};
-
 /** Anbieter-Auswahl und Konfiguration der Synchronisierung. Die Wahl wirkt sofort (kein „Speichern“). */
 export function SyncSection() {
+  const t = useT();
   const provider = useSettingsStore((s) => s.settings?.syncProvider ?? "none");
   const setProvider = useSettingsStore((s) => s.setSyncProvider);
   const [pending, setPending] = useState<SyncProvider | null>(null);
@@ -50,7 +46,7 @@ export function SyncSection() {
     const result = await syncNow();
     // Änderungen meldet `sync:complete`; hier nur der Fall „nichts zu tun“
     if (result && describeSyncResult(result) === null)
-      notify("Bereits auf dem neuesten Stand.");
+      notify(t("sync.upToDate"));
   };
 
   const choose = (next: SyncProvider): void => {
@@ -65,15 +61,15 @@ export function SyncSection() {
       className="flex min-w-0 flex-col gap-4"
     >
       <h2 id="sync-heading" className="font-display text-xl font-bold">
-        Synchronisierung
+        {t("sync.title")}
       </h2>
       <div className="flex flex-col gap-3 rounded-2xl bg-surface-container-low p-5">
         <Segmented
-          label="Sync-Anbieter"
+          label={t("sync.providerLabel")}
           value={provider}
           options={options.map((o) => ({
             ...o,
-            label: PROVIDER_LABELS[o.value],
+            label: t(`sync.provider.${o.value}`),
           }))}
           onChange={choose}
         />
@@ -86,7 +82,7 @@ export function SyncSection() {
               aria-busy={syncing}
               onClick={() => void runSync()}
             >
-              {syncing ? "Synchronisiere …" : "Jetzt synchronisieren"}
+              {syncing ? t("sync.syncing") : t("sync.now")}
             </Button>
           </div>
         )}
@@ -97,8 +93,7 @@ export function SyncSection() {
           role="status"
           className="rounded-xl bg-surface-container-low p-4 text-orange-300"
         >
-          WebDAV ist ausgewählt, aber noch nicht eingerichtet. Trage unten die
-          Verbindungsdaten ein, damit synchronisiert werden kann.
+          {t("sync.webdavNotSetUp")}
         </p>
       )}
 
@@ -107,8 +102,7 @@ export function SyncSection() {
           role="status"
           className="rounded-xl bg-surface-container-low p-4 text-orange-300"
         >
-          Google Drive ist ausgewählt, aber noch nicht verbunden. Melde dich
-          unten an, damit synchronisiert werden kann.
+          {t("sync.driveNotConnected")}
         </p>
       )}
 
@@ -119,7 +113,7 @@ export function SyncSection() {
           <h3 className="font-semibold">WebDAV</h3>
           {provider !== "webdav" && (
             <p className="text-sm text-on-surface-variant">
-              Wähle WebDAV als Anbieter, um die Verbindung zu bearbeiten.
+              {t("sync.webdavChoose")}
             </p>
           )}
           <WebDavForm
@@ -135,8 +129,8 @@ export function SyncSection() {
 
       {pending && (
         <ConfirmDialog
-          title="Anbieter wechseln?"
-          confirmLabel="Anbieter wechseln"
+          title={t("sync.switch.title")}
+          confirmLabel={t("sync.switch.button")}
           onConfirm={() => {
             void setProvider(pending);
             setPending(null);
@@ -144,8 +138,9 @@ export function SyncSection() {
           onCancel={() => setPending(null)}
         >
           <p>
-            Die Synchronisierung mit {PROVIDER_LABELS[provider]} wird beendet.
-            Die gespeicherten Zugangsdaten bleiben erhalten.
+            {t("sync.switch.body", {
+              provider: t(`sync.provider.${provider}`),
+            })}
           </p>
         </ConfirmDialog>
       )}

@@ -1,5 +1,7 @@
 import { create } from "zustand";
+import { t } from "../i18n";
 import {
+  errorMessage,
   commands,
   unwrap,
   type SyncResult,
@@ -52,7 +54,8 @@ export const useTodoistStore = create<TodoistState>((set) => ({
       set({ account: await unwrap(commands.connectTodoist()) });
     } catch (error) {
       set({
-        connectError: error instanceof Error ? error.message : "Fehler",
+        connectError:
+          error instanceof Error ? errorMessage(error) : t("common.error"),
       });
     } finally {
       set({ connecting: false });

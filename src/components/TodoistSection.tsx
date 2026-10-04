@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { t, useT } from "../i18n";
 import { formatTimeOfDay } from "../lib/format";
 import { useTodoistStore } from "../stores/todoistStore";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -9,15 +10,16 @@ export function todoistStatusText(
   state: "idle" | "syncing" | "error",
   lastSyncAt: string | null,
 ): string {
-  if (state === "syncing") return "⟳ Todoist synchronisiert…";
-  if (state === "error") return "⚠ Todoist-Sync fehlgeschlagen";
+  if (state === "syncing") return t("todoist.status.syncing");
+  if (state === "error") return t("todoist.status.error");
   return lastSyncAt
-    ? `✓ Todoist: ${formatTimeOfDay(lastSyncAt)}`
-    : "✓ Todoist: noch nicht synchronisiert";
+    ? t("todoist.status.last", { time: formatTimeOfDay(lastSyncAt) })
+    : t("todoist.status.never");
 }
 
 /** Todoist-Konto verbinden und trennen, Zustand des Abgleichs (nur Desktop). */
 export function TodoistSection() {
+  const t = useT();
   const account = useTodoistStore((s) => s.account);
   const status = useTodoistStore((s) => s.status);
   const connecting = useTodoistStore((s) => s.connecting);
@@ -36,19 +38,18 @@ export function TodoistSection() {
       className="flex min-w-0 flex-col gap-4"
     >
       <h2 id="todoist-heading" className="font-display text-xl font-bold">
-        Todoist
+        {t("todoist.title")}
       </h2>
       <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-surface-container-low p-5">
         {!account.connected ? (
           <>
-            <p data-testid="todoist-state">Nicht verbunden</p>
+            <p data-testid="todoist-state">{t("todoist.notConnected")}</p>
             <p className="text-sm text-on-surface-variant">
-              Aufgaben werden in beide Richtungen abgeglichen. Sessions und
-              Einstellungen bleiben auf diesem Gerät.
+              {t("todoist.explain")}
             </p>
             {!account.configured && (
               <p className="text-sm text-orange-300">
-                In diesem Build sind keine Todoist-Zugangsdaten hinterlegt.
+                {t("todoist.noCredentials")}
               </p>
             )}
             {error && (
@@ -63,9 +64,7 @@ export function TodoistSection() {
                 aria-busy={connecting}
                 onClick={() => void connect()}
               >
-                {connecting
-                  ? "Warte auf den Browser …"
-                  : "Mit Todoist verbinden"}
+                {connecting ? t("todoist.waiting") : t("todoist.connect")}
               </Button>
             </div>
           </>
@@ -75,12 +74,14 @@ export function TodoistSection() {
               {account.avatarUrl && (
                 <img
                   src={account.avatarUrl}
-                  alt="Avatar"
+                  alt={t("todoist.avatar")}
                   className="size-10 rounded-full"
                 />
               )}
               <p data-testid="todoist-state">
-                {account.email ? `Verbunden als ${account.email}` : "Verbunden"}
+                {account.email
+                  ? t("todoist.connectedAs", { email: account.email })
+                  : t("todoist.connected")}
               </p>
             </div>
             {status.state === "error" && status.errorMessage && (
@@ -92,12 +93,10 @@ export function TodoistSection() {
                 aria-busy={syncing}
                 onClick={() => void syncNow()}
               >
-                {syncing
-                  ? "Synchronisiere Todoist …"
-                  : "Todoist jetzt synchronisieren"}
+                {syncing ? t("todoist.syncing") : t("todoist.syncNow")}
               </Button>
               <Button variant="danger" onClick={() => setConfirming(true)}>
-                Todoist trennen
+                {t("todoist.disconnect")}
               </Button>
             </div>
           </>
@@ -105,8 +104,8 @@ export function TodoistSection() {
       </div>
       {confirming && (
         <ConfirmDialog
-          title="Todoist-Verbindung trennen?"
-          confirmLabel="Trennen"
+          title={t("todoist.disconnectTitle")}
+          confirmLabel={t("todoist.disconnectConfirm")}
           danger
           onConfirm={() => {
             setConfirming(false);
@@ -114,10 +113,7 @@ export function TodoistSection() {
           }}
           onCancel={() => setConfirming(false)}
         >
-          <p>
-            Lokale Todos bleiben erhalten, werden aber nicht mehr mit Todoist
-            synchronisiert.
-          </p>
+          <p>{t("todoist.disconnectBody")}</p>
         </ConfirmDialog>
       )}
     </section>

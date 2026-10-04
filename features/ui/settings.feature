@@ -73,3 +73,18 @@ Feature: Settings view
     Given the platform is "mobile"
     When I open the app at "/settings"
     Then I do not see "Symbol im Infobereich (Tray)"
+
+  @ui @REQ-5.4
+  Scenario: The interface language can be switched to English and back
+    When I open the app at "/settings"
+    And I select "English" in the field "Sprache"
+    And I click "Speichern"
+    Then the backend received "save_settings" with:
+      """
+      { "settings": { "language": "en" } }
+      """
+    And I see "Configuration"
+    And I see "Settings saved."
+    When I select "Deutsch" in the field "Language"
+    And I click "Save"
+    Then I see "Konfiguration"

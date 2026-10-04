@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import type { SyncResult, WebDavConfig } from "./api";
 
 /** `http://` oder `https://` gefolgt von einem Host (wie `is_http_url` im Kern). */
@@ -16,21 +17,16 @@ export function isWebDavComplete(config: WebDavConfig): boolean {
 export function describeSyncResult(result: SyncResult): string | null {
   const parts: string[] = [];
   if (result.importedSessions > 0)
-    parts.push(
-      `${result.importedSessions} ${result.importedSessions === 1 ? "Session" : "Sessions"}`,
-    );
+    parts.push(t("sync.result.sessions", { count: result.importedSessions }));
   if (result.importedTodos > 0)
-    parts.push(
-      `${result.importedTodos} ${result.importedTodos === 1 ? "Aufgabe" : "Aufgaben"}`,
-    );
+    parts.push(t("sync.result.todos", { count: result.importedTodos }));
   const notes: string[] = [];
-  if (parts.length > 0) notes.push(`${parts.join(" und ")} importiert.`);
-  if (result.conflictedTodos > 0)
+  if (parts.length > 0)
     notes.push(
-      result.conflictedTodos === 1
-        ? "1 Aufgabe wurde durch eine neuere Version vom Server ersetzt."
-        : `${result.conflictedTodos} Aufgaben wurden durch neuere Versionen vom Server ersetzt.`,
+      t("sync.result.imported", { parts: parts.join(t("sync.result.and")) }),
     );
+  if (result.conflictedTodos > 0)
+    notes.push(t("sync.result.conflicts", { count: result.conflictedTodos }));
   return notes.length > 0 ? notes.join(" ") : null;
 }
 

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { t } from "../i18n";
 import {
   commands,
   errorMessage,
@@ -101,7 +102,7 @@ export const useBackupStore = create<BackupState>((set, get) => ({
   exportBackup: async (entry) => {
     try {
       const target = await unwrap(commands.exportBackup(entry.path));
-      if (target !== null) useUiStore.getState().notify("Backup exportiert.");
+      if (target !== null) useUiStore.getState().notify(t("backup.exported"));
     } catch (error) {
       useUiStore.getState().fail(error);
     }
@@ -114,7 +115,7 @@ export const useBackupStore = create<BackupState>((set, get) => ({
     try {
       await unwrap(commands.restoreFromBackup(pending.path));
       set({ pending: null });
-      useUiStore.getState().notify("Daten wiederhergestellt.");
+      useUiStore.getState().notify(t("backup.restored"));
       await get().load();
     } catch (error) {
       // die Daten sind unverändert; der Dialog schließt, der Fehler bleibt neben der Liste stehen

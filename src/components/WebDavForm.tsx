@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../i18n";
 import type { ConnectionTestResult, WebDavConfig } from "../lib/api";
 import { isHttpUrl } from "../lib/sync";
 import { useSyncStore } from "../stores/syncStore";
@@ -21,6 +22,7 @@ export function WebDavForm({
   hasPassword: boolean;
   disabled: boolean;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState<WebDavConfig>(stored);
   const [password, setPassword] = useState("");
   const [revealed, setRevealed] = useState(false);
@@ -52,7 +54,7 @@ export function WebDavForm({
   const submit = async (): Promise<void> => {
     if (await save(draft, typedPassword)) {
       setPassword("");
-      notify("WebDAV-Einstellungen gespeichert.");
+      notify(t("webdav.saved"));
     }
   };
 
@@ -67,7 +69,7 @@ export function WebDavForm({
     >
       <div className="flex min-w-0 flex-col gap-2">
         <label htmlFor="webdav-url" className="font-semibold">
-          Server-URL
+          {t("webdav.url")}
         </label>
         <input
           id="webdav-url"
@@ -83,13 +85,13 @@ export function WebDavForm({
         />
         {draft.url !== "" && !validUrl && (
           <span role="alert" className="text-sm text-red-300">
-            Die Adresse muss mit http:// oder https:// beginnen.
+            {t("webdav.urlInvalid")}
           </span>
         )}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex min-w-0 flex-col gap-2">
-          <span className="font-semibold">Authentifizierung</span>
+          <span className="font-semibold">{t("webdav.auth")}</span>
           <select
             disabled={disabled}
             value={draft.authMethod}
@@ -106,7 +108,7 @@ export function WebDavForm({
           </select>
         </label>
         <label className="flex min-w-0 flex-col gap-2">
-          <span className="font-semibold">Benutzername</span>
+          <span className="font-semibold">{t("webdav.user")}</span>
           <input
             type="text"
             autoComplete="off"
@@ -121,7 +123,7 @@ export function WebDavForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor="webdav-password" className="font-semibold">
-            Passwort
+            {t("webdav.password")}
           </label>
           <div className="flex min-w-0 flex-wrap gap-2">
             <input
@@ -130,9 +132,7 @@ export function WebDavForm({
               autoComplete="new-password"
               disabled={disabled}
               value={password}
-              placeholder={
-                hasPassword ? "gespeichert – leer lassen zum Behalten" : ""
-              }
+              placeholder={hasPassword ? t("webdav.passwordStored") : ""}
               onChange={(event) => {
                 setPassword(event.target.value);
                 setResult(null);
@@ -144,12 +144,12 @@ export function WebDavForm({
               disabled={disabled}
               onClick={() => setRevealed((r) => !r)}
             >
-              {revealed ? "Passwort verbergen" : "Passwort anzeigen"}
+              {revealed ? t("webdav.hide") : t("webdav.show")}
             </Button>
           </div>
         </div>
         <label className="flex min-w-0 flex-col gap-2">
-          <span className="font-semibold">Remote-Pfad</span>
+          <span className="font-semibold">{t("webdav.remotePath")}</span>
           <input
             type="text"
             autoComplete="off"
@@ -167,15 +167,15 @@ export function WebDavForm({
           aria-busy={testing}
           onClick={() => void runTest()}
         >
-          {testing ? "Teste …" : "Verbindung testen"}
+          {testing ? t("webdav.testing") : t("webdav.test")}
         </Button>
         <Button
           type="submit"
           variant="primary"
-          aria-label="WebDAV-Einstellungen speichern"
+          aria-label={t("webdav.saveLabel")}
           disabled={disabled || !validUrl || !dirty}
         >
-          Speichern
+          {t("common.save")}
         </Button>
       </div>
       {result && (
@@ -184,7 +184,7 @@ export function WebDavForm({
           className={result.success ? "text-primary" : "text-red-300"}
         >
           {result.success
-            ? `Verbindung erfolgreich: ${result.message}`
+            ? t("webdav.success", { message: result.message })
             : result.message}
         </p>
       )}

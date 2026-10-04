@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 import { InfoIcon } from "./icons";
 import { Button } from "./ui";
 import { isAndroid, isMobile } from "../lib/platform";
@@ -18,6 +19,7 @@ export function NotificationHint({
 }: {
   withRequest?: boolean;
 }) {
+  const t = useT();
   const info = useNotificationStore((s) => s.info);
   const request = useNotificationStore((s) => s.request);
   const enabled = useSettingsStore((s) => s.settings?.notificationsEnabled);
@@ -37,11 +39,10 @@ export function NotificationHint({
         <>
           <p className="flex items-center gap-2">
             <InfoIcon />
-            Erlaube Benachrichtigungen, damit nunc das Ende des Timers auch im
-            Hintergrund meldet.
+            {t("notifications.allowPrompt")}
           </p>
           <Button onClick={() => void request()}>
-            Benachrichtigungen erlauben
+            {t("notifications.allow")}
           </Button>
         </>
       )}
@@ -49,12 +50,11 @@ export function NotificationHint({
         <>
           <p className="flex items-center gap-2">
             <InfoIcon />
-            Benachrichtigungen sind für nunc ausgeschaltet. Der Timer meldet
-            sein Ende nur bei geöffneter App.
+            {t("notifications.blocked")}
           </p>
           {isAndroid() && (
             <Button onClick={openNotificationSettings}>
-              Systemeinstellungen öffnen
+              {t("notifications.openSettings")}
             </Button>
           )}
         </>
@@ -63,10 +63,11 @@ export function NotificationHint({
         <>
           <p className="flex items-center gap-2">
             <InfoIcon />
-            Genaue Alarme sind ausgeschaltet. Das Timer-Ende kann sich um
-            mehrere Minuten verspäten.
+            {t("notifications.noExact")}
           </p>
-          <Button onClick={openExactAlarmSettings}>Alarme erlauben</Button>
+          <Button onClick={openExactAlarmSettings}>
+            {t("notifications.allowAlarms")}
+          </Button>
         </>
       )}
     </div>
