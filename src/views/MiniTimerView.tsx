@@ -21,7 +21,7 @@ export function MiniTimerView() {
       <RingTimer
         snapshot={snapshot}
         idleSeconds={idleSeconds}
-        size={170}
+        size={miniRingSize(width, height)}
         compact
       />
       <div className="flex gap-2">
