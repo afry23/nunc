@@ -1,4 +1,8 @@
+import { emit } from "@tauri-apps/api/event";
 import type {
+  BackupEntry,
+  BackupInfo,
+  BackupStatus,
   Settings,
   StatsResponse,
   TimerMode,
@@ -91,11 +95,38 @@ export interface FakeBackend extends BackendMock {
   permissionAnswer: "granted" | "denied";
   /** Ergebnis von `save_export_to_file` (`null` = Dialog abgebrochen). */
   exportPath: string | null;
+  /** Backups im Backup-Ordner (neueste zuerst); Status und Liste leiten sich daraus ab. */
+  backups: BackupEntry[];
+  /** Todo-Zeilen je Backup-Pfad, die ein Restore einspielt. */
+  backupContents: Record<string, string[]>;
+  /** Ergebnis von `trigger_backup`; `"hold"` hält den Aufruf an, bis `releaseBackup` ruft. */
+  backupResult: BackupInfo;
+  /** Meldet der Status „veraltet“ (die Zeitrechnung selbst gehört dem Backend). */
+  backupsOutdated: boolean;
+  holdBackup: boolean;
+  releaseBackup: () => void;
+  /** Ergebnisse der Datei- und Ordner-Dialoge (`null` = abgebrochen). */
+  restoreFile: string | null;
+  backupDirChoice: string | null;
+  /** Fehler, den `restore_from_backup` meldet (`null` = Erfolg). */
+  restoreError: { code: string; message: string } | null;
   /** Letzte Argumente je Command. */
   last: (cmd: string) => Record<string, unknown> | undefined;
   /** Anzahl der Aufrufe eines Commands. */
   count: (cmd: string) => number;
   addTodo: (rawText: string, over?: Partial<Todo>) => Todo;
+}
+
+function backupStatus(
+  backups: BackupEntry[],
+  isOutdated: boolean,
+): BackupStatus {
+  return {
+    lastBackupAt: backups[0]?.createdAt ?? null,
+    backupCount: backups.length,
+    totalSizeBytes: backups.reduce((sum, b) => sum + b.sizeBytes, 0),
+    isOutdated,
+  };
 }
 
 const IDLE: TimerSnapshot = {
@@ -118,7 +149,23 @@ export function createFakeBackend(): FakeBackend {
     exportPath: "/tmp/export.csv" as string | null,
     notificationPermission: "granted",
     permissionAnswer: "granted",
-  } as FakeBackend;
+    backups: [],
+    backupContents: {},
+    backupResult: {
+      path: "/data/backups/nunc-backup-2026-10-04.db",
+      sizeBytes: 2048,
+      deleted: [],
+      rotationError: null,
+    },
+    holdBackup: false,
+    releaseBackup: () => undefined,
+    backupsOutdated: false,
+    restoreFile: null,
+    backupDirChoice: null,
+    restoreError: null,
+  } as unknown as FakeBackend;
+  let releaseHeld: (() => void) | undefined;
+  fake.releaseBackup = () => releaseHeld?.();
   let nextId = 1;
 
   const resequence = (): void =>
@@ -271,6 +318,28 @@ export function createFakeBackend(): FakeBackend {
     get_stats: () => fake.stats,
     save_export_to_file: () => fake.exportPath,
     show_main_window: () => null,
+    get_backup_status: () => backupStatus(fake.backups, fake.backupsOutdated),
+    list_backups: () => fake.backups,
+    trigger_backup: async () => {
+      if (fake.holdBackup)
+        await new Promise<void>((resolve) => (releaseHeld = resolve));
+      return fake.backupResult;
+    },
+    select_backup_dir: () => {
+      if (fake.backupDirChoice !== null)
+        fake.settings = { ...fake.settings, backupDir: fake.backupDirChoice };
+      return fake.backupDirChoice;
+    },
+    select_restore_file: () => fake.restoreFile,
+    restore_from_backup: async ({ sourcePath }: { sourcePath: string }) => {
+      if (fake.restoreError) throw fake.restoreError;
+      const lines = fake.backupContents[sourcePath] ?? [];
+      fake.todos = [];
+      lines.forEach((line) => fake.addTodo(line));
+      // wie das echte Backend: nach dem Austausch melden
+      setTimeout(() => void emit("app:reload"), 0);
+      return null;
+    },
   };
 
   const mock = mockBackend(

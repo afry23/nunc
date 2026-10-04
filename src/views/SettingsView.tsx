@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
+import { BackupSection } from "../components/BackupSection";
 import { InfoIcon } from "../components/icons";
 import { NotificationHint } from "../components/NotificationHint";
 import { Button, SectionLabel, Toggle } from "../components/ui";
@@ -14,7 +15,14 @@ export function SettingsView() {
   if (!stored)
     return <p className="p-10 text-on-surface-variant">Lade Einstellungen …</p>;
   // `key` setzt den Entwurf zurück, sobald andere Werte gespeichert sind (z. B. nach einem Restore)
-  return <SettingsForm key={JSON.stringify(stored)} stored={stored} />;
+  return (
+    <>
+      <SettingsForm key={JSON.stringify(stored)} stored={stored} />
+      <div className="mx-auto flex max-w-4xl flex-col gap-10 px-6 pb-10">
+        <BackupSection />
+      </div>
+    </>
+  );
 }
 
 function SettingsForm({ stored }: { stored: Settings }) {
@@ -37,7 +45,7 @@ function SettingsForm({ stored }: { stored: Settings }) {
         event.preventDefault();
         void submit();
       }}
-      className="mx-auto flex max-w-4xl flex-col gap-10 px-6 py-10"
+      className="mx-auto flex max-w-4xl flex-col gap-10 px-6 pt-10 pb-10"
     >
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>

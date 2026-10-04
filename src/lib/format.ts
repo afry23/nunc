@@ -59,6 +59,20 @@ export function formatBytes(bytes: number): string {
   return `${(kb / 1024).toFixed(1).replace(".", ",")} MB`;
 }
 
+/** Zeitpunkt (RFC 3339) in lokaler Zeit als `04.10.2026, 08:30`. */
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Kalendertag eines Zeitpunkts in UTC als `04.10.2026` (Backup-Dateien tragen ihren Tag im Namen, 12:00 UTC). */
+export function formatUtcDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${pad(d.getUTCDate())}.${pad(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`;
+}
+
 /** Flowtime-Verhältnis als Badge: `1 : 0.2`. */
 export function ratioBadge(ratio: number): string {
   return `1 : ${Number(ratio.toFixed(2))}`;
