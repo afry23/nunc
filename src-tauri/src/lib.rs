@@ -17,7 +17,7 @@ mod windows;
 use tauri_specta::{Builder, collect_commands, collect_events};
 
 /// Pfad der generierten TypeScript-Bindings (relativ zum Crate, nicht zum CWD).
-#[cfg(any(desktop, test))]
+#[cfg(any(all(debug_assertions, desktop), test))]
 const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/bindings.ts");
 
 fn specta_builder() -> Builder<tauri::Wry> {
@@ -89,6 +89,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    logging::mark_start();
     let builder = specta_builder();
 
     // Nur auf dem Entwicklungsrechner: auf Mobilgeräten existiert der Host-Pfad nicht.
@@ -112,11 +113,19 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
         .invoke_handler(builder.invoke_handler())
+        .on_page_load(|webview, payload| {
+            if webview.label() == "main"
+                && matches!(payload.event(), tauri::webview::PageLoadEvent::Finished)
+            {
+                logging::log_startup("Oberfläche geladen");
+            }
+        })
         .setup(move |app| {
             builder.mount_events(app);
             lifecycle::setup(app)?;
             #[cfg(desktop)]
             tray::setup(app.handle(), lifecycle::tray_enabled(app.handle()))?;
+            logging::log_startup("Einrichtung abgeschlossen");
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -125,7 +134,7 @@ pub fn run() {
     app.run(lifecycle::on_run_event);
 }
 
-#[cfg(any(desktop, test))]
+#[cfg(any(all(debug_assertions, desktop), test))]
 fn export_bindings(builder: &Builder<tauri::Wry>) {
     builder
         .export(specta_typescript::Typescript::default(), BINDINGS_PATH)

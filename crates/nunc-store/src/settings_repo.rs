@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use nunc_core::model::{Language, Settings, SyncProvider};
+use nunc_core::model::{Settings, SyncProvider};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::StoreError;

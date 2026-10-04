@@ -14,6 +14,18 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// Release-Signierung (roadmap M8-05): Zugangsdaten kommen aus `keystore.properties` (lokal, nicht eingecheckt) oder
+// aus Umgebungsvariablen (CI). Fehlen sie, entsteht ein unsigniertes Release (z. B. für Prüfbuilds).
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun signingValue(property: String, env: String): String? =
+    keystoreProperties.getProperty(property) ?: System.getenv(env)
+
 android {
     compileSdk = 37
     namespace = "com.afry.nunc"
@@ -24,6 +36,17 @@ android {
         targetSdk = 37
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        val storeFilePath = signingValue("storeFile", "NUNC_ANDROID_KEYSTORE")
+        if (storeFilePath != null) {
+            create("release") {
+                storeFile = file(storeFilePath)
+                storePassword = signingValue("storePassword", "NUNC_ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "NUNC_ANDROID_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "NUNC_ANDROID_KEY_PASSWORD")
+            }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -39,6 +62,7 @@ android {
             }
         }
         getByName("release") {
+            signingConfig = signingConfigs.findByName("release")
             optimization {
                enable = true
             }

@@ -67,3 +67,11 @@ mutants.out.old
 
 # lokale OAuth-Zugangsdaten
 .env
+
+# Signierschlüssel und Zugangsdaten (Release, roadmap M8)
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision

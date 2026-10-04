@@ -1,6 +1,9 @@
 //! Protokoll der App (`tauri-plugin-log`): Datei im Log-Ordner des Systems mit Rotation, in Debug-Builds
 //! zusätzlich Stdout. Tokens und Passwörter gehören nie in eine Meldung (siehe CLAUDE.md „Do Not“).
 
+use std::sync::OnceLock;
+use std::time::Instant;
+
 use log::LevelFilter;
 use tauri::Runtime;
 use tauri::plugin::TauriPlugin;
@@ -19,6 +22,24 @@ pub fn default_level(debug: bool) -> LevelFilter {
         LevelFilter::Debug
     } else {
         LevelFilter::Info
+    }
+}
+
+static STARTED: OnceLock<Instant> = OnceLock::new();
+
+/// Merkt den Startzeitpunkt der App (erster Aufruf zählt).
+pub fn mark_start() {
+    STARTED.get_or_init(Instant::now);
+}
+
+/// Protokolliert einen Meilenstein des Starts mit der Zeit seit [`mark_start`]. Das Skript
+/// `tests/nfr/measure-desktop.sh` liest diese Zeilen (NFR „Start < 2 s“, roadmap M8-01).
+pub fn log_startup(milestone: &str) {
+    if let Some(started) = STARTED.get() {
+        log::info!(
+            "Start: {milestone} nach {} ms",
+            started.elapsed().as_millis()
+        );
     }
 }
 
