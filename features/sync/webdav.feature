@@ -1,27 +1,110 @@
 Feature: WebDAV sync
   Source: US-WebDAV (US-Sync-01-WebDAV-Config, US-Sync-02-WebDAV); nunc-go sync_webdav*.go
 
-  @ui @US-Sync-01-WebDAV-Config @wip
+  @ui @US-Sync-01-WebDAV-Config
   Scenario: The configuration offers URL, authentication method, user, password and remote path
+    Given the setting "syncProvider" is "webdav"
+    When I open the app at "/settings"
+    Then I see the fields "Server-URL, Authentifizierung, Benutzername, Passwort, Remote-Pfad"
+    And the field "Remote-Pfad" has the value "/nunc/"
+    And I see the buttons "Verbindung testen"
 
-  @ui @US-Sync-01-WebDAV-Config @wip
+  @ui @US-Sync-01-WebDAV-Config
+  Scenario: Saved settings are shown and the stored password stays hidden
+    Given the setting "syncProvider" is "webdav"
+    And the WebDAV settings are:
+      | url                     | authMethod | username | remotePath  |
+      | https://dav.example.org | digest     | me       | /apps/nunc/ |
+    And a WebDAV password is stored
+    When I open the app at "/settings"
+    Then the field "Server-URL" has the value "https://dav.example.org"
+    And the field "Benutzername" has the value "me"
+    And the field "Remote-Pfad" has the value "/apps/nunc/"
+    And the field "Passwort" has the value ""
+    And I do not see "WebDAV ist ausgewählt, aber noch nicht eingerichtet"
+  @ui @US-Sync-01-WebDAV-Config
   Scenario: The password is masked and can be revealed
-
-  @ui @US-Sync-01-WebDAV-Config @wip
+    Given the setting "syncProvider" is "webdav"
+    When I open the app at "/settings"
+    And I enter "geheim" into the field "Passwort"
+    Then the field "Passwort" is masked
+    When I click "Passwort anzeigen"
+    Then the field "Passwort" is readable
+    When I click "Passwort verbergen"
+    Then the field "Passwort" is masked
+  @ui @US-Sync-01-WebDAV-Config
   Scenario: An invalid URL disables saving and testing
-
-  @ui @US-Sync-01-WebDAV-Config @wip
+    Given the setting "syncProvider" is "webdav"
+    When I open the app at "/settings"
+    And I enter "cloud.example.org" into the field "Server-URL"
+    Then I see "Die Adresse muss mit http:// oder https:// beginnen."
+    And the button "Verbindung testen" is disabled
+    And the button "WebDAV-Einstellungen speichern" is disabled
+    When I enter "https://cloud.example.org" into the field "Server-URL"
+    Then the button "Verbindung testen" is enabled
+    And the button "WebDAV-Einstellungen speichern" is enabled
+  @ui @US-Sync-01-WebDAV-Config
   Scenario: Changes are only applied on explicit save
+    Given the setting "syncProvider" is "webdav"
+    When I open the app at "/settings"
+    And I enter "https://dav.example.org" into the field "Server-URL"
+    And I enter "me" into the field "Benutzername"
+    And I enter "pw" into the field "Passwort"
+    Then the backend did not receive "save_webdav_config"
+    When I click "WebDAV-Einstellungen speichern"
+    Then the backend received "save_webdav_config" with:
+      """
+      { "config": { "url": "https://dav.example.org", "username": "me", "authMethod": "basic", "remotePath": "/nunc/" }, "password": "pw" }
+      """
+    And I see "WebDAV-Einstellungen gespeichert."
+    And the field "Passwort" has the value ""
 
-  @ui @US-Sync-01-WebDAV-Config @wip
+  @ui @US-Sync-01-WebDAV-Config
+  Scenario: Saving without a new password keeps the stored one
+    Given the setting "syncProvider" is "webdav"
+    And the WebDAV settings are:
+      | url                     | authMethod | username | remotePath |
+      | https://dav.example.org | basic      | me       | /nunc/     |
+    And a WebDAV password is stored
+    When I open the app at "/settings"
+    And I enter "https://other.example.org" into the field "Server-URL"
+    And I click "WebDAV-Einstellungen speichern"
+    Then the backend received "save_webdav_config" with:
+      """
+      { "config": { "url": "https://other.example.org" }, "password": null }
+      """
+  @ui @US-Sync-01-WebDAV-Config
   Scenario: A banner shows that WebDAV is selected but not configured
+    Given the setting "syncProvider" is "webdav"
+    When I open the app at "/settings"
+    Then I see "WebDAV ist ausgewählt, aber noch nicht eingerichtet."
 
-  @ui @US-Sync-01-WebDAV-Config @wip
+  @ui @US-Sync-01-WebDAV-Config
+  Scenario: No banner is shown while no sync is selected
+    When I open the app at "/settings"
+    Then I do not see "noch nicht eingerichtet"
+  @ui @US-Sync-01-WebDAV-Config
   Scenario: Testing the connection shows success with the server name
-
-  @ui @US-Sync-01-WebDAV-Config @wip
+    Given the setting "syncProvider" is "webdav"
+    And the connection test succeeds for "dav.example.org"
+    When I open the app at "/settings"
+    And I enter "https://dav.example.org" into the field "Server-URL"
+    And I enter "pw" into the field "Passwort"
+    And I click "Verbindung testen"
+    Then the backend received "test_webdav_connection" with:
+      """
+      { "config": { "url": "https://dav.example.org" }, "password": "pw" }
+      """
+    And I see "Verbindung erfolgreich: dav.example.org"
+  @ui @US-Sync-01-WebDAV-Config
   Scenario: Testing the connection shows a readable error
-
+    Given the setting "syncProvider" is "webdav"
+    And the connection test fails with "401 Unauthorized – Benutzername oder Passwort falsch"
+    When I open the app at "/settings"
+    And I enter "https://dav.example.org" into the field "Server-URL"
+    And I click "Verbindung testen"
+    Then I see "401 Unauthorized – Benutzername oder Passwort falsch"
+    And I do not see "Verbindung erfolgreich"
   @integration @sync @US-Sync-01-WebDAV-Config
   Scenario: The connection test sends a PROPFIND request
     Given a WebDAV server with the folder "/nunc/"

@@ -99,6 +99,17 @@ export const commands = {
 	 *  erhalten, sie werden nur nicht mehr benutzt.
 	 */
 	setSyncProvider: (provider: SyncProvider) => typedError<null, AppError>(__TAURI_INVOKE("set_sync_provider", { provider })),
+	getWebdavConfig: () => typedError<WebDavSettings, AppError>(__TAURI_INVOKE("get_webdav_config")),
+	/**
+	 *  Speichert die Einstellungen in der Datenbank und das Passwort im Tresor. `password: None` lässt das
+	 *  gespeicherte Passwort unverändert.
+	 */
+	saveWebdavConfig: (config: WebDavConfig, password: string | null) => typedError<null, AppError>(__TAURI_INVOKE("save_webdav_config", { config, password })),
+	/**
+	 *  Prüft die Verbindung mit den übergebenen (noch nicht gespeicherten) Werten. Ohne Passwort gilt das
+	 *  gespeicherte.
+	 */
+	testWebdavConnection: (config: WebDavConfig, password: string | null) => typedError<ConnectionTestResult, AppError>(__TAURI_INVOKE("test_webdav_connection", { config, password })),
 	/**  Aktueller Stand, ohne den Nutzer zu fragen. */
 	getNotificationStatus: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("get_notification_status")),
 	/**
@@ -169,6 +180,13 @@ export type BackupStatus = {
 export type BreakSuggestion = {
 	sessionType: SessionType,
 	minutes: number,
+};
+
+/**  Ergebnis des Verbindungstests. */
+export type ConnectionTestResult = {
+	success: boolean,
+	/**  Servername bei Erfolg, lesbarer Fehler sonst. */
+	message: string,
 };
 
 /**  Arbeitszeit pro `@context`-Tag. */
@@ -403,6 +421,27 @@ export type TodoStats = {
 	description: string,
 	pomodoroCount: number,
 	workMinutes: number,
+};
+
+/**  Anmeldeverfahren am WebDAV-Server. */
+export type WebDavAuth = "basic" | "digest";
+
+/**  Verbindung zu einem WebDAV-Server. Das Passwort gehört nicht dazu: es liegt im Tresor. */
+export type WebDavConfig = {
+	url: string,
+	authMethod: WebDavAuth,
+	username: string,
+	/**  Ordner auf dem Server, in dem `nunc-sync.json` liegt (Standard `/nunc/`). */
+	remotePath: string,
+};
+
+/**
+ *  Gespeicherte WebDAV-Einstellungen. Das Passwort verlässt den Tresor nicht: die Oberfläche erfährt nur, ob eins
+ *  gespeichert ist.
+ */
+export type WebDavSettings = {
+	config: WebDavConfig,
+	hasPassword: boolean,
 };
 
 /**  Kennzahlen je Wochentag (`0` = Montag … `6` = Sonntag) im Zeitraum. */

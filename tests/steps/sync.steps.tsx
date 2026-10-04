@@ -1,6 +1,6 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { expect } from "vitest";
-import { Given, Then } from "quickpickle";
+import { DataTable, Given, Then } from "quickpickle";
 import type { UiWorld } from "./world";
 
 Given(
@@ -37,5 +37,79 @@ Then(
   "the option {string} is not selected",
   async (_w: UiWorld, name: string) => {
     expect((await radio(name)).getAttribute("aria-checked")).toBe("false");
+  },
+);
+
+// ---------------------------------------------------------------------------------------------
+// WebDAV-Einstellungen
+
+Given("the WebDAV settings are:", (world: UiWorld, table: DataTable) => {
+  const row = table.hashes()[0];
+  world.fake.webdav = {
+    ...world.fake.webdav,
+    config: {
+      url: row.url,
+      authMethod: row.authMethod as "basic" | "digest",
+      username: row.username,
+      remotePath: row.remotePath,
+    },
+  };
+});
+
+Given("a WebDAV password is stored", (world: UiWorld) => {
+  world.fake.webdav = { ...world.fake.webdav, hasPassword: true };
+});
+
+Given(
+  "the connection test succeeds for {string}",
+  (world: UiWorld, host: string) => {
+    world.fake.webdavTest = { success: true, message: host };
+  },
+);
+
+Given(
+  "the connection test fails with {string}",
+  (world: UiWorld, message: string) => {
+    world.fake.webdavTest = { success: false, message };
+  },
+);
+
+Then("I see the fields {string}", async (_world: UiWorld, labels: string) => {
+  for (const label of labels.split(",").map((l) => l.trim()))
+    await screen.findByLabelText(label);
+});
+
+Then("the field {string} is disabled", async (_w: UiWorld, label: string) => {
+  expect(
+    ((await screen.findByLabelText(label)) as HTMLInputElement).disabled,
+  ).toBe(true);
+});
+
+Then("the field {string} is enabled", async (_w: UiWorld, label: string) => {
+  await waitFor(async () =>
+    expect(
+      ((await screen.findByLabelText(label)) as HTMLInputElement).disabled,
+    ).toBe(false),
+  );
+});
+
+Then("the field {string} is masked", async (_w: UiWorld, label: string) => {
+  expect((await screen.findByLabelText(label)).getAttribute("type")).toBe(
+    "password",
+  );
+});
+
+Then("the field {string} is readable", async (_w: UiWorld, label: string) => {
+  expect((await screen.findByLabelText(label)).getAttribute("type")).toBe(
+    "text",
+  );
+});
+
+Then(
+  "the field {string} has the value {string}",
+  async (_w: UiWorld, label: string, value: string) => {
+    expect(
+      ((await screen.findByLabelText(label)) as HTMLInputElement).value,
+    ).toBe(value);
   },
 );

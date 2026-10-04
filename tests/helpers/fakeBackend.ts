@@ -3,6 +3,8 @@ import type {
   BackupEntry,
   BackupInfo,
   BackupStatus,
+  ConnectionTestResult,
+  WebDavSettings,
   Settings,
   StatsResponse,
   TimerMode,
@@ -110,6 +112,9 @@ export interface FakeBackend extends BackendMock {
   backupDirChoice: string | null;
   /** Ziel des „Speichern unter“-Dialogs beim Export (`null` = abgebrochen). */
   exportTarget: string | null;
+  /** Gespeicherte WebDAV-Einstellungen und das Ergebnis des Verbindungstests. */
+  webdav: WebDavSettings;
+  webdavTest: ConnectionTestResult;
   /** Fehler, den `set_sync_provider` meldet (`null` = Erfolg). */
   providerError: { code: string; message: string } | null;
   /** Fehler, den `restore_from_backup` meldet (`null` = Erfolg). */
@@ -168,6 +173,16 @@ export function createFakeBackend(): FakeBackend {
     backupDirChoice: null,
     restoreError: null,
     providerError: null,
+    webdav: {
+      config: {
+        url: "",
+        authMethod: "basic",
+        username: "",
+        remotePath: "/nunc/",
+      },
+      hasPassword: false,
+    },
+    webdavTest: { success: true, message: "dav.example.org" },
     exportTarget: "/storage/Download/nunc-backup.db",
   } as unknown as FakeBackend;
   let releaseHeld: (() => void) | undefined;
@@ -338,6 +353,21 @@ export function createFakeBackend(): FakeBackend {
     },
     select_restore_file: () => fake.restoreFile,
     export_backup: () => fake.exportTarget,
+    get_webdav_config: () => fake.webdav,
+    save_webdav_config: ({
+      config,
+      password,
+    }: {
+      config: WebDavSettings["config"];
+      password: string | null;
+    }) => {
+      fake.webdav = {
+        config,
+        hasPassword: password !== null || fake.webdav.hasPassword,
+      };
+      return null;
+    },
+    test_webdav_connection: () => fake.webdavTest,
     set_sync_provider: ({
       provider,
     }: {

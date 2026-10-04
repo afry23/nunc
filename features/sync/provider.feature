@@ -103,8 +103,16 @@ Feature: Sync provider selection
     When I open the app at "/settings"
     Then the option "WebDAV" is selected
 
-  @ui @US-Sync-Provider @wip
+  @ui @US-Sync-Provider
   Scenario: Provider fields are disabled when no sync is selected
+    When I open the app at "/settings"
+    Then the field "Server-URL" is disabled
+    And the field "Benutzername" is disabled
+    And the button "Verbindung testen" is disabled
+    And I see "Wähle WebDAV als Anbieter, um die Verbindung zu bearbeiten."
+    When I click "WebDAV"
+    Then the field "Server-URL" is enabled
+    And the field "Benutzername" is enabled
 
   @ui @US-Sync-Provider @mobile
   Scenario: Mobile offers only none and WebDAV

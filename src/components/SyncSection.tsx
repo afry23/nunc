@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { isMobile } from "../lib/platform";
 import type { SyncProvider } from "../lib/api";
+import { isWebDavComplete } from "../lib/sync";
 import { useSettingsStore } from "../stores/settingsStore";
+import { useSyncStore } from "../stores/syncStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Segmented } from "./ui";
+import { WebDavForm } from "./WebDavForm";
 
 const PROVIDER_LABELS: Record<SyncProvider, string> = {
   none: "Kein Sync",
@@ -16,7 +19,16 @@ export function SyncSection() {
   const provider = useSettingsStore((s) => s.settings?.syncProvider ?? "none");
   const setProvider = useSettingsStore((s) => s.setSyncProvider);
   const [pending, setPending] = useState<SyncProvider | null>(null);
+  const webdav = useSyncStore((s) => s.webdav);
   const mobile = isMobile();
+
+  useEffect(() => {
+    void useSyncStore.getState().loadWebdav();
+  }, []);
+  const needsSetup =
+    provider === "webdav" &&
+    webdav !== null &&
+    !(isWebDavComplete(webdav.config) && webdav.hasPassword);
 
   const options: { value: SyncProvider; disabled?: boolean }[] = [
     { value: "none" },
@@ -52,6 +64,33 @@ export function SyncSection() {
           </p>
         )}
       </div>
+
+      {needsSetup && (
+        <p
+          role="status"
+          className="rounded-xl bg-surface-container-low p-4 text-orange-300"
+        >
+          WebDAV ist ausgewählt, aber noch nicht eingerichtet. Trage unten die
+          Verbindungsdaten ein, damit synchronisiert werden kann.
+        </p>
+      )}
+
+      {webdav && (
+        <div className="flex flex-col gap-3 rounded-2xl bg-surface-container-low p-5">
+          <h3 className="font-semibold">WebDAV</h3>
+          {provider !== "webdav" && (
+            <p className="text-sm text-on-surface-variant">
+              Wähle WebDAV als Anbieter, um die Verbindung zu bearbeiten.
+            </p>
+          )}
+          <WebDavForm
+            key={JSON.stringify(webdav)}
+            stored={webdav.config}
+            hasPassword={webdav.hasPassword}
+            disabled={provider !== "webdav"}
+          />
+        </div>
+      )}
 
       {pending && (
         <ConfirmDialog

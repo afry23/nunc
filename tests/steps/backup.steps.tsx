@@ -110,3 +110,11 @@ Then("the backup list shows:", async (_world: UiWorld, table: DataTable) => {
 Given("the export dialog is cancelled", (world: UiWorld) => {
   world.fake.exportTarget = null;
 });
+
+Then(
+  "the button {string} is enabled",
+  async (_world: UiWorld, name: string) => {
+    const button = await screen.findByRole("button", { name });
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+  },
+);

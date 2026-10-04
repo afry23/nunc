@@ -76,6 +76,9 @@ impl Harness {
                 backup::restore_from_backup,
                 backup::export_backup,
                 sync::set_sync_provider,
+                sync::get_webdav_config,
+                sync::save_webdav_config,
+                sync::test_webdav_connection,
                 notifications::get_notification_status,
                 notifications::request_notification_permission,
             ])
@@ -225,6 +228,92 @@ fn the_sync_provider_is_chosen_by_its_own_command_and_not_by_save_settings() {
         h.call("set_sync_provider", json!({ "provider": "dropbox" }))
             .is_err()
     );
+}
+
+#[test]
+fn webdav_settings_are_saved_without_ever_returning_the_password() {
+    let h = Harness::new();
+    let fresh = h.ok("get_webdav_config", json!({}));
+    assert_eq!(fresh["hasPassword"], false);
+    assert_eq!(fresh["config"]["remotePath"], "/nunc/");
+    assert_eq!(fresh["config"]["authMethod"], "basic");
+
+    let config = json!({
+        "url": " https://dav.example.org/dav ",
+        "authMethod": "digest",
+        "username": "me",
+        "remotePath": "/apps/nunc/"
+    });
+    h.ok(
+        "save_webdav_config",
+        json!({ "config": config, "password": "s3cret" }),
+    );
+    let saved = h.ok("get_webdav_config", json!({}));
+    assert_eq!(saved["hasPassword"], true);
+    assert_eq!(saved["config"]["url"], "https://dav.example.org/dav");
+    assert_eq!(saved["config"]["authMethod"], "digest");
+    assert!(!saved.to_string().contains("s3cret"));
+
+    // ohne Passwort bleibt das gespeicherte erhalten
+    h.ok(
+        "save_webdav_config",
+        json!({ "config": config, "password": null }),
+    );
+    assert_eq!(h.ok("get_webdav_config", json!({}))["hasPassword"], true);
+}
+
+#[test]
+fn webdav_settings_with_a_bad_address_are_refused() {
+    let h = Harness::new();
+    let config = json!({
+        "url": "cloud.example.org", "authMethod": "basic", "username": "me", "remotePath": "/nunc/"
+    });
+    assert_eq!(
+        h.err_code(
+            "save_webdav_config",
+            json!({ "config": config, "password": "x" })
+        ),
+        "invalid_input"
+    );
+    assert_eq!(h.ok("get_webdav_config", json!({}))["config"]["url"], "");
+    // leeren ist erlaubt
+    let empty = json!({
+        "url": "", "authMethod": "basic", "username": "", "remotePath": "/nunc/"
+    });
+    h.ok(
+        "save_webdav_config",
+        json!({ "config": empty, "password": null }),
+    );
+}
+
+#[test]
+fn the_connection_test_reports_failures_as_a_result_not_an_error() {
+    let h = Harness::new();
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    let config = json!({
+        "url": url, "authMethod": "basic", "username": "me", "remotePath": "/nunc/"
+    });
+    let result = h.ok(
+        "test_webdav_connection",
+        json!({ "config": config, "password": "x" }),
+    );
+    assert_eq!(result["success"], false);
+    assert_eq!(
+        result["message"],
+        "Verbindung abgelehnt – Server nicht erreichbar"
+    );
+
+    let bad = json!({
+        "url": "kein-url", "authMethod": "basic", "username": "me", "remotePath": "/"
+    });
+    let result = h.ok(
+        "test_webdav_connection",
+        json!({ "config": bad, "password": null }),
+    );
+    assert_eq!(result["success"], false);
+    assert_eq!(result["message"], "Ungültige Server-Adresse: kein-url");
 }
 
 #[test]

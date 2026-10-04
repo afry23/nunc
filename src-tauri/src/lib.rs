@@ -50,6 +50,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
             backup::select_restore_file::<tauri::Wry>,
             backup::export_backup::<tauri::Wry>,
             sync::set_sync_provider,
+            sync::get_webdav_config,
+            sync::save_webdav_config,
+            sync::test_webdav_connection,
             notifications::get_notification_status::<tauri::Wry>,
             notifications::request_notification_permission::<tauri::Wry>,
         ])

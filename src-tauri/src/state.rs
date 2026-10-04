@@ -55,8 +55,7 @@ pub struct AppState {
     pub clock: Arc<dyn Clock>,
     pub events: Arc<dyn EventSink>,
     pub timer: Arc<TimerService>,
-    /// Tresor für Tokens und Passwörter (Sync, ab M6).
-    #[expect(dead_code, reason = "wird mit dem WebDAV-Sync in M6 gelesen")]
+    /// Tresor für Tokens und Passwörter (Sync).
     pub secrets: Arc<dyn SecretStore>,
     shutdown_hooks: Mutex<Vec<ShutdownHook>>,
 }
