@@ -42,6 +42,7 @@ After(async () => {
   resetBackend();
   resetStores();
   vi.restoreAllMocks();
+  localStorage.clear();
   vi.unstubAllGlobals();
   Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   Reflect.deleteProperty(window, "scrollY");
