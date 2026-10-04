@@ -38,7 +38,7 @@ src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)
   src/timer_service.rs  Timer-Laufzeit: Transitionen persistieren, Events, Benachrichtigung
   src/adapters.rs     Tauri-Adapter für EventSink/Notifier/UrlOpener (brauchen AppHandle)
   src/sync_service.rs Verdrahtung des Syncs: Store-Adapter, Koordinatoren (Sync-Anbieter, Todoist), Ereignisse
-  src/credentials.rs  OAuth-Client-IDs aus dem Build (`NUNC_GOOGLE_*`, `NUNC_TODOIST_*`) oder der Umgebung
+  src/credentials.rs  OAuth-Client-IDs: Umgebung (`NUNC_GOOGLE_*`, `NUNC_TODOIST_*`) → `.env` (nur Debug) → Build
   src/commands/       dünne Commands je Bereich, Tests in commands/tests.rs (mock_builder)
 src/                  React-Frontend (src/lib/api.ts = einziger Backend-Zugang)
   src/lib/            reine Hilfen (format, timer, todos, stats, shortcuts, sound), je mit Unit-Test
@@ -144,7 +144,8 @@ oder specta-Typen `cargo test -p nunc export_bindings` ausführen und `src/bindi
 - `tauri-plugin-notification` (iOS): `Schedule.at` parst das UTC-Datum als Ortszeit und lehnt es still ab,
   `sendNotification` verschluckt Fehler (ADR 0004). Nicht unverändert verwenden.
 - Android: `USE_EXACT_ALARM` ist nötig, sonst feuern Timer-Notifications Minuten zu spät (ADR 0004).
-- OAuth: Google und Todoist brauchen eine App-Registrierung (Client-ID/-Secret per Umgebungsvariable beim Bauen oder Starten,
+- OAuth: Google und Todoist brauchen eine App-Registrierung (Client-ID/-Secret per Umgebungsvariable, in Debug-Builds auch per `.env`
+  wie `.env.example`, die `.env` der Go-App passt unverändert; Release: beim Bauen,
   `src-tauri/src/credentials.rs`). Todoist verlangt registrierte Rückruf-Adressen: `http://127.0.0.1:42813/oauth/callback` bis
   `…:42817/…` eintragen. Tokens liegen nur im Tresor (Dienst `nunc`, Konten `google-drive`, `todoist`, `webdav`).
 - Keychain-Tests berühren die Login-Keychain und können einen Dialog auslösen; sie sind `#[ignore]` und nutzen nur

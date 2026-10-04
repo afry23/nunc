@@ -311,7 +311,8 @@ App-Registrierung, siehe unten). Entscheidungen: [ADR 0009](./docs/adr/0009-driv
 - M7-06: Abschnitt „Todoist“ in den Einstellungen, Statuszeile `✓ Todoist: HH:MM` / `⟳ Todoist synchronisiert…` /
   `⚠ Todoist-Sync fehlgeschlagen` (Tooltip: Meldung) über dem Inhalt. Fehler erscheinen zusätzlich als Hinweis.
 - Zugangsdaten: `NUNC_GOOGLE_CLIENT_ID`, `NUNC_GOOGLE_CLIENT_SECRET`, `NUNC_TODOIST_CLIENT_ID`,
-  `NUNC_TODOIST_CLIENT_SECRET` beim Bauen (`option_env!`) oder zur Laufzeit als Umgebungsvariablen. Ohne sie ist
+  `NUNC_TODOIST_CLIENT_SECRET` beim Bauen (`option_env!`) oder zur Laufzeit als Umgebungsvariablen; Debug-Builds lesen
+  zusätzlich eine `.env` (`.env.example`, auch mit den Go-Namen `GOOGLE_CLIENT_ID` …). Ohne Zugangsdaten ist
   „Verbinden“ deaktiviert.
 - **Manuell zu prüfen:** Anmeldung und Abgleich mit echten Konten; Interop mit der Go-App über dasselbe Google-Konto
   (`nunc/nunc-sync.json`).

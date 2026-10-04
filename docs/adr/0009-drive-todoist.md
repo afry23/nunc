@@ -29,7 +29,8 @@ alten schlüge fehl. Scheitert die Erneuerung, steht „Anmeldung abgelaufen –
 
 Client-ID und -Secret werden beim Bauen eingesetzt (`NUNC_GOOGLE_CLIENT_ID`, `NUNC_GOOGLE_CLIENT_SECRET`,
 `NUNC_TODOIST_CLIENT_ID`, `NUNC_TODOIST_CLIENT_SECRET`, per `option_env!`); gleichnamige Umgebungsvariablen zur Laufzeit
-überschreiben sie (Entwicklung). Ohne Zugangsdaten ist „Verbinden“ deaktiviert und sagt warum. Desktop-Clients gelten
+überschreiben sie (Entwicklung). Debug-Builds lesen außerdem eine `.env` (aktueller Ordner oder darüber, auch die
+Go-Namen `GOOGLE_CLIENT_ID` …); Release-Builds nie. Ohne Zugangsdaten ist „Verbinden“ deaktiviert und sagt warum. Desktop-Clients gelten
 bei beiden Diensten nicht als vertraulich, gehören aber nicht ins Repository.
 
 ### Google Drive (M7-02, M7-03)
