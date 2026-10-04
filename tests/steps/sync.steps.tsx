@@ -242,3 +242,135 @@ Then(
 Then("the browser opened {string}", async (world: UiWorld, url: string) => {
   await waitFor(() => expect(world.fake.openedUrls).toContain(url));
 });
+
+// ---------------------------------------------------------------------------------------------
+// Todoist
+
+Given("Todoist is connected", (world: UiWorld) => {
+  world.fake.todoist = {
+    ...world.fake.todoist,
+    connected: true,
+    email: "me@example.org",
+    avatarUrl: "https://avatars.example/me.png",
+  };
+});
+
+Given("this build has no Todoist credentials", (world: UiWorld) => {
+  world.fake.todoist = { ...world.fake.todoist, configured: false };
+});
+
+Given(
+  "connecting Todoist fails with {string}: {string}",
+  (world: UiWorld, code: string, message: string) => {
+    world.fake.todoistConnectError = { code, message };
+  },
+);
+
+When("the Todoist login works again", (world: UiWorld) => {
+  world.fake.todoistConnectError = null;
+});
+
+/** Eine Uhrzeit in lokaler Zeit (die Anzeige ist lokal, der Test soll nicht von der Zeitzone abhängen). */
+function localIso(time: string): string {
+  const [hours, minutes] = time.split(":").map(Number);
+  return new Date(2026, 9, 4, hours, minutes).toISOString();
+}
+
+Given(
+  "the Todoist sync status is {string} with the last sync at {string}",
+  (world: UiWorld, state: string, time: string) => {
+    world.fake.todoistSyncStatus = {
+      state: state as "idle" | "syncing" | "error",
+      lastSyncAt: localIso(time),
+      errorMessage: null,
+    };
+  },
+);
+
+Given(
+  "the next Todoist sync imports {int} todos and replaces {int}",
+  (world: UiWorld, imported: number, replaced: number) => {
+    world.fake.todoistSyncOutcome = {
+      importedTodos: imported,
+      importedSessions: 0,
+      conflictedTodos: replaced,
+    };
+  },
+);
+
+Given(
+  "the next Todoist sync fails with {string}",
+  (world: UiWorld, error: string) => {
+    world.fake.todoistSyncOutcome = { error };
+  },
+);
+
+When(
+  "the backend reports the Todoist sync status {string}",
+  async (_world: UiWorld, state: string) => {
+    await act(async () => {
+      await emit("todoist:sync_status", {
+        state,
+        lastSyncAt: null,
+        errorMessage: null,
+      });
+    });
+  },
+);
+
+When(
+  "the backend reports the Todoist sync status {string} with {string}",
+  async (_world: UiWorld, state: string, message: string) => {
+    await act(async () => {
+      await emit("todoist:sync_status", {
+        state,
+        lastSyncAt: null,
+        errorMessage: message,
+      });
+    });
+  },
+);
+
+Then(
+  "I see the Todoist status line {string}",
+  async (_world: UiWorld, text: string) => {
+    await waitFor(() =>
+      expect(screen.getByTestId("todoist-status").textContent?.trim()).toBe(
+        text,
+      ),
+    );
+  },
+);
+
+Then(
+  "the Todoist status line has the tooltip {string}",
+  async (_world: UiWorld, text: string) => {
+    await waitFor(() =>
+      expect(screen.getByTestId("todoist-status").getAttribute("title")).toBe(
+        text,
+      ),
+    );
+  },
+);
+
+Then(
+  "I see the image {string} from {string}",
+  async (_world: UiWorld, alt: string, source: string) => {
+    const image = await screen.findByRole("img", { name: alt });
+    expect(image.getAttribute("src")).toBe(source);
+  },
+);
+
+When(
+  "the backend finishes a Todoist sync that imported the todos:",
+  async (world: UiWorld, table: DataTable) => {
+    for (const row of table.hashes()) world.fake.addTodo(row.rawText);
+    await act(async () => {
+      await emit("todoist:sync_complete", {
+        importedTodos: table.hashes().length,
+        importedSessions: 0,
+        conflictedTodos: 0,
+      });
+    });
+  },
+);

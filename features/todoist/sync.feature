@@ -79,14 +79,37 @@ Feature: Todoist sync
     When I sync with Todoist
     Then Todoist received 0 create, 0 update and 1 close requests
 
-  @ui @US-Todoist-Sync @desktop @wip
+  @ui @US-Todoist-Sync @desktop
   Scenario: The status shows idle, syncing and error
+    Given Todoist is connected
+    And the Todoist sync status is "idle" with the last sync at "12:00"
+    When I open the app
+    Then I see the Todoist status line "✓ Todoist: 12:00"
+    When the backend reports the Todoist sync status "syncing"
+    Then I see the Todoist status line "⟳ Todoist synchronisiert…"
+    When the backend reports the Todoist sync status "error" with "Verbindung abgelehnt – Server nicht erreichbar"
+    Then I see the Todoist status line "⚠ Todoist-Sync fehlgeschlagen"
+    And the Todoist status line has the tooltip "Verbindung abgelehnt – Server nicht erreichbar"
 
-  @ui @US-Todoist-Sync @desktop @wip
+  @ui @US-Todoist-Sync @desktop
   Scenario: The sync now button starts a sync
+    Given Todoist is connected
+    And the next Todoist sync imports 1 todos and replaces 0
+    When I open the app at "/settings"
+    And I click "Todoist jetzt synchronisieren"
+    Then the backend received "todoist_sync_now"
+    And I see "Todoist: 1 Aufgabe importiert."
 
-  @ui @US-Todoist-Sync @desktop @wip
+  @ui @US-Todoist-Sync @desktop
   Scenario: A failed token refresh is shown as a non-blocking notification
+    Given Todoist is connected
+    And the next Todoist sync fails with "Todoist: Anmeldung abgelaufen – bitte neu verbinden"
+    When I open the app at "/settings"
+    And I click "Todoist jetzt synchronisieren"
+    Then I see "Todoist: Anmeldung abgelaufen – bitte neu verbinden"
+    And I do not see a dialog
+    And I see the buttons "Meldung schließen"
+    And the button "Todoist jetzt synchronisieren" is enabled
 
   @integration @sync @US-Todoist-Sync @desktop
   Scenario: New tasks in Todoist become todos with project and labels
@@ -215,3 +238,17 @@ Feature: Todoist sync
     When the Todoist runner runs
     Then the runner reports the finish time "2026-10-04T09:00:00Z"
     And the last Todoist sync time in the settings is "2026-10-04T09:00:00Z"
+
+  @ui @US-Todoist-Sync @desktop
+  Scenario: The status line is only shown while a Todoist account is connected
+    When I open the app
+    Then I do not see "Todoist:"
+
+  @ui @US-Todoist-Sync @desktop
+  Scenario: Tasks imported from Todoist appear without reloading the app
+    Given Todoist is connected
+    When I open the app
+    And the backend finishes a Todoist sync that imported the todos:
+      | rawText      |
+      | From Todoist |
+    Then I see "Todoist: 1 Aufgabe importiert."

@@ -8,6 +8,7 @@ import type {
   SyncImportInfo,
   SyncResult,
   SyncStatus,
+  TodoistStatus,
   WebDavSettings,
   Settings,
   StatsResponse,
@@ -126,6 +127,12 @@ export interface FakeBackend extends BackendMock {
   drive: DriveStatus;
   driveAccount: string;
   driveConnectError: { code: string; message: string } | null;
+  /** Todoist-Verbindung, Konto nach dem Verbinden, Fehler beim Verbinden und Stand des Abgleichs. */
+  todoist: TodoistStatus;
+  todoistConnectError: { code: string; message: string } | null;
+  todoistSyncStatus: SyncStatus;
+  /** Was der nächste `todoist_sync_now` tut (`null` = nicht verbunden, nichts zu tun). */
+  todoistSyncOutcome: SyncResult | { error: string } | null;
   /** Was `check_sync_import` meldet. */
   importInfo: SyncImportInfo;
   /** Hält `sync_now` an, bis `releaseSync` ruft. */
@@ -200,6 +207,19 @@ export function createFakeBackend(): FakeBackend {
     driveAccount: "me@example.org",
     driveConnectError: null,
     importInfo: { available: false, todoCount: 0, sessionCount: 0 },
+    todoist: {
+      configured: true,
+      connected: false,
+      email: null,
+      avatarUrl: null,
+    },
+    todoistConnectError: null,
+    todoistSyncStatus: { state: "idle", lastSyncAt: null, errorMessage: null },
+    todoistSyncOutcome: {
+      importedTodos: 0,
+      importedSessions: 0,
+      conflictedTodos: 0,
+    },
     holdSync: false,
     releaseSync: () => undefined,
     openedUrls: [],
@@ -425,6 +445,54 @@ export function createFakeBackend(): FakeBackend {
     },
     check_sync_import: () => fake.importInfo,
     finish_connect: () => null,
+    get_todoist_status: () => fake.todoist,
+    connect_todoist: () => {
+      if (fake.todoistConnectError) throw fake.todoistConnectError;
+      fake.todoist = {
+        ...fake.todoist,
+        connected: true,
+        email: "me@example.org",
+        avatarUrl: "https://avatars.example/me.png",
+      };
+      return fake.todoist;
+    },
+    disconnect_todoist: () => {
+      fake.todoist = {
+        ...fake.todoist,
+        connected: false,
+        email: null,
+        avatarUrl: null,
+      };
+      return fake.todoist;
+    },
+    get_todoist_sync_status: () => fake.todoistSyncStatus,
+    todoist_sync_now: async () => {
+      const outcome = fake.todoistSyncOutcome;
+      if (outcome === null) return null;
+      const last = fake.todoistSyncStatus.lastSyncAt;
+      await emit("todoist:sync_status", {
+        state: "syncing",
+        lastSyncAt: last,
+        errorMessage: null,
+      });
+      if ("error" in outcome) {
+        fake.todoistSyncStatus = {
+          state: "error",
+          lastSyncAt: last,
+          errorMessage: outcome.error,
+        };
+        await emit("todoist:sync_status", fake.todoistSyncStatus);
+        fail("network", outcome.error);
+      }
+      fake.todoistSyncStatus = {
+        state: "idle",
+        lastSyncAt: "2026-10-04T10:00:00Z",
+        errorMessage: null,
+      };
+      await emit("todoist:sync_status", fake.todoistSyncStatus);
+      await emit("todoist:sync_complete", outcome);
+      return outcome;
+    },
     "plugin:opener|open_url": ({ url }: { url: string }) => {
       fake.openedUrls.push(url);
       return null;

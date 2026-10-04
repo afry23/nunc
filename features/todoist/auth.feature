@@ -1,8 +1,13 @@
 Feature: Todoist connection
   Source: US-Todoist (US-Todoist-Auth); desktop only in v1
 
-  @ui @US-Todoist-Auth @desktop @wip
+  @ui @US-Todoist-Auth @desktop
   Scenario: The Todoist section shows the connection status
+    When I open the app at "/settings"
+    Then I see the heading "Todoist"
+    And I see "Nicht verbunden"
+    And I see the buttons "Mit Todoist verbinden"
+    And I do not see the button "Todoist trennen"
 
   @integration @sync @US-Todoist-Auth @desktop
   Scenario: Connecting opens the browser with the Todoist authorization page
@@ -35,11 +40,29 @@ Feature: Todoist connection
     And the account has just been connected
     Then within 3000 ms Todoist holds the task "Local task"
 
-  @ui @US-Todoist-Auth @desktop @wip
+  @ui @US-Todoist-Auth @desktop
   Scenario: The connected account is shown with e-mail and avatar
+    Given Todoist is connected
+    When I open the app at "/settings"
+    Then I see "Verbunden als me@example.org"
+    And I see the image "Avatar" from "https://avatars.example/me.png"
+    And I do not see the button "Mit Todoist verbinden"
 
-  @ui @US-Todoist-Auth @desktop @wip
+  @ui @US-Todoist-Auth @desktop
   Scenario: Disconnecting asks for confirmation
+    Given Todoist is connected
+    When I open the app at "/settings"
+    And I click "Todoist trennen"
+    Then I see a dialog with the text "Todoist-Verbindung trennen?"
+    And I see a dialog with the text "Lokale Todos bleiben erhalten, werden aber nicht mehr mit Todoist synchronisiert."
+    And the backend did not receive "disconnect_todoist"
+    When I click "Abbrechen"
+    Then I see "Verbunden als me@example.org"
+    When I click "Todoist trennen"
+    And I click "Trennen"
+    Then the backend received "disconnect_todoist"
+    And I see "Nicht verbunden"
+    And I see the buttons "Mit Todoist verbinden"
 
   @integration @sync @US-Todoist-Auth @desktop
   Scenario: Disconnecting deletes the tokens and keeps local todos
@@ -51,8 +74,17 @@ Feature: Todoist connection
     Then the secret store holds no Todoist connection
     And the local todos are "Keep me"
 
-  @ui @US-Todoist-Auth @desktop @wip
+  @ui @US-Todoist-Auth @desktop
   Scenario: A token exchange error is shown inline and can be retried
+    Given connecting Todoist fails with "oauth": "Token-Austausch mit Todoist fehlgeschlagen: invalid_grant"
+    When I open the app at "/settings"
+    And I click "Mit Todoist verbinden"
+    Then I see "Token-Austausch mit Todoist fehlgeschlagen: invalid_grant"
+    And I do not see a dialog
+    And the button "Mit Todoist verbinden" is enabled
+    When the Todoist login works again
+    And I click "Mit Todoist verbinden"
+    Then I see "Verbunden als me@example.org"
 
   @integration @sync @US-Todoist-Auth @desktop
   Scenario: An expired access token is refreshed automatically
@@ -127,3 +159,24 @@ Feature: Todoist connection
     When I sync with Todoist
     Then the sync fails with "Nicht mit Todoist verbunden"
     And Todoist was not contacted
+
+  @ui @US-Todoist-Auth @desktop
+  Scenario: Connecting from the settings shows the account
+    When I open the app at "/settings"
+    And I click "Mit Todoist verbinden"
+    Then the backend received "connect_todoist"
+    And I see "Verbunden als me@example.org"
+
+  @ui @US-Todoist-Auth @desktop
+  Scenario: A build without Todoist credentials cannot connect
+    Given this build has no Todoist credentials
+    When I open the app at "/settings"
+    Then I see "In diesem Build sind keine Todoist-Zugangsdaten hinterlegt."
+    And the button "Mit Todoist verbinden" is disabled
+
+  @ui @US-Todoist-Auth @mobile
+  Scenario: Todoist is not offered on mobile
+    Given the platform is "mobile"
+    When I open the app at "/settings"
+    Then I do not see "Mit Todoist verbinden"
+    And I do not see "Todoist"
