@@ -31,7 +31,7 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 ```
 crates/nunc-core      pure Fachlogik, kein I/O, kein tokio
 crates/nunc-store     rusqlite, Migrationen, Repos, Backup/Restore
-crates/nunc-sync      WebDAV, Google Drive, Todoist (reqwest)
+crates/nunc-sync      WebDAV-Client, Sync-Lauf, Steuerung (Koordinator); später Google Drive, Todoist (reqwest)
 crates/nunc-platform  Traits + Fakes: Clock, EventSink, Notifier, SecretStore (Keyring)
 src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)])
   src/state.rs        AppState (DB, TimerService, Tresor), Start, Restore, Shutdown-Hooks
@@ -84,18 +84,20 @@ Zeitstempel neu berechnet. Tick-Events (`timer:tick`) sind nur Anzeige im Vorder
 4. `@wip` entfernen, Pflicht-Checks ausführen, committen.
 
 Tags: `@domain` (Rust, pure), `@integration` (Rust, In-Memory-SQLite + wiremock), `@ui` (Vitest, `mockIPC`),
-`@e2e`, `@desktop`/`@mobile`, `@property` (Eigenschaftstest über zufällige Eingaben, ADR 0006), `@wip`. `@wip`-Szenarien werden von den Runnern übersprungen. Keine
+`@sync` (Integrationsszenario für den Sync, läuft in `nunc-sync`), `@e2e`, `@desktop`/`@mobile`, `@property` (Eigenschaftstest über zufällige Eingaben, ADR 0006), `@wip`. `@wip`-Szenarien werden von den Runnern übersprungen. Keine
 undefined/pending Steps (der Rust-Runner bricht bei übersprungenen Steps ab).
 
 ```bash
 cargo test -p nunc-core --test bdd      # @domain (NUNC_BDD_REPORT=/abs/pfad.json schreibt zusätzlich JSON)
 cargo test -p nunc-store --test bdd     # @integration (Temp-Ordner, echte SQLite-Dateien)
+cargo test -p nunc-sync --test bdd      # @integration @sync (WebDAV-Server mit Zustand per wiremock, Sync-Steuerung)
 npm run test:bdd                        # @ui (features/ui/*.feature)
 npm run test:e2e                        # @e2e @desktop, braucht tauri-driver (Linux/Windows)
 npm run test:mobile                     # @e2e @mobile, Maestro-Flows gegen Emulator/Gerät (e2e/mobile/README.md)
 ```
 
-Go-Interop (manuell, braucht `../nunc-go` und Go): `tests/interop/go-reads-nunc-db.sh`.
+Go-Interop (manuell, braucht `../nunc-go` und Go): `tests/interop/go-reads-nunc-db.sh` (Go liest die nunc-DB),
+`tests/interop/webdav-go-nunc.sh` (Go-App und nunc synchronisieren abwechselnd gegen einen WebDAV-Server, kein Docker nötig).
 
 Step-Definitions: Rust in `crates/*/tests/bdd/` (`main.rs` mit gemeinsamer `DomainWorld`, ein Modul pro Themenbereich), TypeScript in `tests/steps/` (`tests/helpers/ipc.ts` →
 `mockBackend({ app_info: () => … })`). Details: ADR 0006.

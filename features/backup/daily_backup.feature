@@ -222,17 +222,109 @@ Feature: Daily backup
       | 2026-10-02T10:00:00Z | false    |
       | 2026-10-02T09:59:59Z | true     |
 
-  @ui @US-B04 @wip
+  @ui @US-B04
   Scenario: The backup status is shown in the settings
+    Given the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+      | 2026-10-02 | daily    | 500       |
+    When I open the app at "/settings"
+    Then I see "Letztes Backup: 03.10.2026"
+    And I see "2 Backups · 1 KB"
+    And I do not see "älter als zwei Tage"
 
-  @ui @US-B05 @wip
+  @ui @US-B04
+  Scenario: Without backups the settings say so
+    When I open the app at "/settings"
+    Then I see "Noch kein Backup vorhanden."
+    And I see "Keine Backups vorhanden."
+
+  @ui @US-B05
   Scenario: The backup now button shows a spinner and then the result
+    Given the manual backup is held back
+    And the backup result is "/data/backups/nunc-backup-2026-10-04.db" with 2048 bytes
+    When I open the app at "/settings"
+    And I click "Jetzt sichern"
+    Then I see "Sichere …"
+    And the button "Sichere …" is disabled
+    When the manual backup finishes
+    Then I see "Gesichert: /data/backups/nunc-backup-2026-10-04.db (2 KB)"
+    And I see the buttons "Jetzt sichern"
+    And the backend received "trigger_backup"
 
-  @ui @US-B04 @wip
+  @ui @US-B05
+  Scenario: A rotation problem is reported next to the result
+    Given the backup result has the rotation error "Zugriff verweigert"
+    When I open the app at "/settings"
+    And I click "Jetzt sichern"
+    Then I see "Alte Backups konnten nicht aufgeräumt werden: Zugriff verweigert"
+
+  @ui @US-B04
   Scenario: A warning is shown when the last backup is too old
+    Given the backups:
+      | date       | category | sizeBytes |
+      | 2026-09-30 | daily    | 1000      |
+    And the backup status is outdated
+    When I open the app at "/settings"
+    Then I see "Das letzte Backup ist älter als zwei Tage."
 
-  @ui @US-B03 @desktop @wip
+  @ui @US-B03 @desktop
   Scenario: The backup folder can be chosen
+    Given the platform is "desktop"
+    And the folder dialog returns "/home/me/nunc-backups"
+    When I open the app at "/settings"
+    Then I see "Backup-Ordner: Standardordner"
+    When I click "Backup-Ordner wählen"
+    Then the backend received "select_backup_dir"
+    And I see "Backup-Ordner: /home/me/nunc-backups"
 
-  @ui @US-B05 @mobile @wip
+  @ui @US-B03 @desktop
+  Scenario: Cancelling the folder dialog keeps the folder
+    Given the platform is "desktop"
+    And the setting "backupDir" is "/home/me/old"
+    And the folder dialog is cancelled
+    When I open the app at "/settings"
+    And I click "Backup-Ordner wählen"
+    Then I see "Backup-Ordner: /home/me/old"
+
+  @ui @US-B03 @mobile
+  Scenario: The backup folder is fixed on mobile
+    Given the platform is "mobile"
+    When I open the app at "/settings"
+    Then I do not see the button "Backup-Ordner wählen"
+    And I do not see "Backup-Ordner:"
+
+  @ui @US-B05 @mobile
   Scenario: Backups can be exported and shared
+    Given the platform is "mobile"
+    And the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+    When I open the app at "/settings"
+    And I click "Backup vom 03.10.2026 exportieren"
+    Then the backend received "export_backup" with:
+      """
+      { "sourcePath": "/data/backups/nunc-backup-2026-10-03.db" }
+      """
+    And I see "Backup exportiert."
+
+  @ui @US-B05 @mobile
+  Scenario: Cancelling the export dialog shows no confirmation
+    Given the platform is "mobile"
+    And the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+    And the export dialog is cancelled
+    When I open the app at "/settings"
+    And I click "Backup vom 03.10.2026 exportieren"
+    Then the backend received "export_backup"
+    And I do not see "Backup exportiert."
+
+  @ui @US-B05 @desktop
+  Scenario: Backups are not exported on the desktop because the folder is accessible
+    Given the platform is "desktop"
+    And the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+    When I open the app at "/settings"
+    Then I do not see the button "Backup vom 03.10.2026 exportieren"

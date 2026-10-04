@@ -7,6 +7,7 @@ use nunc_core::model::SettingsIssue;
 use nunc_core::timer::TimerError;
 use nunc_platform::{NotifyError, SecretError};
 use nunc_store::StoreError;
+use nunc_sync::SyncError;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
@@ -42,15 +43,37 @@ impl AppError {
     }
 }
 
+fn store_code(error: &StoreError) -> &'static str {
+    match error {
+        StoreError::Io(_) => "io",
+        StoreError::Sqlite(_) | StoreError::Migration { .. } => "database",
+        StoreError::Json(_) => "state_unreadable",
+        StoreError::BackupDir(_) => "backup_dir",
+        StoreError::InvalidBackup(_) => "invalid_backup",
+        StoreError::NotFound { .. } => "not_found",
+    }
+}
+
 impl From<StoreError> for AppError {
     fn from(error: StoreError) -> Self {
+        Self::new(store_code(&error), error.to_string())
+    }
+}
+
+impl From<SyncError> for AppError {
+    fn from(error: SyncError) -> Self {
         let code = match &error {
-            StoreError::Io(_) => "io",
-            StoreError::Sqlite(_) | StoreError::Migration { .. } => "database",
-            StoreError::Json(_) => "state_unreadable",
-            StoreError::BackupDir(_) => "backup_dir",
-            StoreError::InvalidBackup(_) => "invalid_backup",
-            StoreError::NotFound { .. } => "not_found",
+            SyncError::Transport(_) => "network",
+            SyncError::Unauthorized | SyncError::Forbidden | SyncError::WrongAuthMethod(..) => {
+                "unauthorized"
+            }
+            SyncError::Status { .. } => "server",
+            SyncError::Conflict => "sync_conflict",
+            SyncError::InvalidFile(_) => "sync_file_invalid",
+            SyncError::InvalidUrl(_) => "invalid_input",
+            SyncError::NotConfigured => "sync_not_configured",
+            SyncError::Store(inner) => return Self::new(store_code(inner), error.to_string()),
+            SyncError::Secret(_) => "secret_store",
         };
         Self::new(code, error.to_string())
     }
@@ -126,6 +149,37 @@ mod tests {
         assert_eq!(
             AppError::from(StoreError::BackupDir("x".into())).code,
             "backup_dir"
+        );
+    }
+
+    #[test]
+    fn sync_errors_get_stable_codes() {
+        let code = |error: SyncError| AppError::from(error).code;
+        assert_eq!(code(SyncError::Unauthorized), "unauthorized");
+        assert_eq!(code(SyncError::Forbidden), "unauthorized");
+        assert_eq!(code(SyncError::Conflict), "sync_conflict");
+        assert_eq!(code(SyncError::NotConfigured), "sync_not_configured");
+        assert_eq!(code(SyncError::Transport("x".into())), "network");
+        assert_eq!(
+            code(SyncError::InvalidFile("x".into())),
+            "sync_file_invalid"
+        );
+        assert_eq!(code(SyncError::InvalidUrl("x".into())), "invalid_input");
+        assert_eq!(
+            code(SyncError::Status {
+                status: 500,
+                action: "Test"
+            }),
+            "server"
+        );
+        assert_eq!(
+            code(SyncError::Store(StoreError::InvalidBackup("x".into()))),
+            "invalid_backup"
+        );
+        let error = AppError::from(SyncError::Unauthorized);
+        assert_eq!(
+            error.message,
+            "401 Unauthorized – Benutzername oder Passwort falsch"
         );
     }
 

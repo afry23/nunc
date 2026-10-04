@@ -44,6 +44,12 @@ fn save(world: &mut StoreWorld) {
     nunc_store::save_settings(conn, &settings).expect("Einstellungen speichern");
 }
 
+#[when(expr = "I select the sync provider {string}")]
+fn select_provider(world: &mut StoreWorld, provider: String) {
+    let provider = provider.parse().expect("unbekannter Sync-Anbieter");
+    nunc_store::set_sync_provider(world.conn(), provider).expect("Anbieter wählen");
+}
+
 #[when(expr = "the settings table has {string} = {string}")]
 fn raw_set(world: &mut StoreWorld, key: String, value: String) {
     world

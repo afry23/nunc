@@ -113,7 +113,7 @@ fn build_export(
 }
 
 /// Schreibt über das Fs-Plugin, damit auch Ziele des Datei-Pickers auf Mobilgeräten funktionieren.
-fn write_file<R: Runtime>(
+pub(crate) fn write_file<R: Runtime>(
     app: &AppHandle<R>,
     target: FilePath,
     content: &[u8],

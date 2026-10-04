@@ -5,6 +5,7 @@ mod error;
 mod events;
 mod lifecycle;
 mod state;
+mod sync_service;
 mod timer_service;
 #[cfg(desktop)]
 mod tray;
@@ -18,7 +19,7 @@ use tauri_specta::{Builder, collect_commands, collect_events};
 const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/bindings.ts");
 
 fn specta_builder() -> Builder<tauri::Wry> {
-    use commands::{app, backup, notifications, settings, stats, timer, todos};
+    use commands::{app, backup, notifications, settings, stats, sync, timer, todos};
 
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -48,6 +49,14 @@ fn specta_builder() -> Builder<tauri::Wry> {
             backup::restore_from_backup,
             backup::select_backup_dir::<tauri::Wry>,
             backup::select_restore_file::<tauri::Wry>,
+            backup::export_backup::<tauri::Wry>,
+            sync::set_sync_provider,
+            sync::get_webdav_config,
+            sync::save_webdav_config,
+            sync::test_webdav_connection,
+            sync::get_sync_status,
+            sync::sync_now,
+            sync::sync_in_background,
             notifications::get_notification_status::<tauri::Wry>,
             notifications::request_notification_permission::<tauri::Wry>,
         ])
@@ -56,6 +65,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
             events::TimerComplete,
             events::TimerStopped,
             events::AppReload,
+            events::SyncStart,
+            events::SyncStatusChanged,
+            events::SyncComplete,
         ])
         // Dateigrößen liegen weit unter 2^53; `u64` darf daher als `number` exportiert werden.
         .dangerously_cast_bigints_to_number()

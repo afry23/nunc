@@ -3,6 +3,8 @@ import {
   addDays,
   formatBytes,
   formatClock,
+  formatDateTime,
+  formatUtcDate,
   formatMinutes,
   parseIsoDate,
   shortDate,
@@ -94,5 +96,20 @@ describe("monthLabel", () => {
   });
   it("falls back to the number for invalid months", () => {
     expect(monthLabel(2026, 13)).toBe("13 2026");
+  });
+});
+
+describe("formatDateTime / formatUtcDate", () => {
+  it("formats local date and time", () => {
+    const local = new Date(2026, 9, 4, 8, 5).toISOString();
+    expect(formatDateTime(local)).toBe("04.10.2026, 08:05");
+  });
+  it("formats the UTC calendar day", () => {
+    expect(formatUtcDate("2026-10-04T12:00:00Z")).toBe("04.10.2026");
+    expect(formatUtcDate("2026-01-09T23:59:00Z")).toBe("09.01.2026");
+  });
+  it("returns unreadable input unchanged", () => {
+    expect(formatDateTime("gestern")).toBe("gestern");
+    expect(formatUtcDate("gestern")).toBe("gestern");
   });
 });

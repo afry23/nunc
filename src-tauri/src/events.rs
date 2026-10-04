@@ -3,7 +3,7 @@
 //! Die Dienste senden über den [`EventSink`]; die Typen hier legen Namen und Nutzlast fest und landen in
 //! `src/bindings.ts`.
 
-use nunc_core::model::Session;
+use nunc_core::model::{Session, SyncResult, SyncStatus};
 use nunc_core::timer::{BreakSuggestion, TimerSnapshot};
 use nunc_platform::EventSink;
 use serde::{Deserialize, Serialize};
@@ -39,6 +39,21 @@ pub struct TimerStopped(pub FinishPayload);
 #[tauri_specta(event_name = "app:reload")]
 pub struct AppReload;
 
+/// Ein Sync-Lauf beginnt.
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[tauri_specta(event_name = "sync:start")]
+pub struct SyncStart;
+
+/// Der Sync-Zustand hat sich geändert (`idle` · `syncing` · `error`).
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[tauri_specta(event_name = "sync:status")]
+pub struct SyncStatusChanged(pub SyncStatus);
+
+/// Ein Sync-Lauf ist gelungen; die Nutzlast sagt, was vom Server übernommen wurde.
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[tauri_specta(event_name = "sync:complete")]
+pub struct SyncComplete(pub SyncResult);
+
 /// Sendet ein typisiertes Ereignis über die Senke.
 pub fn emit<E: Event + Serialize>(sink: &dyn EventSink, event: &E) {
     match serde_json::to_value(event) {
@@ -61,6 +76,9 @@ mod tests {
         assert_eq!(TimerComplete::NAME, "timer:complete");
         assert_eq!(TimerStopped::NAME, "timer:stopped");
         assert_eq!(AppReload::NAME, "app:reload");
+        assert_eq!(SyncStart::NAME, "sync:start");
+        assert_eq!(SyncStatusChanged::NAME, "sync:status");
+        assert_eq!(SyncComplete::NAME, "sync:complete");
     }
 
     #[test]

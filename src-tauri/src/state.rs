@@ -14,10 +14,12 @@ use nunc_store::{
     BackupResult, LegacyImport, backup_if_needed, device_id, import_legacy_db, open,
     resolve_backup_dir, restore_backup,
 };
+use nunc_sync::{SyncCoordinator, Trigger};
 
 use crate::db::Db;
 use crate::error::AppError;
 use crate::events::{self, AppReload};
+use crate::sync_service;
 use crate::timer_service::TimerService;
 
 /// Dateien und Ordner der App.
@@ -45,6 +47,8 @@ pub struct Platform {
     pub events: Arc<dyn EventSink>,
     pub notifier: Arc<dyn Notifier>,
     pub secrets: Arc<dyn SecretStore>,
+    /// Tokio-Laufzeit für Hintergrundaufgaben (Sync).
+    pub runtime: tokio::runtime::Handle,
 }
 
 type ShutdownHook = Box<dyn Fn() + Send>;
@@ -55,9 +59,10 @@ pub struct AppState {
     pub clock: Arc<dyn Clock>,
     pub events: Arc<dyn EventSink>,
     pub timer: Arc<TimerService>,
-    /// Tresor für Tokens und Passwörter (Sync, ab M6).
-    #[expect(dead_code, reason = "wird mit dem WebDAV-Sync in M6 gelesen")]
+    /// Tresor für Tokens und Passwörter (Sync).
     pub secrets: Arc<dyn SecretStore>,
+    pub sync: Arc<SyncCoordinator>,
+    pub runtime: tokio::runtime::Handle,
     shutdown_hooks: Mutex<Vec<ShutdownHook>>,
 }
 
@@ -71,6 +76,15 @@ impl AppState {
         }
         let db = Arc::new(Db::new(open(&paths.db)?));
         let device_id = db.with(|conn| device_id(conn, || uuid::Uuid::new_v4().to_string()))?;
+        let sync = sync_service::coordinator(
+            db.clone(),
+            device_id.clone(),
+            platform.secrets.clone(),
+            platform.clock.clone(),
+            platform.events.clone(),
+            platform.runtime.clone(),
+        )?;
+        let session_sync = sync.clone();
         let timer = Arc::new(
             TimerService::new(
                 db.clone(),
@@ -79,6 +93,9 @@ impl AppState {
                 platform.notifier,
                 device_id,
             )?
+            .with_session_hook(Arc::new(move || {
+                session_sync.trigger(Trigger::SessionFinished)
+            }))
             .with_fast_pomodoro(fast_timer_from_env()),
         );
         Ok(Self {
@@ -88,19 +105,14 @@ impl AppState {
             events: platform.events,
             timer,
             secrets: platform.secrets,
+            sync,
+            runtime: platform.runtime,
             shutdown_hooks: Mutex::new(Vec::new()),
         })
     }
 
     /// Meldet `hook` für das Beenden der App an (z. B. der Sync, der beim Schließen noch einmal läuft, M6-07).
     /// Die Hooks laufen in der Reihenfolge der Anmeldung.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "wird mit der Sync-Orchestrierung in M6-07 angemeldet"
-        )
-    )]
     pub fn on_shutdown(&self, hook: impl Fn() + Send + 'static) {
         if let Ok(mut hooks) = self.shutdown_hooks.lock() {
             hooks.push(Box::new(hook));
@@ -148,6 +160,20 @@ impl AppState {
     }
 }
 
+/// Laufzeit für Tests, die einen [`AppState`] bauen. Niemand treibt sie an: gestartete Hintergrundaufgaben
+/// (Sync-Auslöser) laufen dort nicht, was die Tests deterministisch hält.
+#[cfg(test)]
+pub fn test_runtime() -> tokio::runtime::Handle {
+    use std::sync::LazyLock;
+    static RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .expect("Test-Laufzeit")
+    });
+    RUNTIME.handle().clone()
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -193,6 +219,7 @@ mod tests {
                     events: self.events.clone(),
                     notifier: Arc::new(RecordingNotifier::new(false)),
                     secrets: Arc::new(MemorySecretStore::default()),
+                    runtime: test_runtime(),
                 },
             )
             .unwrap()

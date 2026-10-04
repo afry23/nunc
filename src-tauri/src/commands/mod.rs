@@ -6,6 +6,7 @@ pub mod backup;
 pub mod notifications;
 pub mod settings;
 pub mod stats;
+pub mod sync;
 pub mod timer;
 pub mod todos;
 

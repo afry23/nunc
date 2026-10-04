@@ -1,4 +1,12 @@
+import { emit } from "@tauri-apps/api/event";
 import type {
+  BackupEntry,
+  BackupInfo,
+  BackupStatus,
+  ConnectionTestResult,
+  SyncResult,
+  SyncStatus,
+  WebDavSettings,
   Settings,
   StatsResponse,
   TimerMode,
@@ -91,11 +99,48 @@ export interface FakeBackend extends BackendMock {
   permissionAnswer: "granted" | "denied";
   /** Ergebnis von `save_export_to_file` (`null` = Dialog abgebrochen). */
   exportPath: string | null;
+  /** Backups im Backup-Ordner (neueste zuerst); Status und Liste leiten sich daraus ab. */
+  backups: BackupEntry[];
+  /** Todo-Zeilen je Backup-Pfad, die ein Restore einspielt. */
+  backupContents: Record<string, string[]>;
+  /** Ergebnis von `trigger_backup`; `"hold"` hält den Aufruf an, bis `releaseBackup` ruft. */
+  backupResult: BackupInfo;
+  /** Meldet der Status „veraltet“ (die Zeitrechnung selbst gehört dem Backend). */
+  backupsOutdated: boolean;
+  holdBackup: boolean;
+  releaseBackup: () => void;
+  /** Ergebnisse der Datei- und Ordner-Dialoge (`null` = abgebrochen). */
+  restoreFile: string | null;
+  backupDirChoice: string | null;
+  /** Ziel des „Speichern unter“-Dialogs beim Export (`null` = abgebrochen). */
+  exportTarget: string | null;
+  /** Gespeicherte WebDAV-Einstellungen und das Ergebnis des Verbindungstests. */
+  webdav: WebDavSettings;
+  webdavTest: ConnectionTestResult;
+  /** Stand der Synchronisierung und was der nächste `sync_now` tut (`null` = nichts zu synchronisieren). */
+  syncStatus: SyncStatus;
+  syncOutcome: SyncResult | { error: string } | null;
+  /** Fehler, den `set_sync_provider` meldet (`null` = Erfolg). */
+  providerError: { code: string; message: string } | null;
+  /** Fehler, den `restore_from_backup` meldet (`null` = Erfolg). */
+  restoreError: { code: string; message: string } | null;
   /** Letzte Argumente je Command. */
   last: (cmd: string) => Record<string, unknown> | undefined;
   /** Anzahl der Aufrufe eines Commands. */
   count: (cmd: string) => number;
   addTodo: (rawText: string, over?: Partial<Todo>) => Todo;
+}
+
+function backupStatus(
+  backups: BackupEntry[],
+  isOutdated: boolean,
+): BackupStatus {
+  return {
+    lastBackupAt: backups[0]?.createdAt ?? null,
+    backupCount: backups.length,
+    totalSizeBytes: backups.reduce((sum, b) => sum + b.sizeBytes, 0),
+    isOutdated,
+  };
 }
 
 const IDLE: TimerSnapshot = {
@@ -118,7 +163,37 @@ export function createFakeBackend(): FakeBackend {
     exportPath: "/tmp/export.csv" as string | null,
     notificationPermission: "granted",
     permissionAnswer: "granted",
-  } as FakeBackend;
+    backups: [],
+    backupContents: {},
+    backupResult: {
+      path: "/data/backups/nunc-backup-2026-10-04.db",
+      sizeBytes: 2048,
+      deleted: [],
+      rotationError: null,
+    },
+    holdBackup: false,
+    releaseBackup: () => undefined,
+    backupsOutdated: false,
+    restoreFile: null,
+    backupDirChoice: null,
+    restoreError: null,
+    providerError: null,
+    webdav: {
+      config: {
+        url: "",
+        authMethod: "basic",
+        username: "",
+        remotePath: "/nunc/",
+      },
+      hasPassword: false,
+    },
+    webdavTest: { success: true, message: "dav.example.org" },
+    syncStatus: { state: "idle", lastSyncAt: null, errorMessage: null },
+    syncOutcome: { importedTodos: 0, importedSessions: 0, conflictedTodos: 0 },
+    exportTarget: "/storage/Download/nunc-backup.db",
+  } as unknown as FakeBackend;
+  let releaseHeld: (() => void) | undefined;
+  fake.releaseBackup = () => releaseHeld?.();
   let nextId = 1;
 
   const resequence = (): void =>
@@ -271,6 +346,83 @@ export function createFakeBackend(): FakeBackend {
     get_stats: () => fake.stats,
     save_export_to_file: () => fake.exportPath,
     show_main_window: () => null,
+    get_backup_status: () => backupStatus(fake.backups, fake.backupsOutdated),
+    list_backups: () => fake.backups,
+    trigger_backup: async () => {
+      if (fake.holdBackup)
+        await new Promise<void>((resolve) => (releaseHeld = resolve));
+      return fake.backupResult;
+    },
+    select_backup_dir: () => {
+      if (fake.backupDirChoice !== null)
+        fake.settings = { ...fake.settings, backupDir: fake.backupDirChoice };
+      return fake.backupDirChoice;
+    },
+    select_restore_file: () => fake.restoreFile,
+    export_backup: () => fake.exportTarget,
+    get_webdav_config: () => fake.webdav,
+    save_webdav_config: ({
+      config,
+      password,
+    }: {
+      config: WebDavSettings["config"];
+      password: string | null;
+    }) => {
+      fake.webdav = {
+        config,
+        hasPassword: password !== null || fake.webdav.hasPassword,
+      };
+      return null;
+    },
+    test_webdav_connection: () => fake.webdavTest,
+    get_sync_status: () => fake.syncStatus,
+    sync_in_background: () => null,
+    sync_now: async () => {
+      const outcome = fake.syncOutcome;
+      if (outcome === null) return null;
+      const last = fake.syncStatus.lastSyncAt;
+      await emit("sync:start");
+      await emit("sync:status", {
+        state: "syncing",
+        lastSyncAt: last,
+        errorMessage: null,
+      });
+      if ("error" in outcome) {
+        fake.syncStatus = {
+          state: "error",
+          lastSyncAt: last,
+          errorMessage: outcome.error,
+        };
+        await emit("sync:status", fake.syncStatus);
+        fail("network", outcome.error);
+      }
+      fake.syncStatus = {
+        state: "idle",
+        lastSyncAt: "2026-10-04T10:00:00Z",
+        errorMessage: null,
+      };
+      await emit("sync:status", fake.syncStatus);
+      await emit("sync:complete", outcome);
+      return outcome;
+    },
+    set_sync_provider: ({
+      provider,
+    }: {
+      provider: Settings["syncProvider"];
+    }) => {
+      if (fake.providerError) throw fake.providerError;
+      fake.settings = { ...fake.settings, syncProvider: provider };
+      return null;
+    },
+    restore_from_backup: async ({ sourcePath }: { sourcePath: string }) => {
+      if (fake.restoreError) throw fake.restoreError;
+      const lines = fake.backupContents[sourcePath] ?? [];
+      fake.todos = [];
+      lines.forEach((line) => fake.addTodo(line));
+      // wie das echte Backend: nach dem Austausch melden
+      setTimeout(() => void emit("app:reload"), 0);
+      return null;
+    },
   };
 
   const mock = mockBackend(

@@ -15,7 +15,7 @@ use tempfile::TempDir;
 
 use crate::state::{AppPaths, AppState, Platform};
 
-use super::{app, backup, notifications, settings, stats, timer, todos};
+use super::{app, backup, notifications, settings, stats, sync, timer, todos};
 
 struct Harness {
     _dir: TempDir,
@@ -45,6 +45,7 @@ impl Harness {
                 events: events.clone(),
                 notifier: Arc::new(RecordingNotifier::new(false)),
                 secrets: Arc::new(MemorySecretStore::default()),
+                runtime: crate::state::test_runtime(),
             },
         )
         .unwrap();
@@ -74,6 +75,14 @@ impl Harness {
                 backup::trigger_backup,
                 backup::list_backups,
                 backup::restore_from_backup,
+                backup::export_backup,
+                sync::set_sync_provider,
+                sync::get_webdav_config,
+                sync::get_sync_status,
+                sync::sync_now,
+                sync::sync_in_background,
+                sync::save_webdav_config,
+                sync::test_webdav_connection,
                 notifications::get_notification_status,
                 notifications::request_notification_permission,
             ])
@@ -202,6 +211,147 @@ fn settings_keep_backend_owned_fields() {
     let after = h.ok("get_settings", json!({}));
     assert_eq!(after["lastBackupDate"], "2026-10-04");
     assert_eq!(after["backupDir"], "");
+}
+
+#[test]
+fn the_sync_provider_is_chosen_by_its_own_command_and_not_by_save_settings() {
+    let h = Harness::new();
+    assert_eq!(h.ok("get_settings", json!({}))["syncProvider"], "none");
+    h.ok("set_sync_provider", json!({ "provider": "webdav" }));
+    assert_eq!(h.ok("get_settings", json!({}))["syncProvider"], "webdav");
+
+    // ein veralteter Entwurf im Formular überschreibt die Wahl nicht
+    let mut stale = h.ok("get_settings", json!({}));
+    stale["syncProvider"] = json!("none");
+    h.ok("save_settings", json!({ "settings": stale }));
+    assert_eq!(h.ok("get_settings", json!({}))["syncProvider"], "webdav");
+
+    h.ok("set_sync_provider", json!({ "provider": "none" }));
+    assert_eq!(h.ok("get_settings", json!({}))["syncProvider"], "none");
+    assert!(
+        h.call("set_sync_provider", json!({ "provider": "dropbox" }))
+            .is_err()
+    );
+}
+
+#[test]
+fn webdav_settings_are_saved_without_ever_returning_the_password() {
+    let h = Harness::new();
+    let fresh = h.ok("get_webdav_config", json!({}));
+    assert_eq!(fresh["hasPassword"], false);
+    assert_eq!(fresh["config"]["remotePath"], "/nunc/");
+    assert_eq!(fresh["config"]["authMethod"], "basic");
+
+    let config = json!({
+        "url": " https://dav.example.org/dav ",
+        "authMethod": "digest",
+        "username": "me",
+        "remotePath": "/apps/nunc/"
+    });
+    h.ok(
+        "save_webdav_config",
+        json!({ "config": config, "password": "s3cret" }),
+    );
+    let saved = h.ok("get_webdav_config", json!({}));
+    assert_eq!(saved["hasPassword"], true);
+    assert_eq!(saved["config"]["url"], "https://dav.example.org/dav");
+    assert_eq!(saved["config"]["authMethod"], "digest");
+    assert!(!saved.to_string().contains("s3cret"));
+
+    // ohne Passwort bleibt das gespeicherte erhalten
+    h.ok(
+        "save_webdav_config",
+        json!({ "config": config, "password": null }),
+    );
+    assert_eq!(h.ok("get_webdav_config", json!({}))["hasPassword"], true);
+}
+
+#[test]
+fn webdav_settings_with_a_bad_address_are_refused() {
+    let h = Harness::new();
+    let config = json!({
+        "url": "cloud.example.org", "authMethod": "basic", "username": "me", "remotePath": "/nunc/"
+    });
+    assert_eq!(
+        h.err_code(
+            "save_webdav_config",
+            json!({ "config": config, "password": "x" })
+        ),
+        "invalid_input"
+    );
+    assert_eq!(h.ok("get_webdav_config", json!({}))["config"]["url"], "");
+    // leeren ist erlaubt
+    let empty = json!({
+        "url": "", "authMethod": "basic", "username": "", "remotePath": "/nunc/"
+    });
+    h.ok(
+        "save_webdav_config",
+        json!({ "config": empty, "password": null }),
+    );
+}
+
+#[test]
+fn the_connection_test_reports_failures_as_a_result_not_an_error() {
+    let h = Harness::new();
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    let config = json!({
+        "url": url, "authMethod": "basic", "username": "me", "remotePath": "/nunc/"
+    });
+    let result = h.ok(
+        "test_webdav_connection",
+        json!({ "config": config, "password": "x" }),
+    );
+    assert_eq!(result["success"], false);
+    assert_eq!(
+        result["message"],
+        "Verbindung abgelehnt – Server nicht erreichbar"
+    );
+
+    let bad = json!({
+        "url": "kein-url", "authMethod": "basic", "username": "me", "remotePath": "/"
+    });
+    let result = h.ok(
+        "test_webdav_connection",
+        json!({ "config": bad, "password": null }),
+    );
+    assert_eq!(result["success"], false);
+    assert_eq!(result["message"], "Ungültige Server-Adresse: kein-url");
+}
+
+#[test]
+fn sync_now_does_nothing_without_a_provider_and_reports_an_incomplete_setup() {
+    let h = Harness::new();
+    let status = h.ok("get_sync_status", json!({}));
+    assert_eq!(status["state"], "idle");
+    assert!(status["lastSyncAt"].is_null());
+
+    assert!(h.ok("sync_now", json!({})).is_null());
+    assert!(h.events.names().iter().any(|n| n == "sync:start"));
+    assert_eq!(h.ok("get_sync_status", json!({}))["state"], "idle");
+
+    h.ok("set_sync_provider", json!({ "provider": "webdav" }));
+    assert_eq!(h.err_code("sync_now", json!({})), "sync_not_configured");
+    let status = h.ok("get_sync_status", json!({}));
+    assert_eq!(status["state"], "error");
+    assert_eq!(
+        status["errorMessage"],
+        "WebDAV ist nicht vollständig eingerichtet"
+    );
+    let names = h.events.names();
+    assert!(names.iter().any(|n| n == "sync:status"));
+    assert!(!names.iter().any(|n| n == "sync:complete"));
+}
+
+#[test]
+fn a_paused_sync_does_nothing_even_with_a_provider() {
+    let h = Harness::new();
+    h.ok("set_sync_provider", json!({ "provider": "webdav" }));
+    let mut settings = h.ok("get_settings", json!({}));
+    settings["syncEnabled"] = json!(false);
+    h.ok("save_settings", json!({ "settings": settings }));
+    assert!(h.ok("sync_now", json!({})).is_null());
 }
 
 #[test]
@@ -478,6 +628,21 @@ fn restoring_a_bad_file_fails_with_a_typed_error_and_changes_nothing() {
     );
     assert_eq!(texts(&h.ok("get_todos", json!({}))), ["bleibt"]);
     assert!(!h.events.names().contains(&"app:reload".to_owned()));
+}
+
+#[test]
+fn only_backups_from_the_backup_folder_can_be_exported() {
+    let h = Harness::new();
+    let outside = h._dir.path().join("nunc-backup-2026-10-04.db");
+    std::fs::write(&outside, b"x").unwrap();
+    assert_eq!(
+        h.err_code("export_backup", json!({ "sourcePath": outside })),
+        "invalid_input"
+    );
+    assert_eq!(
+        h.err_code("export_backup", json!({ "sourcePath": "/etc/passwd" })),
+        "invalid_input"
+    );
 }
 
 #[test]

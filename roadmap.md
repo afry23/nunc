@@ -250,6 +250,31 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 | M6-08 | Sync-Status-Anzeige | Statusleiste idle/syncing/error, Ergebnis-Hinweis „X Sessions, Y Aufgaben importiert“, Konflikt-Hinweis | – |
 | M6-09 | Interop-Test Go ↔ Tauri | WebDAV-Testserver (Docker `rclone serve webdav`): Go-App und Tauri-App syncen abwechselnd → identische Daten | `sync/compat_go.feature` (@e2e) |
 
+**Stand:** umgesetzt (Desktop; Mobil-Export/-Import, Mobil-Sync und die Builds für Android/iOS sind nicht auf einem Gerät geprüft).
+Entscheidungen: [ADR 0008](./docs/adr/0008-webdav-sync.md). Abweichungen und Ergänzungen:
+
+- M6-01/02: Backup und Wiederherstellung stehen als Abschnitt „Datensicherung“ in den Einstellungen (`BackupSection`),
+  getrennt vom Einstellungsformular (eigene Aktionen, kein „Speichern“). Der Datei-Dialog filtert auf `.db`
+  (`RESTORE_EXTENSIONS`, Rust-Test); mobil gibt es keinen Filter, weil iOS/Android `.db` nicht als Dateityp kennen.
+- M6-03: `export_backup` kopiert ein Backup über den „Speichern unter“-Dialog (auch `content://`-Ziele); kein Share-Sheet-Plugin.
+  `select_restore_file` kopiert Auswahlen ohne Dateipfad in den Cache-Ordner (`import/`). Nur die Rust-Teile sind getestet,
+  die Dialoge nicht (manuell auf Android/iOS prüfen).
+- M6-04: Google Drive erscheint deaktiviert („folgt in einer späteren Version“) bis M7. Die Wahl wirkt sofort
+  (`set_sync_provider`); `save_settings` überschreibt `syncProvider` nicht.
+- M6-05/06: Passwort im Tresor unter `nunc` / `webdav`; die Oberfläche bekommt nur `hasPassword`. Eine leere Adresse darf
+  gespeichert werden, sonst muss sie `http(s)://host` sein.
+- M6-07: Auslöser, Entprellen (3 s), Beenden (5 s), Mobil-Hintergrund über `sync_in_background`; Pull-to-refresh synchronisiert mit.
+  Ein pausierter Sync (`syncEnabled = false`) oder kein Anbieter ist ein stilles „nichts zu tun“, ein unvollständig
+  eingerichtetes WebDAV ein Fehler im Status.
+- M6-08: Statusleiste über dem Inhalt (nur bei gewähltem Anbieter), Ergebnis als Hinweis („X Sessions und Y Aufgaben importiert.“),
+  Fehler zusätzlich als Hinweis ohne Dialog. Der Konfliktzähler nennt die ersetzten Todos nicht.
+- M6-09: `tests/interop/webdav-go-nunc.sh` (Go-App und nunc abwechselnd, Server `x/net/webdav`, kein Docker). Lief grün;
+  die CI führt es nicht aus (braucht `../nunc-go`).
+- Mutationstest (`cargo mutants --in-diff`, 152 Mutanten): alle gefangen oder nicht kompilierbar (die CI hatte zwei Überlebende in
+  `WebDavClient::send` und `ensure_folder`; dafür gibt es jetzt Szenarien: falscher Auth-Typ = genau eine Anfrage,
+  Ordner gleichzeitig angelegt = 405 wird akzeptiert).
+- Neu: Tag `@sync` für `@integration`-Szenarien, die im Runner von `nunc-sync` laufen.
+
 **Exit-Kriterien M6:** Zwei Geräte (Desktop + Handy) synchronisieren über WebDAV; Restore auf Mobile funktioniert.
 
 ---

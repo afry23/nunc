@@ -41,8 +41,28 @@ Feature: Sync file compatibility with the Go app
     And the merged todo "t-0003" says "2026-09-22 Buy groceries +home @errands"
     And the merged file keeps the header of the local file
 
-  @integration @REQ-compat @wip
+  @integration @sync @REQ-compat
   Scenario: The WebDAV file of another device is merged with the local database
+    Given the Go fixture database
+    And a WebDAV server with the folder "/nunc/" holding the sync file "webdav/nunc-sync.json"
+    When I sync
+    Then the sync succeeds with 1 imported todos, 2 imported sessions and 2 conflicts
+    And the local database has the todos:
+      | sync_id | rawText                                      | deleted |
+      | t-0001  | (A) 2026-09-20 Write quarterly report +work @desk | false |
+      | t-0002  | (A) 2026-09-21 Call dentist tomorrow @phone  | false   |
+      | t-0003  | 2026-09-22 Buy groceries +home @errands      | false   |
+      | t-0004  | x 2026-09-25 2026-09-18 Plan sprint +work    | false   |
+      | t-0005  | (C) Read Rust book +learning +rust @evening | true    |
+      | t-0006  | Old idea that was deleted                    | true    |
+      | t-0100  | 2026-09-29 Water the plants @home            | false   |
+    And the local database has 13 sessions
 
-  @e2e @US-Sync-02-WebDAV @desktop @wip
+  @e2e @US-Sync-02-WebDAV @desktop @manual
   Scenario: Go app and nunc sync alternately against a WebDAV server
+    Given the repository checkout contains ../nunc-go and Go is installed
+    When I run "tests/interop/webdav-go-nunc.sh"
+    Then the Go app logic and nunc synchronize alternately against one WebDAV server
+    And the todos of the Go database and the nunc database are the same
+    And a todo added, changed and deleted on either side reaches the other side
+    And the completed sessions of both databases are the same

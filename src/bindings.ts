@@ -11,8 +11,9 @@ export const commands = {
 	showMainWindow: () => __TAURI_INVOKE<void>("show_main_window"),
 	getSettings: () => typedError<Settings, AppError>(__TAURI_INVOKE("get_settings")),
 	/**
-	 *  Speichert die Einstellungen nach Prüfung der Wertebereiche. `lastBackupDate` gehört dem Backup-Dienst und
-	 *  `backupDir` dem Ordner-Dialog (`select_backup_dir`): beide bleiben wie gespeichert; ein leeres `backupDir`
+	 *  Speichert die Einstellungen nach Prüfung der Wertebereiche. `lastBackupDate` gehört dem Backup-Dienst,
+	 *  `syncProvider` `set_sync_provider` und `backupDir` dem Ordner-Dialog (`select_backup_dir`): sie bleiben wie
+	 *  gespeichert; ein leeres `backupDir`
 	 *  setzt den Standardordner wieder ein.
 	 */
 	saveSettings: (settings: Settings) => typedError<null, AppError>(__TAURI_INVOKE("save_settings", { settings })),
@@ -81,8 +82,48 @@ export const commands = {
 	restoreFromBackup: (sourcePath: string) => typedError<null, AppError>(__TAURI_INVOKE("restore_from_backup", { sourcePath })),
 	/**  Öffnet den Ordner-Dialog und speichert den gewählten Backup-Ordner (nur Desktop). `None` bei Abbruch. */
 	selectBackupDir: () => typedError<string | null, AppError>(__TAURI_INVOKE("select_backup_dir")),
-	/**  Öffnet den Datei-Dialog für eine Backup-Datei (`.db`). `None` bei Abbruch. */
+	/**
+	 *  Öffnet den Datei-Dialog für eine Backup-Datei. `None` bei Abbruch.
+	 * 
+	 *  Auf Mobilgeräten liefert der Picker keinen Dateipfad (Android: `content://`-URI, iOS: Dateien außerhalb der
+	 *  Sandbox). Die Datei wird dann in den Cache-Ordner der App kopiert und dieser Pfad zurückgegeben.
+	 */
 	selectRestoreFile: () => typedError<string | null, AppError>(__TAURI_INVOKE("select_restore_file")),
+	/**
+	 *  Kopiert ein Backup an einen vom Nutzer gewählten Ort (Datei-Dialog bzw. „Speichern unter“ auf Mobilgeräten).
+	 *  `None`, wenn der Dialog abgebrochen wurde.
+	 */
+	exportBackup: (sourcePath: string) => typedError<string | null, AppError>(__TAURI_INVOKE("export_backup", { sourcePath })),
+	/**
+	 *  Wählt den Sync-Anbieter (exklusiv) und speichert die Wahl sofort. Zugangsdaten der übrigen Anbieter bleiben
+	 *  erhalten, sie werden nur nicht mehr benutzt.
+	 */
+	setSyncProvider: (provider: SyncProvider) => typedError<null, AppError>(__TAURI_INVOKE("set_sync_provider", { provider })),
+	getWebdavConfig: () => typedError<WebDavSettings, AppError>(__TAURI_INVOKE("get_webdav_config")),
+	/**
+	 *  Speichert die Einstellungen in der Datenbank und das Passwort im Tresor. `password: None` lässt das
+	 *  gespeicherte Passwort unverändert.
+	 */
+	saveWebdavConfig: (config: WebDavConfig, password: string | null) => typedError<null, AppError>(__TAURI_INVOKE("save_webdav_config", { config, password })),
+	/**
+	 *  Prüft die Verbindung mit den übergebenen (noch nicht gespeicherten) Werten. Ohne Passwort gilt das
+	 *  gespeicherte.
+	 */
+	testWebdavConnection: (config: WebDavConfig, password: string | null) => typedError<ConnectionTestResult, AppError>(__TAURI_INVOKE("test_webdav_connection", { config, password })),
+	/**  Zustand der Synchronisierung (für die Statusleiste beim Öffnen; danach kommt `sync:status`). */
+	getSyncStatus: () => __TAURI_INVOKE<SyncStatus>("get_sync_status"),
+	/**
+	 *  Synchronisiert jetzt und wartet auf das Ergebnis. `None`, wenn nichts zu synchronisieren ist (kein Anbieter
+	 *  gewählt oder Sync pausiert). Ein Fehler steht zusätzlich im Status.
+	 */
+	syncNow: () => typedError<{
+	importedTodos: number,
+	importedSessions: number,
+	/**  Lokale Todos, die durch eine neuere Server-Version ersetzt wurden. */
+	conflictedTodos: number,
+} | null, AppError>(__TAURI_INVOKE("sync_now")),
+	/**  Die App geht in den Hintergrund (Mobil): ein letzter Sync, bevor das Betriebssystem sie einfriert. */
+	syncInBackground: () => __TAURI_INVOKE<void>("sync_in_background"),
 	/**  Aktueller Stand, ohne den Nutzer zu fragen. */
 	getNotificationStatus: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("get_notification_status")),
 	/**
@@ -97,6 +138,9 @@ export const commands = {
 /** Events */
 export const events = {
 	appReload: makeEvent<AppReload>("app:reload"),
+	syncComplete: makeEvent<SyncComplete>("sync:complete"),
+	syncStart: makeEvent<SyncStart>("sync:start"),
+	syncStatus: makeEvent<SyncStatusChanged>("sync:status"),
 	timerComplete: makeEvent<TimerComplete>("timer:complete"),
 	timerStopped: makeEvent<TimerStopped>("timer:stopped"),
 	timerTick: makeEvent<TimerTick>("timer:tick"),
@@ -153,6 +197,13 @@ export type BackupStatus = {
 export type BreakSuggestion = {
 	sessionType: SessionType,
 	minutes: number,
+};
+
+/**  Ergebnis des Verbindungstests. */
+export type ConnectionTestResult = {
+	success: boolean,
+	/**  Servername bei Erfolg, lesbarer Fehler sonst. */
+	message: string,
 };
 
 /**  Arbeitszeit pro `@context`-Tag. */
@@ -300,8 +351,36 @@ export type StatsResponse = {
 	longestStreak: number,
 };
 
+/**  Ein Sync-Lauf ist gelungen; die Nutzlast sagt, was vom Server übernommen wurde. */
+export type SyncComplete = SyncResult;
+
 /**  Aktiver Sync-Provider (exklusiv). */
 export type SyncProvider = "none" | "google_drive" | "webdav";
+
+/**  Was ein Sync-Lauf vom Server übernommen hat (`sync:complete`). */
+export type SyncResult = {
+	importedTodos: number,
+	importedSessions: number,
+	/**  Lokale Todos, die durch eine neuere Server-Version ersetzt wurden. */
+	conflictedTodos: number,
+};
+
+/**  Ein Sync-Lauf beginnt. */
+export type SyncStart = null;
+
+/**  Zustand der Synchronisierung. */
+export type SyncState = "idle" | "syncing" | "error";
+
+/**  Nutzlast von `sync:status` und Ergebnis von `get_sync_status`. */
+export type SyncStatus = {
+	state: SyncState,
+	/**  RFC 3339; `None`, solange noch nie synchronisiert wurde. */
+	lastSyncAt: string | null,
+	errorMessage: string | null,
+};
+
+/**  Der Sync-Zustand hat sich geändert (`idle` · `syncing` · `error`). */
+export type SyncStatusChanged = SyncStatus;
 
 /**  Session natürlich abgelaufen (oder Flowtime-Arbeit beendet). */
 export type TimerComplete = FinishPayload;
@@ -387,6 +466,27 @@ export type TodoStats = {
 	description: string,
 	pomodoroCount: number,
 	workMinutes: number,
+};
+
+/**  Anmeldeverfahren am WebDAV-Server. */
+export type WebDavAuth = "basic" | "digest";
+
+/**  Verbindung zu einem WebDAV-Server. Das Passwort gehört nicht dazu: es liegt im Tresor. */
+export type WebDavConfig = {
+	url: string,
+	authMethod: WebDavAuth,
+	username: string,
+	/**  Ordner auf dem Server, in dem `nunc-sync.json` liegt (Standard `/nunc/`). */
+	remotePath: string,
+};
+
+/**
+ *  Gespeicherte WebDAV-Einstellungen. Das Passwort verlässt den Tresor nicht: die Oberfläche erfährt nur, ob eins
+ *  gespeichert ist.
+ */
+export type WebDavSettings = {
+	config: WebDavConfig,
+	hasPassword: boolean,
 };
 
 /**  Kennzahlen je Wochentag (`0` = Montag … `6` = Sonntag) im Zeitraum. */

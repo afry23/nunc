@@ -30,6 +30,8 @@ pub struct TimerService {
     notifier: Arc<dyn Notifier>,
     device_id: String,
     timer: Mutex<Timer>,
+    /// Wird aufgerufen, nachdem eine Session gespeichert wurde (löst den Sync aus).
+    on_session_saved: Option<Arc<dyn Fn() + Send + Sync>>,
     /// Feste Pomodoro-Dauer in Sekunden für Oberflächentests (`NUNC_TEST_FAST_TIMER`), nur in Debug-Builds.
     fast_pomodoro_sec: Option<u32>,
 }
@@ -51,8 +53,16 @@ impl TimerService {
             notifier,
             device_id,
             timer: Mutex::new(timer),
+            on_session_saved: None,
             fast_pomodoro_sec: None,
         })
+    }
+
+    /// Meldet `hook` an, der nach jeder gespeicherten Session läuft (beendet oder abgebrochen). Er darf nicht
+    /// blockieren: der Timer ist währenddessen gesperrt.
+    pub fn with_session_hook(mut self, hook: Arc<dyn Fn() + Send + Sync>) -> Self {
+        self.on_session_saved = Some(hook);
+        self
     }
 
     /// Setzt die Pomodoro-Dauer fest (Sekunden). Wirkt nur in Debug-Builds; Release-Builds ignorieren sie.
@@ -230,6 +240,9 @@ impl TimerService {
         let session = self
             .db
             .with(|conn| commit_finish(conn, &finish, &self.device_id, timer, now))?;
+        if let Some(hook) = &self.on_session_saved {
+            hook();
+        }
         let payload = FinishPayload {
             session,
             suggested_break: finish.suggested_break,

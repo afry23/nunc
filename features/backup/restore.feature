@@ -180,20 +180,101 @@ Feature: Restore
     When nunc opens the database
     Then the backup file "missing.db" is rejected with "Datei nicht lesbar"
 
-  @ui @US-R01 @wip
+  @ui @US-R01
   Scenario: The backup list shows the newest backup first
+    Given the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-04 | daily    | 100       |
+      | 2026-09-27 | weekly   | 700       |
+      | 2026-09-06 | monthly  | 900       |
+    When I open the app at "/settings"
+    Then the backup list shows:
+      | date       | category    | size  |
+      | 04.10.2026 | Täglich     | 100 B |
+      | 27.09.2026 | Wöchentlich | 700 B |
+      | 06.09.2026 | Monatlich   | 900 B |
 
-  @ui @US-R02 @wip
+  @ui @US-R02
   Scenario: A confirmation dialog warns that all data is replaced
+    Given the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+    When I open the app at "/settings"
+    And I click "Backup vom 03.10.2026 wiederherstellen"
+    Then I see a dialog with the text "Alle aktuellen Daten werden durch den Stand von nunc-backup-2026-10-03.db ersetzt"
+    And I see a dialog with the text "Notfall-Backup"
+    And the backend did not receive "restore_from_backup"
+    When I click "Abbrechen"
+    Then I do not see a dialog
+    And the backend did not receive "restore_from_backup"
 
-  @ui @US-R03 @wip
-  Scenario: Restore from file only offers db files
+  @ui @US-R03
+  Scenario: Restore from a file asks for a file and confirms first
+    Given the file dialog returns "/home/me/Downloads/old.db"
+    When I open the app at "/settings"
+    And I click "Aus Datei wiederherstellen"
+    Then the backend received "select_restore_file"
+    And I see a dialog with the text "old.db"
+    When I click "Jetzt wiederherstellen"
+    Then the backend received "restore_from_backup" with:
+      """
+      { "sourcePath": "/home/me/Downloads/old.db" }
+      """
 
-  @ui @US-R02 @wip
+  @ui @US-R03
+  Scenario: Cancelling the file dialog opens no confirmation
+    Given the file dialog is cancelled
+    When I open the app at "/settings"
+    And I click "Aus Datei wiederherstellen"
+    Then I do not see a dialog
+    And the backend did not receive "restore_from_backup"
+
+  @ui @US-R02
   Scenario: A restore error is shown and no data changes
+    Given the todos:
+      | rawText |
+      | Keep me |
+    And the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+    And the restore fails with "invalid_backup": "Datei ist keine nunc-Datenbank"
+    When I open the app at "/settings"
+    And I click "Backup vom 03.10.2026 wiederherstellen"
+    And I click "Jetzt wiederherstellen"
+    Then I see "Datei ist keine nunc-Datenbank"
+    And I do not see a dialog
+    When I click "Aufgaben"
+    Then I see "Keep me"
 
-  @ui @US-R02 @wip
+  @ui @US-R02
   Scenario: The app reloads its data after a restore
+    Given the todos:
+      | rawText |
+      | Current |
+    And the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+    And the backup "nunc-backup-2026-10-03.db" contains the todos:
+      | rawText     |
+      | From backup |
+    When I open the app at "/settings"
+    And I click "Backup vom 03.10.2026 wiederherstellen"
+    And I click "Jetzt wiederherstellen"
+    Then I see "Daten wiederhergestellt."
+    When I click "Aufgaben"
+    Then I see "From backup"
+    And I do not see "Current"
 
-  @ui @US-R03 @mobile @wip
+  @ui @US-R03 @mobile
   Scenario: Import a backup file with the file picker
+    Given the platform is "mobile"
+    And the file dialog returns "/data/cache/import/phone.db"
+    When I open the app at "/settings"
+    And I click "Backup-Datei importieren"
+    Then the backend received "select_restore_file"
+    And I see a dialog with the text "phone.db"
+    When I click "Jetzt wiederherstellen"
+    Then the backend received "restore_from_backup" with:
+      """
+      { "sourcePath": "/data/cache/import/phone.db" }
+      """
