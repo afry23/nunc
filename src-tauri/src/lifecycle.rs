@@ -26,14 +26,34 @@ pub fn setup<R: Runtime>(app: &App<R>) -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
-/// Rückkehr aus dem Hintergrund (Mobil): Stand aus dem Zeitstempel neu berechnen, Anzeige aktualisieren.
-pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: &RunEvent) {
-    if matches!(event, RunEvent::Resumed)
-        && let Some(state) = app.try_state::<AppState>()
-        && let Err(error) = state.timer.recover()
-    {
-        log::error!("Timer nach dem Hintergrund nicht aktualisiert: {error}");
+/// Ereignisse der Laufzeit: Rückkehr aus dem Hintergrund (Mobil), Dock-Klick (macOS), Beenden.
+pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
+    match event {
+        // Stand aus dem Zeitstempel neu berechnen, Anzeige aktualisieren
+        RunEvent::Resumed => {
+            if let Some(state) = app.try_state::<AppState>()
+                && let Err(error) = state.timer.recover()
+            {
+                log::error!("Timer nach dem Hintergrund nicht aktualisiert: {error}");
+            }
+        }
+        #[cfg(target_os = "macos")]
+        RunEvent::Reopen { .. } => crate::windows::show_main(app),
+        RunEvent::Exit => {
+            if let Some(state) = app.try_state::<AppState>() {
+                state.shutdown();
+            }
+        }
+        _ => {}
     }
+}
+
+/// Ob das Tray-Symbol sichtbar sein soll (Einstellung `systemTrayEnabled`).
+#[cfg(desktop)]
+pub fn tray_enabled<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<AppState>()
+        .and_then(|state| state.db.with(|conn| nunc_store::load_settings(conn)).ok())
+        .is_none_or(|settings| settings.system_tray_enabled)
 }
 
 fn app_paths<R: Runtime>(handle: &AppHandle<R>) -> Result<AppPaths, AppError> {

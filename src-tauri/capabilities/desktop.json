@@ -3,7 +3,8 @@
   "identifier": "desktop",
   "description": "Capability for the main window on desktop",
   "windows": [
-    "main"
+    "main",
+    "mini"
   ],
   "platforms": [
     "macOS",

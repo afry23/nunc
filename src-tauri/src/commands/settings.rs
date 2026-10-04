@@ -1,5 +1,5 @@
 use nunc_core::model::Settings;
-use tauri::State;
+use tauri::{AppHandle, Runtime, State};
 
 use crate::error::AppError;
 use crate::state::AppState;
@@ -15,7 +15,11 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<Settings, AppError> {
 /// setzt den Standardordner wieder ein.
 #[tauri::command]
 #[specta::specta]
-pub fn save_settings(state: State<'_, AppState>, mut settings: Settings) -> Result<(), AppError> {
+pub fn save_settings<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    mut settings: Settings,
+) -> Result<(), AppError> {
     settings.validate()?;
     state.db.with(|conn| {
         let stored = nunc_store::load_settings(conn)?;
@@ -24,5 +28,10 @@ pub fn save_settings(state: State<'_, AppState>, mut settings: Settings) -> Resu
             settings.backup_dir = stored.backup_dir;
         }
         nunc_store::save_settings(conn, &settings)
-    })
+    })?;
+    #[cfg(desktop)]
+    crate::tray::set_visible(&app, settings.system_tray_enabled);
+    #[cfg(mobile)]
+    let _ = app;
+    Ok(())
 }

@@ -5,7 +5,7 @@
 //! Hintergrund ([`AppState::startup_backup`]).
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use chrono::NaiveDate;
 use nunc_core::clock::Clock;
@@ -39,6 +39,8 @@ pub struct Platform {
     pub secrets: Arc<dyn SecretStore>,
 }
 
+type ShutdownHook = Box<dyn Fn() + Send>;
+
 pub struct AppState {
     pub db: Arc<Db>,
     pub paths: AppPaths,
@@ -48,6 +50,7 @@ pub struct AppState {
     /// Tresor für Tokens und Passwörter (Sync, ab M6).
     #[expect(dead_code, reason = "wird mit dem WebDAV-Sync in M6 gelesen")]
     pub secrets: Arc<dyn SecretStore>,
+    shutdown_hooks: Mutex<Vec<ShutdownHook>>,
 }
 
 impl AppState {
@@ -74,7 +77,31 @@ impl AppState {
             events: platform.events,
             timer,
             secrets: platform.secrets,
+            shutdown_hooks: Mutex::new(Vec::new()),
         })
+    }
+
+    /// Meldet `hook` für das Beenden der App an (z. B. der Sync, der beim Schließen noch einmal läuft, M6-07).
+    /// Die Hooks laufen in der Reihenfolge der Anmeldung.
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "wird mit der Sync-Orchestrierung in M6-07 angemeldet"
+        )
+    )]
+    pub fn on_shutdown(&self, hook: impl Fn() + Send + 'static) {
+        if let Ok(mut hooks) = self.shutdown_hooks.lock() {
+            hooks.push(Box::new(hook));
+        }
+    }
+
+    /// Führt die angemeldeten Hooks aus (`RunEvent::Exit`). Der Timer bleibt unangetastet: Seine geplante
+    /// Benachrichtigung muss das Beenden überleben.
+    pub fn shutdown(&self) {
+        if let Ok(hooks) = self.shutdown_hooks.lock() {
+            hooks.iter().for_each(|hook| hook());
+        }
     }
 
     /// Heutiger Kalendertag in der Zeitzone des Geräts.
@@ -107,5 +134,186 @@ impl AppState {
         })?;
         events::emit(&*self.events, &AppReload);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use chrono::{TimeZone, Utc};
+    use nunc_core::model::TimerMode;
+    use nunc_platform::{ManualClock, MemorySecretStore, RecordingEventSink, RecordingNotifier};
+    use nunc_store::{add_todo, list_todos, run_backup};
+    use tempfile::TempDir;
+
+    use super::*;
+
+    struct Fixture {
+        dir: TempDir,
+        clock: Arc<ManualClock>,
+        events: Arc<RecordingEventSink>,
+    }
+
+    impl Fixture {
+        fn new() -> Self {
+            Self {
+                dir: tempfile::tempdir().unwrap(),
+                clock: Arc::new(ManualClock::new(
+                    Utc.with_ymd_and_hms(2026, 10, 4, 9, 0, 0).unwrap(),
+                )),
+                events: Arc::new(RecordingEventSink::default()),
+            }
+        }
+
+        fn paths(&self) -> AppPaths {
+            AppPaths {
+                db: self.dir.path().join("app").join("nunc.db"),
+                default_backup_dir: self.dir.path().join("app").join("backups"),
+                legacy_db: Some(self.dir.path().join("legacy").join("nunc").join("nunc.db")),
+            }
+        }
+
+        fn open(&self) -> AppState {
+            AppState::open(
+                self.paths(),
+                Platform {
+                    clock: self.clock.clone(),
+                    events: self.events.clone(),
+                    notifier: Arc::new(RecordingNotifier::new(false)),
+                    secrets: Arc::new(MemorySecretStore::default()),
+                },
+            )
+            .unwrap()
+        }
+    }
+
+    fn todo_texts(state: &AppState) -> Vec<String> {
+        state
+            .db
+            .with(|conn| list_todos(conn))
+            .unwrap()
+            .into_iter()
+            .map(|todo| todo.raw_text)
+            .collect()
+    }
+
+    #[test]
+    fn a_fresh_start_creates_the_database_and_keeps_the_device_id() {
+        let fixture = Fixture::new();
+        let first = fixture.open();
+        assert!(fixture.paths().db.is_file());
+        let id = first
+            .db
+            .with(|conn| device_id(conn, || "other".into()))
+            .unwrap();
+        assert!(!id.is_empty());
+        drop(first);
+
+        let second = fixture.open();
+        let again = second
+            .db
+            .with(|conn| device_id(conn, || "other".into()))
+            .unwrap();
+        assert_eq!(again, id);
+    }
+
+    #[test]
+    fn the_first_start_takes_over_the_go_database_and_leaves_the_original() {
+        let fixture = Fixture::new();
+        let legacy = fixture.paths().legacy_db.unwrap();
+        {
+            let conn = open(&legacy).unwrap();
+            add_todo(&conn, "(A) aus der Go-App", "s-1", fixture.clock.now()).unwrap();
+        }
+        let state = fixture.open();
+        assert_eq!(todo_texts(&state), ["(A) aus der Go-App"]);
+        assert!(legacy.is_file());
+
+        // beim zweiten Start gewinnt die neue Datenbank
+        state
+            .db
+            .with(|conn| add_todo(conn, "neu", "s-2", fixture.clock.now()))
+            .unwrap();
+        drop(state);
+        assert_eq!(todo_texts(&fixture.open()).len(), 2);
+    }
+
+    #[test]
+    fn the_startup_backup_runs_once_per_day() {
+        let fixture = Fixture::new();
+        let state = fixture.open();
+        let first = state.startup_backup().unwrap().expect("Backup erstellt");
+        assert!(first.path.starts_with(&fixture.paths().default_backup_dir));
+        assert!(first.path.is_file());
+        assert!(state.startup_backup().unwrap().is_none());
+
+        fixture.clock.advance(chrono::Duration::days(1));
+        assert!(state.startup_backup().unwrap().is_some());
+    }
+
+    #[test]
+    fn restore_swaps_the_database_reloads_the_timer_and_announces_it() {
+        let fixture = Fixture::new();
+        let state = fixture.open();
+        state
+            .db
+            .with(|conn| add_todo(conn, "vor dem Backup", "s-1", fixture.clock.now()))
+            .unwrap();
+        let backup = state
+            .db
+            .with(|conn| run_backup(conn, &fixture.paths().default_backup_dir, state.today()))
+            .unwrap();
+
+        state
+            .db
+            .with(|conn| add_todo(conn, "nach dem Backup", "s-2", fixture.clock.now()))
+            .unwrap();
+        state.timer.start(TimerMode::Pomodoro, None).unwrap();
+        let before = fixture.events.names().len();
+
+        state.restore(&backup.path).unwrap();
+
+        assert_eq!(todo_texts(&state), ["vor dem Backup"]);
+        // das Backup enthielt keinen laufenden Timer
+        assert_eq!(
+            state.timer.snapshot().unwrap().state,
+            nunc_core::model::TimerState::Idle
+        );
+        assert_eq!(fixture.events.names()[before], "app:reload");
+    }
+
+    #[test]
+    fn a_broken_backup_leaves_everything_untouched() {
+        let fixture = Fixture::new();
+        let state = fixture.open();
+        state
+            .db
+            .with(|conn| add_todo(conn, "bleibt", "s-1", fixture.clock.now()))
+            .unwrap();
+        let broken = fixture.dir.path().join("kaputt.db");
+        std::fs::write(&broken, b"das ist keine Datenbank").unwrap();
+
+        let error = state.restore(&broken).unwrap_err();
+        assert_eq!(error.code, "invalid_backup");
+        assert_eq!(todo_texts(&state), ["bleibt"]);
+        assert!(!fixture.events.names().contains(&"app:reload".to_owned()));
+    }
+
+    #[test]
+    fn shutdown_runs_the_registered_hooks_in_order() {
+        let fixture = Fixture::new();
+        let state = fixture.open();
+        let calls = Arc::new(AtomicUsize::new(0));
+        let first = calls.clone();
+        state.on_shutdown(move || {
+            assert_eq!(first.fetch_add(1, Ordering::SeqCst), 0);
+        });
+        let second = calls.clone();
+        state.on_shutdown(move || {
+            assert_eq!(second.fetch_add(1, Ordering::SeqCst), 1);
+        });
+        state.shutdown();
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
     }
 }

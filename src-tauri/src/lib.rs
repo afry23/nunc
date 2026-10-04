@@ -6,6 +6,10 @@ mod events;
 mod lifecycle;
 mod state;
 mod timer_service;
+#[cfg(desktop)]
+mod tray;
+#[cfg(desktop)]
+mod windows;
 
 use tauri_specta::{Builder, collect_commands, collect_events};
 
@@ -19,8 +23,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             app::app_info,
+            app::show_main_window::<tauri::Wry>,
             settings::get_settings,
-            settings::save_settings,
+            settings::save_settings::<tauri::Wry>,
             todos::get_todos,
             todos::add_todo,
             todos::update_todo,
@@ -62,7 +67,16 @@ pub fn run() {
     #[cfg(all(debug_assertions, desktop))]
     export_bindings(&builder);
 
-    let app = tauri::Builder::default()
+    let builder_app = tauri::Builder::default();
+    // Muss das erste Plugin sein: ein zweiter Start holt das vorhandene Fenster nach vorn und endet.
+    #[cfg(desktop)]
+    let builder_app = builder_app.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        windows::show_main(app);
+    }));
+    #[cfg(desktop)]
+    let builder_app = builder_app.on_window_event(windows::on_window_event);
+
+    let app = builder_app
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
@@ -70,12 +84,15 @@ pub fn run() {
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
-            lifecycle::setup(app)
+            lifecycle::setup(app)?;
+            #[cfg(desktop)]
+            tray::setup(app.handle(), lifecycle::tray_enabled(app.handle()))?;
+            Ok(())
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|handle, event| lifecycle::on_run_event(handle, &event));
+    app.run(lifecycle::on_run_event);
 }
 
 #[cfg(any(desktop, test))]

@@ -7,6 +7,8 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	/**  Name und Version der App (Beispiel-Command für die Typ-Bridge). */
 	appInfo: () => __TAURI_INVOKE<AppInfo>("app_info"),
+	/**  Holt das Hauptfenster nach vorn und versteckt den Mini-Timer (Desktop; mobil ohne Wirkung). */
+	showMainWindow: () => __TAURI_INVOKE<void>("show_main_window"),
 	getSettings: () => typedError<Settings, AppError>(__TAURI_INVOKE("get_settings")),
 	/**
 	 *  Speichert die Einstellungen nach Prüfung der Wertebereiche. `lastBackupDate` gehört dem Backup-Dienst und
