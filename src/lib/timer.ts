@@ -50,3 +50,10 @@ export function spokenRemaining(snapshot: TimerSnapshot): string {
     return `${what}: ${minutes} ${unit} gelaufen${paused}`;
   return `${what}: noch ${minutes} ${unit}${paused}`;
 }
+
+/** Ringdurchmesser des Mini-Timers: passt in das Fenster (Platz für Tasten darunter), 90–200 px. */
+export function miniRingSize(width: number, height: number): number {
+  return Math.round(
+    Math.min(200, Math.max(90, Math.min(width - 24, height - 110))),
+  );
+}

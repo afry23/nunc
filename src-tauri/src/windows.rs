@@ -13,6 +13,10 @@ use crate::state::AppState;
 pub const MAIN: &str = "main";
 pub const MINI: &str = "mini";
 
+/// Startgröße (zugleich Maximum) und Mindestgröße des Mini-Timers in Pixeln.
+const MINI_SIZE: (f64, f64) = (264.0, 280.0);
+const MINI_MIN_SIZE: (f64, f64) = (160.0, 190.0);
+
 /// Route der Oberfläche für den Mini-Timer (M4-10).
 const MINI_ROUTE: &str = "mini";
 
@@ -79,9 +83,11 @@ fn show_mini<R: Runtime>(app: &AppHandle<R>) {
         None => {
             let built = WebviewWindowBuilder::new(app, MINI, WebviewUrl::App(MINI_ROUTE.into()))
                 .title("nunc mini")
-                .inner_size(264.0, 280.0)
-                .decorations(false)
-                .resizable(false)
+                .inner_size(MINI_SIZE.0, MINI_SIZE.1)
+                // nur verkleinern oder bis zur Startgröße wieder vergrößern
+                .max_inner_size(MINI_SIZE.0, MINI_SIZE.1)
+                .min_inner_size(MINI_MIN_SIZE.0, MINI_MIN_SIZE.1)
+                .resizable(true)
                 .always_on_top(true)
                 .visible(false)
                 .build();
@@ -117,10 +123,18 @@ fn check_minimized_later<R: Runtime>(app: &AppHandle<R>) {
 
 /// Fensterereignisse: Schließen verbirgt in den Tray, Minimieren während eines Timers öffnet den Mini-Timer.
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
+    let app = window.app_handle();
+    // Der Mini-Timer wird nie zerstört: Schließen bringt das Hauptfenster zurück.
+    if window.label() == MINI {
+        if let WindowEvent::CloseRequested { api, .. } = event {
+            api.prevent_close();
+            show_main(app);
+        }
+        return;
+    }
     if window.label() != MAIN {
         return;
     }
-    let app = window.app_handle();
     match event {
         WindowEvent::CloseRequested { api, .. } => {
             let tray_enabled = app
