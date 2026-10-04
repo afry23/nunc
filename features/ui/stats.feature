@@ -66,3 +66,52 @@ Feature: Statistics view
       { "format": "json", "request": { "period": "week" } }
       """
     And I see "Export gespeichert: /tmp/nunc-export.json"
+
+  @ui @REQ-10
+  Scenario: The number of pomodoros in the period is shown, not the lifetime total
+    Given the statistics contain daily data:
+      | daysAgo | pomodoros | minutes |
+      | 0       | 4         | 100     |
+      | 1       | 2         | 50      |
+      | 3       | 6         | 150     |
+    And the statistics count 250 pomodoros over all time
+    When I open the app at "/stats"
+    Then the statistic "Pomodoros" is "12"
+    And the statistic "Ø Pomodoros / Tag" is "1.7"
+    And the statistic "Gesamt" is "250 Pomodoros"
+    When I click "Tag"
+    Then the statistic "Pomodoros" is "4"
+
+  @ui @REQ-10
+  Scenario: The pomodoros of each day are labelled in the line chart
+    Given the statistics contain daily data:
+      | daysAgo | pomodoros | minutes |
+      | 0       | 4         | 100     |
+      | 2       | 6         | 150     |
+    When I open the app at "/stats"
+    Then the line chart labels the days with "0, 6, 0, 4"
+
+  @ui @REQ-10
+  Scenario: Pomodoros per month are listed for month and year
+    Given the statistics contain daily data:
+      | daysAgo | pomodoros | minutes |
+      | 0       | 4         | 100     |
+    And the statistics contain monthly data:
+      | year | month | pomodoros | minutes |
+      | 2026 | 9     | 30        | 750     |
+      | 2026 | 10    | 12        | 300     |
+    When I open the app at "/stats"
+    Then I do not see the monthly table
+    When I click "Jahr"
+    Then the month "September 2026" shows 30 pomodoros
+    And the month "Oktober 2026" shows 12 pomodoros
+
+  @ui @REQ-10
+  Scenario: The pomodoros of each day are labelled above the bars
+    Given the statistics contain daily data:
+      | daysAgo | pomodoros | minutes |
+      | 0       | 4         | 100     |
+      | 2       | 6         | 150     |
+    When I open the app at "/stats"
+    Then the bar chart labels the days with "0, 6, 0, 4"
+

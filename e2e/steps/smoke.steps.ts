@@ -45,7 +45,7 @@ When("the pomodoro has ended", async () => {
 Then("the statistics show {int} pomodoro", async (count: number) => {
   await clickByName("Statistik");
   const term = await $(
-    "//dt[normalize-space(.)='Sitzungen']/following-sibling::dd[1]",
+    "//dt[normalize-space(.)='Pomodoros']/following-sibling::dd[1]",
   );
   await term.waitForDisplayed();
   await expect(term).toHaveText(String(count));

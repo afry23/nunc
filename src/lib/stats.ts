@@ -180,3 +180,26 @@ export function slicePath(
   const large = end - start > Math.PI ? 1 : 0;
   return `M${cx},${cy} L${point(start)} A${r},${r} 0 ${large} 1 ${point(end)} Z`;
 }
+
+/** Summen über die Tage des Zeitraums (die Gesamtwerte der Antwort zählen dagegen alle Sessions). */
+export function periodTotals(days: DayPoint[]): {
+  pomodoros: number;
+  workMinutes: number;
+  perDay: number;
+} {
+  const pomodoros = days.reduce((sum, d) => sum + d.pomodoroCount, 0);
+  const workMinutes = days.reduce((sum, d) => sum + d.workMinutes, 0);
+  return {
+    pomodoros,
+    workMinutes,
+    perDay: days.length === 0 ? 0 : pomodoros / days.length,
+  };
+}
+
+/** Bezeichnung des Auswertungsfensters für die Anzeige. */
+export const PERIOD_NAMES: Record<StatsPeriod, string> = {
+  day: "Heute",
+  week: "Letzte 7 Tage",
+  month: "Letzte 30 Tage",
+  year: "Letzte 365 Tage",
+};

@@ -70,3 +70,23 @@ export function ratioAnchor(ratio: number): "STRICT" | "BALANCED" | "RELAXED" {
   if (ratio <= 0.35) return "BALANCED";
   return "RELAXED";
 }
+
+const MONTHS = [
+  "Januar",
+  "Februar",
+  "März",
+  "April",
+  "Mai",
+  "Juni",
+  "Juli",
+  "August",
+  "September",
+  "Oktober",
+  "November",
+  "Dezember",
+];
+
+/** `Oktober 2026` für Jahr und Monat (1–12). */
+export function monthLabel(year: number, month: number): string {
+  return `${MONTHS[month - 1] ?? month} ${year}`;
+}
