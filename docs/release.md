@@ -12,7 +12,7 @@ Signierung, Notarisierung, Play-Console- und TestFlight-Upload.
 git switch -c release/1.0.0
 npm run version:set 1.0.0        # package.json, Cargo.toml, tauri.conf.json, gen/apple/project.yml
 cargo check                      # schreibt die Version in Cargo.lock
-npm install --package-lock-only    # schreibt die Version in package-lock.json
+# package-lock.json: die zwei Versionszeilen am Anfang von Hand anpassen (npm install ergänzt sonst fremde Einträge)
 git commit -am "chore: release 1.0.0"
 # PR → main (Check „checks“), danach:
 git tag v1.0.0 && git push origin v1.0.0
