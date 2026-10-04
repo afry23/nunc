@@ -18,6 +18,8 @@ Nutzern waren nicht nachvollziehbar.
   (zusätzlich Stdout). HTTP-Bibliotheken nur ab `Warn`.
 - **Jeder `AppError` wird beim Erzeugen protokolliert** (`AppError::new`): Eingabefehler auf `debug`, Datenbank-/E/A-/
   interne Fehler auf `error`, alles andere auf `warn`. So muss kein Command das einzeln tun.
+- **Nicht auf iOS:** `tauri-plugin-log` zieht `num_threads`, das für `aarch64-apple-ios-sim` nicht kompiliert (libc ohne
+  `mach_task_self`). Dort gibt es keine Protokolldatei; Desktop und Android sind abgedeckt.
 - Secrets gehören weiter nie in Meldungen: Fehlertexte der Sync-Clients enthalten Status und Aktion, keine Header oder Bodys.
 
 ## Folgen
