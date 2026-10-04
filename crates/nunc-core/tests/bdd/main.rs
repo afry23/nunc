@@ -12,6 +12,7 @@ mod stats;
 mod sync_merge;
 mod timer;
 mod todo_query;
+mod todoist;
 mod todotxt;
 
 /// Gemeinsamer Zustand aller `@domain`-Szenarien. Jeder Themenbereich legt seine Felder hier ab und
@@ -25,6 +26,7 @@ pub struct DomainWorld {
     sync: sync_merge::State,
     timer: timer::State,
     todo_query: todo_query::State,
+    todoist: todoist::State,
     todotxt: todotxt::State,
 }
 
