@@ -5,18 +5,24 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.graphics.Color
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    enableEdgeToEdge()
+    // Die App ist dunkel: helle Symbole in Status- und Navigationsleiste, auch wenn das System hell ist
+    enableEdgeToEdge(
+      statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+    )
     super.onCreate(savedInstanceState)
     // Edge-to-edge: Android verkleinert das Fenster nicht mehr für die Tastatur. Der Inhalt bekommt
     // deshalb unten den Tastaturabstand, damit das Eingabefeld sichtbar bleibt.
