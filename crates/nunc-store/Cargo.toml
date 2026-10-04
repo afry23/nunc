@@ -14,6 +14,7 @@ chrono.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+serde.workspace = true
 cucumber.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt", "macros"] }

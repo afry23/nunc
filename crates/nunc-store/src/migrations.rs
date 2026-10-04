@@ -44,12 +44,13 @@ pub fn migrate(conn: &mut Connection) -> Result<(), StoreError> {
 }
 
 fn apply(conn: &mut Connection, migrations: &[Migration]) -> Result<(), StoreError> {
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS schema_migrations (
-            version    INTEGER PRIMARY KEY,
-            applied_at DATETIME NOT NULL DEFAULT (datetime('now'))
-        )",
-    )?;
+    // Wortgleich zur Go-App (inklusive Tabs), damit auch `sqlite_master` identisch ist.
+    conn.execute_batch(concat!(
+        "CREATE TABLE IF NOT EXISTS schema_migrations (\n",
+        "\t\t\tversion    INTEGER PRIMARY KEY,\n",
+        "\t\t\tapplied_at DATETIME NOT NULL DEFAULT (datetime('now'))\n",
+        "\t\t)"
+    ))?;
 
     for m in migrations {
         let applied: bool = conn.query_row(

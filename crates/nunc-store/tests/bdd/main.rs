@@ -8,10 +8,16 @@ use std::path::PathBuf;
 
 use chrono::{DateTime, NaiveTime, Utc};
 use cucumber::{World, given, then, when};
-use nunc_core::model::{Settings, TimerMode, TimerState};
+use nunc_core::model::{Settings, StatsResponse, TimerMode, TimerState, Todo};
 use nunc_core::timer::Timer;
 use rusqlite::Connection;
 use tempfile::TempDir;
+
+mod backup;
+mod compat;
+mod legacy;
+mod settings;
+mod todos;
 
 /// Gemeinsamer Zustand der `@integration`-Szenarien.
 #[derive(Debug, Default, World)]
@@ -24,6 +30,12 @@ pub struct StoreWorld {
     /// `sqlite_master`-Definitionen vor dem Öffnen: Name → SQL
     schema_before: Option<BTreeMap<String, String>>,
     timer: Timer,
+    settings: Settings,
+    todos: Vec<Todo>,
+    stats: Option<StatsResponse>,
+    sync_counter: u32,
+    backup: backup::State,
+    legacy: legacy::State,
 }
 
 /// Uhrzeit `HH:MM:SS` am festen Testtag (UTC).
@@ -46,9 +58,17 @@ fn schema(conn: &Connection) -> BTreeMap<String, String> {
 }
 
 impl StoreWorld {
+    fn root(&mut self) -> PathBuf {
+        self.dir().path().to_path_buf()
+    }
+
     fn dir(&mut self) -> &TempDir {
         self.dir
             .get_or_insert_with(|| tempfile::tempdir().expect("Temp-Ordner"))
+    }
+
+    fn conn_mut(&mut self) -> &mut Connection {
+        self.conn.as_mut().expect("Datenbank nicht geöffnet")
     }
 
     fn conn(&self) -> &Connection {
