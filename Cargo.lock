@@ -2743,9 +2743,12 @@ dependencies = [
 name = "nunc-store"
 version = "0.1.0"
 dependencies = [
+ "cucumber",
  "nunc-core",
  "rusqlite",
+ "tempfile",
  "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]

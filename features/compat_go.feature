@@ -1,8 +1,14 @@
 Feature: Compatibility with the database of the Go app
   Fixtures: tests/fixtures/go-v5.db (schema version 5, created by nunc-go)
 
-  @integration @REQ-compat @desktop @wip
+  @integration @REQ-compat @desktop
   Scenario: The Go database opens and its migrations are recognized as applied
+    Given the Go fixture database
+    When nunc opens the database
+    Then the migrations 1 to 5 are recorded as applied
+    And the migration timestamps did not change
+    And the table "todos" contains 6 rows
+    And the table "sessions" contains 11 rows
 
   @integration @REQ-compat @desktop @wip
   Scenario: Only the additive migration 006 is applied on top
