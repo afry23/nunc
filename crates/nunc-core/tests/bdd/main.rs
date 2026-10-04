@@ -59,7 +59,7 @@ fn selected(
     scenario: &cucumber::gherkin::Scenario,
 ) -> bool {
     let has = |tag: &str| feature.tags.iter().chain(&scenario.tags).any(|t| t == tag);
-    has("domain") && !has("wip")
+    has("domain") && !has("api") && !has("wip")
 }
 
 /// Mit `NUNC_BDD_REPORT=<datei>` wird zusätzlich ein Cucumber-JSON-Report geschrieben (CI-Artefakt, absoluter Pfad empfohlen: `cargo test` läuft im Crate-Verzeichnis).

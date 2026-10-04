@@ -38,6 +38,7 @@ android-native-keyring-store = "1"
 
 # interne Crates
 nunc-core = { path = "crates/nunc-core" }
+nunc-api = { path = "crates/nunc-api" }
 nunc-store = { path = "crates/nunc-store" }
 nunc-sync = { path = "crates/nunc-sync" }
 nunc-platform = { path = "crates/nunc-platform" }

@@ -3170,6 +3170,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "nunc-api"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "chrono",
+ "cucumber",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "log",
+ "nunc-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+]
+
+[[package]]
 name = "nunc-core"
 version = "0.1.0"
 dependencies = [

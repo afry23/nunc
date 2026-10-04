@@ -10,6 +10,7 @@ on:
       - "crates/nunc-core/**"
       - "crates/nunc-store/**"
       - "crates/nunc-sync/**"
+      - "crates/nunc-api/**"
       - "features/**"
       - ".cargo/mutants.toml"
       - ".github/workflows/mutation.yml"
@@ -41,7 +42,7 @@ jobs:
         run: git diff "origin/${{ github.base_ref }}...HEAD" > pr.diff
 
       - name: Mutation-Tests auf geändertem Code
-        run: cargo mutants --in-diff pr.diff -p nunc-core -p nunc-store -p nunc-sync --no-shuffle
+        run: cargo mutants --in-diff pr.diff -p nunc-core -p nunc-store -p nunc-sync -p nunc-api --no-shuffle
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -65,7 +66,7 @@ jobs:
           tool: cargo-mutants
 
       - name: Vollständiger Mutation-Lauf
-        run: cargo mutants -p nunc-core -p nunc-store -p nunc-sync --jobs 2
+        run: cargo mutants -p nunc-core -p nunc-store -p nunc-sync -p nunc-api --jobs 2
 
       - uses: actions/upload-artifact@v4
         if: always()

@@ -188,7 +188,7 @@ fn selected(
     scenario: &cucumber::gherkin::Scenario,
 ) -> bool {
     let has = |tag: &str| feature.tags.iter().chain(&scenario.tags).any(|t| t == tag);
-    has("integration") && has("sync") && !has("wip")
+    has("integration") && has("sync") && !has("api") && !has("wip")
 }
 
 #[tokio::main(flavor = "current_thread")]

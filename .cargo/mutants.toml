@@ -14,6 +14,9 @@ exclude_re = [
   # prüfen (ADR 0007: äquivalent bzw. nicht beobachtbar)
   "replace http_client",
   "replace < with <= in read_target",
+  # Der Server prüft die angekündigte Länge vorab nur, um früh abzulehnen; `Limited` beim Lesen erzwingt dieselbe
+  # Grenze, `> -> ==` ändert das Ergebnis nicht (äquivalent)
+  "replace > with == in handle",
   "impl (Debug|Display) for",
   "<impl Debug",
   "<impl Display",
