@@ -6,6 +6,7 @@
 
 use cucumber::{World, WriterExt as _, given, then, when, writer};
 
+mod backup;
 mod export;
 mod settings;
 mod stats;
@@ -20,6 +21,7 @@ mod todotxt;
 #[derive(Debug, Default, World)]
 pub struct DomainWorld {
     value: i64,
+    backup: backup::State,
     export: export::State,
     settings: settings::State,
     stats: stats::State,

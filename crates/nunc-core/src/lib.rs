@@ -3,6 +3,7 @@
 //! Keine Systemzeit, kein Dateisystem, kein Netz: Zeit wird als Parameter oder über eine injizierte
 //! `Clock` hereingereicht (Feature `clock` von `chrono` ist hier bewusst nicht aktiviert).
 
+pub mod backup_policy;
 pub mod clock;
 pub mod export;
 pub mod flowtime;
