@@ -3,6 +3,7 @@ import { BackupSection } from "../components/BackupSection";
 import { InfoIcon } from "../components/icons";
 import { NotificationHint } from "../components/NotificationHint";
 import { SyncSection } from "../components/SyncSection";
+import { TodoistSection } from "../components/TodoistSection";
 import { Button, SectionLabel, Toggle } from "../components/ui";
 import type { Settings } from "../lib/api";
 import { ratioAnchor, ratioBadge } from "../lib/format";
@@ -21,6 +22,7 @@ export function SettingsView() {
       <SettingsForm key={JSON.stringify(stored)} stored={stored} />
       <div className="mx-auto flex max-w-4xl flex-col gap-10 px-6 pb-10">
         <SyncSection />
+        {!isMobile() && <TodoistSection />}
         <BackupSection />
       </div>
     </>

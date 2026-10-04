@@ -11,6 +11,7 @@ import { useTimerStore } from "../stores/timerStore";
 import { BreakDialog } from "./BreakDialog";
 import { BottomTabs, Sidebar } from "./Navigation";
 import { SyncStatusBar } from "./SyncStatusBar";
+import { TodoistStatusBar } from "./TodoistStatusBar";
 import { Toast } from "./Toast";
 
 /** Aktualisieren per Ziehen: alles neu laden und, wenn ein Anbieter gewählt ist, synchronisieren. */
@@ -47,6 +48,7 @@ export function AppShell() {
         className={`min-w-0 flex-1 outline-none ${wide || keyboardOpen ? "" : "pb-20"}`}
       >
         <SyncStatusBar />
+        <TodoistStatusBar />
         <Outlet />
       </main>
       {!wide && !keyboardOpen && <BottomTabs />}

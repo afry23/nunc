@@ -8,6 +8,8 @@ import { useSyncStore } from "../stores/syncStore";
 import { useUiStore } from "../stores/uiStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Button, Segmented } from "./ui";
+import { DriveSection } from "./DriveSection";
+import { ImportDialog } from "./ImportDialog";
 import { WebDavForm } from "./WebDavForm";
 
 const PROVIDER_LABELS: Record<SyncProvider, string> = {
@@ -24,12 +26,14 @@ export function SyncSection() {
   const webdav = useSyncStore((s) => s.webdav);
   const syncing = useSyncStore((s) => s.status.state === "syncing");
   const syncNow = useSyncStore((s) => s.syncNow);
+  const drive = useSyncStore((s) => s.drive);
   const notify = useUiStore((s) => s.notify);
   const mobile = isMobile();
 
   useEffect(() => {
     void useSyncStore.getState().loadWebdav();
-  }, []);
+    if (!mobile) void useSyncStore.getState().loadDrive();
+  }, [mobile]);
   const needsSetup =
     provider === "webdav" &&
     webdav !== null &&
@@ -37,8 +41,8 @@ export function SyncSection() {
 
   const options: { value: SyncProvider; disabled?: boolean }[] = [
     { value: "none" },
-    // Google Drive folgt mit M7 und gibt es mobil nicht
-    ...(mobile ? [] : [{ value: "google_drive" as const, disabled: true }]),
+    // Google Drive gibt es mobil nicht
+    ...(mobile ? [] : [{ value: "google_drive" as const }]),
     { value: "webdav" },
   ];
 
@@ -73,15 +77,12 @@ export function SyncSection() {
           }))}
           onChange={choose}
         />
-        {!mobile && (
-          <p className="text-sm text-on-surface-variant">
-            Google Drive folgt in einer späteren Version.
-          </p>
-        )}
         {provider !== "none" && (
           <div>
             <Button
-              disabled={syncing}
+              disabled={
+                syncing || (provider === "google_drive" && !drive?.connected)
+              }
               aria-busy={syncing}
               onClick={() => void runSync()}
             >
@@ -101,7 +102,19 @@ export function SyncSection() {
         </p>
       )}
 
-      {webdav && (
+      {provider === "google_drive" && drive && !drive.connected && (
+        <p
+          role="status"
+          className="rounded-xl bg-surface-container-low p-4 text-orange-300"
+        >
+          Google Drive ist ausgewählt, aber noch nicht verbunden. Melde dich
+          unten an, damit synchronisiert werden kann.
+        </p>
+      )}
+
+      {provider === "google_drive" && !mobile && <DriveSection />}
+
+      {provider !== "google_drive" && webdav && (
         <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-surface-container-low p-5">
           <h3 className="font-semibold">WebDAV</h3>
           {provider !== "webdav" && (
@@ -117,6 +130,8 @@ export function SyncSection() {
           />
         </div>
       )}
+
+      <ImportDialog />
 
       {pending && (
         <ConfirmDialog

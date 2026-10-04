@@ -194,7 +194,7 @@ Jede Phase endet mit grünen Checks (s. 5) und lauffähigem Build.
 ### Phase 7 – Google Drive + Todoist (Desktop) (≈ 2 Wochen)
 - OAuth2 PKCE Loopback, Tokens im SecretStore (eigene Service-Namen; Konten werden nach dem Umstieg neu verbunden, Go-Keychain-Einträge werden nicht übernommen).
 - Drive: Ordner `nunc/`, `nunc-sync.json`, `drive.file`-Scope, Import-Dialog auf neuem Gerät, Konflikt-Hinweise.
-- Todoist: REST v2 (prüfen, ob inzwischen API v1 nötig — vor Phase verifizieren), Mapping-Tabelle, serialisierter Sync, Close statt Delete.
+- Todoist: API v1 (geprüft, siehe ADR 0009), Mapping-Tabelle, serialisierter Sync, Close statt Delete.
 - In Mobile-UI ausgeblendet (Szenarien `@desktop`).
 
 ### Phase 8 – Mobile-Feinschliff & Release (≈ 2 Wochen)

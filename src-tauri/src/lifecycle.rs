@@ -8,7 +8,7 @@ use nunc_platform::{KeyringSecretStore, SecretStore, SystemClock, UnavailableSec
 use nunc_sync::Trigger;
 use tauri::{App, AppHandle, Manager, RunEvent, Runtime};
 
-use crate::adapters::{TauriEventSink, TauriNotifier, create_timer_channel};
+use crate::adapters::{TauriEventSink, TauriNotifier, TauriUrlOpener, create_timer_channel};
 use crate::error::AppError;
 use crate::state::{AppPaths, AppState, Platform};
 
@@ -28,6 +28,7 @@ pub fn setup<R: Runtime>(app: &App<R>) -> Result<(), Box<dyn std::error::Error>>
     }
     spawn_startup_backup(&handle);
     state.sync.trigger(Trigger::Start);
+    state.todoist.trigger(Trigger::Start);
     // Beim Beenden noch einmal synchronisieren, höchstens wenige Sekunden lang (nur Desktop: Mobilgeräte
     // beenden die App ohne Vorwarnung, dort greift der Sync beim Wechsel in den Hintergrund)
     #[cfg(desktop)]
@@ -106,6 +107,7 @@ fn platform<R: Runtime>(handle: &AppHandle<R>) -> Platform {
         clock: Arc::new(SystemClock),
         events: Arc::new(TauriEventSink(handle.clone())),
         notifier: Arc::new(TauriNotifier(handle.clone())),
+        opener: Arc::new(TauriUrlOpener(handle.clone())),
         secrets,
         runtime: tauri::async_runtime::handle().inner().clone(),
     }

@@ -1,7 +1,8 @@
 //! Commands für Sync-Anbieter, WebDAV-Konfiguration und Synchronisierung.
 
 use nunc_core::model::{
-    ConnectionTestResult, SyncProvider, SyncResult, SyncStatus, WebDavConfig, is_http_url,
+    ConnectionTestResult, DriveStatus, SyncImportInfo, SyncProvider, SyncResult, SyncStatus,
+    TodoistStatus, WebDavConfig, is_http_url,
 };
 use nunc_sync::{Trigger, WebDavClient};
 use serde::{Deserialize, Serialize};
@@ -24,9 +25,13 @@ pub fn set_sync_provider(
             "Dieser Sync-Anbieter ist auf Mobilgeräten nicht verfügbar.",
         ));
     }
-    state
-        .db
-        .with(|conn| nunc_store::set_sync_provider(conn, provider))
+    let last_sync_at = state.db.with(|conn| {
+        nunc_store::set_sync_provider(conn, provider)?;
+        nunc_store::last_sync_of(conn, provider)
+    })?;
+    // jeder Anbieter hat seinen eigenen Zeitpunkt des letzten Syncs
+    state.sync.set_last_sync_at(last_sync_at);
+    Ok(())
 }
 
 /// Gespeicherte WebDAV-Einstellungen. Das Passwort verlässt den Tresor nicht: die Oberfläche erfährt nur, ob eins
@@ -125,4 +130,110 @@ pub async fn sync_now(state: State<'_, AppState>) -> Result<Option<SyncResult>, 
 #[specta::specta]
 pub fn sync_in_background(state: State<'_, AppState>) {
     state.sync.trigger(Trigger::Background);
+}
+
+fn desktop_only() -> Result<(), AppError> {
+    if cfg!(mobile) {
+        Err(AppError::unsupported(
+            "Google Drive ist auf Mobilgeräten nicht verfügbar.",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+/// Zustand der Google-Drive-Verbindung (ohne Netzwerkzugriff).
+#[tauri::command]
+#[specta::specta]
+pub fn get_drive_status(state: State<'_, AppState>) -> Result<DriveStatus, AppError> {
+    let folder = state.db.with(|conn| nunc_store::drive_folder_id(conn))?;
+    Ok(state.drive.status(folder.as_deref())?)
+}
+
+/// Meldet im Browser bei Google an (Desktop). Wartet, bis der Browser zurückruft oder die Zeit abläuft; der
+/// erste Abgleich folgt, sobald die Oberfläche keinen Import anbietet (`finish_connect`).
+#[tauri::command]
+#[specta::specta]
+pub async fn connect_drive(state: State<'_, AppState>) -> Result<DriveStatus, AppError> {
+    desktop_only()?;
+    let drive = state.drive.clone();
+    let opener = state.opener.clone();
+    Ok(drive.connect(&*opener).await?)
+}
+
+/// Löscht die Anmeldung lokal; die Sync-Datei im Drive bleibt.
+#[tauri::command]
+#[specta::specta]
+pub fn disconnect_drive(state: State<'_, AppState>) -> Result<DriveStatus, AppError> {
+    state.drive.disconnect()?;
+    get_drive_status(state)
+}
+
+/// Liegt im Drive Stand, den dieses (leere) Gerät übernehmen kann?
+#[tauri::command]
+#[specta::specta]
+pub async fn check_sync_import(state: State<'_, AppState>) -> Result<SyncImportInfo, AppError> {
+    desktop_only()?;
+    let drive = state.drive.clone();
+    let store = state.sync_store.clone();
+    Ok(drive.check_import(&*store).await?)
+}
+
+/// Nach dem Verbinden: der erste Abgleich im Hintergrund (außer die Oberfläche bietet einen Import an).
+#[tauri::command]
+#[specta::specta]
+pub fn finish_connect(state: State<'_, AppState>) {
+    state.sync.trigger(Trigger::Connected);
+}
+
+fn todoist_desktop_only() -> Result<(), AppError> {
+    if cfg!(mobile) {
+        Err(AppError::unsupported(
+            "Todoist ist auf Mobilgeräten nicht verfügbar.",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+/// Zustand der Todoist-Verbindung (ohne Netzwerkzugriff).
+#[tauri::command]
+#[specta::specta]
+pub fn get_todoist_status(state: State<'_, AppState>) -> Result<TodoistStatus, AppError> {
+    Ok(state.todoist_service.status()?)
+}
+
+/// Meldet im Browser bei Todoist an (Desktop). Danach läuft der erste Abgleich im Hintergrund.
+#[tauri::command]
+#[specta::specta]
+pub async fn connect_todoist(state: State<'_, AppState>) -> Result<TodoistStatus, AppError> {
+    todoist_desktop_only()?;
+    let service = state.todoist_service.clone();
+    let opener = state.opener.clone();
+    let status = service.connect(&*opener).await?;
+    state.todoist.trigger(Trigger::Connected);
+    Ok(status)
+}
+
+/// Löscht die Anmeldung lokal; lokale Todos bleiben.
+#[tauri::command]
+#[specta::specta]
+pub fn disconnect_todoist(state: State<'_, AppState>) -> Result<TodoistStatus, AppError> {
+    state.todoist_service.disconnect()?;
+    Ok(state.todoist_service.status()?)
+}
+
+/// Zustand des Todoist-Syncs (für die Statusleiste beim Öffnen; danach kommt `todoist:sync_status`).
+#[tauri::command]
+#[specta::specta]
+pub fn get_todoist_sync_status(state: State<'_, AppState>) -> SyncStatus {
+    state.todoist.status()
+}
+
+/// Gleicht jetzt mit Todoist ab und wartet auf das Ergebnis. `None`, wenn Todoist nicht verbunden ist.
+#[tauri::command]
+#[specta::specta]
+pub async fn todoist_sync_now(state: State<'_, AppState>) -> Result<Option<SyncResult>, AppError> {
+    let sync = state.todoist.clone();
+    Ok(sync.sync_now().await?)
 }

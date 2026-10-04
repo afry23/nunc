@@ -102,7 +102,14 @@ jobs:
 
       - run: npm ci
 
+      # OAuth-Zugangsdaten werden beim Bauen eingesetzt (option_env!). Bei PRs aus Forks fehlen die Secrets: dann
+      # sind die Werte leer und "Verbinden" ist im Build deaktiviert.
       - run: npm run tauri build -- --debug --no-bundle
+        env:
+          NUNC_GOOGLE_CLIENT_ID: ${{ secrets.NUNC_GOOGLE_CLIENT_ID }}
+          NUNC_GOOGLE_CLIENT_SECRET: ${{ secrets.NUNC_GOOGLE_CLIENT_SECRET }}
+          NUNC_TODOIST_CLIENT_ID: ${{ secrets.NUNC_TODOIST_CLIENT_ID }}
+          NUNC_TODOIST_CLIENT_SECRET: ${{ secrets.NUNC_TODOIST_CLIENT_SECRET }}
 
   # Desktop-E2E-Smoke (WebdriverIO + tauri-driver, Linux)
   e2e-desktop:

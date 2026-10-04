@@ -291,6 +291,32 @@ Entscheidungen: [ADR 0008](./docs/adr/0008-webdav-sync.md). Abweichungen und Erg
 | M7-06 | Todoist-UI | Verbinden/Trennen (Bestätigung), Konto-Anzeige (E-Mail, Avatar), Status `✓ Todoist: HH:MM` / `⟳` / `⚠` | `todoist/auth.feature` |
 | M7-07 | ~~Keychain-Kontinuität~~ | **Entfällt:** Die App ersetzt die Go-App, Konten (Drive, Todoist, WebDAV) werden neu verbunden; alte Go-Keychain-Einträge werden nicht übernommen | – |
 
+**Stand:** umgesetzt (Desktop; Anmeldung mit echten Konten bei Google und Todoist ist nicht getestet – dafür braucht es eine
+App-Registrierung, siehe unten). Entscheidungen: [ADR 0009](./docs/adr/0009-drive-todoist.md). Abweichungen und Ergänzungen:
+
+- M7-01: gemeinsames Modul `nunc-sync::oauth` (PKCE, Loopback-Server, Token-Austausch und -Erneuerung, Tresor-Eintrag).
+  Rückruf-Ports: Google beliebig, Todoist `42813`–`42817` (alle in der Todoist-App als Redirect-URI eintragen).
+  Neu in `nunc-platform`: Trait `UrlOpener` (Adapter auf `tauri-plugin-opener`).
+- M7-02/03: Scope nur `drive.file` (die E-Mail kommt über `about.get`, die Go-App brauchte `userinfo.email` zusätzlich).
+  Drive kennt kein bedingtes Schreiben: der Lauf prüft vor dem Überschreiben die Änderungszeit und setzt neu an.
+  Pausieren ist der Schalter „Synchronisierung aktiv“ (`syncEnabled`), „Leer starten“ schließt nur den Import-Dialog
+  (wie in Go; die Daten kommen beim nächsten Abgleich).
+- M7-04: Todoist API v1 geprüft (die Go-App nutzte sie schon; REST v2 ist nicht mehr der Stand). **Refresh-Tokens gibt es
+  jetzt**, die Annahme der Go-App stimmte nicht mehr; ältere Apps haben unbefristete Tokens (ohne `expires_in`).
+- M7-05: Todoist hat einen eigenen Koordinator (Events `todoist:sync_status`, `todoist:sync_complete`), unabhängig vom
+  Sync-Anbieter; Auslöser Start, Todo-Änderung, Verbinden. Übernahmen aus Todoist tragen die Änderungszeit der Aufgabe
+  (kein Rück-Push); sagt die Todoist-Version dasselbe wie das Todo, wird nur die Zeit angeglichen (kein
+  „ersetzt“-Hinweis wegen des Erstellungsdatums). Mappings entstehen sofort nach dem Anlegen (kein Duplikat nach einem
+  abgebrochenen Lauf), gelöschte Todos verlieren sie nach dem Schließen.
+- M7-06: Abschnitt „Todoist“ in den Einstellungen, Statuszeile `✓ Todoist: HH:MM` / `⟳ Todoist synchronisiert…` /
+  `⚠ Todoist-Sync fehlgeschlagen` (Tooltip: Meldung) über dem Inhalt. Fehler erscheinen zusätzlich als Hinweis.
+- Zugangsdaten: `NUNC_GOOGLE_CLIENT_ID`, `NUNC_GOOGLE_CLIENT_SECRET`, `NUNC_TODOIST_CLIENT_ID`,
+  `NUNC_TODOIST_CLIENT_SECRET` beim Bauen (`option_env!`) oder zur Laufzeit als Umgebungsvariablen; Debug-Builds lesen
+  zusätzlich eine `.env` (`.env.example`, auch mit den Go-Namen `GOOGLE_CLIENT_ID` …). Ohne Zugangsdaten ist
+  „Verbinden“ deaktiviert.
+- **Manuell zu prüfen:** Anmeldung und Abgleich mit echten Konten; Interop mit der Go-App über dasselbe Google-Konto
+  (`nunc/nunc-sync.json`).
+
 **Exit-Kriterien M7:** Feature-Parität mit `nunc-go` auf Desktop → Go-App kann abgelöst werden.
 
 ---

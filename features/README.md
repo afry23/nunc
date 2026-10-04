@@ -8,7 +8,7 @@ Eine Quelle für alle Runner (siehe ADR 0006). Szenarien sind englisch, Dateien 
 |---|---|
 | `@domain` · `@integration` · `@ui` · `@e2e` | Ebene/Runner (Rust pure · Rust mit SQLite/wiremock · Vitest · End-to-End) |
 | `@US-…` · `@REQ-…` | Rückverfolgbarkeit: User Story (`nunc-go/nunc-userstories`, `STORIES.md`) bzw. Abschnitt in `REQUIREMENTS.md` |
-| `@sync` | `@integration`-Szenario für WebDAV/Sync: läuft im Runner von `nunc-sync` (wiremock-Server mit Zustand), nicht in `nunc-store` |
+| `@sync` | `@integration`-Szenario für WebDAV, Google Drive, Todoist und die Sync-Steuerung: läuft im Runner von `nunc-sync` (wiremock-Server mit Zustand), nicht in `nunc-store` |
 | `@desktop` · `@mobile` | Nur auf dieser Plattformklasse |
 | `@wip` | Szenario ist nur ein Titel, Steps fehlen noch; Runner überspringen es |
 | `@property` · `@manual` | Eigenschaftstest (proptest, `Then the property "…" holds for N random cases`) · nicht automatisierbar, manueller Check |

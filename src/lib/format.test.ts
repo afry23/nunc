@@ -4,6 +4,7 @@ import {
   formatBytes,
   formatClock,
   formatDateTime,
+  formatTimeOfDay,
   formatUtcDate,
   formatMinutes,
   parseIsoDate,
@@ -111,5 +112,19 @@ describe("formatDateTime / formatUtcDate", () => {
   it("returns unreadable input unchanged", () => {
     expect(formatDateTime("gestern")).toBe("gestern");
     expect(formatUtcDate("gestern")).toBe("gestern");
+  });
+});
+
+describe("formatTimeOfDay", () => {
+  it("shows the local time of day with two digits", () => {
+    expect(formatTimeOfDay(new Date(2026, 9, 4, 8, 5).toISOString())).toBe(
+      "08:05",
+    );
+    expect(formatTimeOfDay(new Date(2026, 9, 4, 23, 59).toISOString())).toBe(
+      "23:59",
+    );
+  });
+  it("returns unreadable input unchanged", () => {
+    expect(formatTimeOfDay("gestern")).toBe("gestern");
   });
 });

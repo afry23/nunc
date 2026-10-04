@@ -93,6 +93,8 @@ pub struct State {
     pub quit_took: Option<Duration>,
     pub last_error: Option<String>,
     pub runner_outcome: Option<nunc_sync::RunOutcome>,
+    /// Statt des Skripts: ein echter Läufer.
+    pub runner_override: Option<Arc<dyn SyncRunner>>,
 }
 
 impl Default for State {
@@ -107,16 +109,19 @@ impl Default for State {
             quit_took: None,
             last_error: None,
             runner_outcome: None,
+            runner_override: None,
         }
     }
 }
 
 impl State {
-    fn coordinator(&mut self) -> Arc<SyncCoordinator> {
+    pub fn coordinator(&mut self) -> Arc<SyncCoordinator> {
         self.coordinator
             .get_or_insert_with(|| {
                 SyncCoordinator::new(
-                    self.runner.clone(),
+                    self.runner_override
+                        .clone()
+                        .unwrap_or_else(|| self.runner.clone()),
                     self.observer.clone(),
                     tokio::runtime::Handle::current(),
                     self.mobile,
@@ -198,6 +203,16 @@ where
         out.push(task.await.expect("Task"));
     }
     out
+}
+
+#[when(expr = "I replace the last sync time with {string}")]
+fn replace_last_sync(world: &mut SyncWorld, time: String) {
+    world.coord.coordinator().set_last_sync_at(Some(time));
+}
+
+#[when("I replace the last sync time with nothing")]
+fn clear_last_sync(world: &mut SyncWorld) {
+    world.coord.coordinator().set_last_sync_at(None);
 }
 
 #[when("I sync now")]

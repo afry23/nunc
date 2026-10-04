@@ -118,7 +118,7 @@ async fn server_holding_broken_file(world: &mut SyncWorld, folder: String) {
     });
 }
 
-fn todo_json(sync_id: &str, text: &str) -> SyncTodo {
+pub fn todo_json(sync_id: &str, text: &str) -> SyncTodo {
     SyncTodo {
         sync_id: sync_id.to_owned(),
         device_id: "fixture-device-c".to_owned(),

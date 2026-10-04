@@ -66,6 +66,13 @@ export function formatDateTime(iso: string): string {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** Uhrzeit eines Zeitpunkts (RFC 3339) in lokaler Zeit als `08:30`. */
+export function formatTimeOfDay(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** Kalendertag eines Zeitpunkts in UTC als `04.10.2026` (Backup-Dateien tragen ihren Tag im Namen, 12:00 UTC). */
 export function formatUtcDate(iso: string): string {
   const d = new Date(iso);

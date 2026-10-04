@@ -1,6 +1,5 @@
 use nunc_core::model::Todo;
 use nunc_core::todo_query::{SortDirection, TodoFilter, TodoSort, query_todos};
-use nunc_sync::Trigger;
 use tauri::State;
 
 use crate::error::AppError;
@@ -34,7 +33,7 @@ pub fn add_todo(state: State<'_, AppState>, raw_text: String) -> Result<Todo, Ap
     let todo = state
         .db
         .with(|conn| nunc_store::add_todo(conn, raw_text, &sync_id, now))?;
-    state.sync.trigger(Trigger::TodoChanged);
+    state.todos_changed();
     Ok(todo)
 }
 
@@ -51,7 +50,7 @@ pub fn update_todo(
     let todo = state
         .db
         .with(|conn| nunc_store::update_todo(conn, id, raw_text, now))?;
-    state.sync.trigger(Trigger::TodoChanged);
+    state.todos_changed();
     Ok(todo)
 }
 
@@ -63,7 +62,7 @@ pub fn delete_todo(state: State<'_, AppState>, id: i32) -> Result<(), AppError> 
     state
         .db
         .with(|conn| nunc_store::delete_todo(conn, id, now))?;
-    state.sync.trigger(Trigger::TodoChanged);
+    state.todos_changed();
     Ok(())
 }
 
@@ -79,7 +78,7 @@ pub fn set_todo_completed(
     let todo = state
         .db
         .with(|conn| nunc_store::set_todo_completed(conn, id, completed, today, now))?;
-    state.sync.trigger(Trigger::TodoChanged);
+    state.todos_changed();
     Ok(todo)
 }
 

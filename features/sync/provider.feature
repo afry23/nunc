@@ -48,11 +48,10 @@ Feature: Sync provider selection
       | google_drive | mobile   | unavailable |
 
   @ui @US-Sync-Provider
-  Scenario: The provider can be chosen between none and WebDAV and Google Drive follows later
+  Scenario: The provider can be chosen between none, Google Drive and WebDAV
     When I open the app at "/settings"
     Then I see the radio group "Sync-Anbieter" with the options "Kein Sync, Google Drive, WebDAV"
-    And the option "Google Drive" is disabled
-    And I see "Google Drive folgt in einer späteren Version."
+    And the option "Google Drive" is enabled
 
   @ui @US-Sync-Provider
   Scenario: Only one provider can be active
@@ -119,3 +118,28 @@ Feature: Sync provider selection
     Given the platform is "mobile"
     When I open the app at "/settings"
     Then I see the radio group "Sync-Anbieter" with the options "Kein Sync, WebDAV"
+
+  @integration @sync @US-Sync-Provider
+  Scenario: Each provider shows its own time of the last sync
+    Given a sync coordinator whose runs take 0 ms
+    When I sync now
+    And I replace the last sync time with "2026-10-03T08:00:00Z"
+    Then the sync status is "idle 2026-10-03T08:00:00Z -"
+    When I replace the last sync time with nothing
+    Then the sync status is "idle - -"
+
+  @integration @sync @US-Sync-Provider
+  Scenario: Changing the provider clears an old error
+    Given a sync coordinator whose runs take 0 ms
+    And the next run fails with "Verbindung abgelehnt – Server nicht erreichbar"
+    When I sync now
+    And I replace the last sync time with "2026-10-03T08:00:00Z"
+    Then the sync status is "idle 2026-10-03T08:00:00Z -"
+
+  @integration @sync @US-Sync-Provider
+  Scenario: A running sync keeps its status when the provider is changed
+    Given a sync coordinator whose runs take 400 ms
+    When the app starts
+    And I wait 100 ms
+    And I replace the last sync time with "2026-10-03T08:00:00Z"
+    Then the sync status is "syncing - -"
