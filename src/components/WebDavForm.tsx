@@ -6,7 +6,7 @@ import { useUiStore } from "../stores/uiStore";
 import { Button } from "./ui";
 
 const FIELD =
-  "min-h-11 rounded-lg bg-surface-container-highest px-3 focus:bg-secondary-container disabled:opacity-40";
+  "w-full min-w-0 min-h-11 rounded-lg bg-surface-container-highest px-3 focus:bg-secondary-container disabled:opacity-40";
 
 /**
  * Verbindungsdaten für WebDAV. Änderungen gelten erst nach „Speichern“; das Passwort kommt nie vom Backend
@@ -63,9 +63,9 @@ export function WebDavForm({
         event.preventDefault();
         if (validUrl) void submit();
       }}
-      className="flex flex-col gap-4"
+      className="flex min-w-0 flex-col gap-4"
     >
-      <div className="flex flex-col gap-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <label htmlFor="webdav-url" className="font-semibold">
           Server-URL
         </label>
@@ -88,7 +88,7 @@ export function WebDavForm({
         )}
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-2">
+        <label className="flex min-w-0 flex-col gap-2">
           <span className="font-semibold">Authentifizierung</span>
           <select
             disabled={disabled}
@@ -105,7 +105,7 @@ export function WebDavForm({
             <option value="digest">Digest</option>
           </select>
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="flex min-w-0 flex-col gap-2">
           <span className="font-semibold">Benutzername</span>
           <input
             type="text"
@@ -119,11 +119,11 @@ export function WebDavForm({
         </label>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <label htmlFor="webdav-password" className="font-semibold">
             Passwort
           </label>
-          <div className="flex gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <input
               id="webdav-password"
               type={revealed ? "text" : "password"}
@@ -137,7 +137,7 @@ export function WebDavForm({
                 setPassword(event.target.value);
                 setResult(null);
               }}
-              className={`${FIELD} min-w-0 flex-1`}
+              className={`${FIELD} flex-1 basis-40`}
             />
             <Button
               aria-pressed={revealed}
@@ -148,7 +148,7 @@ export function WebDavForm({
             </Button>
           </div>
         </div>
-        <label className="flex flex-col gap-2">
+        <label className="flex min-w-0 flex-col gap-2">
           <span className="font-semibold">Remote-Pfad</span>
           <input
             type="text"

@@ -56,7 +56,10 @@ export function SyncSection() {
   };
 
   return (
-    <section aria-labelledby="sync-heading" className="flex flex-col gap-4">
+    <section
+      aria-labelledby="sync-heading"
+      className="flex min-w-0 flex-col gap-4"
+    >
       <h2 id="sync-heading" className="font-display text-xl font-bold">
         Synchronisierung
       </h2>
@@ -99,7 +102,7 @@ export function SyncSection() {
       )}
 
       {webdav && (
-        <div className="flex flex-col gap-3 rounded-2xl bg-surface-container-low p-5">
+        <div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-surface-container-low p-5">
           <h3 className="font-semibold">WebDAV</h3>
           {provider !== "webdav" && (
             <p className="text-sm text-on-surface-variant">
