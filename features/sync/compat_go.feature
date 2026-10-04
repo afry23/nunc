@@ -58,5 +58,11 @@ Feature: Sync file compatibility with the Go app
       | t-0100  | 2026-09-29 Water the plants @home            | false   |
     And the local database has 13 sessions
 
-  @e2e @US-Sync-02-WebDAV @desktop @wip
+  @e2e @US-Sync-02-WebDAV @desktop @manual
   Scenario: Go app and nunc sync alternately against a WebDAV server
+    Given the repository checkout contains ../nunc-go and Go is installed
+    When I run "tests/interop/webdav-go-nunc.sh"
+    Then the Go app logic and nunc synchronize alternately against one WebDAV server
+    And the todos of the Go database and the nunc database are the same
+    And a todo added, changed and deleted on either side reaches the other side
+    And the completed sessions of both databases are the same
