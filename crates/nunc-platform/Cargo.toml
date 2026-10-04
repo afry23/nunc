@@ -9,3 +9,22 @@ license.workspace = true
 [dependencies]
 nunc-core.workspace = true
 thiserror.workspace = true
+serde_json.workspace = true
+# "clock": nur hier darf die Systemzeit gelesen werden (SystemClock, lokale Zeitzone)
+chrono = { workspace = true, features = ["clock"] }
+keyring-core.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+apple-native-keyring-store = { workspace = true, features = ["keychain"] }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+apple-native-keyring-store = { workspace = true, features = ["protected"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-native-keyring-store.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus-secret-service-keyring-store = { workspace = true, features = ["crypto-rust"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+android-native-keyring-store.workspace = true
