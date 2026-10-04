@@ -32,6 +32,10 @@ impl AppError {
     }
 
     /// Nicht auf dieser Plattform verfügbar.
+    #[cfg_attr(
+        desktop,
+        expect(dead_code, reason = "nur die Mobil-Zweige melden „nicht verfügbar“")
+    )]
     pub fn unsupported(message: impl Into<String>) -> Self {
         Self::new("unsupported", message)
     }

@@ -74,6 +74,7 @@ impl Harness {
                 backup::trigger_backup,
                 backup::list_backups,
                 backup::restore_from_backup,
+                backup::export_backup,
                 notifications::get_notification_status,
                 notifications::request_notification_permission,
             ])
@@ -478,6 +479,21 @@ fn restoring_a_bad_file_fails_with_a_typed_error_and_changes_nothing() {
     );
     assert_eq!(texts(&h.ok("get_todos", json!({}))), ["bleibt"]);
     assert!(!h.events.names().contains(&"app:reload".to_owned()));
+}
+
+#[test]
+fn only_backups_from_the_backup_folder_can_be_exported() {
+    let h = Harness::new();
+    let outside = h._dir.path().join("nunc-backup-2026-10-04.db");
+    std::fs::write(&outside, b"x").unwrap();
+    assert_eq!(
+        h.err_code("export_backup", json!({ "sourcePath": outside })),
+        "invalid_input"
+    );
+    assert_eq!(
+        h.err_code("export_backup", json!({ "sourcePath": "/etc/passwd" })),
+        "invalid_input"
+    );
 }
 
 #[test]

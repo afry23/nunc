@@ -36,6 +36,8 @@ interface BackupState {
   requestRestore: (entry: BackupEntry) => void;
   /** Öffnet den Datei-Dialog und fragt danach die Bestätigung an. */
   requestRestoreFromFile: () => Promise<void>;
+  /** „Speichern unter“ für ein Backup (Mobil: Datei-Dialog des Systems). */
+  exportBackup: (entry: BackupEntry) => Promise<void>;
   cancelRestore: () => void;
   confirmRestore: () => Promise<void>;
 }
@@ -94,6 +96,14 @@ export const useBackupStore = create<BackupState>((set, get) => ({
       set({ pending: { path, label: name }, restoreError: null });
     } catch (error) {
       set({ restoreError: errorMessage(error) });
+    }
+  },
+  exportBackup: async (entry) => {
+    try {
+      const target = await unwrap(commands.exportBackup(entry.path));
+      if (target !== null) useUiStore.getState().notify("Backup exportiert.");
+    } catch (error) {
+      useUiStore.getState().fail(error);
     }
   },
   cancelRestore: () => set({ pending: null }),

@@ -293,3 +293,38 @@ Feature: Daily backup
     When I open the app at "/settings"
     Then I do not see the button "Backup-Ordner wählen"
     And I do not see "Backup-Ordner:"
+
+  @ui @US-B05 @mobile
+  Scenario: Backups can be exported and shared
+    Given the platform is "mobile"
+    And the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+    When I open the app at "/settings"
+    And I click "Backup vom 03.10.2026 exportieren"
+    Then the backend received "export_backup" with:
+      """
+      { "sourcePath": "/data/backups/nunc-backup-2026-10-03.db" }
+      """
+    And I see "Backup exportiert."
+
+  @ui @US-B05 @mobile
+  Scenario: Cancelling the export dialog shows no confirmation
+    Given the platform is "mobile"
+    And the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+    And the export dialog is cancelled
+    When I open the app at "/settings"
+    And I click "Backup vom 03.10.2026 exportieren"
+    Then the backend received "export_backup"
+    And I do not see "Backup exportiert."
+
+  @ui @US-B05 @desktop
+  Scenario: Backups are not exported on the desktop because the folder is accessible
+    Given the platform is "desktop"
+    And the backups:
+      | date       | category | sizeBytes |
+      | 2026-10-03 | daily    | 1000      |
+    When I open the app at "/settings"
+    Then I do not see the button "Backup vom 03.10.2026 exportieren"

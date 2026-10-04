@@ -106,3 +106,7 @@ Then("the backup list shows:", async (_world: UiWorld, table: DataTable) => {
       expect(rows[index]).toContain(part);
   });
 });
+
+Given("the export dialog is cancelled", (world: UiWorld) => {
+  world.fake.exportTarget = null;
+});

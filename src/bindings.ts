@@ -81,8 +81,18 @@ export const commands = {
 	restoreFromBackup: (sourcePath: string) => typedError<null, AppError>(__TAURI_INVOKE("restore_from_backup", { sourcePath })),
 	/**  Öffnet den Ordner-Dialog und speichert den gewählten Backup-Ordner (nur Desktop). `None` bei Abbruch. */
 	selectBackupDir: () => typedError<string | null, AppError>(__TAURI_INVOKE("select_backup_dir")),
-	/**  Öffnet den Datei-Dialog für eine Backup-Datei (`.db`). `None` bei Abbruch. */
+	/**
+	 *  Öffnet den Datei-Dialog für eine Backup-Datei. `None` bei Abbruch.
+	 * 
+	 *  Auf Mobilgeräten liefert der Picker keinen Dateipfad (Android: `content://`-URI, iOS: Dateien außerhalb der
+	 *  Sandbox). Die Datei wird dann in den Cache-Ordner der App kopiert und dieser Pfad zurückgegeben.
+	 */
 	selectRestoreFile: () => typedError<string | null, AppError>(__TAURI_INVOKE("select_restore_file")),
+	/**
+	 *  Kopiert ein Backup an einen vom Nutzer gewählten Ort (Datei-Dialog bzw. „Speichern unter“ auf Mobilgeräten).
+	 *  `None`, wenn der Dialog abgebrochen wurde.
+	 */
+	exportBackup: (sourcePath: string) => typedError<string | null, AppError>(__TAURI_INVOKE("export_backup", { sourcePath })),
 	/**  Aktueller Stand, ohne den Nutzer zu fragen. */
 	getNotificationStatus: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("get_notification_status")),
 	/**

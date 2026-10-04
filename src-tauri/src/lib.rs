@@ -48,6 +48,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             backup::restore_from_backup,
             backup::select_backup_dir::<tauri::Wry>,
             backup::select_restore_file::<tauri::Wry>,
+            backup::export_backup::<tauri::Wry>,
             notifications::get_notification_status::<tauri::Wry>,
             notifications::request_notification_permission::<tauri::Wry>,
         ])

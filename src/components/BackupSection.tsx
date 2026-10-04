@@ -116,12 +116,22 @@ export function BackupSection() {
                     {formatBytes(entry.sizeBytes)}
                   </span>
                 </span>
-                <Button
-                  aria-label={`Backup vom ${formatUtcDate(entry.createdAt)} wiederherstellen`}
-                  onClick={() => actions.requestRestore(entry)}
-                >
-                  Wiederherstellen
-                </Button>
+                <span className="flex gap-2">
+                  {mobile && (
+                    <Button
+                      aria-label={`Backup vom ${formatUtcDate(entry.createdAt)} exportieren`}
+                      onClick={() => void actions.exportBackup(entry)}
+                    >
+                      Exportieren
+                    </Button>
+                  )}
+                  <Button
+                    aria-label={`Backup vom ${formatUtcDate(entry.createdAt)} wiederherstellen`}
+                    onClick={() => actions.requestRestore(entry)}
+                  >
+                    Wiederherstellen
+                  </Button>
+                </span>
               </li>
             ))}
           </ul>

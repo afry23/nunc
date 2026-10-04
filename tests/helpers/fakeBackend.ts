@@ -108,6 +108,8 @@ export interface FakeBackend extends BackendMock {
   /** Ergebnisse der Datei- und Ordner-Dialoge (`null` = abgebrochen). */
   restoreFile: string | null;
   backupDirChoice: string | null;
+  /** Ziel des „Speichern unter“-Dialogs beim Export (`null` = abgebrochen). */
+  exportTarget: string | null;
   /** Fehler, den `restore_from_backup` meldet (`null` = Erfolg). */
   restoreError: { code: string; message: string } | null;
   /** Letzte Argumente je Command. */
@@ -163,6 +165,7 @@ export function createFakeBackend(): FakeBackend {
     restoreFile: null,
     backupDirChoice: null,
     restoreError: null,
+    exportTarget: "/storage/Download/nunc-backup.db",
   } as unknown as FakeBackend;
   let releaseHeld: (() => void) | undefined;
   fake.releaseBackup = () => releaseHeld?.();
@@ -331,6 +334,7 @@ export function createFakeBackend(): FakeBackend {
       return fake.backupDirChoice;
     },
     select_restore_file: () => fake.restoreFile,
+    export_backup: () => fake.exportTarget,
     restore_from_backup: async ({ sourcePath }: { sourcePath: string }) => {
       if (fake.restoreError) throw fake.restoreError;
       const lines = fake.backupContents[sourcePath] ?? [];

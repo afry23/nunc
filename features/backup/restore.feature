@@ -265,5 +265,16 @@ Feature: Restore
     Then I see "From backup"
     And I do not see "Current"
 
-  @ui @US-R03 @mobile @wip
+  @ui @US-R03 @mobile
   Scenario: Import a backup file with the file picker
+    Given the platform is "mobile"
+    And the file dialog returns "/data/cache/import/phone.db"
+    When I open the app at "/settings"
+    And I click "Backup-Datei importieren"
+    Then the backend received "select_restore_file"
+    And I see a dialog with the text "phone.db"
+    When I click "Jetzt wiederherstellen"
+    Then the backend received "restore_from_backup" with:
+      """
+      { "sourcePath": "/data/cache/import/phone.db" }
+      """
