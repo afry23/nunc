@@ -24,5 +24,10 @@ Feature: Responsive layout
   @ui @REQ-responsive @mobile @wip
   Scenario: The todo input stays visible above the keyboard
 
-  @ui @REQ-responsive @mobile @wip
+  @ui @REQ-responsive @mobile
   Scenario: Desktop-only settings are hidden on mobile
+    Given the platform is "mobile"
+    When I open the app at "/settings"
+    Then I do not see "Symbol im Infobereich (Tray)"
+    When I press the key "Space"
+    Then the backend did not receive "start_timer"
