@@ -13,8 +13,8 @@ Eine Quelle für alle Runner (siehe ADR 0006). Szenarien sind englisch, Dateien 
 | `@wip` | Szenario ist nur ein Titel, Steps fehlen noch; Runner überspringen es |
 | `@property` · `@manual` | Eigenschaftstest (proptest, `Then the property "…" holds for N random cases`) · nicht automatisierbar, manueller Check |
 
-**Stand (M0-13, `nunc-store` M2):** alle Szenarien tragen `@wip` und bestehen nur aus dem Titel. Beim Umsetzen eines Tickets Steps
-ergänzen, rot → grün, dann `@wip` des Szenarios entfernen. `smoke*.feature` sind Runner-Selbsttests.
+**Stand (M8):** kein Szenario trägt `@wip`; `npm run docs:report` prüft das. Neue Szenarien beginnen als `@wip` (nur Titel), Steps
+ergänzen, rot → grün, dann `@wip` entfernen. `smoke*.feature` sind Runner-Selbsttests.
 
 Fixtures für Kompatibilitätsszenarien: [`tests/fixtures/`](../tests/fixtures/README.md).
 

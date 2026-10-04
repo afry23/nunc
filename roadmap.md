@@ -334,6 +334,25 @@ App-Registrierung, siehe unten). Entscheidungen: [ADR 0009](./docs/adr/0009-driv
 | M8-07 | Doku | README (Installation, Datenpfade, Backup, Sync), Living Documentation aus Cucumber-Report, Umstiegsanleitung Go → Tauri |
 | M8-08 | Abnahme | Alle Features ohne `@wip`; Traceability-Report Story → Szenario → Status vollständig |
 
+**Stand:** umgesetzt, soweit ohne Zertifikate, Konten und Geräte möglich. **Nicht ausgeführt:** Signierung/Notarisierung,
+Play-Console- und TestFlight-Upload, Windows-/Mobil-Messung, Maestro. Entscheidungen: ADR [0010](./docs/adr/0010-fehler-und-protokoll.md)
+(Fehler, Protokoll), [0011](./docs/adr/0011-i18n.md) (i18n), [0012](./docs/adr/0012-release.md) (Release). Abweichungen und Ergänzungen:
+
+- M8-01: `tests/nfr/measure-desktop.sh` misst Start („Oberfläche geladen“ aus dem Protokoll) und Speicher (macOS `footprint`, Linux PSS)
+  des Release-Builds; Ergebnisse und Grenzen in [docs/nfr.md](./docs/nfr.md) (macOS: Start ≈ 0,5 s, Speicher 88–93 MB, knapp unter
+  dem Ziel). Neue Szenarien: Timer-Drift über eine Stunde, Timer überlebt Kill ohne sauberes Beenden (`@integration`).
+- M8-02: der Fehlertyp `AppError { code, message }` bestand seit M3. Neu: `tauri-plugin-log` (Datei `nunc.log`, 1 MB, fünf
+  Dateien), jeder `AppError` wird protokolliert. Fehlertexte in der UI folgen über den `code` der Sprache.
+- M8-03: Einstellung `language` (`system`/`de`/`en`, nur nunc, die Go-App ignoriert den Schlüssel), Kataloge `src/i18n/` mit
+  331 Schlüsseln, Englisch vollständig. **Offen:** Texte des Backends (Tray, Benachrichtigung, Server-Meldungen) sind deutsch.
+- M8-04…06: Bundle-Metadaten, Release-Workflow (`release.yml`), Android-Signierung in `build.gradle.kts`, Versions-Skript
+  (`npm run version:set`), Anleitung [docs/release.md](./docs/release.md). Kein Auto-Updater in 1.0. Die Version steht noch auf
+  0.1.0; sie wird beim Release gesetzt.
+- M8-07: README, [Umstieg Go → nunc](./docs/migration-from-go.md), `npm run docs:report` (Living Documentation + Traceability
+  nach `target/docs/`, in der CI als Artefakt).
+- M8-08: die 18 übrig gebliebenen `@wip`-Titel waren Dubletten umgesetzter Szenarien (bzw. das Share-Sheet, das es laut M6 nicht
+  gibt) und sind entfernt. `npm run docs:report` bricht bei `@wip`, fehlender Ebene oder fehlender Story ab; CI und Release rufen es auf.
+
 **Exit-Kriterien M8 = Release 1.0** auf macOS, Windows, Linux, Android, iOS.
 
 ---

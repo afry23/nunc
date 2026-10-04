@@ -104,6 +104,15 @@ Go-Interop (manuell, braucht `../nunc-go` und Go): `tests/interop/go-reads-nunc-
 Step-Definitions: Rust in `crates/*/tests/bdd/` (`main.rs` mit gemeinsamer `DomainWorld`, ein Modul pro Themenbereich), TypeScript in `tests/steps/` (`tests/helpers/ipc.ts` →
 `mockBackend({ app_info: () => … })`). Details: ADR 0006.
 
+## Texte, Fehler, Protokoll
+
+- **Keine Klartexte in der UI:** sichtbare Texte stehen in `src/i18n/de.ts` (Quelle) und `en.ts` (gleiche Schlüssel, vom Typ
+  erzwungen). Komponenten: `const t = useT()`, sonst `t()` aus `src/i18n`. Neue Sprache: ADR 0011.
+- Fehler an die UI nur als `AppError` (`code` stabil, `message` deutsch); für neue Codes `error.<code>` in beiden Katalogen ergänzen.
+  Jeder `AppError` landet im Protokoll (`nunc.log`, ADR 0010) – keine Secrets in Meldungen.
+- Abnahme: `npm run docs:report` muss grün sein (kein `@wip`, jedes Szenario mit Ebenen-Tag und Story/Anforderung).
+  Release: [docs/release.md](./docs/release.md).
+
 ## Pflicht-Checks (nach jeder Änderung, alle müssen sauber durchlaufen)
 
 ```bash
@@ -111,6 +120,7 @@ cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace            # inkl. cucumber (@domain/@integration)
 npm run typecheck && npm run lint && npm run test
+npm run docs:report                # Abnahme: kein @wip, Traceability
 npm run tauri build -- --debug --no-bundle   # ab M3: ohne Warnungen
 ```
 
