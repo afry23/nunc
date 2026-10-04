@@ -21,3 +21,22 @@ export function useMediaQuery(query: string, fallback = true): boolean {
 export function useIsWide(): boolean {
   return useMediaQuery("(min-width: 768px)");
 }
+
+/** Innenmaße des Fensters, aktualisiert beim Ändern der Größe. */
+export function useViewportSize(): { width: number; height: number } {
+  const subscribe = (notify: () => void): (() => void) => {
+    window.addEventListener("resize", notify);
+    return () => window.removeEventListener("resize", notify);
+  };
+  const width = useSyncExternalStore(
+    subscribe,
+    () => window.innerWidth,
+    () => 264,
+  );
+  const height = useSyncExternalStore(
+    subscribe,
+    () => window.innerHeight,
+    () => 280,
+  );
+  return { width, height };
+}

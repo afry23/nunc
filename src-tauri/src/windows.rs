@@ -1,5 +1,7 @@
 //! Fenster (nur Desktop): Hauptfenster in den Tray schließen, Mini-Timer (always-on-top), Fokus bei zweitem Start.
 
+use std::time::Duration;
+
 use nunc_core::model::TimerState;
 use tauri::{
     AppHandle, Manager, Runtime, WebviewUrl, WebviewWindow, WebviewWindowBuilder, Window,
@@ -10,6 +12,10 @@ use crate::state::AppState;
 
 pub const MAIN: &str = "main";
 pub const MINI: &str = "mini";
+
+/// Startgröße (zugleich Maximum) und Mindestgröße des Mini-Timers in Pixeln.
+const MINI_SIZE: (f64, f64) = (264.0, 280.0);
+const MINI_MIN_SIZE: (f64, f64) = (160.0, 190.0);
 
 /// Route der Oberfläche für den Mini-Timer (M4-10).
 const MINI_ROUTE: &str = "mini";
@@ -36,12 +42,38 @@ pub fn hide_main<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
+/// Läuft oder pausiert ein Timer? Nur dann lohnt der Mini-Timer.
+fn timer_active<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<AppState>()
+        .and_then(|state| state.timer.snapshot().ok())
+        .is_some_and(|snapshot| wants_mini(snapshot.state))
+}
+
+fn wants_mini(state: TimerState) -> bool {
+    state != TimerState::Idle
+}
+
+/// Hauptfenster in den Tray verbergen (Schließen, Tray-Menü). Läuft ein Timer, erscheint der Mini-Timer.
+pub fn hide_to_tray<R: Runtime>(app: &AppHandle<R>) {
+    hide_main(app);
+    if timer_active(app) {
+        open_mini(app);
+    }
+}
+
 /// Tray-Klick: Hauptfenster umschalten.
 pub fn toggle_main<R: Runtime>(app: &AppHandle<R>) {
     match main_window(app).map(|window| window.is_visible()) {
-        Some(Ok(true)) => hide_main(app),
+        Some(Ok(true)) => hide_to_tray(app),
         _ => show_main(app),
     }
+}
+
+/// Öffnet den Mini-Timer abseits des Ereignis-Threads: Fenster dürfen (v. a. unter Windows) nicht im
+/// Ereignishandler selbst erzeugt werden, das blockiert die Ereignisschleife.
+fn open_mini<R: Runtime>(app: &AppHandle<R>) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move { show_mini(&app) });
 }
 
 /// Zeigt den Mini-Timer (wird beim ersten Mal erzeugt) und versteckt das Hauptfenster.
@@ -51,9 +83,11 @@ fn show_mini<R: Runtime>(app: &AppHandle<R>) {
         None => {
             let built = WebviewWindowBuilder::new(app, MINI, WebviewUrl::App(MINI_ROUTE.into()))
                 .title("nunc mini")
-                .inner_size(264.0, 280.0)
-                .decorations(false)
-                .resizable(false)
+                .inner_size(MINI_SIZE.0, MINI_SIZE.1)
+                // nur verkleinern oder bis zur Startgröße wieder vergrößern
+                .max_inner_size(MINI_SIZE.0, MINI_SIZE.1)
+                .min_inner_size(MINI_MIN_SIZE.0, MINI_MIN_SIZE.1)
+                .resizable(true)
                 .always_on_top(true)
                 .visible(false)
                 .build();
@@ -67,15 +101,40 @@ fn show_mini<R: Runtime>(app: &AppHandle<R>) {
         }
     };
     hide_main(app);
-    let _ = mini.show();
+    if let Err(error) = mini.show() {
+        log::warn!("Mini-Timer nicht anzeigbar: {error}");
+    }
+}
+
+/// Tauri meldet kein eigenes Minimieren-Ereignis, und je nach Plattform kommt dabei weder `Resized` noch ein
+/// Fokusverlust zuverlässig vor dem Minimieren an. Deshalb wird nach jeder Fensteränderung kurz verzögert geprüft.
+fn check_minimized_later<R: Runtime>(app: &AppHandle<R>) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(350)).await;
+        let minimized = main_window(&app)
+            .and_then(|window| window.is_minimized().ok())
+            .unwrap_or(false);
+        if minimized && timer_active(&app) {
+            show_mini(&app);
+        }
+    });
 }
 
 /// Fensterereignisse: Schließen verbirgt in den Tray, Minimieren während eines Timers öffnet den Mini-Timer.
 pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
+    let app = window.app_handle();
+    // Der Mini-Timer wird nie zerstört: Schließen bringt das Hauptfenster zurück.
+    if window.label() == MINI {
+        if let WindowEvent::CloseRequested { api, .. } = event {
+            api.prevent_close();
+            show_main(app);
+        }
+        return;
+    }
     if window.label() != MAIN {
         return;
     }
-    let app = window.app_handle();
     match event {
         WindowEvent::CloseRequested { api, .. } => {
             let tray_enabled = app
@@ -84,21 +143,26 @@ pub fn on_window_event<R: Runtime>(window: &Window<R>, event: &WindowEvent) {
                 .is_some_and(|settings| settings.system_tray_enabled);
             if tray_enabled {
                 api.prevent_close();
-                hide_main(app);
+                hide_to_tray(app);
             }
         }
         // Ohne Tray endet die App mit dem Hauptfenster (der Mini-Timer hält sie nicht am Leben).
         WindowEvent::Destroyed => app.exit(0),
-        // Tauri meldet kein eigenes Minimieren-Ereignis; es zeigt sich als Größenänderung.
-        WindowEvent::Resized(_) if window.is_minimized().unwrap_or(false) => {
-            let running = app
-                .try_state::<AppState>()
-                .and_then(|state| state.timer.snapshot().ok())
-                .is_some_and(|snapshot| snapshot.state != TimerState::Idle);
-            if running {
-                show_mini(app);
-            }
+        WindowEvent::Resized(_) | WindowEvent::Focused(false) | WindowEvent::Moved(_) => {
+            check_minimized_later(app);
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_mini_timer_is_for_running_and_paused_timers() {
+        assert!(wants_mini(TimerState::Running));
+        assert!(wants_mini(TimerState::Paused));
+        assert!(!wants_mini(TimerState::Idle));
     }
 }

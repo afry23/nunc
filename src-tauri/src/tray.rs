@@ -222,7 +222,7 @@ fn update<R: Runtime>(app: &AppHandle<R>, snapshot: &TimerSnapshot) {
 fn on_menu_event<R: Runtime>(app: &AppHandle<R>, event: &MenuEvent) {
     match event.id().as_ref() {
         "show" => windows::show_main(app),
-        "hide" => windows::hide_main(app),
+        "hide" => windows::hide_to_tray(app),
         "quit" => app.exit(0),
         id @ ("start" | "pause" | "stop") => {
             let Some(state) = app.try_state::<AppState>() else {
