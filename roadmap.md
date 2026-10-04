@@ -186,7 +186,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 | M4-11 | Accessibility-Pass | ARIA-Labels, Fokus-Reihenfolge, Kontrast (DESIGN.md-Farben prüfen) | – |
 | M4-12 | Desktop-E2E-Smoke | WebdriverIO + `tauri-driver` + Cucumber (Linux/Windows-CI): Start → Todo anlegen → Pomodoro (Test-Dauer via Env `NUNC_TEST_FAST_TIMER`) → Stats zeigt 1 | `@e2e @desktop` |
 
-**Stand:** umgesetzt (Desktop-E2E noch nicht auf CI verifiziert). Abweichungen und Ergänzungen:
+**Stand:** umgesetzt (Desktop-E2E läuft auf Linux-CI, Windows folgt). Abweichungen und Ergänzungen:
 
 - Die `@ui`-Szenarien liegen gesammelt in `features/ui/*.feature` (`timer`, `flowtime`, `todos`, `stats`, `settings`,
   `navigation`, `responsive`, `shortcuts`), nicht mehr in den Domänen-Dateien: deren `Background`-Schritte gehören zu den
@@ -196,8 +196,7 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 - Das Filtern und Sortieren der Todos läuft über `get_todos` (Kern), nicht im React-Code.
 - `npm run dev` im Browser startet ein Fake-Backend mit Beispieldaten (`src/dev/preview.ts`, nur Dev-Build).
 - Der Mini-Timer ist die Route `/mini`; „Zur App“ ruft `show_main_window`.
-- E2E: `npm run test:e2e` (WebdriverIO + `tauri-driver`, Linux/Windows; der CI-Job `e2e-desktop` ist bis zum ersten
-  grünen Lauf `continue-on-error`). `NUNC_TEST_FAST_TIMER=<Sekunden>` verkürzt den Pomodoro, wirkt nur in Debug-Builds.
+- E2E: `npm run test:e2e` (WebdriverIO + `tauri-driver`, Linux/Windows; Linux-CI-Job `e2e-desktop`). `NUNC_TEST_FAST_TIMER=<Sekunden>` verkürzt den Pomodoro, wirkt nur in Debug-Builds.
 - Nicht in M4: Backup-/Restore-UI und Sync-Einstellungen (M6), Kontrast-/Screenreader-Prüfung mit echten Tools (M8).
 
 **Exit-Kriterien M4 = Desktop-MVP:** Alltagsnutzung auf Desktop möglich (Dogfooding startet, Daten parallel zur Go-App über gemeinsame DB-Kopie).

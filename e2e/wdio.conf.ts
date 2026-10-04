@@ -23,7 +23,7 @@ let driver: ChildProcess | undefined;
 export const config = {
   host: "127.0.0.1",
   port: 4444,
-  specs: [path.join(root, "features/**/*.feature")],
+  specs: [path.join(root, "features/e2e/**/*.feature")],
   maxInstances: 1,
   capabilities: [
     {
