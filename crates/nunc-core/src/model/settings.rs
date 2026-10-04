@@ -18,6 +18,14 @@ text_enum!(SyncProvider, "SyncProvider", {
     Webdav => "webdav",
 });
 
+impl SyncProvider {
+    /// Ob der Anbieter auf der Plattform wählbar ist. Google Drive braucht auf Mobilgeräten Deep-Links und
+    /// Plattform-Client-IDs (Backlog nach 1.0); dort gibt es nur „kein Sync“ und WebDAV.
+    pub fn is_available(self, mobile: bool) -> bool {
+        !(mobile && self == Self::GoogleDrive)
+    }
+}
+
 /// Alle Benutzereinstellungen. Standardwerte siehe [`Settings::default`] (identisch zu
 /// `models.DefaultSettings()` der Go-App).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
@@ -197,6 +205,15 @@ mod tests {
             assert_eq!(p.as_str().parse::<SyncProvider>(), Ok(p));
         }
         assert!("dropbox".parse::<SyncProvider>().is_err());
+    }
+
+    #[test]
+    fn google_drive_is_not_available_on_mobile() {
+        for provider in [SyncProvider::None, SyncProvider::Webdav] {
+            assert!(provider.is_available(true) && provider.is_available(false));
+        }
+        assert!(SyncProvider::GoogleDrive.is_available(false));
+        assert!(!SyncProvider::GoogleDrive.is_available(true));
     }
 
     #[test]

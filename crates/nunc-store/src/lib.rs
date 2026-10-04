@@ -24,7 +24,7 @@ pub use migrations::{MIGRATIONS, Migration, migrate};
 pub use restore::{restore_backup, validate_backup_file};
 pub use rusqlite::Connection;
 pub use session_repo::{commit_finish, list_sessions};
-pub use settings_repo::{device_id, load_settings, save_settings};
+pub use settings_repo::{device_id, load_settings, save_settings, set_sync_provider};
 pub use timer_state::{load_timer, save_timer};
 pub use todo_repo::{
     add_todo, delete_todo, increment_pomodoro_count, list_all_todos, list_todos, reorder_todos,

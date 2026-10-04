@@ -15,7 +15,7 @@ use tempfile::TempDir;
 
 use crate::state::{AppPaths, AppState, Platform};
 
-use super::{app, backup, notifications, settings, stats, timer, todos};
+use super::{app, backup, notifications, settings, stats, sync, timer, todos};
 
 struct Harness {
     _dir: TempDir,
@@ -75,6 +75,7 @@ impl Harness {
                 backup::list_backups,
                 backup::restore_from_backup,
                 backup::export_backup,
+                sync::set_sync_provider,
                 notifications::get_notification_status,
                 notifications::request_notification_permission,
             ])
@@ -203,6 +204,27 @@ fn settings_keep_backend_owned_fields() {
     let after = h.ok("get_settings", json!({}));
     assert_eq!(after["lastBackupDate"], "2026-10-04");
     assert_eq!(after["backupDir"], "");
+}
+
+#[test]
+fn the_sync_provider_is_chosen_by_its_own_command_and_not_by_save_settings() {
+    let h = Harness::new();
+    assert_eq!(h.ok("get_settings", json!({}))["syncProvider"], "none");
+    h.ok("set_sync_provider", json!({ "provider": "webdav" }));
+    assert_eq!(h.ok("get_settings", json!({}))["syncProvider"], "webdav");
+
+    // ein veralteter Entwurf im Formular überschreibt die Wahl nicht
+    let mut stale = h.ok("get_settings", json!({}));
+    stale["syncProvider"] = json!("none");
+    h.ok("save_settings", json!({ "settings": stale }));
+    assert_eq!(h.ok("get_settings", json!({}))["syncProvider"], "webdav");
+
+    h.ok("set_sync_provider", json!({ "provider": "none" }));
+    assert_eq!(h.ok("get_settings", json!({}))["syncProvider"], "none");
+    assert!(
+        h.call("set_sync_provider", json!({ "provider": "dropbox" }))
+            .is_err()
+    );
 }
 
 #[test]

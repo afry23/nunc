@@ -11,8 +11,9 @@ export const commands = {
 	showMainWindow: () => __TAURI_INVOKE<void>("show_main_window"),
 	getSettings: () => typedError<Settings, AppError>(__TAURI_INVOKE("get_settings")),
 	/**
-	 *  Speichert die Einstellungen nach Prüfung der Wertebereiche. `lastBackupDate` gehört dem Backup-Dienst und
-	 *  `backupDir` dem Ordner-Dialog (`select_backup_dir`): beide bleiben wie gespeichert; ein leeres `backupDir`
+	 *  Speichert die Einstellungen nach Prüfung der Wertebereiche. `lastBackupDate` gehört dem Backup-Dienst,
+	 *  `syncProvider` `set_sync_provider` und `backupDir` dem Ordner-Dialog (`select_backup_dir`): sie bleiben wie
+	 *  gespeichert; ein leeres `backupDir`
 	 *  setzt den Standardordner wieder ein.
 	 */
 	saveSettings: (settings: Settings) => typedError<null, AppError>(__TAURI_INVOKE("save_settings", { settings })),
@@ -93,6 +94,11 @@ export const commands = {
 	 *  `None`, wenn der Dialog abgebrochen wurde.
 	 */
 	exportBackup: (sourcePath: string) => typedError<string | null, AppError>(__TAURI_INVOKE("export_backup", { sourcePath })),
+	/**
+	 *  Wählt den Sync-Anbieter (exklusiv) und speichert die Wahl sofort. Zugangsdaten der übrigen Anbieter bleiben
+	 *  erhalten, sie werden nur nicht mehr benutzt.
+	 */
+	setSyncProvider: (provider: SyncProvider) => typedError<null, AppError>(__TAURI_INVOKE("set_sync_provider", { provider })),
 	/**  Aktueller Stand, ohne den Nutzer zu fragen. */
 	getNotificationStatus: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("get_notification_status")),
 	/**

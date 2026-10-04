@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use nunc_core::model::Settings;
+use nunc_core::model::{Settings, SyncProvider};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::StoreError;
@@ -40,6 +40,11 @@ pub(crate) fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<(
         params![key, value],
     )?;
     Ok(())
+}
+
+/// Wählt den Sync-Anbieter und schreibt nur diesen Schlüssel (sofort, ohne die übrigen Einstellungen).
+pub fn set_sync_provider(conn: &Connection, provider: SyncProvider) -> Result<(), StoreError> {
+    set_setting(conn, "sync_provider", provider.as_str())
 }
 
 /// Kennung dieses Geräts (Schlüssel `device_id`, wie in der Go-App). Fehlt sie oder ist sie leer, legt
@@ -186,6 +191,19 @@ mod tests {
         let conn = open_in_memory().unwrap();
         set_raw(&conn, "device_id", "");
         assert_eq!(device_id(&conn, || "dev-3".into()).unwrap(), "dev-3");
+    }
+
+    #[test]
+    fn choosing_the_provider_writes_only_its_key() {
+        let conn = open_in_memory().unwrap();
+        set_raw(&conn, "pomodoro_min", "40");
+        set_sync_provider(&conn, SyncProvider::Webdav).unwrap();
+        assert_eq!(raw(&conn, "sync_provider").as_deref(), Some("webdav"));
+        let loaded = load_settings(&conn).unwrap();
+        assert_eq!(loaded.sync_provider, SyncProvider::Webdav);
+        assert_eq!(loaded.pomodoro_min, 40);
+        set_sync_provider(&conn, SyncProvider::None).unwrap();
+        assert_eq!(raw(&conn, "sync_provider").as_deref(), Some("none"));
     }
 
     #[test]

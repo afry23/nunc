@@ -18,7 +18,7 @@ use tauri_specta::{Builder, collect_commands, collect_events};
 const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/bindings.ts");
 
 fn specta_builder() -> Builder<tauri::Wry> {
-    use commands::{app, backup, notifications, settings, stats, timer, todos};
+    use commands::{app, backup, notifications, settings, stats, sync, timer, todos};
 
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -49,6 +49,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             backup::select_backup_dir::<tauri::Wry>,
             backup::select_restore_file::<tauri::Wry>,
             backup::export_backup::<tauri::Wry>,
+            sync::set_sync_provider,
             notifications::get_notification_status::<tauri::Wry>,
             notifications::request_notification_permission::<tauri::Wry>,
         ])
