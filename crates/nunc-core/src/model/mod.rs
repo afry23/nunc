@@ -5,6 +5,7 @@ mod session;
 mod settings;
 mod stats;
 mod sync;
+mod sync_status;
 mod timer;
 mod todo;
 
@@ -15,6 +16,9 @@ pub use stats::{
     TodoStats, WeekdayStats,
 };
 pub use sync::{SyncFile, SyncSession, SyncTodo};
+pub use sync_status::{
+    ConnectionTestResult, SyncResult, SyncState, SyncStatus, WebDavAuth, WebDavConfig, is_http_url,
+};
 pub use timer::{TimerMode, TimerState};
 pub use todo::Todo;
 
