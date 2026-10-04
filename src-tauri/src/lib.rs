@@ -1,5 +1,6 @@
 mod adapters;
 mod commands;
+mod credentials;
 mod db;
 mod error;
 mod events;
@@ -57,6 +58,11 @@ fn specta_builder() -> Builder<tauri::Wry> {
             sync::get_sync_status,
             sync::sync_now,
             sync::sync_in_background,
+            sync::get_drive_status,
+            sync::connect_drive,
+            sync::disconnect_drive,
+            sync::check_sync_import,
+            sync::finish_connect,
             notifications::get_notification_status::<tauri::Wry>,
             notifications::request_notification_permission::<tauri::Wry>,
         ])

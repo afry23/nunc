@@ -48,11 +48,10 @@ Feature: Sync provider selection
       | google_drive | mobile   | unavailable |
 
   @ui @US-Sync-Provider
-  Scenario: The provider can be chosen between none and WebDAV and Google Drive follows later
+  Scenario: The provider can be chosen between none, Google Drive and WebDAV
     When I open the app at "/settings"
     Then I see the radio group "Sync-Anbieter" with the options "Kein Sync, Google Drive, WebDAV"
-    And the option "Google Drive" is disabled
-    And I see "Google Drive folgt in einer späteren Version."
+    And the option "Google Drive" is enabled
 
   @ui @US-Sync-Provider
   Scenario: Only one provider can be active

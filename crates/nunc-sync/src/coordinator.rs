@@ -47,6 +47,8 @@ pub enum Trigger {
     Resume,
     /// Die App geht in den Hintergrund (nur Mobil).
     Background,
+    /// Ein Konto wurde soeben verbunden: erster Abgleich.
+    Connected,
 }
 
 impl Trigger {
@@ -55,7 +57,7 @@ impl Trigger {
     pub fn applies(self, mobile: bool) -> bool {
         match self {
             Self::Resume | Self::Background => mobile,
-            Self::Start | Self::SessionFinished | Self::TodoChanged => true,
+            Self::Start | Self::SessionFinished | Self::TodoChanged | Self::Connected => true,
         }
     }
 }
@@ -117,6 +119,18 @@ impl SyncCoordinator {
             .lock()
             .map(|status| status.clone())
             .unwrap_or_else(|_| SyncStatus::idle(None))
+    }
+
+    /// Ersetzt den Zeitpunkt des letzten Syncs, wenn ein anderer Anbieter gewählt wird (jeder hat seinen eigenen).
+    pub fn set_last_sync_at(&self, last_sync_at: Option<String>) {
+        let mut status = self.status();
+        if status.state == SyncState::Syncing {
+            return;
+        }
+        status.last_sync_at = last_sync_at;
+        status.error_message = None;
+        status.state = SyncState::Idle;
+        self.set_status(status);
     }
 
     fn set_status(&self, status: SyncStatus) {

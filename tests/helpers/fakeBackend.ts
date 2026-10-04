@@ -4,6 +4,8 @@ import type {
   BackupInfo,
   BackupStatus,
   ConnectionTestResult,
+  DriveStatus,
+  SyncImportInfo,
   SyncResult,
   SyncStatus,
   WebDavSettings,
@@ -120,6 +122,17 @@ export interface FakeBackend extends BackendMock {
   /** Stand der Synchronisierung und was der nächste `sync_now` tut (`null` = nichts zu synchronisieren). */
   syncStatus: SyncStatus;
   syncOutcome: SyncResult | { error: string } | null;
+  /** Google-Drive-Verbindung; `connect_drive` macht daraus `driveAccount`, außer es scheitert (`driveConnectError`). */
+  drive: DriveStatus;
+  driveAccount: string;
+  driveConnectError: { code: string; message: string } | null;
+  /** Was `check_sync_import` meldet. */
+  importInfo: SyncImportInfo;
+  /** Hält `sync_now` an, bis `releaseSync` ruft. */
+  holdSync: boolean;
+  releaseSync: () => void;
+  /** Im Browser geöffnete Adressen. */
+  openedUrls: string[];
   /** Fehler, den `set_sync_provider` meldet (`null` = Erfolg). */
   providerError: { code: string; message: string } | null;
   /** Fehler, den `restore_from_backup` meldet (`null` = Erfolg). */
@@ -178,6 +191,18 @@ export function createFakeBackend(): FakeBackend {
     backupDirChoice: null,
     restoreError: null,
     providerError: null,
+    drive: {
+      configured: true,
+      connected: false,
+      email: null,
+      folderUrl: null,
+    },
+    driveAccount: "me@example.org",
+    driveConnectError: null,
+    importInfo: { available: false, todoCount: 0, sessionCount: 0 },
+    holdSync: false,
+    releaseSync: () => undefined,
+    openedUrls: [],
     webdav: {
       config: {
         url: "",
@@ -194,6 +219,8 @@ export function createFakeBackend(): FakeBackend {
   } as unknown as FakeBackend;
   let releaseHeld: (() => void) | undefined;
   fake.releaseBackup = () => releaseHeld?.();
+  let syncHeld: (() => void) | undefined;
+  fake.releaseSync = () => syncHeld?.();
   let nextId = 1;
 
   const resequence = (): void =>
@@ -377,6 +404,31 @@ export function createFakeBackend(): FakeBackend {
     test_webdav_connection: () => fake.webdavTest,
     get_sync_status: () => fake.syncStatus,
     sync_in_background: () => null,
+    get_drive_status: () => fake.drive,
+    connect_drive: () => {
+      if (fake.driveConnectError) throw fake.driveConnectError;
+      fake.drive = {
+        ...fake.drive,
+        connected: true,
+        email: fake.driveAccount,
+      };
+      return fake.drive;
+    },
+    disconnect_drive: () => {
+      fake.drive = {
+        ...fake.drive,
+        connected: false,
+        email: null,
+        folderUrl: null,
+      };
+      return fake.drive;
+    },
+    check_sync_import: () => fake.importInfo,
+    finish_connect: () => null,
+    "plugin:opener|open_url": ({ url }: { url: string }) => {
+      fake.openedUrls.push(url);
+      return null;
+    },
     sync_now: async () => {
       const outcome = fake.syncOutcome;
       if (outcome === null) return null;
@@ -387,6 +439,8 @@ export function createFakeBackend(): FakeBackend {
         lastSyncAt: last,
         errorMessage: null,
       });
+      if (fake.holdSync)
+        await new Promise<void>((resolve) => (syncHeld = resolve));
       if ("error" in outcome) {
         fake.syncStatus = {
           state: "error",
@@ -396,6 +450,11 @@ export function createFakeBackend(): FakeBackend {
         await emit("sync:status", fake.syncStatus);
         fail("network", outcome.error);
       }
+      if (fake.drive.connected && !fake.drive.folderUrl)
+        fake.drive = {
+          ...fake.drive,
+          folderUrl: "https://drive.google.com/drive/folders/folder-1",
+        };
       fake.syncStatus = {
         state: "idle",
         lastSyncAt: "2026-10-04T10:00:00Z",

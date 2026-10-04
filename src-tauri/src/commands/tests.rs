@@ -44,6 +44,7 @@ impl Harness {
                 clock: clock.clone(),
                 events: events.clone(),
                 notifier: Arc::new(RecordingNotifier::new(false)),
+                opener: Arc::new(nunc_platform::RecordingUrlOpener::default()),
                 secrets: Arc::new(MemorySecretStore::default()),
                 runtime: crate::state::test_runtime(),
             },
@@ -83,6 +84,10 @@ impl Harness {
                 sync::sync_in_background,
                 sync::save_webdav_config,
                 sync::test_webdav_connection,
+                sync::get_drive_status,
+                sync::disconnect_drive,
+                sync::check_sync_import,
+                sync::finish_connect,
                 notifications::get_notification_status,
                 notifications::request_notification_permission,
             ])
@@ -318,6 +323,35 @@ fn the_connection_test_reports_failures_as_a_result_not_an_error() {
     );
     assert_eq!(result["success"], false);
     assert_eq!(result["message"], "Ungültige Server-Adresse: kein-url");
+}
+
+#[test]
+fn google_drive_is_not_connected_until_the_user_signs_in() {
+    let h = Harness::new();
+    let status = h.ok("get_drive_status", json!({}));
+    assert_eq!(status["connected"], false);
+    assert!(status["email"].is_null() && status["folderUrl"].is_null());
+    assert_eq!(h.ok("disconnect_drive", json!({}))["connected"], false);
+    // ohne Verbindung gibt es nichts zu prüfen, und es wird kein Netzwerk berührt
+    assert_eq!(h.err_code("check_sync_import", json!({})), "not_connected");
+}
+
+#[test]
+fn switching_the_provider_shows_that_providers_last_sync() {
+    let h = Harness::new();
+    h.state()
+        .db
+        .with(|conn| {
+            nunc_store::set_last_sync_of(conn, nunc_core::model::SyncProvider::Webdav, at(8, 0))
+        })
+        .unwrap();
+    h.ok("set_sync_provider", json!({ "provider": "webdav" }));
+    assert_eq!(
+        h.state().sync.status().last_sync_at.as_deref(),
+        Some("2026-10-04T08:00:00Z")
+    );
+    h.ok("set_sync_provider", json!({ "provider": "google_drive" }));
+    assert_eq!(h.state().sync.status().last_sync_at, None);
 }
 
 #[test]

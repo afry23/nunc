@@ -1,8 +1,13 @@
 Feature: Google Drive sync
   Source: US-Sync-GoogleDrive (S01-S07); desktop only in v1
 
-  @ui @US-S01 @desktop @wip
+  @ui @US-S01 @desktop
   Scenario: The sync section shows not connected
+    Given the setting "syncProvider" is "google_drive"
+    When I open the app at "/settings"
+    Then I see "Nicht verbunden"
+    And I see the buttons "Mit Google Drive verbinden"
+    And I do not see the button "Verbindung trennen"
 
   @integration @sync @US-S01 @desktop
   Scenario: Connecting uses OAuth2 with PKCE in the browser
@@ -27,8 +32,15 @@ Feature: Google Drive sync
     And the database does not contain "access-1"
     And the database does not contain "refresh-1"
 
-  @ui @US-S01 @desktop @wip
+  @ui @US-S01 @desktop
   Scenario: The status shows the connected account
+    Given the setting "syncProvider" is "google_drive"
+    When I open the app at "/settings"
+    And I click "Mit Google Drive verbinden"
+    Then the backend received "connect_drive"
+    And I see "Verbunden als me@example.org"
+    And I see the buttons "Verbindung trennen"
+    And I do not see the button "Mit Google Drive verbinden"
 
   @integration @sync @US-S01 @desktop
   Scenario: Disconnecting deletes the token locally
@@ -72,17 +84,43 @@ Feature: Google Drive sync
     Then the sync status is "error - Unerwartete Antwort des Servers (503) beim Suchen des Ordners"
     And the local todos are "Offline task"
 
-  @ui @US-S02 @desktop @wip
+  @ui @US-S02 @desktop
   Scenario: The sync status is shown while syncing
+    Given the setting "syncProvider" is "google_drive"
+    When I open the app
+    And the backend reports the sync status "syncing"
+    Then I see "Synchronisiere …"
 
-  @ui @US-S03 @desktop @wip
+  @ui @US-S03 @desktop
   Scenario: The sync now button is disabled while syncing
+    Given the setting "syncProvider" is "google_drive"
+    And Google Drive is connected as "me@example.org"
+    And the sync is held
+    When I open the app at "/settings"
+    And I click "Jetzt synchronisieren"
+    Then the button "Synchronisiere …" is disabled
+    When the held sync finishes
+    Then the button "Jetzt synchronisieren" is enabled
 
-  @ui @US-S03 @desktop @wip
+  @ui @US-S03 @desktop
   Scenario: The result shows the number of imported sessions and todos
+    Given the setting "syncProvider" is "google_drive"
+    And Google Drive is connected as "me@example.org"
+    And the next sync imports 2 sessions, 1 todos and 0 conflicts
+    When I open the app at "/settings"
+    And I click "Jetzt synchronisieren"
+    Then I see "2 Sessions und 1 Aufgabe importiert."
+    And I see "Zuletzt synchronisiert: 04.10.2026"
 
-  @ui @US-S03 @desktop @wip
+  @ui @US-S03 @desktop
   Scenario: Errors are shown in plain text
+    Given the setting "syncProvider" is "google_drive"
+    And Google Drive is connected as "me@example.org"
+    And the next sync fails with "Google Drive: Anmeldung abgelaufen – bitte neu verbinden"
+    When I open the app at "/settings"
+    And I click "Jetzt synchronisieren"
+    Then I see "Sync-Fehler: Google Drive: Anmeldung abgelaufen – bitte neu verbinden"
+    And I see the buttons "Erneut versuchen"
 
   @integration @sync @US-S04 @desktop
   Scenario: Newer todo versions from another device win
@@ -95,8 +133,14 @@ Feature: Google Drive sync
     And the local todo "t-0002" says "(A) 2026-09-21 Call dentist tomorrow @phone"
     And the local todo "t-0003" says "2026-09-22 Buy groceries +home @errands"
 
-  @ui @US-S04 @desktop @wip
+  @ui @US-S04 @desktop
   Scenario: The user is informed about taken-over newer versions
+    Given the setting "syncProvider" is "google_drive"
+    And Google Drive is connected as "me@example.org"
+    And the next sync imports 0 sessions, 0 todos and 2 conflicts
+    When I open the app at "/settings"
+    And I click "Jetzt synchronisieren"
+    Then I see "2 Aufgaben wurden durch neuere Versionen vom Server ersetzt."
 
   @integration @sync @US-S04 @desktop
   Scenario: Sessions of both devices are merged
@@ -151,8 +195,15 @@ Feature: Google Drive sync
     And the sync file on Drive has the todos "Only local"
     And the local todos are "Only local"
 
-  @ui @US-S05 @desktop @wip
+  @ui @US-S05 @desktop
   Scenario: The drive path and a link to the folder are shown
+    Given the setting "syncProvider" is "google_drive"
+    And Google Drive is connected as "me@example.org"
+    And the Drive folder link is "https://drive.google.com/drive/folders/folder-1"
+    When I open the app at "/settings"
+    Then I see "nunc/nunc-sync.json"
+    When I click "In Drive öffnen"
+    Then the browser opened "https://drive.google.com/drive/folders/folder-1"
 
   @integration @sync @US-S06 @desktop
   Scenario: An existing sync file is detected on a device without data
@@ -163,8 +214,18 @@ Feature: Google Drive sync
     When I look for a sync file to import
     Then the import offer shows 3 todos and 3 sessions
 
-  @ui @US-S06 @desktop @wip
+  @ui @US-S06 @desktop
   Scenario: A dialog offers importing or starting empty
+    Given the setting "syncProvider" is "google_drive"
+    And Drive holds a sync file with 3 todos and 3 sessions
+    When I open the app at "/settings"
+    And I click "Mit Google Drive verbinden"
+    Then I see a dialog with the text "Vorhandene Daten von Google Drive importieren?"
+    And I see a dialog with the text "3 Aufgaben und 3 Sessions"
+    And I see the buttons "Importieren, Leer starten"
+    When I click "Leer starten"
+    Then I do not see a dialog
+    And the backend did not receive "sync_now"
 
   @integration @sync @US-S06 @desktop
   Scenario: Importing takes over all sessions and todos
@@ -176,8 +237,20 @@ Feature: Google Drive sync
     Then the sync succeeds with 3 imported todos, 3 imported sessions and 0 conflicts
     And the local database has 3 sessions
 
-  @ui @US-S06 @desktop @wip
+  @ui @US-S06 @desktop
   Scenario: A progress bar and a summary are shown while importing
+    Given the setting "syncProvider" is "google_drive"
+    And Drive holds a sync file with 3 todos and 3 sessions
+    And the next sync imports 3 sessions, 3 todos and 0 conflicts
+    And the sync is held
+    When I open the app at "/settings"
+    And I click "Mit Google Drive verbinden"
+    And I click "Importieren"
+    Then I see a progress bar "Import läuft"
+    When the held sync finishes
+    Then I see a dialog with the text "3 Sessions und 3 Aufgaben importiert."
+    When I click "Fertig"
+    Then I do not see a dialog
 
   @integration @sync @US-S06 @desktop
   Scenario: After the import the app works offline
@@ -190,8 +263,18 @@ Feature: Google Drive sync
     Then the local database has 3 sessions
     And the local todos include "2026-09-29 Water the plants @home"
 
-  @ui @US-S07 @desktop @wip
+  @ui @US-S07 @desktop
   Scenario: Sync can be paused with a toggle
+    Given the setting "syncProvider" is "google_drive"
+    And Google Drive is connected as "me@example.org"
+    When I open the app at "/settings"
+    And I switch off "Synchronisierung aktiv"
+    Then the backend received "save_settings" with:
+      """
+      { "settings": { "syncEnabled": false } }
+      """
+    And I see "Die Sync-Datei auf Google Drive wird nicht gelöscht."
+    And I see "Verbunden als me@example.org"
 
   @integration @sync @US-S07 @desktop
   Scenario: A paused sync makes no Drive access and keeps the token
@@ -346,3 +429,37 @@ Feature: Google Drive sync
     And no database exists yet
     When I look for a sync file to import
     Then no import is offered
+
+  @ui @US-S01 @desktop
+  Scenario: A failed login is shown inline and can be retried
+    Given the setting "syncProvider" is "google_drive"
+    And connecting Google Drive fails with "oauth": "Die Anmeldung bei Google Drive wurde abgebrochen: access_denied"
+    When I open the app at "/settings"
+    And I click "Mit Google Drive verbinden"
+    Then I see "Die Anmeldung bei Google Drive wurde abgebrochen: access_denied"
+    And the button "Mit Google Drive verbinden" is enabled
+
+  @ui @US-S01 @desktop
+  Scenario: A build without Google credentials cannot connect
+    Given the setting "syncProvider" is "google_drive"
+    And this build has no Google credentials
+    When I open the app at "/settings"
+    Then I see "In diesem Build sind keine Google-Zugangsdaten hinterlegt."
+    And the button "Mit Google Drive verbinden" is disabled
+
+  @ui @US-S01 @desktop
+  Scenario: Disconnecting returns to the not connected state
+    Given the setting "syncProvider" is "google_drive"
+    And Google Drive is connected as "me@example.org"
+    When I open the app at "/settings"
+    And I click "Verbindung trennen"
+    Then the backend received "disconnect_drive"
+    And I see "Nicht verbunden"
+    And I see the buttons "Mit Google Drive verbinden"
+
+  @ui @US-S01 @desktop
+  Scenario: Selecting Google Drive without a connection points to the login
+    Given the setting "syncProvider" is "google_drive"
+    When I open the app at "/settings"
+    Then I see "Google Drive ist ausgewählt, aber noch nicht verbunden."
+    And the button "Jetzt synchronisieren" is disabled

@@ -31,6 +31,10 @@ Then("the option {string} is disabled", async (_w: UiWorld, name: string) => {
   expect((await radio(name)).hasAttribute("disabled")).toBe(true);
 });
 
+Then("the option {string} is enabled", async (_w: UiWorld, name: string) => {
+  expect((await radio(name)).hasAttribute("disabled")).toBe(false);
+});
+
 Then("the option {string} is selected", async (_w: UiWorld, name: string) => {
   expect((await radio(name)).getAttribute("aria-checked")).toBe("true");
 });
@@ -184,3 +188,57 @@ When(
     });
   },
 );
+
+// ---------------------------------------------------------------------------------------------
+// Google Drive
+
+Given(
+  "Google Drive is connected as {string}",
+  (world: UiWorld, email: string) => {
+    world.fake.drive = { ...world.fake.drive, connected: true, email };
+  },
+);
+
+Given("this build has no Google credentials", (world: UiWorld) => {
+  world.fake.drive = { ...world.fake.drive, configured: false };
+});
+
+Given(
+  "connecting Google Drive fails with {string}: {string}",
+  (world: UiWorld, code: string, message: string) => {
+    world.fake.driveConnectError = { code, message };
+  },
+);
+
+Given(
+  "Drive holds a sync file with {int} todos and {int} sessions",
+  (world: UiWorld, todoCount: number, sessionCount: number) => {
+    world.fake.importInfo = { available: true, todoCount, sessionCount };
+  },
+);
+
+Given("the Drive folder link is {string}", (world: UiWorld, url: string) => {
+  world.fake.drive = { ...world.fake.drive, folderUrl: url };
+});
+
+Given("the sync is held", (world: UiWorld) => {
+  world.fake.holdSync = true;
+});
+
+When("the held sync finishes", async (world: UiWorld) => {
+  await act(async () => {
+    world.fake.releaseSync();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+});
+
+Then(
+  "I see a progress bar {string}",
+  async (_world: UiWorld, label: string) => {
+    await screen.findByRole("progressbar", { name: label });
+  },
+);
+
+Then("the browser opened {string}", async (world: UiWorld, url: string) => {
+  await waitFor(() => expect(world.fake.openedUrls).toContain(url));
+});

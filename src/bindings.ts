@@ -124,6 +124,19 @@ export const commands = {
 } | null, AppError>(__TAURI_INVOKE("sync_now")),
 	/**  Die App geht in den Hintergrund (Mobil): ein letzter Sync, bevor das Betriebssystem sie einfriert. */
 	syncInBackground: () => __TAURI_INVOKE<void>("sync_in_background"),
+	/**  Zustand der Google-Drive-Verbindung (ohne Netzwerkzugriff). */
+	getDriveStatus: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("get_drive_status")),
+	/**
+	 *  Meldet im Browser bei Google an (Desktop). Wartet, bis der Browser zurückruft oder die Zeit abläuft; der
+	 *  erste Abgleich folgt, sobald die Oberfläche keinen Import anbietet (`finish_connect`).
+	 */
+	connectDrive: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("connect_drive")),
+	/**  Löscht die Anmeldung lokal; die Sync-Datei im Drive bleibt. */
+	disconnectDrive: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("disconnect_drive")),
+	/**  Liegt im Drive Stand, den dieses (leere) Gerät übernehmen kann? */
+	checkSyncImport: () => typedError<SyncImportInfo, AppError>(__TAURI_INVOKE("check_sync_import")),
+	/**  Nach dem Verbinden: der erste Abgleich im Hintergrund (außer die Oberfläche bietet einen Import an). */
+	finishConnect: () => __TAURI_INVOKE<void>("finish_connect"),
 	/**  Aktueller Stand, ohne den Nutzer zu fragen. */
 	getNotificationStatus: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("get_notification_status")),
 	/**
@@ -219,6 +232,16 @@ export type DailyStats = {
 	pomodoroCount: number,
 	workMinutes: number,
 	breakMinutes: number,
+};
+
+/**  Zustand der Google-Drive-Verbindung (`get_drive_status`). */
+export type DriveStatus = {
+	/**  Ob dieser Build Zugangsdaten für Google hat (Client-ID und -Secret). */
+	configured: boolean,
+	connected: boolean,
+	email: string | null,
+	/**  Link auf den Ordner `nunc` im Drive (erst nach dem ersten Sync bekannt). */
+	folderUrl: string | null,
 };
 
 export type ExportFormat = "csv" | "json";
@@ -353,6 +376,13 @@ export type StatsResponse = {
 
 /**  Ein Sync-Lauf ist gelungen; die Nutzlast sagt, was vom Server übernommen wurde. */
 export type SyncComplete = SyncResult;
+
+/**  Ergebnis der Prüfung nach dem Verbinden: liegt auf Drive Stand, den ein leeres Gerät übernehmen kann? */
+export type SyncImportInfo = {
+	available: boolean,
+	todoCount: number,
+	sessionCount: number,
+};
 
 /**  Aktiver Sync-Provider (exklusiv). */
 export type SyncProvider = "none" | "google_drive" | "webdav";

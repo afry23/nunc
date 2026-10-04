@@ -8,7 +8,7 @@ use nunc_platform::{KeyringSecretStore, SecretStore, SystemClock, UnavailableSec
 use nunc_sync::Trigger;
 use tauri::{App, AppHandle, Manager, RunEvent, Runtime};
 
-use crate::adapters::{TauriEventSink, TauriNotifier, create_timer_channel};
+use crate::adapters::{TauriEventSink, TauriNotifier, TauriUrlOpener, create_timer_channel};
 use crate::error::AppError;
 use crate::state::{AppPaths, AppState, Platform};
 
@@ -106,6 +106,7 @@ fn platform<R: Runtime>(handle: &AppHandle<R>) -> Platform {
         clock: Arc::new(SystemClock),
         events: Arc::new(TauriEventSink(handle.clone())),
         notifier: Arc::new(TauriNotifier(handle.clone())),
+        opener: Arc::new(TauriUrlOpener(handle.clone())),
         secrets,
         runtime: tauri::async_runtime::handle().inner().clone(),
     }
