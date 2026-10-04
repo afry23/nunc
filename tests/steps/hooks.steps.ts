@@ -10,6 +10,7 @@ import { useTimerStore } from "../../src/stores/timerStore";
 import { useTodoStore } from "../../src/stores/todoStore";
 import { useUiStore } from "../../src/stores/uiStore";
 import { createFakeBackend } from "../helpers/fakeBackend";
+import { setLanguage } from "../../src/i18n";
 import { resetBackend } from "../helpers/ipc";
 import { UiWorld } from "./world";
 
@@ -23,6 +24,7 @@ function resetStores(): void {
   useNotificationStore.setState(useNotificationStore.getInitialState(), true);
   resetNotificationHint();
   useUiStore.setState(useUiStore.getInitialState(), true);
+  setLanguage("de");
 }
 
 // Tag-Filter: nur @ui-Szenarien laufen hier (@domain/@integration laufen in Rust).

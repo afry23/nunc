@@ -26,6 +26,21 @@ impl SyncProvider {
     }
 }
 
+/// Sprache der Oberfläche (`system` folgt dem Betriebssystem).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum Language {
+    System,
+    De,
+    En,
+}
+
+text_enum!(Language, "Language", {
+    System => "system",
+    De => "de",
+    En => "en",
+});
+
 /// Alle Benutzereinstellungen. Standardwerte siehe [`Settings::default`] (identisch zu
 /// `models.DefaultSettings()` der Go-App).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
@@ -56,6 +71,8 @@ pub struct Settings {
     pub flowtime_ratio: f64,
     /// Mindest-Arbeitszeit in Minuten (1–60), ab der eine Pause empfohlen wird.
     pub flowtime_min_flow_state_min: u32,
+    /// Sprache der Oberfläche; die Go-App kennt den Schlüssel nicht und ignoriert ihn.
+    pub language: Language,
 }
 
 /// Eine verletzte Einstellungsgrenze.
@@ -124,6 +141,7 @@ impl Default for Settings {
             sync_provider: SyncProvider::None,
             flowtime_ratio: 0.2,
             flowtime_min_flow_state_min: 15,
+            language: Language::System,
         }
     }
 }
@@ -239,12 +257,22 @@ mod tests {
             "syncProvider",
             "flowtimeRatio",
             "flowtimeMinFlowStateMin",
+            "language",
         ] {
             assert!(value.get(key).is_some(), "Schlüssel {key} fehlt");
         }
-        assert_eq!(value.as_object().unwrap().len(), 19);
+        assert_eq!(value.as_object().unwrap().len(), 20);
         assert_eq!(value["activeMode"], "pomodoro");
         assert_eq!(value["syncProvider"], "none");
+        assert_eq!(value["language"], "system");
+    }
+
+    #[test]
+    fn language_parses_only_offered_values() {
+        for language in [Language::System, Language::De, Language::En] {
+            assert_eq!(language.as_str().parse::<Language>().unwrap(), language);
+        }
+        assert!("fr".parse::<Language>().is_err());
     }
 
     #[test]

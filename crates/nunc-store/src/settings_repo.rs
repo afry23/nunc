@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use nunc_core::model::{Settings, SyncProvider};
+use nunc_core::model::{Language, Settings, SyncProvider};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::StoreError;
@@ -124,10 +124,13 @@ fn settings_from_kv(kv: &HashMap<String, String>) -> Settings {
         "flowtime_min_flow_state_min",
         &mut s.flowtime_min_flow_state_min,
     );
+    if let Some(language) = get("language").and_then(|v| v.parse().ok()) {
+        s.language = language;
+    }
     s
 }
 
-fn kv_from_settings(s: &Settings) -> [(&'static str, String); 19] {
+fn kv_from_settings(s: &Settings) -> [(&'static str, String); 20] {
     [
         ("pomodoro_min", s.pomodoro_min.to_string()),
         ("short_break_min", s.short_break_min.to_string()),
@@ -154,6 +157,7 @@ fn kv_from_settings(s: &Settings) -> [(&'static str, String); 19] {
             "flowtime_min_flow_state_min",
             s.flowtime_min_flow_state_min.to_string(),
         ),
+        ("language", s.language.as_str().to_owned()),
     ]
 }
 
@@ -161,7 +165,7 @@ fn kv_from_settings(s: &Settings) -> [(&'static str, String); 19] {
 mod tests {
     use super::*;
     use crate::open_in_memory;
-    use nunc_core::model::{SyncProvider, TimerMode};
+    use nunc_core::model::{Language, SyncProvider, TimerMode};
 
     fn raw(conn: &Connection, key: &str) -> Option<String> {
         conn.query_row("SELECT value FROM settings WHERE key = ?1", [key], |r| {
@@ -235,6 +239,7 @@ mod tests {
             sync_provider: SyncProvider::Webdav,
             flowtime_ratio: 0.35,
             flowtime_min_flow_state_min: 40,
+            language: Language::En,
         };
         save_settings(&mut conn, &s).unwrap();
         assert_eq!(load_settings(&conn).unwrap(), s);

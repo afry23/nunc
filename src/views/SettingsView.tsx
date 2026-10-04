@@ -5,6 +5,7 @@ import { NotificationHint } from "../components/NotificationHint";
 import { SyncSection } from "../components/SyncSection";
 import { TodoistSection } from "../components/TodoistSection";
 import { Button, SectionLabel, Toggle } from "../components/ui";
+import { LANGUAGES, useT, type LanguageSetting } from "../i18n";
 import type { Settings } from "../lib/api";
 import { ratioAnchor, ratioBadge } from "../lib/format";
 import { isMobile } from "../lib/platform";
@@ -33,6 +34,7 @@ function SettingsForm({ stored }: { stored: Settings }) {
   const save = useSettingsStore((s) => s.save);
   const lastError = useSettingsStore((s) => s.lastError);
   const notify = useUiStore((s) => s.notify);
+  const t = useT();
   const [draft, setDraft] = useState<Settings>(stored);
   const dirty = JSON.stringify(draft) !== JSON.stringify(stored);
   const set = <K extends keyof Settings>(key: K, value: Settings[K]): void =>
@@ -210,6 +212,28 @@ function SettingsForm({ stored }: { stored: Settings }) {
             />
           </div>
         </div>
+      </Section>
+
+      <Section title={t("language.label")}>
+        <label className="flex flex-col gap-2 rounded-2xl bg-surface-container-low p-5">
+          <span className="font-semibold">{t("language.label")}</span>
+          <select
+            value={draft.language}
+            onChange={(event) =>
+              set("language", event.target.value as LanguageSetting)
+            }
+            className="min-h-11 rounded-lg bg-surface-container-highest px-3"
+          >
+            {LANGUAGES.map(({ value, native }) => (
+              <option key={value} value={value}>
+                {native ?? t("language.system")}
+              </option>
+            ))}
+          </select>
+          <span className="text-sm text-on-surface-variant">
+            {t("language.hint")}
+          </span>
+        </label>
       </Section>
 
       {!isMobile() && (

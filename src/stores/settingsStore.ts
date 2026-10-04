@@ -1,5 +1,12 @@
 import { create } from "zustand";
-import { commands, unwrap, type Settings, type SyncProvider } from "../lib/api";
+import { applySettingsLanguage } from "../i18n/apply";
+import {
+  commands,
+  errorMessage,
+  unwrap,
+  type Settings,
+  type SyncProvider,
+} from "../lib/api";
 import { useUiStore } from "./uiStore";
 
 interface SettingsState {
@@ -19,7 +26,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   lastError: null,
   load: async () => {
     try {
-      set({ settings: await unwrap(commands.getSettings()) });
+      const settings = await unwrap(commands.getSettings());
+      applySettingsLanguage(settings);
+      set({ settings });
     } catch (error) {
       useUiStore.getState().fail(error);
     }
@@ -28,10 +37,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       await unwrap(commands.saveSettings(settings));
       // das Backend behält die ihm gehörenden Felder: Ergebnis neu lesen
-      set({ settings: await unwrap(commands.getSettings()), lastError: null });
+      const loaded = await unwrap(commands.getSettings());
+      applySettingsLanguage(loaded);
+      set({ settings: loaded, lastError: null });
       return true;
     } catch (error) {
-      set({ lastError: error instanceof Error ? error.message : "Fehler" });
+      set({ lastError: errorMessage(error) });
       useUiStore.getState().fail(error);
       return false;
     }
@@ -39,7 +50,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setSyncProvider: async (provider) => {
     try {
       await unwrap(commands.setSyncProvider(provider));
-      set({ settings: await unwrap(commands.getSettings()) });
+      const settings = await unwrap(commands.getSettings());
+      applySettingsLanguage(settings);
+      set({ settings });
       return true;
     } catch (error) {
       useUiStore.getState().fail(error);
