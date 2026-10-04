@@ -13,6 +13,7 @@ use nunc_core::timer::Timer;
 use rusqlite::Connection;
 use tempfile::TempDir;
 
+mod backup;
 mod settings;
 mod todos;
 
@@ -31,6 +32,7 @@ pub struct StoreWorld {
     todos: Vec<Todo>,
     stats: Option<StatsResponse>,
     sync_counter: u32,
+    backup: backup::State,
 }
 
 /// Uhrzeit `HH:MM:SS` am festen Testtag (UTC).
@@ -53,6 +55,10 @@ fn schema(conn: &Connection) -> BTreeMap<String, String> {
 }
 
 impl StoreWorld {
+    fn root(&mut self) -> PathBuf {
+        self.dir().path().to_path_buf()
+    }
+
     fn dir(&mut self) -> &TempDir {
         self.dir
             .get_or_insert_with(|| tempfile::tempdir().expect("Temp-Ordner"))

@@ -18,7 +18,7 @@ fn today() -> NaiveDate {
     NaiveDate::from_ymd_opt(2026, 10, 4).unwrap()
 }
 
-fn date(text: &str) -> NaiveDate {
+pub(crate) fn date(text: &str) -> NaiveDate {
     NaiveDate::parse_from_str(text, "%Y-%m-%d").unwrap_or_else(|_| panic!("Datum {text:?}"))
 }
 

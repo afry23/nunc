@@ -7,6 +7,10 @@ pub enum StoreError {
     Sqlite(#[from] rusqlite::Error),
     #[error("Gespeicherter Zustand nicht lesbar: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("Backup-Ordner nicht nutzbar: {0}")]
+    BackupDir(String),
+    #[error("Ungültige Backup-Datei: {0}")]
+    InvalidBackup(String),
     #[error("{entity} {id} nicht gefunden")]
     NotFound { entity: &'static str, id: i32 },
     #[error("Migration {version} fehlgeschlagen: {source}")]

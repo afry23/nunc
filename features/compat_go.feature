@@ -75,8 +75,23 @@ Feature: Compatibility with the database of the Go app
       | todoId |       |
     And all sessions have the sync device id "fixture-device-a"
 
-  @integration @REQ-compat @desktop @wip
+  @integration @REQ-compat @desktop
   Scenario: A backup created by the Go app can be restored
+    Given no database exists yet
+    When nunc opens the database
+    And I add the todo "mine"
+    And the Go fixture is copied to "go-backup.db"
+    And I restore "go-backup.db" on 2026-10-04
+    And I list the todos
+    Then the listed todos are:
+      | id | rawText                                           |
+      | 1  | (A) 2026-09-20 Write quarterly report +work @desk |
+      | 2  | (B) 2026-09-21 Call dentist @phone                |
+      | 3  | 2026-09-22 Buy groceries +home @errands           |
+      | 4  | x 2026-09-25 2026-09-18 Plan sprint +work         |
+      | 5  | (C) Read Rust book +learning +rust @evening       |
+    And exactly the migrations 1 to 6 are recorded as applied
+    And there are 11 sessions
 
   @integration @REQ-compat @desktop @wip
   Scenario: A database written by nunc keeps the Go tables unchanged

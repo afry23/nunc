@@ -33,6 +33,15 @@ pub fn save_settings(conn: &mut Connection, settings: &Settings) -> Result<(), S
     Ok(())
 }
 
+/// Schreibt einen einzelnen Schlüssel, ohne die übrigen Einstellungen anzufassen.
+pub(crate) fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<(), StoreError> {
+    conn.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)",
+        params![key, value],
+    )?;
+    Ok(())
+}
+
 /// Go `strconv.ParseBool`.
 fn parse_bool(text: &str) -> Option<bool> {
     match text {
