@@ -95,6 +95,3 @@ Feature: Streaks
   @domain @property @REQ-10.4
   Scenario: Streaks follow from the set of days
     Then the property "streaks follow from the set of days" holds for 300 random cases
-
-  @ui @REQ-10.4 @wip
-  Scenario: The current and the longest streak are shown

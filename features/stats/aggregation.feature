@@ -233,12 +233,3 @@ Feature: Statistics aggregation
 
   @domain @REQ-10 @wip
   Scenario: Total focused time over all sessions
-
-  @ui @REQ-10 @wip
-  Scenario: Switch between day, week, month and year
-
-  @ui @REQ-10 @wip
-  Scenario: Bar, line, heatmap calendar and pie charts render
-
-  @ui @REQ-10 @wip
-  Scenario: An empty period shows an empty state

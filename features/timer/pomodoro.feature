@@ -314,26 +314,10 @@ Feature: Pomodoro timer
   Scenario: Random commands keep the timer consistent
     Then the property "random commands keep the timer consistent" holds for 150 random cases
 
-  @ui @REQ-3 @wip
-  Scenario: The ring shows the remaining time as MM:SS
-
-  @ui @REQ-3 @wip
-  Scenario: The ring color depends on the session type
-
-  @ui @REQ-3 @wip
-  Scenario: A running timer pulses and a paused timer does not
-
-  @ui @REQ-2.1 @wip
-  Scenario: Start, pause, resume and stop buttons reflect the timer state
-
-  @ui @REQ-4.3 @wip
-  Scenario: A todo can be selected before starting the timer
-
-  @ui @REQ-2.1 @wip
-  Scenario: A break suggestion dialog appears after a completed pomodoro
-
-  @ui @REQ-13 @wip
-  Scenario: The remaining time is announced to screen readers
-
-  @e2e @REQ-2.1 @desktop @wip
+  @e2e @REQ-2.1 @desktop
   Scenario: Run a short pomodoro and see it in the statistics
+    Given the app is started with a short pomodoro
+    When I add the todo "E2E Bericht +work"
+    And I start a pomodoro for the todo "E2E Bericht"
+    And the pomodoro has ended
+    Then the statistics show 1 pomodoro

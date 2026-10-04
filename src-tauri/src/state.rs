@@ -31,6 +31,14 @@ pub struct AppPaths {
     pub legacy_db: Option<PathBuf>,
 }
 
+/// `NUNC_TEST_FAST_TIMER=<Sekunden>`: feste Pomodoro-Dauer für die Oberflächentests (nur Debug-Builds).
+fn fast_timer_from_env() -> Option<u32> {
+    std::env::var("NUNC_TEST_FAST_TIMER")
+        .ok()
+        .and_then(|value| value.trim().parse().ok())
+        .filter(|seconds| *seconds > 0)
+}
+
 /// Plattformabhängige Bausteine (echt in der App, Fakes in Tests).
 pub struct Platform {
     pub clock: Arc<dyn Clock>,
@@ -63,13 +71,16 @@ impl AppState {
         }
         let db = Arc::new(Db::new(open(&paths.db)?));
         let device_id = db.with(|conn| device_id(conn, || uuid::Uuid::new_v4().to_string()))?;
-        let timer = Arc::new(TimerService::new(
-            db.clone(),
-            platform.clock.clone(),
-            platform.events.clone(),
-            platform.notifier,
-            device_id,
-        )?);
+        let timer = Arc::new(
+            TimerService::new(
+                db.clone(),
+                platform.clock.clone(),
+                platform.events.clone(),
+                platform.notifier,
+                device_id,
+            )?
+            .with_fast_pomodoro(fast_timer_from_env()),
+        );
         Ok(Self {
             db,
             paths,

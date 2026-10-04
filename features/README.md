@@ -16,3 +16,6 @@ Eine Quelle für alle Runner (siehe ADR 0006). Szenarien sind englisch, Dateien 
 ergänzen, rot → grün, dann `@wip` des Szenarios entfernen. `smoke*.feature` sind Runner-Selbsttests.
 
 Fixtures für Kompatibilitätsszenarien: [`tests/fixtures/`](../tests/fixtures/README.md).
+
+**UI-Szenarien (`@ui`)** liegen in `ui/*.feature`, getrennt von den Domänen-Dateien, weil deren `Background` zu den Rust-Runnern gehört.
+Steps: `tests/steps/`, Fake-Backend mit Zustand: `tests/helpers/fakeBackend.ts`. E2E (`@e2e @desktop`): `e2e/`, `npm run test:e2e`.

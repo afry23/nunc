@@ -1,11 +1,19 @@
 Feature: Responsive layout
   Source: PLAN 1.3, roadmap M4-01, M5-02
 
-  @ui @REQ-responsive @wip
+  @ui @REQ-responsive
   Scenario: A sidebar is shown from 768 pixels width
+    Given the viewport is 768 pixels wide
+    When I open the app
+    Then I see a sidebar
+    And I do not see a bottom tab bar
 
-  @ui @REQ-responsive @wip
+  @ui @REQ-responsive
   Scenario: A bottom tab bar is shown below 768 pixels width
+    Given the viewport is 767 pixels wide
+    When I open the app
+    Then I see a bottom tab bar
+    And I do not see a sidebar
 
   @ui @REQ-responsive @mobile @wip
   Scenario: Safe areas are respected

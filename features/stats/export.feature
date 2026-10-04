@@ -151,11 +151,5 @@ Feature: Session export
   Scenario: The CSV export can be read back for any text
     Then the property "the CSV export can be read back for any text" holds for 200 random cases
 
-  @ui @REQ-11 @wip
-  Scenario: The export button offers CSV and JSON
-
-  @ui @REQ-11 @desktop @wip
-  Scenario: Saving the export writes a file
-
   @ui @REQ-11 @mobile @wip
   Scenario: The export is handed to the share sheet

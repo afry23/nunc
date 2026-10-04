@@ -135,24 +135,3 @@ Feature: Flowtime break recommendation
 
   @integration @US-FT-02 @wip
   Scenario: Default flowtime settings are ratio 0.2 and minimum flow state 15
-
-  @ui @US-FT-02 @wip
-  Scenario: The ratio slider ranges from 1:0.1 to 1:0.5 in steps of 0.05
-
-  @ui @US-FT-02 @wip
-  Scenario: Anchor labels STRICT, BALANCED and RELAXED are shown below the slider
-
-  @ui @US-FT-02 @wip
-  Scenario: The selected ratio is shown as a badge
-
-  @ui @US-FT-02 @wip
-  Scenario: The minimum flow state accepts 1 to 60 minutes
-
-  @ui @US-FT-02 @wip
-  Scenario: The dynamic break scaling info banner is shown
-
-  @ui @US-FT-02 @wip
-  Scenario: The stopwatch is displayed while a flowtime session runs
-
-  @ui @US-FT-02 @wip
-  Scenario: The break recommendation is shown after stopping

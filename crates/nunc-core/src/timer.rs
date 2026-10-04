@@ -212,11 +212,23 @@ impl Timer {
         todo_id: Option<i32>,
         settings: &Settings,
     ) -> Result<(), TimerError> {
-        self.ensure_idle()?;
         let planned_sec = match mode {
             TimerMode::Pomodoro => settings.pomodoro_min.saturating_mul(60),
             TimerMode::Flowtime => 0,
         };
+        self.start_planned(now, mode, todo_id, planned_sec)
+    }
+
+    /// Wie [`Timer::start`], aber mit eigener Countdown-Dauer in Sekunden (`0` = Stoppuhr). Nur für Tests der
+    /// Oberfläche gedacht, die keine 25 Minuten warten können (`NUNC_TEST_FAST_TIMER`).
+    pub fn start_planned(
+        &mut self,
+        now: DateTime<Utc>,
+        mode: TimerMode,
+        todo_id: Option<i32>,
+        planned_sec: u32,
+    ) -> Result<(), TimerError> {
+        self.ensure_idle()?;
         self.suggestion = None;
         self.begin(now, mode, SessionType::Work, planned_sec, todo_id);
         Ok(())
@@ -487,6 +499,26 @@ mod tests {
         let resumed = now + Duration::minutes(30);
         timer.resume(resumed).unwrap();
         assert_eq!(timer.due_at(), Some(resumed + Duration::minutes(15)));
+    }
+
+    #[test]
+    fn a_custom_duration_replaces_the_setting() {
+        let now = Utc.with_ymd_and_hms(2026, 10, 3, 9, 0, 0).unwrap();
+        let mut timer = Timer::default();
+        timer
+            .start_planned(now, TimerMode::Pomodoro, Some(2), 3)
+            .unwrap();
+        assert_eq!(timer.due_at(), Some(now + Duration::seconds(3)));
+        assert_eq!(timer.snapshot(now).total, 3);
+        assert_eq!(
+            timer.start_planned(now, TimerMode::Pomodoro, None, 3),
+            Err(TimerError::AlreadyActive)
+        );
+        let finish = timer
+            .tick(now + Duration::seconds(3), &Settings::default())
+            .expect("abgelaufen");
+        assert_eq!(finish.kind, FinishKind::Completed);
+        assert_eq!(finish.increment_todo, Some(2));
     }
 
     #[test]

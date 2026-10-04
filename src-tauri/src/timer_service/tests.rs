@@ -390,3 +390,22 @@ fn exclusive_reloads_the_timer_afterwards() {
         Some(&Reminder::Cancelled(NOTIFICATION_ID))
     );
 }
+
+#[test]
+fn a_fast_pomodoro_runs_for_the_given_seconds_and_is_booked() {
+    let mut h = Harness::new(true);
+    h.service =
+        Harness::service_for(&h.db, &h.clock, &h.events, &h.notifier).with_fast_pomodoro(Some(3));
+    let snapshot = h.service.start(TimerMode::Pomodoro, None).unwrap();
+    assert_eq!((snapshot.remaining, snapshot.total), (3, 3));
+    // Flowtime bleibt eine Stoppuhr
+    h.service.stop().unwrap();
+    assert_eq!(h.service.start(TimerMode::Flowtime, None).unwrap().total, 0);
+    h.service.stop().unwrap();
+
+    h.service.start(TimerMode::Pomodoro, None).unwrap();
+    h.clock.advance(Duration::seconds(3));
+    h.service.tick().unwrap();
+    let sessions = h.sessions();
+    assert_eq!(sessions.last().unwrap().status, SessionStatus::Completed);
+}
