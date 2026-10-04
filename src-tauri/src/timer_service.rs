@@ -30,6 +30,8 @@ pub struct TimerService {
     notifier: Arc<dyn Notifier>,
     device_id: String,
     timer: Mutex<Timer>,
+    /// Feste Pomodoro-Dauer in Sekunden für Oberflächentests (`NUNC_TEST_FAST_TIMER`), nur in Debug-Builds.
+    fast_pomodoro_sec: Option<u32>,
 }
 
 impl TimerService {
@@ -49,7 +51,14 @@ impl TimerService {
             notifier,
             device_id,
             timer: Mutex::new(timer),
+            fast_pomodoro_sec: None,
         })
+    }
+
+    /// Setzt die Pomodoro-Dauer fest (Sekunden). Wirkt nur in Debug-Builds; Release-Builds ignorieren sie.
+    pub fn with_fast_pomodoro(mut self, seconds: Option<u32>) -> Self {
+        self.fast_pomodoro_sec = seconds.filter(|_| cfg!(debug_assertions));
+        self
     }
 
     fn lock(&self) -> Result<MutexGuard<'_, Timer>, AppError> {
@@ -108,7 +117,13 @@ impl TimerService {
     }
 
     pub fn start(&self, mode: TimerMode, todo_id: Option<i32>) -> Result<TimerSnapshot, AppError> {
-        self.transition(|timer, now, settings| timer.start(now, mode, todo_id, settings))
+        let fast = self
+            .fast_pomodoro_sec
+            .filter(|_| mode == TimerMode::Pomodoro);
+        self.transition(|timer, now, settings| match fast {
+            Some(seconds) => timer.start_planned(now, mode, todo_id, seconds),
+            None => timer.start(now, mode, todo_id, settings),
+        })
     }
 
     pub fn start_break(&self) -> Result<TimerSnapshot, AppError> {

@@ -175,16 +175,30 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 |---|---|---|---|
 | M4-01 | App-Shell & Layout | Responsive: ≥ 768 px Sidebar, darunter Bottom-Tab-Bar; Routen Timer/Todos/Stats/Settings; Safe-Areas; Dark-Theme-Tokens; „Breath“-Animation | `ui/navigation.feature`, `ui/responsive.feature` |
 | M4-02 | Stores | Zustand: `timerStore` (nur Snapshot aus Events), `todoStore`, `settingsStore`, `uiStore`; Reload bei `app:reload` | – |
-| M4-03 | `RingTimer` | reines SVG, Farben je Modus/Typ, Countdown/Stoppuhr, `MM:SS`, Zustände (Pulsieren), ARIA live region | `timer/pomodoro.feature` (@ui) |
-| M4-04 | Timer-View | Todo-Auswahl, Start/Pause/Resume/Stop, Break-Vorschlag-Dialog, Flowtime-Pausenempfehlung | `timer/*.feature` (@ui) |
+| M4-03 | `RingTimer` | reines SVG, Farben je Modus/Typ, Countdown/Stoppuhr, `MM:SS`, Zustände (Pulsieren), ARIA live region | `ui/timer.feature` |
+| M4-04 | Timer-View | Todo-Auswahl, Start/Pause/Resume/Stop, Break-Vorschlag-Dialog, Flowtime-Pausenempfehlung | `ui/timer.feature`, `ui/flowtime.feature` |
 | M4-05 | Sound | Web Audio, `.mp3`-Assets (Glocke, Ding, Digital), Lautstärke, Trigger auf `timer:complete` | – |
-| M4-06 | Todo-View | Liste mit Prio/Tags/🍅-Zähler, Inline-Add/Edit (todo.txt-Syntax), Abhaken, Löschen, Filter, Suche, Sortierung, Reorder (Drag & Drop, touch-fähig: `dnd-kit`) | `todos/*.feature` (@ui) |
-| M4-07 | Stats-View | Tag/Woche/Monat/Jahr; eigene SVG-Charts: Bar, Line, Heatmap-Kalender, Pie; Top-Todos, Projekt-/Kontext-Verteilung, Durchschnitt 7/30 T., Streaks; Export-Button | `stats/*.feature` (@ui) |
-| M4-08 | Settings-View | Timer, Flowtime (Slider 0.1–0.5 / 0.05, Anker STRICT/BALANCED/RELAXED, Badge, Info-Banner), Min-Flow-State 1–60, Notifications, Sound, Tray | `settings.feature` (@ui) |
+| M4-06 | Todo-View | Liste mit Prio/Tags/🍅-Zähler, Inline-Add/Edit (todo.txt-Syntax), Abhaken, Löschen, Filter, Suche, Sortierung, Reorder (Drag & Drop, touch-fähig: `dnd-kit`) | `ui/todos.feature` |
+| M4-07 | Stats-View | Tag/Woche/Monat/Jahr; eigene SVG-Charts: Bar, Line, Heatmap-Kalender, Pie; Top-Todos, Projekt-/Kontext-Verteilung, Durchschnitt 7/30 T., Streaks; Export-Button | `ui/stats.feature` |
+| M4-08 | Settings-View | Timer, Flowtime (Slider 0.1–0.5 / 0.05, Anker STRICT/BALANCED/RELAXED, Badge, Info-Banner), Min-Flow-State 1–60, Notifications, Sound, Tray | `ui/settings.feature` |
 | M4-09 | Keyboard-Shortcuts | Space, Esc, N, 1/2/3, `,` – nur Desktop, nicht in Eingabefeldern | `ui/shortcuts.feature` |
 | M4-10 | Mini-Timer | eigene Route im 2. Fenster, kompakter Ring | – |
 | M4-11 | Accessibility-Pass | ARIA-Labels, Fokus-Reihenfolge, Kontrast (DESIGN.md-Farben prüfen) | – |
 | M4-12 | Desktop-E2E-Smoke | WebdriverIO + `tauri-driver` + Cucumber (Linux/Windows-CI): Start → Todo anlegen → Pomodoro (Test-Dauer via Env `NUNC_TEST_FAST_TIMER`) → Stats zeigt 1 | `@e2e @desktop` |
+
+**Stand:** umgesetzt (Desktop-E2E noch nicht auf CI verifiziert). Abweichungen und Ergänzungen:
+
+- Die `@ui`-Szenarien liegen gesammelt in `features/ui/*.feature` (`timer`, `flowtime`, `todos`, `stats`, `settings`,
+  `navigation`, `responsive`, `shortcuts`), nicht mehr in den Domänen-Dateien: deren `Background`-Schritte gehören zu den
+  Rust-Runnern. `@mobile`-Szenarien bleiben `@wip` (M5).
+- Töne sind synthetisiert (Web Audio: Glocke, Ding, Digital), es gibt keine `.mp3`-Assets.
+- Drag & Drop mit `dnd-kit` (Maus, Touch, Tastatur); zusätzlich „Nach oben/unten“-Schaltflächen als barrierefreie Alternative.
+- Das Filtern und Sortieren der Todos läuft über `get_todos` (Kern), nicht im React-Code.
+- `npm run dev` im Browser startet ein Fake-Backend mit Beispieldaten (`src/dev/preview.ts`, nur Dev-Build).
+- Der Mini-Timer ist die Route `/mini`; „Zur App“ ruft `show_main_window`.
+- E2E: `npm run test:e2e` (WebdriverIO + `tauri-driver`, Linux/Windows; der CI-Job `e2e-desktop` ist bis zum ersten
+  grünen Lauf `continue-on-error`). `NUNC_TEST_FAST_TIMER=<Sekunden>` verkürzt den Pomodoro, wirkt nur in Debug-Builds.
+- Nicht in M4: Backup-/Restore-UI und Sync-Einstellungen (M6), Kontrast-/Screenreader-Prüfung mit echten Tools (M8).
 
 **Exit-Kriterien M4 = Desktop-MVP:** Alltagsnutzung auf Desktop möglich (Dogfooding startet, Daten parallel zur Go-App über gemeinsame DB-Kopie).
 

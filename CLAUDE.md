@@ -39,6 +39,10 @@ src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)
   src/adapters.rs     Tauri-Adapter für EventSink/Notifier (brauchen AppHandle)
   src/commands/       dünne Commands je Bereich, Tests in commands/tests.rs (mock_builder)
 src/                  React-Frontend (src/lib/api.ts = einziger Backend-Zugang)
+  src/lib/            reine Hilfen (format, timer, todos, stats, shortcuts, sound), je mit Unit-Test
+  src/stores/         Zustand: timer (nur Snapshot), todos, settings, ui; stores/backend.ts verdrahtet Events
+  src/views/          Timer, Todos, Stats, Settings, MiniTimer; src/components/ Ring, Charts, Shell, Dialog
+  tests/              steps/ (quickpickle), helpers/fakeBackend.ts; e2e/ WebdriverIO + tauri-driver
 features/             Gherkin, EINE Quelle für alle Runner
 docs/adr/             Architecture Decision Records
 ```
@@ -86,7 +90,8 @@ undefined/pending Steps (der Rust-Runner bricht bei übersprungenen Steps ab).
 ```bash
 cargo test -p nunc-core --test bdd      # @domain (NUNC_BDD_REPORT=/abs/pfad.json schreibt zusätzlich JSON)
 cargo test -p nunc-store --test bdd     # @integration (Temp-Ordner, echte SQLite-Dateien)
-npm run test:bdd                        # @ui
+npm run test:bdd                        # @ui (features/ui/*.feature)
+npm run test:e2e                        # @e2e @desktop, braucht tauri-driver (Linux/Windows)
 ```
 
 Go-Interop (manuell, braucht `../nunc-go` und Go): `tests/interop/go-reads-nunc-db.sh`.
