@@ -75,7 +75,10 @@ export function RingTimer({
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
           data-testid="ring-time"
-          className={`font-display font-bold tabular-nums tracking-tight ${compact ? "text-4xl" : "display-lg text-6xl"}`}
+          className={`font-display font-bold tabular-nums tracking-tight ${compact ? "" : "display-lg text-6xl"}`}
+          style={
+            compact ? { fontSize: `${Math.round(size * 0.21)}px` } : undefined
+          }
         >
           {formatClock(seconds)}
         </span>

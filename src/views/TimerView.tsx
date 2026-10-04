@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Button, Segmented } from "../components/ui";
+import { NotificationHint } from "../components/NotificationHint";
 import { RingTimer } from "../components/RingTimer";
 import type { TimerMode } from "../lib/api";
 import { sessionLabel } from "../lib/timer";
@@ -57,6 +58,8 @@ export function TimerView() {
       <h1 id="timer-heading" className="sr-only">
         Timer
       </h1>
+
+      <NotificationHint />
 
       <Segmented
         label="Timer-Modus"

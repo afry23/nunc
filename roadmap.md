@@ -216,6 +216,22 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 | M5-05 | Assets | App-Icons (`tauri icon` aus `../nunc-go/appicon.png`), Splash, Statusbar-Farbe |
 | M5-06 | Mobile-E2E-Smoke | Maestro-Flows: Start, Todo, Timer starten, App in Hintergrund (`maestro` background/foreground), Notification, Resume-Stand |
 
+**Stand:** umgesetzt (auf dem Android-Emulator geprüft; echte Geräte und iOS stehen aus). Abweichungen und Ergänzungen:
+
+- M5-01: `plugin-os` entscheidet über „mobil“ (`src/lib/platform.ts`), der User-Agent ist nur Fallback (Browser, Tests). Tray, Tastenkürzel und Mini-Timer
+  gab es mobil schon nicht (`#[cfg(desktop)]`); die Backup-Ordner-Einstellung kommt mit M6 und ist dort zu gaten.
+- M5-02: Touch-Ziele ≥ 44 px per Klassen und globaler `pointer: coarse`-Regel; Swipe nach rechts erledigt eine Aufgabe, Pull-to-refresh lädt
+  alle Stores neu (Grundlage für Sync), Tastatur über Visual Viewport (iOS) und IME-Insets in `MainActivity.kt` (Android, Edge-to-edge).
+  Reorder per Touch: Griff (dnd-kit `TouchSensor`) und „Nach oben/unten“-Schaltflächen; das Ziehen selbst ist in jsdom nicht testbar.
+- M5-03: Commands `get_notification_status` / `request_notification_permission`; Anfrage vor dem ersten Timer-Start (blockiert ihn nie),
+  Hinweis bei Ablehnung und, auf Android, wenn Exact-Alarms fehlen (`NuncAndroid`-Brücke in `MainActivity.kt`). Manifest: `USE_EXACT_ALARM`
+  (ab 13) und `SCHEDULE_EXACT_ALARM` (nur ≤ 12). Kanal `timer` (hohe Wichtigkeit). **Offen:** iOS-Zeitzonen-Bug des Plugins (ADR 0004) bleibt beim Offset-Workaround.
+- M5-04: Rückkehr aus dem Hintergrund (`visibilitychange`) lädt Timer, Todos, Einstellungen und Berechtigung neu; Rust rechnet bei `RunEvent::Resumed` neu.
+  Zurück-Taste: WebView-Verlauf (Wry) plus Zurück-Stapel mit dem Timer als Startseite (Tabs ersetzen sich, „Timer“ geht zurück).
+- M5-05: Icons aus `nunc-go/appicon.png` (`tauri icon`); Android-Vordergrund ohne Schriftzug (Sicherheitszone), dunkles Splash/Theme, helle
+  Statusleisten-Symbole, iOS: dunkler Launch-Screen, `Info.ios.plist` (Dark, helle Statusleiste), Fensterfarbe `#131313`.
+- M5-06: Maestro-Flows in `e2e/mobile/` (`npm run test:mobile`), Szenarien in `features/e2e/mobile.feature`. **Nicht ausgeführt** (Maestro nicht installiert).
+
 **Exit-Kriterien M5 = Mobile-MVP:** Debug-Builds laufen stabil auf echtem Android- und iOS-Gerät; Timer überlebt Hintergrund + App-Kill.
 
 ---

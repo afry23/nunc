@@ -151,9 +151,14 @@ export function TodoView() {
           onChange={(event) => setDraft(event.target.value)}
           placeholder="(A) Dokumentation fertig +projekt @kontext"
           autoComplete="off"
-          className="min-h-11 flex-1 bg-transparent px-2 placeholder:text-on-surface-variant focus:outline-none"
+          className="min-h-11 min-w-0 flex-1 bg-transparent px-2 placeholder:text-on-surface-variant focus:outline-none"
         />
-        <Button type="submit" variant="primary" disabled={draft.trim() === ""}>
+        <Button
+          type="submit"
+          variant="primary"
+          className="shrink-0 px-3 text-sm sm:px-5 sm:text-base"
+          disabled={draft.trim() === ""}
+        >
           Hinzufügen
         </Button>
       </form>

@@ -83,3 +83,16 @@ describe("flowtime ratio", () => {
     expect(ratioAnchor(0.5)).toBe("RELAXED");
   });
 });
+
+import { monthLabel } from "./format";
+
+describe("monthLabel", () => {
+  it("names the month in German", () => {
+    expect(monthLabel(2026, 1)).toBe("Januar 2026");
+    expect(monthLabel(2026, 3)).toBe("März 2026");
+    expect(monthLabel(2025, 12)).toBe("Dezember 2025");
+  });
+  it("falls back to the number for invalid months", () => {
+    expect(monthLabel(2026, 13)).toBe("13 2026");
+  });
+});

@@ -33,8 +33,47 @@ Feature: Navigation
     When I click "Zur App"
     Then the backend received "show_main_window"
 
-  @ui @REQ-8 @mobile @wip
+  @ui @REQ-8 @mobile
   Scenario: The back button navigates instead of closing the app
+    Given the platform is "mobile"
+    And the viewport is 390 pixels wide
+    When I open the app
+    And I click "Aufgaben"
+    And I press the back button of the device
+    Then the ring shows "25:00"
+    And the back button would leave the app
+
+  @ui @REQ-8 @mobile
+  Scenario: Switching between tabs does not pile up a back stack
+    Given the platform is "mobile"
+    And the viewport is 390 pixels wide
+    When I open the app
+    And I click "Aufgaben"
+    And I click "Statistik"
+    And I click "Einstellungen"
+    And I press the back button of the device
+    Then the ring shows "25:00"
+    And the back button would leave the app
+
+  @ui @REQ-8 @mobile
+  Scenario: The timer tab goes back instead of adding an entry
+    Given the platform is "mobile"
+    And the viewport is 390 pixels wide
+    When I open the app
+    And I click "Statistik"
+    And I click "Timer"
+    Then the ring shows "25:00"
+    And the back button would leave the app
+
+  @ui @REQ-8 @desktop
+  Scenario: On the desktop every view is a history entry
+    Given the platform is "desktop"
+    And the viewport is 390 pixels wide
+    When I open the app
+    And I click "Aufgaben"
+    And I click "Statistik"
+    And I press the back button of the device
+    Then I see the heading "Aufgaben"
 
   @ui @REQ-responsive
   Scenario: The sidebar can be collapsed to icons and expanded again

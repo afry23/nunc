@@ -1,6 +1,10 @@
 import { cleanup } from "@testing-library/react";
 import { vi } from "vitest";
 import { After, Before, setWorldConstructor } from "quickpickle";
+import {
+  resetNotificationHint,
+  useNotificationStore,
+} from "../../src/stores/notificationStore";
 import { useSettingsStore } from "../../src/stores/settingsStore";
 import { useTimerStore } from "../../src/stores/timerStore";
 import { useTodoStore } from "../../src/stores/todoStore";
@@ -16,6 +20,8 @@ function resetStores(): void {
   useSettingsStore.setState(useSettingsStore.getInitialState(), true);
   useTimerStore.setState(useTimerStore.getInitialState(), true);
   useTodoStore.setState(useTodoStore.getInitialState(), true);
+  useNotificationStore.setState(useNotificationStore.getInitialState(), true);
+  resetNotificationHint();
   useUiStore.setState(useUiStore.getInitialState(), true);
 }
 
@@ -37,5 +43,9 @@ After(async () => {
   resetStores();
   vi.restoreAllMocks();
   localStorage.clear();
+  vi.unstubAllGlobals();
+  Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+  Reflect.deleteProperty(window, "scrollY");
+  Reflect.deleteProperty(window, "NuncAndroid");
   Reflect.deleteProperty(window, "matchMedia");
 });

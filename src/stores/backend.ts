@@ -1,4 +1,5 @@
 import { events } from "../lib/api";
+import { useNotificationStore } from "./notificationStore";
 import { useSettingsStore } from "./settingsStore";
 import { useTimerStore } from "./timerStore";
 import { useTodoStore } from "./todoStore";
@@ -9,6 +10,7 @@ export async function reloadAll(): Promise<void> {
     useSettingsStore.getState().load(),
     useTodoStore.getState().load(),
     useTimerStore.getState().refresh(),
+    useNotificationStore.getState().refresh(),
   ]);
 }
 
@@ -34,6 +36,14 @@ export async function connectBackend(): Promise<() => void> {
     }),
     events.appReload.listen(() => void reloadAll()),
   ]);
+  // Rückkehr aus dem Hintergrund: Ereignisse sind dort ausgeblieben, der Stand kommt neu aus dem Backend
+  const onVisible = (): void => {
+    if (document.visibilityState === "visible") void reloadAll();
+  };
+  document.addEventListener("visibilitychange", onVisible);
   await reloadAll();
-  return () => unlisten.forEach((fn) => fn());
+  return () => {
+    unlisten.forEach((fn) => fn());
+    document.removeEventListener("visibilitychange", onVisible);
+  };
 }

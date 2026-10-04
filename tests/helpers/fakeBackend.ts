@@ -86,6 +86,9 @@ export interface FakeBackend extends BackendMock {
     sessionType: "short_break" | "long_break";
     minutes: number;
   } | null;
+  /** Systemstand der Benachrichtigungs-Berechtigung (mobil); `request_…` entscheidet nach `permissionAnswer`. */
+  notificationPermission: "granted" | "denied" | "prompt";
+  permissionAnswer: "granted" | "denied";
   /** Ergebnis von `save_export_to_file` (`null` = Dialog abgebrochen). */
   exportPath: string | null;
   /** Letzte Argumente je Command. */
@@ -113,6 +116,8 @@ export function createFakeBackend(): FakeBackend {
     stats: { ...EMPTY_STATS },
     suggestedBreak: null,
     exportPath: "/tmp/export.csv" as string | null,
+    notificationPermission: "granted",
+    permissionAnswer: "granted",
   } as FakeBackend;
   let nextId = 1;
 
@@ -150,6 +155,14 @@ export function createFakeBackend(): FakeBackend {
 
   const handlers: Record<string, (args: never) => unknown> = {
     get_settings: () => fake.settings,
+    get_notification_status: () => ({
+      permission: fake.notificationPermission,
+    }),
+    request_notification_permission: () => {
+      if (fake.notificationPermission === "prompt")
+        fake.notificationPermission = fake.permissionAnswer;
+      return { permission: fake.notificationPermission };
+    },
     save_settings: ({ settings }: { settings: Settings }) => {
       if (settings.pomodoroMin < 1)
         fail(

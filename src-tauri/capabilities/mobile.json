@@ -12,6 +12,7 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "notification:default"
+    "notification:default",
+    "os:allow-platform"
   ]
 }

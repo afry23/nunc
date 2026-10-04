@@ -88,15 +88,19 @@ export function Toggle({
         aria-labelledby={labelId}
         aria-describedby={description ? descriptionId : undefined}
         onClick={() => onChange(!checked)}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
-          checked ? "bg-primary" : "bg-surface-container-highest"
-        }`}
+        className="flex h-11 w-14 shrink-0 items-center justify-center"
       >
         <span
-          className={`absolute top-1 size-5 rounded-full bg-on-surface transition-all ${
-            checked ? "left-6" : "left-1"
+          className={`relative h-7 w-12 rounded-full transition-colors ${
+            checked ? "bg-primary" : "bg-surface-container-highest"
           }`}
-        />
+        >
+          <span
+            className={`absolute top-1 size-5 rounded-full bg-on-surface transition-all ${
+              checked ? "left-6" : "left-1"
+            }`}
+          />
+        </span>
       </button>
     </div>
   );
@@ -117,7 +121,7 @@ export function Chip({
       type="button"
       aria-pressed={selected}
       onClick={onClick}
-      className={`min-h-9 rounded-full px-3 text-sm transition-colors ${
+      className={`min-h-11 rounded-full px-3 text-sm transition-colors ${
         selected
           ? "bg-secondary-fixed-dim text-on-secondary"
           : "bg-surface-container-high text-on-surface-variant hover:bg-surface-bright"
@@ -156,7 +160,7 @@ export function Segmented<T extends string>({
           aria-checked={option.value === value}
           disabled={disabled}
           onClick={() => onChange(option.value)}
-          className={`min-h-10 rounded-lg px-5 font-semibold transition-colors disabled:cursor-not-allowed ${
+          className={`min-h-11 rounded-lg px-5 font-semibold transition-colors disabled:cursor-not-allowed ${
             option.value === value
               ? "bg-surface-container-high text-on-surface"
               : "text-on-surface-variant hover:text-on-surface"

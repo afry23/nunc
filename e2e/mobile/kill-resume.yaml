@@ -1,0 +1,16 @@
+# Ein laufender Timer überlebt das Beenden der App (ADR 0004: Zustand wird bei jeder Transition persistiert).
+# Szenario: features/timer/persistence.feature "A running timer survives killing the app"
+appId: com.afry.nunc
+name: Kill und Resume
+---
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: allow
+- tapOn: "Start"
+- assertVisible: "(24|25):[0-5][0-9]"
+- stopApp
+- launchApp
+# Die Uhr lief weiter: nicht wieder 25:00, sondern der Rest aus dem Zeitstempel
+- assertVisible: "24:[0-5][0-9]"
+- assertVisible: "Pause"

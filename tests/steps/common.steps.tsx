@@ -44,6 +44,7 @@ async function settle(world: UiWorld, extra: string[] = []): Promise<void> {
 async function openApp(world: UiWorld, path: string): Promise<void> {
   const history = createMemoryHistory({ initialEntries: [path] });
   render(<App history={history} />);
+  world.history = history;
   world.rendered = true;
   if (path === "/mini")
     await screen.findByRole("heading", { name: "Mini-Timer" });
