@@ -32,12 +32,14 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 crates/nunc-core      pure Fachlogik, kein I/O, kein tokio
 crates/nunc-store     rusqlite, Migrationen, Repos, Backup/Restore
 crates/nunc-sync      WebDAV-, Google-Drive- und Todoist-Client (reqwest), OAuth (PKCE, Loopback), Sync-Läufe, Steuerung (Koordinator)
+crates/nunc-api       lokale HTTP-Schnittstelle (127.0.0.1, Token): pures Routing + hyper-Server, Desktop (ADR 0013)
 crates/nunc-platform  Traits + Fakes: Clock, EventSink, Notifier, SecretStore (Keyring), UrlOpener
 src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)])
   src/state.rs        AppState (DB, TimerService, Tresor), Start, Restore, Shutdown-Hooks
   src/timer_service.rs  Timer-Laufzeit: Transitionen persistieren, Events, Benachrichtigung
   src/adapters.rs     Tauri-Adapter für EventSink/Notifier/UrlOpener (brauchen AppHandle)
   src/sync_service.rs Verdrahtung des Syncs: Store-Adapter, Koordinatoren (Sync-Anbieter, Todoist), Ereignisse
+  src/api_service.rs  ApiService (Server an/aus, Token im Tresor) und AppBackend (Todos für nunc-api), nur Desktop
   src/credentials.rs  OAuth-Client-IDs: Umgebung (`NUNC_GOOGLE_*`, `NUNC_TODOIST_*`) → `.env` (nur Debug) → Build
   src/commands/       dünne Commands je Bereich, Tests in commands/tests.rs (mock_builder)
 src/                  React-Frontend (src/lib/api.ts = einziger Backend-Zugang)
@@ -86,13 +88,14 @@ Zeitstempel neu berechnet. Tick-Events (`timer:tick`) sind nur Anzeige im Vorder
 4. `@wip` entfernen, Pflicht-Checks ausführen, committen.
 
 Tags: `@domain` (Rust, pure), `@integration` (Rust, In-Memory-SQLite + wiremock), `@ui` (Vitest, `mockIPC`),
-`@sync` (Integrationsszenario für den Sync, läuft in `nunc-sync`), `@e2e`, `@desktop`/`@mobile`, `@property` (Eigenschaftstest über zufällige Eingaben, ADR 0006), `@wip`. `@wip`-Szenarien werden von den Runnern übersprungen. Keine
+`@sync` (Integrationsszenario für den Sync, läuft in `nunc-sync`), `@api` (lokale HTTP-Schnittstelle, läuft nur in `nunc-api`), `@e2e`, `@desktop`/`@mobile`, `@property` (Eigenschaftstest über zufällige Eingaben, ADR 0006), `@wip`. `@wip`-Szenarien werden von den Runnern übersprungen. Keine
 undefined/pending Steps (der Rust-Runner bricht bei übersprungenen Steps ab).
 
 ```bash
 cargo test -p nunc-core --test bdd      # @domain (NUNC_BDD_REPORT=/abs/pfad.json schreibt zusätzlich JSON)
 cargo test -p nunc-store --test bdd     # @integration (Temp-Ordner, echte SQLite-Dateien)
 cargo test -p nunc-sync --test bdd      # @integration @sync (WebDAV-/Google-/Todoist-Server mit Zustand per wiremock, Sync-Steuerung)
+cargo test -p nunc-api --test bdd       # @api (pures Routing und Server über echten Socket)
 npm run test:bdd                        # @ui (features/ui/*.feature, features/sync, features/todoist)
 npm run test:e2e                        # @e2e @desktop, braucht tauri-driver (Linux/Windows)
 npm run test:mobile                     # @e2e @mobile, Maestro-Flows gegen Emulator/Gerät (e2e/mobile/README.md)
@@ -178,4 +181,5 @@ oder specta-Typen `cargo test -p nunc export_bindings` ausführen und `src/bindi
 - Kein Schema-Eingriff ohne neue, additive Migration; Migrationen 001–005 nicht ändern.
 - Keine `Date.now()`/`SystemTime::now()` in Fachlogik – `Clock` injizieren.
 - Nicht direkt auf `main` committen; keine `@wip`-Szenarien auf `main` lassen, wenn das Ticket abgeschlossen ist.
+- Das Token der lokalen Schnittstelle nie loggen, in Fehlermeldungen oder Antworten aufnehmen; die Schnittstelle bindet nie an etwas anderes als `127.0.0.1`.
 - Keine Secrets (Tokens, Passwörter) in Logs, DB, Settings oder Testausgaben; nur über `SecretStore`.

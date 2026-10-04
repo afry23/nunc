@@ -7,6 +7,12 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	/**  Name und Version der App (Beispiel-Command für die Typ-Bridge). */
 	appInfo: () => __TAURI_INVOKE<AppInfo>("app_info"),
+	/**  Läuft der Server, auf welchem Port, und warum nicht. */
+	getApiStatus: () => typedError<ApiStatus, AppError>(__TAURI_INVOKE("get_api_status")),
+	/**  Das Token im Klartext (nur auf Klick in den Einstellungen; es steht sonst nirgends in der Oberfläche). */
+	getApiToken: () => typedError<string, AppError>(__TAURI_INVOKE("get_api_token")),
+	/**  Erzeugt ein neues Token; das alte gilt sofort nicht mehr. */
+	regenerateApiToken: () => typedError<string, AppError>(__TAURI_INVOKE("regenerate_api_token")),
 	/**  Holt das Hauptfenster nach vorn und versteckt den Mini-Timer (Desktop; mobil ohne Wirkung). */
 	showMainWindow: () => __TAURI_INVOKE<void>("show_main_window"),
 	getSettings: () => typedError<Settings, AppError>(__TAURI_INVOKE("get_settings")),
@@ -186,6 +192,16 @@ export const events = {
 };
 
 /* Types */
+/**  Zustand der Schnittstelle für die Oberfläche. */
+export type ApiStatus = {
+	/**  Der Server lauscht. */
+	running: boolean,
+	/**  Tatsächlicher Port (kann vom gewünschten abweichen, wenn dieser belegt war). */
+	port: number | null,
+	/**  Warum der Server nicht läuft, obwohl er laufen soll. */
+	error: string | null,
+};
+
 export type AppError = {
 	code: string,
 	message: string,
@@ -359,6 +375,10 @@ export type Settings = {
 	flowtimeMinFlowStateMin: number,
 	/**  Sprache der Oberfläche; die Go-App kennt den Schlüssel nicht und ignoriert ihn. */
 	language: Language,
+	/**  Lokale HTTP-Schnittstelle (nur Desktop, ADR 0013) an/aus; Go ignoriert den Schlüssel. */
+	apiEnabled: boolean,
+	/**  Gewünschter Port der lokalen Schnittstelle (1024–65535); ist er belegt, nimmt der Server den nächsten freien. */
+	apiPort: number,
 };
 
 /**  Sortierrichtung. Fehlende Werte (keine Priorität, kein Datum) stehen in beiden Richtungen zuletzt. */

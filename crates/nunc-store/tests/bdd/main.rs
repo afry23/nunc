@@ -306,7 +306,7 @@ fn selected(
 ) -> bool {
     let has = |tag: &str| feature.tags.iter().chain(&scenario.tags).any(|t| t == tag);
     // `@sync`-Szenarien (WebDAV, wiremock) laufen im Runner von nunc-sync
-    has("integration") && !has("sync") && !has("wip")
+    has("integration") && !has("sync") && !has("api") && !has("wip")
 }
 
 #[tokio::main(flavor = "current_thread")]

@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
+import { ApiSection } from "../components/ApiSection";
 import { BackupSection } from "../components/BackupSection";
 import { InfoIcon } from "../components/icons";
 import { NotificationHint } from "../components/NotificationHint";
@@ -242,6 +243,19 @@ function SettingsForm({ stored }: { stored: Settings }) {
           </span>
         </div>
       </Section>
+
+      {!isMobile() && (
+        <Section title={t("api.title")}>
+          <ApiSection
+            enabled={draft.apiEnabled}
+            port={draft.apiPort}
+            storedEnabled={stored.apiEnabled}
+            storedPort={stored.apiPort}
+            onEnabled={(value) => set("apiEnabled", value)}
+            onPort={(value) => set("apiPort", value)}
+          />
+        </Section>
+      )}
 
       {!isMobile() && (
         <Section title={t("settings.system")}>

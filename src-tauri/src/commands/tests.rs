@@ -731,3 +731,37 @@ fn todotxt_empty_file_adds_nothing_and_exports_nothing() {
     assert_eq!((result.added, result.duplicates), (0, 0));
     assert_eq!(todotxt::export_text(&state).unwrap(), "");
 }
+
+#[cfg(desktop)]
+#[test]
+fn the_api_backend_reads_and_changes_the_apps_todos() {
+    use nunc_api::{ApiError, TodoBackend};
+
+    let h = Harness::new();
+    let backend = crate::api_service::AppBackend(h.app.handle().clone());
+
+    let outcome = backend
+        .import("Bericht +work\n(A) Steuer\nBericht +work\n")
+        .unwrap();
+    assert_eq!((outcome.added.len(), outcome.duplicates), (2, 1));
+    let todos = backend.list().unwrap();
+    assert_eq!(todos.len(), 2);
+    // dieselben Daten sieht die Oberfläche
+    assert_eq!(h.ok("get_todos", json!({})).as_array().unwrap().len(), 2);
+
+    let done = backend.set_completed(todos[0].id, true).unwrap();
+    assert!(done.completed);
+    assert_eq!(backend.set_completed(99, true), Err(ApiError::NotFound(99)));
+    assert_eq!(backend.import("").unwrap().added.len(), 0);
+}
+
+#[cfg(desktop)]
+#[test]
+fn changes_through_the_api_reload_the_interface() {
+    use nunc_api::TodoBackend;
+
+    let h = Harness::new();
+    let backend = crate::api_service::AppBackend(h.app.handle().clone());
+    backend.import("Bericht").unwrap();
+    assert!(h.events.names().iter().any(|name| name == "app:reload"));
+}

@@ -30,6 +30,19 @@ Feature: Settings
       | 100    | the settings are valid                           |
       | 101    | the settings are invalid because of "soundVolume" |
 
+  @domain @REQ-API
+  Scenario Outline: The port of the local interface must be an unprivileged port
+    Given the setting "apiPort" is "<port>"
+    When I validate the settings
+    Then <result>
+
+    Examples:
+      | port  | result                                    |
+      | 1023  | the settings are invalid because of "apiPort" |
+      | 1024  | the settings are valid                    |
+      | 65535 | the settings are valid                    |
+      | 65536 | the settings are invalid because of "apiPort" |
+
   @domain @REQ-5
   Scenario: Break lengths and the long break interval may be zero
     Given the setting "shortBreakMin" is "0"
@@ -66,6 +79,8 @@ Feature: Settings
       | flowtimeRatio           | 0.2      |
       | flowtimeMinFlowStateMin | 15       |
       | language                | system   |
+      | apiEnabled              | false    |
+      | apiPort                 | 42820    |
 
   @integration @REQ-5.4
   Scenario: A language that is not offered falls back to the system language
@@ -87,6 +102,19 @@ Feature: Settings
     Then the settings table contains:
       | key      | value |
       | language | en    |
+
+  @integration @REQ-API
+  Scenario: The local interface settings are persisted
+    Given no database exists yet
+    When nunc opens the database
+    And I load the settings
+    And I set "apiEnabled" to "true"
+    And I set "apiPort" to "43000"
+    And I save the settings
+    Then the settings table contains:
+      | key         | value |
+      | api_enabled | true  |
+      | api_port    | 43000 |
 
   @integration @REQ-5
   Scenario: Saved settings are returned again

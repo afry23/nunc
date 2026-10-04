@@ -16,6 +16,7 @@ Android und iOS – die Neuschreibung der Go/Wails-App `nunc-go`; die Daten blei
 - **Statistik:** Tag/Woche/Monat/Jahr, Streaks, Verteilung nach Projekt/Kontext, Export als CSV/JSON.
 - **Backup:** täglich beim Start, Rotation, Wiederherstellen aus der Liste oder einer `.db`-Datei.
 - **Sync:** WebDAV (alle Plattformen), Google Drive und Todoist (Desktop).
+- **Lokale Schnittstelle** (Desktop, aus): andere Programme tauschen todo.txt-Zeilen aus und fragen den Status ab, siehe unten.
 - **Desktop:** Tray-Symbol, Mini-Timer, Tastenkürzel. **Mobil:** Benachrichtigung bei Timer-Ende, Wischgesten.
 - **Sprache:** Deutsch und Englisch, „System“ folgt dem Betriebssystem (Einstellungen → Sprache).
 
@@ -67,6 +68,25 @@ nicht in der Datenbank, sondern im Schlüsselspeicher des Systems (Dienst `nunc`
 Zusammenführen: Aufgaben nach „letzte Änderung gewinnt“ (Löschen ist ein Merker), Sessions werden nur ergänzt.
 Google und Todoist brauchen OAuth-Zugangsdaten beim Bauen (`NUNC_GOOGLE_CLIENT_ID` …, siehe `.env.example` und
 [CLAUDE.md](./CLAUDE.md)); ohne sie ist „Verbinden“ deaktiviert.
+
+## Lokale Schnittstelle (Desktop)
+
+Andere Programme auf demselben Rechner können Aufgaben im todo.txt-Format austauschen und ihren Status abfragen.
+*Einstellungen → Lokale Schnittstelle:* aktivieren, speichern, „Token anzeigen“. Der Server lauscht nur auf `127.0.0.1`
+(Standardport 42820) und verlangt `Authorization: Bearer <Token>`; Browser-Aufrufe werden abgelehnt.
+
+```bash
+T=…                                              # Token aus den Einstellungen
+curl -H "Authorization: Bearer $T" http://127.0.0.1:42820/v1/todos                       # todo.txt
+curl -H "Authorization: Bearer $T" -H "Accept: application/json" \
+     "http://127.0.0.1:42820/v1/todos?completed=false&project=work"                      # JSON mit Status
+curl -H "Authorization: Bearer $T" http://127.0.0.1:42820/v1/todos/3                     # eine Aufgabe
+curl -X POST -H "Authorization: Bearer $T" --data-binary @todo.txt http://127.0.0.1:42820/v1/todos   # nur neue Zeilen
+curl -X PATCH -H "Authorization: Bearer $T" -H "Content-Type: application/json" \
+     -d '{"completed":true}' http://127.0.0.1:42820/v1/todos/3                           # abhaken
+```
+
+Vertrag, Fehlercodes und Bedrohungsmodell: [ADR 0013](./docs/adr/0013-lokale-api.md).
 
 ## Entwicklung
 

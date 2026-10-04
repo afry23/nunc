@@ -1,6 +1,7 @@
 //! Tauri-Commands: dünne Schicht – Argumente prüfen, an Store/Core delegieren, Ergebnis abbilden.
 //! Neue Commands in `specta_builder()` (`lib.rs`) eintragen.
 
+pub mod api;
 pub mod app;
 pub mod backup;
 pub mod notifications;

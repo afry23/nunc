@@ -3144,6 +3144,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "log",
+ "nunc-api",
  "nunc-core",
  "nunc-platform",
  "nunc-store",
@@ -3167,6 +3168,26 @@ dependencies = [
  "time",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "nunc-api"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "cucumber",
+ "getrandom 0.3.4",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "log",
+ "nunc-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
 ]
 
 [[package]]
