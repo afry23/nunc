@@ -17,3 +17,13 @@ pub fn app_info() -> AppInfo {
         version: env!("CARGO_PKG_VERSION").to_owned(),
     }
 }
+
+/// Holt das Hauptfenster nach vorn und versteckt den Mini-Timer (Desktop; mobil ohne Wirkung).
+#[tauri::command]
+#[specta::specta]
+pub fn show_main_window<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
+    #[cfg(desktop)]
+    crate::windows::show_main(&app);
+    #[cfg(mobile)]
+    let _ = app;
+}

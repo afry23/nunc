@@ -5,5 +5,5 @@
  * Debug-Build bzw. `cargo test -p nunc export_bindings`). Außerhalb von
  * `src/lib/` sind `invoke` und `bindings` per ESLint gesperrt.
  */
-export { commands } from "../bindings";
+export { commands, events } from "../bindings";
 export type * from "../bindings";

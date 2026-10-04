@@ -24,6 +24,12 @@ proptest = { version = "1", default-features = false, features = ["std"] }
 tempfile = "3"
 cucumber = { version = "0.23", features = ["output-json"] }
 tokio = { version = "1", features = ["rt", "sync", "time", "macros"] }
+uuid = { version = "1", features = ["v4"] }
+keyring-core = "1"
+apple-native-keyring-store = "1"
+windows-native-keyring-store = "1"
+zbus-secret-service-keyring-store = "1"
+android-native-keyring-store = "1"
 
 # interne Crates
 nunc-core = { path = "crates/nunc-core" }

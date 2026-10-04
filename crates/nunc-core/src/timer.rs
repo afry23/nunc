@@ -198,6 +198,12 @@ impl Timer {
         self.suggestion
     }
 
+    /// Rechnerischer Endzeitpunkt, solange ein Countdown läuft (für die geplante Benachrichtigung).
+    /// `None` im Ruhezustand, pausiert und bei der Stoppuhr.
+    pub fn due_at(&self) -> Option<DateTime<Utc>> {
+        self.active.as_ref()?.due_at()
+    }
+
     /// Startet eine Arbeitssession (Pomodoro: Countdown, Flowtime: Stoppuhr).
     pub fn start(
         &mut self,
@@ -462,6 +468,36 @@ mod tests {
     use chrono::TimeZone;
 
     use super::*;
+
+    #[test]
+    fn due_at_is_the_end_of_a_running_countdown() {
+        let now = Utc.with_ymd_and_hms(2026, 10, 3, 9, 0, 0).unwrap();
+        let settings = Settings::default();
+        let mut timer = Timer::default();
+        assert_eq!(timer.due_at(), None);
+
+        timer
+            .start(now, TimerMode::Pomodoro, None, &settings)
+            .unwrap();
+        assert_eq!(timer.due_at(), Some(now + Duration::minutes(25)));
+
+        // nach 10 Minuten pausiert gibt es keinen Endzeitpunkt, nach dem Fortsetzen bleiben 15 Minuten
+        timer.pause(now + Duration::minutes(10)).unwrap();
+        assert_eq!(timer.due_at(), None);
+        let resumed = now + Duration::minutes(30);
+        timer.resume(resumed).unwrap();
+        assert_eq!(timer.due_at(), Some(resumed + Duration::minutes(15)));
+    }
+
+    #[test]
+    fn a_stopwatch_has_no_end() {
+        let now = Utc.with_ymd_and_hms(2026, 10, 3, 9, 0, 0).unwrap();
+        let mut timer = Timer::default();
+        timer
+            .start(now, TimerMode::Flowtime, None, &Settings::default())
+            .unwrap();
+        assert_eq!(timer.due_at(), None);
+    }
 
     #[test]
     fn exposes_the_active_session() {

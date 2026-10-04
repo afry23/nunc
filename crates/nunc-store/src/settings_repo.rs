@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 
 use nunc_core::model::Settings;
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::StoreError;
 
@@ -40,6 +40,27 @@ pub(crate) fn set_setting(conn: &Connection, key: &str, value: &str) -> Result<(
         params![key, value],
     )?;
     Ok(())
+}
+
+/// Kennung dieses Geräts (Schlüssel `device_id`, wie in der Go-App). Fehlt sie oder ist sie leer, legt
+/// `generate` eine neue an; sie bleibt danach stabil und kennzeichnet Sessions beim Sync.
+pub fn device_id(
+    conn: &Connection,
+    generate: impl FnOnce() -> String,
+) -> Result<String, StoreError> {
+    let stored: Option<String> = conn
+        .query_row(
+            "SELECT value FROM settings WHERE key = 'device_id'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if let Some(id) = stored.filter(|id| !id.is_empty()) {
+        return Ok(id);
+    }
+    let id = generate();
+    set_setting(conn, "device_id", &id)?;
+    Ok(id)
 }
 
 /// Go `strconv.ParseBool`.
@@ -150,6 +171,21 @@ mod tests {
             [key, value],
         )
         .unwrap();
+    }
+
+    #[test]
+    fn device_id_is_created_once_and_then_kept() {
+        let conn = open_in_memory().unwrap();
+        assert_eq!(device_id(&conn, || "dev-1".into()).unwrap(), "dev-1");
+        assert_eq!(device_id(&conn, || "dev-2".into()).unwrap(), "dev-1");
+        assert_eq!(raw(&conn, "device_id").as_deref(), Some("dev-1"));
+    }
+
+    #[test]
+    fn an_empty_device_id_is_replaced() {
+        let conn = open_in_memory().unwrap();
+        set_raw(&conn, "device_id", "");
+        assert_eq!(device_id(&conn, || "dev-3".into()).unwrap(), "dev-3");
     }
 
     #[test]
