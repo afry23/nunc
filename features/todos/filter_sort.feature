@@ -154,10 +154,3 @@ Feature: Todo filtering, search and sorting
     Given the filter projects are "+work +home"
     When I apply the filter and sort by pomodoros in descending order
     Then the result ids are "3 1 5 6"
-
-
-  @ui @REQ-4.2 @wip
-  Scenario: Filters can be set and cleared
-
-  @ui @REQ-4.2 @wip
-  Scenario: The search box filters while typing

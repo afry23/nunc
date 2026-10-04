@@ -1,0 +1,42 @@
+import { RingTimer } from "../components/RingTimer";
+import { Button } from "../components/ui";
+import { commands } from "../lib/api";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useTimerStore } from "../stores/timerStore";
+
+/** Kompakter Timer für das zweite Fenster (always-on-top). */
+export function MiniTimerView() {
+  const snapshot = useTimerStore((s) => s.snapshot);
+  const { pause, resume, stop } = useTimerStore.getState();
+  const settings = useSettingsStore((s) => s.settings);
+  const idleSeconds =
+    snapshot.mode === "pomodoro" ? (settings?.pomodoroMin ?? 25) * 60 : 0;
+
+  return (
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-container-lowest p-4">
+      <h1 className="sr-only">Mini-Timer</h1>
+      <RingTimer
+        snapshot={snapshot}
+        idleSeconds={idleSeconds}
+        size={170}
+        compact
+      />
+      <div className="flex gap-2">
+        {snapshot.state === "running" && (
+          <Button onClick={() => void pause()}>Pause</Button>
+        )}
+        {snapshot.state === "paused" && (
+          <Button variant="primary" onClick={() => void resume()}>
+            Fortsetzen
+          </Button>
+        )}
+        {snapshot.state !== "idle" && (
+          <Button onClick={() => void stop()}>Stop</Button>
+        )}
+      </div>
+      <Button variant="ghost" onClick={() => void commands.showMainWindow()}>
+        Zur App
+      </Button>
+    </main>
+  );
+}

@@ -161,24 +161,6 @@ Feature: Todo management
       | field         | value |
       | pomodoroCount | 2     |
 
-  @ui @REQ-4.2 @wip
-  Scenario: Add a todo inline using todo.txt syntax
-
-  @ui @REQ-4.2 @wip
-  Scenario: Edit a todo inline
-
-  @ui @REQ-4.2 @wip
-  Scenario: Check off a todo
-
-  @ui @REQ-4.2 @wip
-  Scenario: Delete a todo from the list
-
-  @ui @REQ-4.3 @wip
-  Scenario: The pomodoro count is shown next to the todo
-
-  @ui @REQ-4.2 @desktop @wip
-  Scenario: Reorder todos by drag and drop
-
   @ui @REQ-4.2 @mobile @wip
   Scenario: Reorder todos by touch
 
