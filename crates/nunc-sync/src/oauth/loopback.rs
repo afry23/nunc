@@ -36,7 +36,7 @@ pub struct Loopback {
 
 /// Wie lange ein einzelner Browser-Zugriff höchstens dauern darf, bis die Anfrage vollständig ist.
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
-const MAX_REQUEST: usize = 16 * 1024;
+const MAX_REQUEST: usize = 16_384;
 
 impl Loopback {
     /// Bindet an den ersten freien Port der Liste (`0` = beliebiger freier Port).
@@ -241,6 +241,48 @@ mod tests {
             error.contains("abgebrochen") && error.contains("Nein"),
             "{error}"
         );
+    }
+
+    #[tokio::test]
+    async fn a_request_line_that_arrives_in_pieces_is_read_completely() {
+        let loopback = Loopback::bind(&[0], "/cb").await.unwrap();
+        let port = loopback.port;
+        let waiting = tokio::spawn(async move {
+            loopback
+                .wait_for_code("st", Duration::from_secs(5), &PAGE, "Test")
+                .await
+        });
+        let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+        stream.write_all(b"GET /c").await.unwrap();
+        stream.flush().await.unwrap();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        stream
+            .write_all(b"b?code=teil&state=st HTTP/1.1\r\nHost: x\r\n\r\n")
+            .await
+            .unwrap();
+        let mut answer = String::new();
+        stream.read_to_string(&mut answer).await.unwrap();
+        assert!(answer.starts_with("HTTP/1.1 200 OK"), "{answer}");
+        assert_eq!(waiting.await.unwrap().unwrap(), "teil");
+    }
+
+    #[tokio::test]
+    async fn answers_carry_the_matching_status_text() {
+        let loopback = Loopback::bind(&[0], "/cb").await.unwrap();
+        let port = loopback.port;
+        let waiting = tokio::spawn(async move {
+            loopback
+                .wait_for_code("st", Duration::from_secs(5), &PAGE, "Test")
+                .await
+        });
+        assert!(get(port, "/x").await.starts_with("HTTP/1.1 404 Not Found"));
+        assert!(
+            get(port, "/cb?state=st")
+                .await
+                .starts_with("HTTP/1.1 400 Bad Request")
+        );
+        get(port, "/cb?code=c&state=st").await;
+        waiting.await.unwrap().unwrap();
     }
 
     #[tokio::test]

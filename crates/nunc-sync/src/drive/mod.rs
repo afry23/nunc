@@ -299,3 +299,93 @@ impl SyncRunner for ChainRunner {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::{TimeZone, Utc};
+    use nunc_platform::{ManualClock, MemorySecretStore};
+
+    use super::*;
+
+    fn service(client_id: &str, client_secret: &str) -> DriveService {
+        DriveService::new(
+            DriveConfig::google(client_id, client_secret),
+            Arc::new(MemorySecretStore::default()),
+            Arc::new(ManualClock::new(
+                Utc.with_ymd_and_hms(2026, 10, 4, 9, 0, 0).unwrap(),
+            )),
+        )
+        .unwrap()
+    }
+
+    fn connect(service: &DriveService, email: Option<&str>) {
+        service
+            .vault
+            .save(&Connection {
+                tokens: crate::oauth::Tokens {
+                    access_token: "a".into(),
+                    refresh_token: None,
+                    expires_at: None,
+                },
+                email: email.map(str::to_owned),
+                avatar_url: None,
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn google_needs_a_client_id_and_may_lack_a_secret() {
+        let config = DriveConfig::google("id", "secret");
+        assert!(config.is_configured());
+        assert_eq!(config.app.client_secret.as_deref(), Some("secret"));
+        assert_eq!(
+            config.app.scope,
+            "https://www.googleapis.com/auth/drive.file"
+        );
+        let without_secret = DriveConfig::google("id", "");
+        assert_eq!(without_secret.app.client_secret, None);
+        assert!(!DriveConfig::google("", "secret").is_configured());
+    }
+
+    #[test]
+    fn the_folder_link_points_into_drive() {
+        assert_eq!(
+            folder_url("abc123"),
+            "https://drive.google.com/drive/folders/abc123"
+        );
+    }
+
+    #[test]
+    fn the_status_reflects_the_vault_and_the_known_folder() {
+        let service = service("id", "secret");
+        let status = service.status(Some("folder-1")).unwrap();
+        assert!(status.configured && !status.connected);
+        assert_eq!(status.email, None);
+        assert_eq!(
+            status.folder_url.as_deref(),
+            Some("https://drive.google.com/drive/folders/folder-1")
+        );
+        assert_eq!(service.status(Some("")).unwrap().folder_url, None);
+        assert_eq!(service.status(None).unwrap().folder_url, None);
+        assert!(!service.is_connected().unwrap());
+
+        connect(&service, Some("me@example.org"));
+        assert!(service.is_connected().unwrap());
+        let status = service.status(None).unwrap();
+        assert!(status.connected);
+        assert_eq!(status.email.as_deref(), Some("me@example.org"));
+        assert!(!self::service("", "").status(None).unwrap().configured);
+    }
+
+    #[test]
+    fn disconnecting_removes_the_connection() {
+        let service = service("id", "secret");
+        connect(&service, None);
+        service.disconnect().unwrap();
+        assert!(!service.is_connected().unwrap());
+        assert!(matches!(
+            service.client(),
+            Err(SyncError::NotConnected("Google Drive"))
+        ));
+    }
+}

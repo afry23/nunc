@@ -307,7 +307,10 @@ mod tests {
             expires_at: None,
         };
         let text = format!("{tokens:?}");
-        assert!(!text.contains("geheim"));
+        assert!(
+            text.starts_with("Tokens") && !text.contains("geheim"),
+            "{text}"
+        );
     }
 
     #[test]
@@ -332,5 +335,147 @@ mod tests {
         assert_eq!(query["response_type"], "code");
         assert_eq!(query["redirect_uri"], "http://127.0.0.1:1/cb");
         assert_eq!(query["access_type"], "offline");
+    }
+
+    mod token_endpoint {
+        use wiremock::matchers::{method, path};
+        use wiremock::{Mock, MockServer, ResponseTemplate};
+
+        use super::super::*;
+
+        fn app(server: &MockServer) -> OAuthApp {
+            OAuthApp {
+                service: "Test",
+                client_id: "id".into(),
+                client_secret: Some("secret".into()),
+                auth_url: String::new(),
+                token_url: format!("{}/token", server.uri()),
+                scope: String::new(),
+                auth_params: vec![],
+            }
+        }
+
+        fn now() -> DateTime<Utc> {
+            DateTime::parse_from_rfc3339("2026-10-04T10:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc)
+        }
+
+        async fn answer(status: u16, body: serde_json::Value) -> (MockServer, OAuthApp) {
+            let server = MockServer::start().await;
+            Mock::given(method("POST"))
+                .and(path("/token"))
+                .respond_with(ResponseTemplate::new(status).set_body_json(body))
+                .mount(&server)
+                .await;
+            let app = app(&server);
+            (server, app)
+        }
+
+        async fn exchange(status: u16, body: serde_json::Value) -> Result<Tokens, SyncError> {
+            let (_server, app) = answer(status, body).await;
+            exchange_code(
+                &http_client().unwrap(),
+                &app,
+                "code",
+                "verifier",
+                "http://127.0.0.1:1/cb",
+                now(),
+            )
+            .await
+        }
+
+        #[tokio::test]
+        async fn tokens_with_a_lifetime_expire_at_the_right_time() {
+            let tokens = exchange(
+                200,
+                serde_json::json!({ "access_token": "a", "refresh_token": "r", "expires_in": 3600 }),
+            )
+            .await
+            .unwrap();
+            assert_eq!(tokens.access_token, "a");
+            assert_eq!(tokens.refresh_token.as_deref(), Some("r"));
+            assert_eq!(
+                tokens.expires_at,
+                Some(now() + ChronoDuration::seconds(3600))
+            );
+        }
+
+        #[tokio::test]
+        async fn tokens_without_a_positive_lifetime_never_expire() {
+            for body in [
+                serde_json::json!({ "access_token": "a" }),
+                serde_json::json!({ "access_token": "a", "expires_in": 0 }),
+                serde_json::json!({ "access_token": "a", "expires_in": -5, "refresh_token": "" }),
+            ] {
+                let tokens = exchange(200, body).await.unwrap();
+                assert_eq!(tokens.expires_at, None);
+                assert_eq!(tokens.refresh_token, None);
+            }
+        }
+
+        #[tokio::test]
+        async fn a_one_second_lifetime_counts() {
+            let tokens = exchange(
+                200,
+                serde_json::json!({ "access_token": "a", "expires_in": 1 }),
+            )
+            .await
+            .unwrap();
+            assert_eq!(tokens.expires_at, Some(now() + ChronoDuration::seconds(1)));
+        }
+
+        #[tokio::test]
+        async fn failures_name_the_reason() {
+            // ein Token trotz Fehlerstatus gilt nicht
+            let error = exchange(
+                400,
+                serde_json::json!({ "access_token": "a", "error": "invalid_grant" }),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+            assert_eq!(
+                error,
+                "Token-Austausch mit Test fehlgeschlagen: invalid_grant"
+            );
+            // leeres Token trotz Erfolgsstatus
+            let error = exchange(200, serde_json::json!({ "access_token": "" }))
+                .await
+                .unwrap_err()
+                .to_string();
+            assert_eq!(error, "Token-Austausch mit Test fehlgeschlagen: HTTP 200");
+            let error = exchange(
+                400,
+                serde_json::json!({ "error": "x", "error_description": "Beschreibung" }),
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+            assert!(error.ends_with("Beschreibung"), "{error}");
+        }
+
+        #[tokio::test]
+        async fn renewal_keeps_the_old_refresh_token_when_none_comes_back() {
+            let (_server, app) = answer(
+                200,
+                serde_json::json!({ "access_token": "neu", "expires_in": 60 }),
+            )
+            .await;
+            let tokens = refresh_tokens(&http_client().unwrap(), &app, "alt", now())
+                .await
+                .unwrap();
+            assert_eq!(tokens.access_token, "neu");
+            assert_eq!(tokens.refresh_token.as_deref(), Some("alt"));
+        }
+
+        #[tokio::test]
+        async fn a_rejected_renewal_asks_for_a_new_login() {
+            let (_server, app) = answer(400, serde_json::json!({ "error": "invalid_grant" })).await;
+            let error = refresh_tokens(&http_client().unwrap(), &app, "alt", now())
+                .await
+                .unwrap_err();
+            assert!(matches!(error, SyncError::AuthExpired("Test")), "{error}");
+        }
     }
 }

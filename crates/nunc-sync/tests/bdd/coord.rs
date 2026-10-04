@@ -205,6 +205,16 @@ where
     out
 }
 
+#[when(expr = "I replace the last sync time with {string}")]
+fn replace_last_sync(world: &mut SyncWorld, time: String) {
+    world.coord.coordinator().set_last_sync_at(Some(time));
+}
+
+#[when("I replace the last sync time with nothing")]
+fn clear_last_sync(world: &mut SyncWorld) {
+    world.coord.coordinator().set_last_sync_at(None);
+}
+
 #[when("I sync now")]
 async fn sync_now(world: &mut SyncWorld) {
     let coordinator = world.coord.coordinator();

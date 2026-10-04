@@ -195,6 +195,7 @@ Feature: Todoist sync
     When I sync with Todoist
     Then Todoist closed the task "Finished"
     And Todoist received 0 create, 0 update and 1 close requests
+    And there are 1 Todoist mappings
 
   @integration @sync @US-Todoist-Sync @desktop
   Scenario: Long lists are read page by page
@@ -252,3 +253,14 @@ Feature: Todoist sync
       | rawText      |
       | From Todoist |
     Then I see "Todoist: 1 Aufgabe importiert."
+
+  @integration @sync @US-Todoist-Sync @desktop
+  Scenario: A project and a label that are new are created only once
+    Given a Todoist server
+    And Todoist is connected
+    And no database exists yet
+    And the local todos "Plan +Home @new, Pay +Home @new"
+    When I sync with Todoist
+    Then Todoist knows the project "Home" once
+    And Todoist knows the label "new" once
+    And Todoist received 2 create, 0 update and 0 close requests

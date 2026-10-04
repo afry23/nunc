@@ -69,7 +69,8 @@ beide Namen. `GET /tasks` liefert nur **aktive** Aufgaben: was dort fehlt, gilt 
 Scope `data:read_write`, PKCE. Neue Apps erhalten Access-Tokens mit **einer Stunde** Lebensdauer und gedrehten
 Refresh-Tokens (60 s Karenz); die Annahme der Go-App („Todoist stellt keine Refresh-Tokens aus“) trifft nicht mehr zu.
 Ältere Apps haben unbefristete Tokens: ohne `expires_in` läuft das Token nie ab. Konto (E-Mail, Avatar) kommt von
-`GET /api/v1/user` (`email`, `avatar_small`).
+`GET /api/v1/user` (`email`, `avatar_small`). Der Avatar liegt bei Todoist bzw. CloudFront; die CSP erlaubt dafür
+`img-src https://*.todoist.com https://*.cloudfront.net` (fehlt der Eintrag, zeigt die Oberfläche nur den Alternativtext).
 
 **Sync:** Merge-Regeln pur in `nunc-core::todoist_mapping` (M1). `nunc-sync::todoist` besitzt Client und Lauf, die
 Datenbank sieht er nur über das Trait `TodoistStore` (keine Sperre über einen Netzwerkzugriff). Ablauf wie in Go

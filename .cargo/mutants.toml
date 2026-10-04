@@ -10,6 +10,10 @@ exclude_globs = [
 
 # Reine Darstellungs-/Diagnosecode erzeugt Rauschen ohne Aussagekraft.
 exclude_re = [
+  # Zeitgrenzen des HTTP-Clients und die Obergrenze einer Anfragezeile des Loopback-Servers lassen sich nicht sinnvoll
+  # prüfen (ADR 0007: äquivalent bzw. nicht beobachtbar)
+  "replace http_client",
+  "replace < with <= in read_target",
   "impl (Debug|Display) for",
   "<impl Debug",
   "<impl Display",

@@ -37,7 +37,7 @@ impl Default for State {
             secrets: Arc::new(MemorySecretStore::default()),
             browser: None,
             client_id: "client-123".to_owned(),
-            auth_timeout: Duration::from_secs(10),
+            auth_timeout: Duration::from_secs(3),
             error: None,
             status: None,
             import: None,
