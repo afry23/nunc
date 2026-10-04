@@ -17,8 +17,22 @@ Feature: Compatibility with the database of the Go app
     Then exactly the migrations 1 to 6 are recorded as applied
     And the migration timestamps did not change
 
-  @integration @REQ-compat @desktop @wip
+  @integration @REQ-compat @desktop
   Scenario: Settings and their defaults match the Go keys
+    Given the Go fixture database
+    When nunc opens the database
+    And I load the settings
+    Then the loaded settings are:
+      | setting                 | value      |
+      | pomodoroMin             | 30         |
+      | shortBreakMin           | 6          |
+      | longBreakAfter          | 3          |
+      | soundVolume             | 55         |
+      | lastBackupDate          | 2026-09-29 |
+      | syncProvider            | webdav     |
+      | flowtimeRatio           | 0.25       |
+      | flowtimeMinFlowStateMin | 20         |
+      | autoStartNextPomodoro   | false      |
 
   @integration @REQ-compat @desktop @wip
   Scenario: Todos are read including sync ids and soft-deleted ones

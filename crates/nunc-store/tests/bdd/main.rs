@@ -13,6 +13,8 @@ use nunc_core::timer::Timer;
 use rusqlite::Connection;
 use tempfile::TempDir;
 
+mod settings;
+
 /// Gemeinsamer Zustand der `@integration`-Szenarien.
 #[derive(Debug, Default, World)]
 pub struct StoreWorld {
@@ -24,6 +26,7 @@ pub struct StoreWorld {
     /// `sqlite_master`-Definitionen vor dem Öffnen: Name → SQL
     schema_before: Option<BTreeMap<String, String>>,
     timer: Timer,
+    settings: Settings,
 }
 
 /// Uhrzeit `HH:MM:SS` am festen Testtag (UTC).
