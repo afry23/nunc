@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use nunc_core::clock::Clock;
-use nunc_core::model::{SyncFile, SyncResult, SyncSession, SyncStatus, SyncTodo};
+use nunc_core::model::{SyncFile, SyncProvider, SyncResult, SyncSession, SyncStatus, SyncTodo};
 use nunc_platform::{EventSink, SecretStore};
 use nunc_store::{Applied, StoreError};
 use nunc_sync::{SyncCoordinator, SyncObserver, SyncSetup, SyncStore, Timing, WebDavRunner};
@@ -54,8 +54,12 @@ impl SyncStore for DbSyncStore {
         })
     }
 
-    fn record_sync(&self, at: DateTime<Utc>) -> Result<(), StoreError> {
-        self.with(|conn| nunc_store::set_last_sync_at(conn, at))
+    fn record_sync(&self, provider: SyncProvider, at: DateTime<Utc>) -> Result<(), StoreError> {
+        self.with(|conn| nunc_store::set_last_sync_of(conn, provider, at))
+    }
+
+    fn record_drive_folder(&self, id: &str) -> Result<(), StoreError> {
+        self.with(|conn| nunc_store::set_drive_folder_id(conn, id))
     }
 
     fn apply_remote(

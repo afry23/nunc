@@ -93,6 +93,8 @@ pub struct State {
     pub quit_took: Option<Duration>,
     pub last_error: Option<String>,
     pub runner_outcome: Option<nunc_sync::RunOutcome>,
+    /// Statt des Skripts: ein echter Läufer.
+    pub runner_override: Option<Arc<dyn SyncRunner>>,
 }
 
 impl Default for State {
@@ -107,6 +109,7 @@ impl Default for State {
             quit_took: None,
             last_error: None,
             runner_outcome: None,
+            runner_override: None,
         }
     }
 }
@@ -116,7 +119,9 @@ impl State {
         self.coordinator
             .get_or_insert_with(|| {
                 SyncCoordinator::new(
-                    self.runner.clone(),
+                    self.runner_override
+                        .clone()
+                        .unwrap_or_else(|| self.runner.clone()),
                     self.observer.clone(),
                     tokio::runtime::Handle::current(),
                     self.mobile,

@@ -17,7 +17,8 @@ pub use stats::{
 };
 pub use sync::{SyncFile, SyncSession, SyncTodo};
 pub use sync_status::{
-    ConnectionTestResult, SyncResult, SyncState, SyncStatus, WebDavAuth, WebDavConfig, is_http_url,
+    ConnectionTestResult, DriveStatus, SyncImportInfo, SyncResult, SyncState, SyncStatus,
+    TodoistStatus, WebDavAuth, WebDavConfig, is_http_url,
 };
 pub use timer::{TimerMode, TimerState};
 pub use todo::Todo;

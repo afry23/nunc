@@ -16,7 +16,7 @@ use crate::coordinator::{RunFuture, SyncRunner};
 use crate::webdav::{Precondition, WebDavClient};
 
 /// Wie oft ein Lauf neu ansetzt, wenn jemand gleichzeitig die Datei auf dem Server ändert.
-const MAX_ATTEMPTS: usize = 3;
+pub(crate) const MAX_ATTEMPTS: usize = 3;
 
 /// Was der Sync von den Einstellungen wissen muss.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,14 +34,55 @@ pub trait SyncStore: Send + Sync {
     fn local_file(&self, now: DateTime<Utc>) -> Result<SyncFile, StoreError>;
     /// Gewählter Anbieter und WebDAV-Einstellungen.
     fn setup(&self) -> Result<SyncSetup, StoreError>;
-    /// Merkt sich den Zeitpunkt des letzten erfolgreichen Syncs.
-    fn record_sync(&self, at: DateTime<Utc>) -> Result<(), StoreError>;
+    /// Merkt sich den Zeitpunkt des letzten erfolgreichen Syncs mit dem Anbieter.
+    fn record_sync(&self, provider: SyncProvider, at: DateTime<Utc>) -> Result<(), StoreError>;
+    /// Merkt sich den Drive-Ordner (für den Link „In Drive öffnen“).
+    fn record_drive_folder(&self, id: &str) -> Result<(), StoreError>;
     /// Spielt Änderungen vom Server atomar ein.
     fn apply_remote(
         &self,
         todos: &[SyncTodo],
         sessions: &[SyncSession],
     ) -> Result<Applied, StoreError>;
+}
+
+/// Führt den Stand vom Server mit dem lokalen zusammen und spielt Änderungen ein. Liefert die Datei, die
+/// hochzuladen ist; `result` zählt, was in der Datenbank ankam.
+///
+/// Gezählt wird, was wirklich in der Datenbank ankam: Der Server kennt auch Sessions, die lokal vorhanden,
+/// aber nicht exportierbar sind (abgebrochene), und bereits gelöschte Todos legt der Sync nicht an.
+/// Bei einem neuen Anlauf sind die Änderungen schon eingespielt und zählen nicht doppelt.
+pub(crate) fn merge_remote(
+    store: &dyn SyncStore,
+    clock: &dyn Clock,
+    remote: Option<&SyncFile>,
+    result: &mut SyncResult,
+) -> Result<SyncFile, SyncError> {
+    let local = store.local_file(clock.now())?;
+    let (remote_todos, remote_sessions) = remote
+        .map(|remote| (remote.todos.as_slice(), remote.sessions.as_slice()))
+        .unwrap_or_default();
+
+    let todos = merge_todos(&local.todos, remote_todos);
+    let sessions = merge_sessions(&local.sessions, remote_sessions);
+    let changed: Vec<SyncTodo> = todos
+        .added_by_remote
+        .iter()
+        .chain(&todos.conflicted_by_remote)
+        .cloned()
+        .collect();
+    let applied = store.apply_remote(&changed, &sessions.new_from_remote)?;
+    result.imported_todos += applied.todos_added;
+    result.conflicted_todos += applied.todos_replaced;
+    result.imported_sessions += applied.sessions_added;
+
+    Ok(SyncFile {
+        schema_version: local.schema_version,
+        synced_at: clock.now(),
+        device_id: local.device_id,
+        todos: todos.merged,
+        sessions: sessions.all,
+    })
 }
 
 /// Führt einen Sync-Lauf aus. Liefert, was vom Server übernommen wurde.
@@ -54,40 +95,12 @@ pub async fn sync_webdav(
     let mut result = SyncResult::default();
     for _ in 0..MAX_ATTEMPTS {
         let remote = client.download().await?;
-        let local = store.local_file(clock.now())?;
-        let (remote_todos, remote_sessions) = remote
-            .as_ref()
-            .map(|remote| {
-                (
-                    remote.file.todos.as_slice(),
-                    remote.file.sessions.as_slice(),
-                )
-            })
-            .unwrap_or_default();
-
-        let todos = merge_todos(&local.todos, remote_todos);
-        let sessions = merge_sessions(&local.sessions, remote_sessions);
-        let changed: Vec<SyncTodo> = todos
-            .added_by_remote
-            .iter()
-            .chain(&todos.conflicted_by_remote)
-            .cloned()
-            .collect();
-        // Gezählt wird, was wirklich in der Datenbank ankam: Der Server kennt auch Sessions, die lokal vorhanden,
-        // aber nicht exportierbar sind (abgebrochene), und bereits gelöschte Todos legt der Sync nicht an.
-        // Bei einem neuen Anlauf sind die Änderungen schon eingespielt und zählen nicht doppelt.
-        let applied = store.apply_remote(&changed, &sessions.new_from_remote)?;
-        result.imported_todos += applied.todos_added;
-        result.conflicted_todos += applied.todos_replaced;
-        result.imported_sessions += applied.sessions_added;
-
-        let merged = SyncFile {
-            schema_version: local.schema_version,
-            synced_at: clock.now(),
-            device_id: local.device_id,
-            todos: todos.merged,
-            sessions: sessions.all,
-        };
+        let merged = merge_remote(
+            store,
+            clock,
+            remote.as_ref().map(|remote| &remote.file),
+            &mut result,
+        )?;
         let precondition = match &remote {
             Some(remote) => remote
                 .etag
@@ -143,7 +156,7 @@ impl SyncRunner for WebDavRunner {
             let client = WebDavClient::new(setup.webdav, password)?;
             let result = sync_webdav(&client, &*store, &*clock).await?;
             let finished = clock.now();
-            store.record_sync(finished)?;
+            store.record_sync(SyncProvider::Webdav, finished)?;
             Ok(Some((
                 result,
                 finished.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),

@@ -37,7 +37,11 @@ impl SyncStore for Store {
         })
     }
 
-    fn record_sync(&self, _: DateTime<Utc>) -> Result<(), StoreError> {
+    fn record_sync(&self, _: SyncProvider, _: DateTime<Utc>) -> Result<(), StoreError> {
+        Ok(())
+    }
+
+    fn record_drive_folder(&self, _: &str) -> Result<(), StoreError> {
         Ok(())
     }
 

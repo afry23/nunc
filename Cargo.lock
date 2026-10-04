@@ -3171,14 +3171,17 @@ dependencies = [
 name = "nunc-sync"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "cucumber",
+ "getrandom 0.3.4",
  "log",
  "md-5",
  "nunc-core",
  "nunc-platform",
  "nunc-store",
  "reqwest 0.12.28",
+ "serde",
  "serde_json",
  "sha2 0.10.9",
  "tempfile",

@@ -27,8 +27,9 @@ pub use rusqlite::Connection;
 pub use session_repo::{commit_finish, list_sessions};
 pub use settings_repo::{device_id, load_settings, save_settings, set_sync_provider};
 pub use sync_repo::{
-    Applied, apply_remote, build_sync_file, last_sync_at, load_webdav_config, save_webdav_config,
-    set_last_sync_at,
+    Applied, apply_remote, build_sync_file, drive_folder_id, last_sync_at, last_sync_of,
+    load_webdav_config, save_webdav_config, set_drive_folder_id, set_last_sync_at,
+    set_last_sync_of, set_todoist_last_sync_at, todoist_last_sync_at,
 };
 pub use timer_state::{load_timer, save_timer};
 pub use todo_repo::{

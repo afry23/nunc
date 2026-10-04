@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, TimeZone, Utc};
 use cucumber::World;
-use nunc_core::model::{ConnectionTestResult, SyncFile, SyncResult, WebDavConfig};
+use nunc_core::model::{ConnectionTestResult, SyncFile, SyncProvider, SyncResult, WebDavConfig};
 use nunc_platform::{ManualClock, MemorySecretStore};
 use nunc_store::{Connection, StoreError};
 use nunc_sync::{SyncError, SyncStore};
@@ -16,6 +16,8 @@ use tempfile::TempDir;
 
 mod coord;
 mod dav;
+mod google;
+mod google_steps;
 mod steps;
 
 pub use dav::Dav;
@@ -60,8 +62,12 @@ impl SyncStore for TestStore {
         })
     }
 
-    fn record_sync(&self, at: DateTime<Utc>) -> Result<(), StoreError> {
-        nunc_store::set_last_sync_at(&self.conn.lock().unwrap(), at)
+    fn record_sync(&self, provider: SyncProvider, at: DateTime<Utc>) -> Result<(), StoreError> {
+        nunc_store::set_last_sync_of(&self.conn.lock().unwrap(), provider, at)
+    }
+
+    fn record_drive_folder(&self, id: &str) -> Result<(), StoreError> {
+        nunc_store::set_drive_folder_id(&self.conn.lock().unwrap(), id)
     }
 
     fn apply_remote(
@@ -90,6 +96,7 @@ pub struct SyncWorld {
     pub test_result: Option<ConnectionTestResult>,
     pub config: Option<WebDavConfig>,
     pub coord: coord::State,
+    pub google: google_steps::State,
 }
 
 impl std::fmt::Debug for SyncWorld {
@@ -115,6 +122,7 @@ impl SyncWorld {
             test_result: None,
             config: None,
             coord: coord::State::default(),
+            google: google_steps::State::default(),
         })
     }
 

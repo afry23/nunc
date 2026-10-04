@@ -337,7 +337,7 @@ fn encode_segment(segment: &str) -> String {
 }
 
 /// Lesbarer Text zu einem Netzwerkfehler (Go: `friendlyWebDAVError`).
-fn describe_transport_error(error: &reqwest::Error) -> String {
+pub(crate) fn describe_transport_error(error: &reqwest::Error) -> String {
     let mut chain = error.to_string();
     let mut source = std::error::Error::source(error);
     while let Some(cause) = source {

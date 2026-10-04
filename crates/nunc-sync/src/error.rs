@@ -1,4 +1,4 @@
-use nunc_platform::SecretError;
+use nunc_platform::{OpenError, SecretError};
 use nunc_store::StoreError;
 
 /// Fehler der Synchronisierung. Die Texte sind für die Anzeige gedacht (deutsch, ohne Technikjargon, soweit
@@ -25,6 +25,17 @@ pub enum SyncError {
     InvalidUrl(String),
     #[error("WebDAV ist nicht vollständig eingerichtet")]
     NotConfigured,
+    /// Es gibt keine gespeicherte Anmeldung (`Google Drive`, `Todoist`).
+    #[error("Nicht mit {0} verbunden")]
+    NotConnected(&'static str),
+    /// Der Dienst lehnt das Token ab und es lässt sich nicht erneuern.
+    #[error("{0}: Anmeldung abgelaufen – bitte neu verbinden")]
+    AuthExpired(&'static str),
+    /// Fehler beim Anmelden (Browser, Rückruf, Token-Austausch), bereits als Text für die Anzeige.
+    #[error("{0}")]
+    OAuth(String),
+    #[error("{0}")]
+    Open(#[from] OpenError),
     #[error("{0}")]
     Store(#[from] StoreError),
     #[error("{0}")]
