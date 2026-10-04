@@ -1,21 +1,29 @@
 //! Protokoll der App (`tauri-plugin-log`): Datei im Log-Ordner des Systems mit Rotation, in Debug-Builds
-//! zusätzlich Stdout. Tokens und Passwörter gehören nie in eine Meldung (siehe CLAUDE.md „Do Not“).
+//! zusätzlich Stdout (nicht auf iOS, siehe `Cargo.toml`). Tokens und Passwörter gehören nie in eine Meldung (siehe CLAUDE.md „Do Not“).
 
 use std::sync::OnceLock;
 use std::time::Instant;
 
+#[cfg(not(target_os = "ios"))]
 use log::LevelFilter;
+#[cfg(not(target_os = "ios"))]
 use tauri::Runtime;
+#[cfg(not(target_os = "ios"))]
 use tauri::plugin::TauriPlugin;
+#[cfg(not(target_os = "ios"))]
 use tauri_plugin_log::{Builder, RotationStrategy, Target, TargetKind};
 
+#[cfg(not(target_os = "ios"))]
 /// Dateiname ohne Endung: `nunc.log`, rotierte Dateien tragen das Datum.
 const LOG_FILE: &str = "nunc";
+#[cfg(not(target_os = "ios"))]
 /// Eine Datei wird ab dieser Größe rotiert.
 const MAX_FILE_BYTES: u128 = 1_000_000;
+#[cfg(not(target_os = "ios"))]
 /// So viele rotierte Dateien bleiben liegen, ältere werden gelöscht.
 const KEPT_FILES: usize = 5;
 
+#[cfg(not(target_os = "ios"))]
 /// Mindeststufe: Debug-Builds protokollieren alles, Release-Builds ab `Info`.
 pub fn default_level(debug: bool) -> LevelFilter {
     if debug {
@@ -43,6 +51,7 @@ pub fn log_startup(milestone: &str) {
     }
 }
 
+#[cfg(not(target_os = "ios"))]
 pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
     let debug = cfg!(debug_assertions);
     let mut targets = vec![Target::new(TargetKind::LogDir {
@@ -65,7 +74,7 @@ pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
         .build()
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_os = "ios")))]
 mod tests {
     use super::*;
 

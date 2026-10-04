@@ -105,8 +105,10 @@ pub fn run() {
     #[cfg(desktop)]
     let builder_app = builder_app.on_window_event(windows::on_window_event);
 
+    #[cfg(not(target_os = "ios"))]
+    let builder_app = builder_app.plugin(logging::plugin());
+
     let app = builder_app
-        .plugin(logging::plugin())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())

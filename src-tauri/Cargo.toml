@@ -39,7 +39,6 @@ specta.workspace = true
 specta-typescript.workspace = true
 tauri-specta.workspace = true
 tauri-plugin-os = "2.4.0"
-tauri-plugin-log = "2.10.0"
 
 # geplante Benachrichtigungen (OffsetDateTime) gibt es nur mobil
 [target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
@@ -47,6 +46,10 @@ time = "0.3"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
+
+# Protokolldatei nicht auf iOS: das Plugin zieht `num_threads`, das dort nicht kompiliert (libc ohne mach_task_self)
+[target.'cfg(not(target_os = "ios"))'.dependencies]
+tauri-plugin-log = "2.10.0"
 
 [dev-dependencies]
 tempfile.workspace = true
