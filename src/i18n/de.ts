@@ -140,6 +140,14 @@ export const de = {
   "todos.new": "Neue Aufgabe",
   "todos.placeholder": "(A) Dokumentation fertig +projekt @kontext",
   "todos.add": "Hinzufügen",
+  "todos.import": "Importieren",
+  "todos.export": "Exportieren",
+  "todos.import.none": "Die Datei enthält keine neuen Aufgaben.",
+  "todos.import.added":
+    "{count} Aufgabe importiert|{count} Aufgaben importiert",
+  "todos.import.duplicates":
+    "{count} Duplikat übersprungen|{count} Duplikate übersprungen",
+  "todos.exportSaved": "Aufgaben exportiert: {path}",
   "todos.filter": "Filter",
   "todos.search.label": "Aufgaben durchsuchen",
   "todos.search.placeholder": "Suchen …",

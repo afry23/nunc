@@ -34,8 +34,8 @@ pub use sync_repo::{
 };
 pub use timer_state::{load_timer, save_timer};
 pub use todo_repo::{
-    add_todo, delete_todo, increment_pomodoro_count, list_all_todos, list_todos, reorder_todos,
-    set_todo_completed, update_todo,
+    TodotxtImport, add_todo, delete_todo, export_todotxt, import_todotxt, increment_pomodoro_count,
+    list_all_todos, list_todos, reorder_todos, set_todo_completed, update_todo,
 };
 pub use todoist_repo::{
     TodoistApplied, TodoistWrite, add_todoist_mapping, apply_todoist_writes, list_local_todos,

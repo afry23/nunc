@@ -142,6 +142,13 @@ export const en: Record<keyof typeof de, string> = {
   "todos.new": "New task",
   "todos.placeholder": "(A) Finish documentation +project @context",
   "todos.add": "Add",
+  "todos.import": "Import",
+  "todos.export": "Export",
+  "todos.import.none": "The file contains no new tasks.",
+  "todos.import.added": "{count} task imported|{count} tasks imported",
+  "todos.import.duplicates":
+    "{count} duplicate skipped|{count} duplicates skipped",
+  "todos.exportSaved": "Tasks exported: {path}",
   "todos.filter": "Filter",
   "todos.search.label": "Search tasks",
   "todos.search.placeholder": "Search …",

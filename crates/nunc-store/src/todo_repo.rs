@@ -7,6 +7,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use nunc_core::model::Todo;
 use nunc_core::todotxt::{ParsedTodo, build_raw_text, parse_line};
+use nunc_core::todotxt_file::{export_todotxt as export_todotxt_text, plan_import};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::StoreError;
@@ -183,6 +184,42 @@ pub fn reorder_todos(conn: &mut Connection, ids: &[i32]) -> Result<(), StoreErro
     }
     tx.commit()?;
     Ok(())
+}
+
+/// Ergebnis von [`import_todotxt`].
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct TodotxtImport {
+    /// Neu angelegte Todos in Dateireihenfolge.
+    pub added: Vec<Todo>,
+    /// Zeilen, die es schon gab oder die mehrfach in der Datei standen.
+    pub duplicates: usize,
+}
+
+/// Liest den Text einer todo.txt-Datei und legt alle neuen Zeilen hinten an (eine Transaktion: alles oder
+/// nichts). Vorhandene, nicht gelöschte Todos mit gleichem Text und Wiederholungen zählen als Dublette.
+/// `new_sync_id` liefert je neuem Todo eine frische Sync-Kennung.
+pub fn import_todotxt(
+    conn: &mut Connection,
+    text: &str,
+    now: DateTime<Utc>,
+    new_sync_id: &mut dyn FnMut() -> String,
+) -> Result<TodotxtImport, StoreError> {
+    let tx = conn.transaction()?;
+    let plan = plan_import(text, &list_todos(&tx)?);
+    let mut added = Vec::with_capacity(plan.to_add.len());
+    for line in &plan.to_add {
+        added.push(add_todo(&tx, line, &new_sync_id(), now)?);
+    }
+    tx.commit()?;
+    Ok(TodotxtImport {
+        added,
+        duplicates: plan.duplicates,
+    })
+}
+
+/// Alle nicht gelöschten Todos als todo.txt-Datei (siehe [`export_todotxt_text`](nunc_core::todotxt_file::export_todotxt)).
+pub fn export_todotxt(conn: &Connection, include_completed: bool) -> Result<String, StoreError> {
+    Ok(export_todotxt_text(&list_todos(conn)?, include_completed))
 }
 
 /// Zählt einen abgeschlossenen Pomodoro für das Todo.

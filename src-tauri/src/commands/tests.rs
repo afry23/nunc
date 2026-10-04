@@ -15,7 +15,7 @@ use tempfile::TempDir;
 
 use crate::state::{AppPaths, AppState, Platform};
 
-use super::{app, backup, notifications, settings, stats, sync, timer, todos};
+use super::{app, backup, notifications, settings, stats, sync, timer, todos, todotxt};
 
 struct Harness {
     _dir: TempDir,
@@ -701,4 +701,33 @@ fn unknown_arguments_are_rejected_by_tauri_not_ignored() {
     // Schutz vor Tippfehlern im Frontend: `raw_text` statt `rawText` ist ein Fehler
     let h = Harness::new();
     assert!(h.call("add_todo", json!({ "raw_text": "x" })).is_err());
+}
+
+#[test]
+fn todotxt_import_adds_new_lines_and_export_returns_them() {
+    let h = Harness::new();
+    h.ok("add_todo", json!({ "rawText": "Bericht +work" }));
+    let state = h.app.state::<AppState>();
+
+    let result = todotxt::import_text(&state, "Bericht +work\n(A) Steuer +privat\n\n").unwrap();
+    assert_eq!((result.added, result.duplicates), (1, 1));
+    let again = todotxt::import_text(&state, "(A) Steuer +privat\n").unwrap();
+    assert_eq!((again.added, again.duplicates), (0, 1));
+
+    let todos = h.ok("get_todos", json!({}));
+    assert_eq!(todos.as_array().unwrap().len(), 2);
+    assert_eq!(todos[1]["priority"], "A");
+    assert_eq!(
+        todotxt::export_text(&state).unwrap(),
+        "Bericht +work\n(A) Steuer +privat\n"
+    );
+}
+
+#[test]
+fn todotxt_empty_file_adds_nothing_and_exports_nothing() {
+    let h = Harness::new();
+    let state = h.app.state::<AppState>();
+    let result = todotxt::import_text(&state, "").unwrap();
+    assert_eq!((result.added, result.duplicates), (0, 0));
+    assert_eq!(todotxt::export_text(&state).unwrap(), "");
 }

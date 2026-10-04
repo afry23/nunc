@@ -10,6 +10,9 @@ Android und iOS – die Neuschreibung der Go/Wails-App `nunc-go`; die Daten blei
 - **Timer:** Pomodoro (Arbeit, kurze/lange Pause, Auto-Start) und Flowtime (Stoppuhr, Pause aus dem Verhältnis
   Arbeit : Pause). Der Timer läuft im Backend über Zeitstempel; er überlebt Hintergrund, Neustart und Kill der App.
 - **Aufgaben:** todo.txt mit Priorität, `+Projekt`, `@Kontext`, 🍅-Zähler, Filter, Suche, Sortierung, Drag & Drop.
+  **Import/Export** einer `todo.txt`-Datei (Aufgaben-Ansicht, „Importieren“/„Exportieren“): der Import legt nur neue Zeilen an
+  (Dubletten und Leerzeilen werden übersprungen), der Export schreibt alle aktiven Aufgaben, eine Zeile je Aufgabe. Pomodoro-Zähler
+  kennt das Format nicht und gehen beim Export verloren.
 - **Statistik:** Tag/Woche/Monat/Jahr, Streaks, Verteilung nach Projekt/Kontext, Export als CSV/JSON.
 - **Backup:** täglich beim Start, Rotation, Wiederherstellen aus der Liste oder einer `.db`-Datei.
 - **Sync:** WebDAV (alle Plattformen), Google Drive und Todoist (Desktop).

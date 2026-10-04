@@ -197,6 +197,24 @@ Given("the export is saved to {string}", (world: UiWorld, path: string) => {
   world.fake.exportPath = path;
 });
 
+Given(
+  "the todo.txt import adds {int} todos and skips {int} duplicate",
+  (world: UiWorld, added: number, duplicates: number) => {
+    world.fake.todotxtImport = { added, duplicates };
+  },
+);
+
+Given("the todo.txt import dialog is cancelled", (world: UiWorld) => {
+  world.fake.todotxtImport = null;
+});
+
+Given(
+  "the todo.txt export is saved to {string}",
+  (world: UiWorld, path: string) => {
+    world.fake.todotxtExportPath = path;
+  },
+);
+
 Then(
   "the statistics were requested for the period {string}",
   async (world: UiWorld, period: string) => {

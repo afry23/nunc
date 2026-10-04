@@ -52,6 +52,15 @@ export const commands = {
 	setTodoCompleted: (id: number, completed: boolean) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_completed", { id, completed })),
 	/**  Setzt die manuelle Reihenfolge: das erste Element bekommt Position 0. */
 	reorderTodos: (ids: number[]) => typedError<null, AppError>(__TAURI_INVOKE("reorder_todos", { ids })),
+	/**  Fragt nach einer todo.txt-Datei und importiert sie. `None`, wenn der Dialog abgebrochen wurde. */
+	importTodotxtFile: () => typedError<{
+	/**  Neu angelegte Todos. */
+	added: number,
+	/**  Zeilen, die schon vorhanden waren oder mehrfach in der Datei standen. */
+	duplicates: number,
+} | null, AppError>(__TAURI_INVOKE("import_todotxt_file")),
+	/**  Schreibt alle Todos in eine vom Nutzer gewählte Datei. Liefert den Pfad, `None` bei Abbruch. */
+	saveTodotxtFile: () => typedError<string | null, AppError>(__TAURI_INVOKE("save_todotxt_file")),
 	/**  Startet eine Arbeitssession. Die Dauer kommt aus den Einstellungen, Flowtime ist eine Stoppuhr. */
 	startTimer: (mode: TimerMode, todoId: number | null) => typedError<TimerSnapshot, AppError>(__TAURI_INVOKE("start_timer", { mode, todoId })),
 	/**  Startet die vorgeschlagene Pause. */
@@ -497,6 +506,14 @@ export type TodoFilter = {
 	text?: string,
 	/**  `Some(false)` nur offene, `Some(true)` nur erledigte, `None` alle. */
 	completed?: boolean | null,
+};
+
+/**  Ergebnis eines Imports. */
+export type TodoImportResult = {
+	/**  Neu angelegte Todos. */
+	added: number,
+	/**  Zeilen, die schon vorhanden waren oder mehrfach in der Datei standen. */
+	duplicates: number,
 };
 
 /**  Sortierkriterium. */
