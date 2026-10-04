@@ -270,6 +270,9 @@ Entscheidungen: [ADR 0008](./docs/adr/0008-webdav-sync.md). Abweichungen und Erg
   Fehler zusätzlich als Hinweis ohne Dialog. Der Konfliktzähler nennt die ersetzten Todos nicht.
 - M6-09: `tests/interop/webdav-go-nunc.sh` (Go-App und nunc abwechselnd, Server `x/net/webdav`, kein Docker). Lief grün;
   die CI führt es nicht aus (braucht `../nunc-go`).
+- Mutationstest (`cargo mutants --in-diff`, 152 Mutanten): 131 gefangen, 13 nicht kompilierbar; 8 überlebten, 5 davon durch Tests
+  nachgezogen. Übrig und begründet: `send` `||`→`&&` (äquivalent: ohne Digest-Herausforderung endet es gleich) und
+  `ensure_folder` Statuscode 405 (Server legt den Ordner gleichzeitig an; nicht im Mock abbildbar).
 - Neu: Tag `@sync` für `@integration`-Szenarien, die im Runner von `nunc-sync` laufen.
 
 **Exit-Kriterien M6:** Zwei Geräte (Desktop + Handy) synchronisieren über WebDAV; Restore auf Mobile funktioniert.

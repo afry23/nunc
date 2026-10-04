@@ -472,6 +472,28 @@ mod tests {
     }
 
     #[test]
+    fn digest_requests_count_up_with_the_same_challenge() {
+        let c = WebDavClient::new(
+            WebDavConfig {
+                url: "https://h.org".into(),
+                auth_method: WebDavAuth::Digest,
+                username: "u".into(),
+                remote_path: "/".into(),
+            },
+            "p".into(),
+        )
+        .unwrap();
+        assert!(c.authorization("GET", "https://h.org/x").is_none());
+        let challenge =
+            digest::parse_challenge(r#"Digest realm="r", nonce="n", qop="auth""#).unwrap();
+        *c.digest.lock().unwrap() = Some((challenge, 0));
+        let first = c.authorization("GET", "https://h.org/x?a=1").unwrap();
+        let second = c.authorization("GET", "https://h.org/x").unwrap();
+        assert!(first.contains("nc=00000001") && first.contains("uri=\"/x?a=1\""));
+        assert!(second.contains("nc=00000002"));
+    }
+
+    #[test]
     fn client_nonces_differ() {
         assert_ne!(client_nonce(), client_nonce());
         assert_eq!(client_nonce().len(), 16);

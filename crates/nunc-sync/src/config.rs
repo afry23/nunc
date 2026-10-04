@@ -58,3 +58,26 @@ pub fn load_credentials(
         _ => Err(SyncError::NotConfigured),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use nunc_platform::MemorySecretStore;
+
+    use super::*;
+
+    #[test]
+    fn the_stored_password_is_reported_but_never_printed() {
+        let secrets = MemorySecretStore::default();
+        assert!(!has_webdav_password(&secrets).unwrap());
+        secrets
+            .set(SECRET_SERVICE, SECRET_ACCOUNT, "geheim")
+            .unwrap();
+        assert!(has_webdav_password(&secrets).unwrap());
+        let credentials = WebDavCredentials {
+            config: WebDavConfig::default(),
+            password: "geheim".into(),
+        };
+        let text = format!("{credentials:?}");
+        assert!(!text.contains("geheim") && text.contains("WebDavCredentials"));
+    }
+}

@@ -230,6 +230,14 @@ mod tests {
     }
 
     #[test]
+    fn the_algorithm_is_named_in_the_header() {
+        let md5 = parse_challenge(r#"Digest realm="r", nonce="n""#).unwrap();
+        assert!(authorization(&md5, "u", "p", "GET", "/", 1, "c").contains("algorithm=MD5,"));
+        let sha = parse_challenge(r#"Digest realm="r", nonce="n", algorithm=SHA-256"#).unwrap();
+        assert!(authorization(&sha, "u", "p", "GET", "/", 1, "c").contains("algorithm=SHA-256,"));
+    }
+
+    #[test]
     fn without_qop_the_old_scheme_is_used() {
         let challenge = parse_challenge(r#"Digest realm="r", nonce="n""#).unwrap();
         assert!(!challenge.qop_auth);
