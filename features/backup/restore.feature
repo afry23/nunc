@@ -1,6 +1,64 @@
 Feature: Restore
   Source: US-Restore (R01-R03); nunc-go backup_list_test.go, backup_restore_test.go
 
+  @domain @US-R01
+  Scenario: The list shows the newest backup first with date, category and size
+    Given today is 2026-10-04
+    And the backup files:
+      | name                      | size |
+      | nunc-backup-2026-09-27.db | 700  |
+      | nunc-backup-2026-10-04.db | 100  |
+      | nunc-backup-2026-09-06.db | 900  |
+      | nunc-backup-2026-09-28.db | 600  |
+      | nunc-backup-2026-09-07.db | 800  |
+    When I list the backups
+    Then the backup list is:
+      | nunc-backup-2026-10-04.db | 2026-10-04T12:00:00+00:00 | daily   | 100 |
+      | nunc-backup-2026-09-28.db | 2026-09-28T12:00:00+00:00 | daily   | 600 |
+      | nunc-backup-2026-09-27.db | 2026-09-27T12:00:00+00:00 | weekly  | 700 |
+      | nunc-backup-2026-09-07.db | 2026-09-07T12:00:00+00:00 | weekly  | 800 |
+      | nunc-backup-2026-09-06.db | 2026-09-06T12:00:00+00:00 | monthly | 900 |
+
+  @domain @US-R01
+  Scenario: The list is empty without backups and ignores other files
+    Given today is 2026-10-04
+    And the backup files:
+      | name                         |
+      | before-restore-2026-10-04.db |
+      | notes.txt                    |
+    When I list the backups
+    Then the backup list is:
+
+  @domain @US-R01
+  Scenario: The list keeps the path of each backup
+    Given today is 2026-10-04
+    And the backup files:
+      | name                      |
+      | nunc-backup-2026-10-03.db |
+      | nunc-backup-2026-10-04.db |
+    When I list the backups
+    Then the first listed backup has the path "/backups/nunc-backup-2026-10-04.db"
+
+  @domain @US-R01
+  Scenario Outline: The category follows the age in days
+    Given today is 2026-10-04
+    And the backup files:
+      | name                |
+      | nunc-backup-<day>.db |
+    When I list the backups
+    Then the backup list is:
+      | nunc-backup-<day>.db | <day>T12:00:00+00:00 | <category> | 1 |
+
+    Examples:
+      | day        | category |
+      | 2026-10-04 | daily    |
+      | 2026-09-28 | daily    |
+      | 2026-09-27 | weekly   |
+      | 2026-09-07 | weekly   |
+      | 2026-09-06 | monthly  |
+      | 2025-10-04 | monthly  |
+      | 2026-10-05 | daily    |
+
   @integration @US-R01 @wip
   Scenario: Backups are listed newest first
 
