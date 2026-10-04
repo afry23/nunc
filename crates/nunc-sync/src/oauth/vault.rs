@@ -42,6 +42,19 @@ impl Vault {
         Ok(serde_json::from_str(&text).ok())
     }
 
+    /// Wie [`Vault::load`], aber ein nicht erreichbarer Tresor (z. B. Linux ohne Secret-Service) zählt als „nicht
+    /// verbunden“. Für Anzeige und Auslöser: sie dürfen beim Start keinen Fehler melden; Verbinden und Abgleich
+    /// sagen es dem Nutzer, wenn er sie benutzt.
+    pub fn load_lenient(&self) -> Option<Connection> {
+        match self.load() {
+            Ok(connection) => connection,
+            Err(error) => {
+                log::warn!("Tresor nicht lesbar ({}): {error}", self.account);
+                None
+            }
+        }
+    }
+
     pub fn save(&self, connection: &Connection) -> Result<(), SyncError> {
         let text = serde_json::to_string(connection)
             .map_err(|error| SyncError::OAuth(error.to_string()))?;

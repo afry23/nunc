@@ -72,7 +72,9 @@ impl DavState {
 }
 
 pub struct Dav {
-    pub server: MockServer,
+    /// Wird absichtlich nie freigegeben: Das Freigeben eines `MockServer` wartet auf alle offenen Verbindungen und
+    /// hängt, wenn ein Szenario mitten im Schritt scheitert (der Mutationstest sähe dann nur Zeitüberschreitungen).
+    pub server: std::mem::ManuallyDrop<MockServer>,
     pub state: Arc<Mutex<DavState>>,
 }
 
@@ -90,7 +92,10 @@ impl Dav {
             .respond_with(Responder(state.clone()))
             .mount(&server)
             .await;
-        Self { server, state }
+        Self {
+            server: std::mem::ManuallyDrop::new(server),
+            state,
+        }
     }
 
     pub fn with<T>(&self, f: impl FnOnce(&mut DavState) -> T) -> T {

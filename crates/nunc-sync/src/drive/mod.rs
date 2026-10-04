@@ -96,7 +96,7 @@ impl DriveService {
 
     /// Zustand der Verbindung (ohne Netzwerkzugriff). `folder_id`: der Ordner aus dem letzten Sync.
     pub fn status(&self, folder_id: Option<&str>) -> Result<DriveStatus, SyncError> {
-        let connection = self.vault.load()?;
+        let connection = self.vault.load_lenient();
         Ok(DriveStatus {
             configured: self.config.is_configured(),
             connected: connection.is_some(),
@@ -106,7 +106,7 @@ impl DriveService {
     }
 
     pub fn is_connected(&self) -> Result<bool, SyncError> {
-        Ok(self.vault.load()?.is_some())
+        Ok(self.vault.load_lenient().is_some())
     }
 
     fn client(&self) -> Result<DriveClient, SyncError> {
@@ -375,6 +375,22 @@ mod tests {
         assert!(status.connected);
         assert_eq!(status.email.as_deref(), Some("me@example.org"));
         assert!(!self::service("", "").status(None).unwrap().configured);
+    }
+
+    #[test]
+    fn an_unreachable_secret_store_counts_as_not_connected() {
+        let service = DriveService::new(
+            DriveConfig::google("id", "secret"),
+            Arc::new(nunc_platform::UnavailableSecretStore::new(
+                "kein Secret-Service",
+            )),
+            Arc::new(ManualClock::new(
+                Utc.with_ymd_and_hms(2026, 10, 4, 9, 0, 0).unwrap(),
+            )),
+        )
+        .unwrap();
+        assert!(!service.is_connected().unwrap());
+        assert!(!service.status(None).unwrap().connected);
     }
 
     #[test]

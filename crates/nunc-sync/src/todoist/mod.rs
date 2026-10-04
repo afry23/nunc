@@ -109,12 +109,12 @@ impl TodoistService {
     }
 
     pub fn is_connected(&self) -> Result<bool, SyncError> {
-        Ok(self.vault.load()?.is_some())
+        Ok(self.vault.load_lenient().is_some())
     }
 
     /// Zustand der Verbindung (ohne Netzwerkzugriff).
     pub fn status(&self) -> Result<TodoistStatus, SyncError> {
-        let connection = self.vault.load()?;
+        let connection = self.vault.load_lenient();
         Ok(TodoistStatus {
             configured: self.config.is_configured(),
             connected: connection.is_some(),
@@ -443,5 +443,48 @@ impl SyncRunner for TodoistRunner {
                 finished.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             )))
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::TimeZone;
+    use nunc_platform::{ManualClock, MemorySecretStore, UnavailableSecretStore};
+
+    use super::*;
+
+    fn service(secrets: Arc<dyn SecretStore>) -> TodoistService {
+        TodoistService::new(
+            TodoistConfig::todoist("id", "secret"),
+            secrets,
+            Arc::new(ManualClock::new(
+                Utc.with_ymd_and_hms(2026, 10, 4, 9, 0, 0).unwrap(),
+            )),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn the_config_points_at_todoist_and_needs_a_client_id() {
+        let config = TodoistConfig::todoist("id", "");
+        assert!(config.is_configured() && config.app.client_secret.is_none());
+        assert!(!TodoistConfig::todoist("", "s").is_configured());
+        assert_eq!(config.ports, CALLBACK_PORTS);
+        assert_eq!(config.app.scope, "data:read_write");
+    }
+
+    #[test]
+    fn the_status_follows_the_vault() {
+        let service = service(Arc::new(MemorySecretStore::default()));
+        let status = service.status().unwrap();
+        assert!(status.configured && !status.connected);
+        assert!(!service.is_connected().unwrap());
+    }
+
+    #[test]
+    fn an_unreachable_secret_store_counts_as_not_connected() {
+        let service = service(Arc::new(UnavailableSecretStore::new("kein Secret-Service")));
+        assert!(!service.is_connected().unwrap());
+        assert!(!service.status().unwrap().connected);
     }
 }
