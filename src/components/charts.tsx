@@ -12,6 +12,11 @@ import {
 const W = 600;
 const H = 180;
 const LABEL_H = 24;
+/** Rand innerhalb der Zeichenfläche: Platz für Zahlen über den Werten und für die Randpunkte der Linie. */
+const PAD_X = 18;
+const PAD_TOP = 24;
+/** Bis zu dieser Zahl Tage stehen die Werte als Zahl im Diagramm. */
+const MAX_LABELLED = 14;
 
 /** Beschriftung jedes n-ten Tages: bis 7 Tage der Wochentag, sonst das Datum. */
 function dayLabel(days: DayPoint[], index: number): string | null {
@@ -22,15 +27,16 @@ function dayLabel(days: DayPoint[], index: number): string | null {
     : shortDate(days[index].date);
 }
 
-/** Säulendiagramm: Arbeitszeit je Tag. */
+/** Säulendiagramm: Arbeitszeit je Tag, darüber die Zahl der Pomodoros. */
 export function BarChart({ days }: { days: DayPoint[] }) {
   const bars = barLayout(
     days.map((d) => d.workMinutes),
     W,
-    H,
+    H - PAD_TOP,
     days.length > 31 ? 1 : 6,
   );
   const total = days.reduce((sum, d) => sum + d.workMinutes, 0);
+  const labelled = days.length <= MAX_LABELLED;
   return (
     <svg
       role="img"
@@ -39,32 +45,49 @@ export function BarChart({ days }: { days: DayPoint[] }) {
       viewBox={`0 0 ${W} ${H + LABEL_H}`}
       className="w-full"
     >
-      {bars.map((bar, index) => (
-        <g key={days[index].date}>
-          <rect
-            x={bar.x}
-            y={bar.y}
-            width={bar.width}
-            height={Math.max(bar.height, 2)}
-            rx={3}
-            fill="var(--color-primary)"
-            opacity={bar.value > 0 ? 1 : 0.2}
-          >
-            <title>{`${days[index].date}: ${formatMinutes(bar.value)}`}</title>
-          </rect>
-          {dayLabel(days, index) && (
-            <text
-              x={bar.x + bar.width / 2}
-              y={H + 16}
-              textAnchor="middle"
-              fontSize="11"
-              fill="var(--color-on-surface-variant)"
+      {bars.map((bar, index) => {
+        const day = days[index];
+        const y = bar.y + PAD_TOP;
+        return (
+          <g key={day.date}>
+            <rect
+              x={bar.x}
+              y={y}
+              width={bar.width}
+              height={Math.max(bar.height, 2)}
+              rx={3}
+              fill="var(--color-primary)"
+              opacity={bar.value > 0 ? 1 : 0.2}
             >
-              {dayLabel(days, index)}
-            </text>
-          )}
-        </g>
-      ))}
+              <title>{`${day.date}: ${day.pomodoroCount} Pomodoros, ${formatMinutes(bar.value)}`}</title>
+            </rect>
+            {labelled && (
+              <text
+                data-testid="bar-value"
+                x={bar.x + bar.width / 2}
+                y={y - 6}
+                textAnchor="middle"
+                fontSize="13"
+                fontWeight="600"
+                fill="var(--color-on-surface)"
+              >
+                {day.pomodoroCount}
+              </text>
+            )}
+            {dayLabel(days, index) && (
+              <text
+                x={bar.x + bar.width / 2}
+                y={H + 16}
+                textAnchor="middle"
+                fontSize="11"
+                fill="var(--color-on-surface-variant)"
+              >
+                {dayLabel(days, index)}
+              </text>
+            )}
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -73,10 +96,11 @@ export function BarChart({ days }: { days: DayPoint[] }) {
 export function LineChart({ days }: { days: DayPoint[] }) {
   const points = linePoints(
     days.map((d) => d.pomodoroCount),
-    W,
-    H,
-  );
+    W - 2 * PAD_X,
+    H - PAD_TOP,
+  ).map((p) => ({ x: p.x + PAD_X, y: p.y + PAD_TOP }));
   const total = days.reduce((sum, d) => sum + d.pomodoroCount, 0);
+  const labelled = days.length <= MAX_LABELLED;
   return (
     <svg
       role="img"
@@ -104,17 +128,17 @@ export function LineChart({ days }: { days: DayPoint[] }) {
           <title>{`${days[index].date}: ${days[index].pomodoroCount} Pomodoros`}</title>
         </circle>
       ))}
-      {days.length <= 14 &&
+      {labelled &&
         points.map((p, index) => (
           <text
             key={`n-${days[index].date}`}
+            data-testid="line-value"
             x={p.x}
-            y={Math.max(12, p.y - 10)}
+            y={p.y - 10}
             textAnchor="middle"
-            fontSize="12"
+            fontSize="13"
             fontWeight="600"
             fill="var(--color-on-surface)"
-            data-testid="line-value"
           >
             {days[index].pomodoroCount}
           </text>

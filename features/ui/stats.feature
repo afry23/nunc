@@ -106,3 +106,12 @@ Feature: Statistics view
     Then the month "September 2026" shows 30 pomodoros
     And the month "Oktober 2026" shows 12 pomodoros
 
+  @ui @REQ-10
+  Scenario: The pomodoros of each day are labelled above the bars
+    Given the statistics contain daily data:
+      | daysAgo | pomodoros | minutes |
+      | 0       | 4         | 100     |
+      | 2       | 6         | 150     |
+    When I open the app at "/stats"
+    Then the bar chart labels the days with "0, 6, 0, 4"
+

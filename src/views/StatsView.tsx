@@ -185,7 +185,10 @@ export function StatsView() {
             />
           </dl>
 
-          <Card title="Arbeitszeit pro Tag">
+          <Card
+            title="Arbeitszeit pro Tag"
+            caption="Zahl über dem Balken: Pomodoros"
+          >
             <BarChart days={days} />
           </Card>
 
@@ -320,15 +323,18 @@ function Kpi({
 
 function Card({
   title,
+  caption,
   children,
 }: {
   title: string;
+  caption?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-2xl bg-surface-container-low p-5">
-      <h2 className="mb-4 font-display text-lg font-bold">{title}</h2>
-      {children}
+      <h2 className="font-display text-lg font-bold">{title}</h2>
+      {caption && <p className="text-sm text-on-surface-variant">{caption}</p>}
+      <div className="mt-4">{children}</div>
     </section>
   );
 }

@@ -288,3 +288,15 @@ Then(
     });
   },
 );
+
+Then(
+  "the bar chart labels the days with {string}",
+  async (_world: UiWorld, list: string) => {
+    await waitFor(() => {
+      const labels = within(screen.getByTestId("chart-bar"))
+        .getAllByTestId("bar-value")
+        .map((node) => node.textContent);
+      expect(labels.slice(-names(list).length)).toEqual(names(list));
+    });
+  },
+);
