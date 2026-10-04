@@ -1,5 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { isMobile } from "../lib/platform";
 import { BarsIcon, CheckIcon, GearIcon, TimerIcon } from "./icons";
 
 export const NAV_ITEMS: {
@@ -45,8 +46,18 @@ export function Sidebar() {
   );
 }
 
-/** Tab-Leiste unter 768 px Breite (Touch-Ziele ≥ 44 px, Safe-Area unten). */
+/**
+ * Tab-Leiste unter 768 px Breite (Touch-Ziele ≥ 44 px, Safe-Area unten).
+ *
+ * Mobil gilt ein Zurück-Stapel mit dem Timer als Startseite: Ein Tab ersetzt den vorigen statt sich
+ * aufzustapeln, und „Timer“ geht einen Schritt zurück. So führt die Zurück-Taste (Android) vom Tab zuerst
+ * zum Timer und erst von dort aus der App, statt durch alle besuchten Tabs zu laufen.
+ */
 export function BottomTabs() {
+  const router = useRouter();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const onTab = pathname !== "/";
+
   return (
     <nav
       aria-label="Hauptnavigation"
@@ -57,6 +68,18 @@ export function BottomTabs() {
         <Link
           key={item.to}
           to={item.to}
+          replace={isMobile() && onTab && item.to !== "/"}
+          onClick={(event) => {
+            if (
+              isMobile() &&
+              onTab &&
+              item.to === "/" &&
+              router.history.canGoBack()
+            ) {
+              event.preventDefault();
+              router.history.back();
+            }
+          }}
           activeOptions={{ exact: item.to === "/" }}
           activeProps={{ "aria-current": "page", className: "text-primary" }}
           inactiveProps={{ className: "text-on-surface-variant" }}

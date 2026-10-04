@@ -102,8 +102,26 @@ Feature: Timer persistence
     Then the table "active_timer" exists
     And the Go tables keep their definition
 
-  @domain @REQ-13 @mobile @wip
+  # Im Hintergrund gibt es keine Ticks: der Rest folgt allein aus dem Zeitstempel, nicht aus gezählten Sekunden.
+  @domain @REQ-13 @mobile
   Scenario: Resuming from the background recalculates the remaining time
+    Given it is 09:00:00
+    When I start a pomodoro
+    And 10 minutes pass
+    Then 900 seconds remain
+    When 7 minutes pass without a tick
+    Then 480 seconds remain
+    And the timer is running
+
+  @domain @REQ-13 @mobile
+  Scenario: A paused timer does not run down in the background
+    Given it is 09:00:00
+    When I start a pomodoro
+    And 10 minutes pass
+    And I pause the timer
+    And 3 hours pass without a tick
+    Then 900 seconds remain
+    And the timer is paused
 
   @e2e @REQ-13 @mobile @wip
   Scenario: A running timer survives killing the app

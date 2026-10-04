@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { expect, vi } from "vitest";
 import { Given, Then, When } from "quickpickle";
+import type { TimerSnapshot } from "../../src/bindings";
 import type { UiWorld } from "./world";
 
 const settle = (): Promise<void> =>
@@ -200,4 +201,49 @@ Then("Android opens the exact alarm settings", () => {
 
 Then("Android opens the notification settings", () => {
   expect(androidCalls).toEqual(["notifications"]);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Lebenszyklus
+
+Given(
+  "the timer ran in the background and is now:",
+  (world: UiWorld, table: import("quickpickle").DataTable) => {
+    const row = table.hashes()[0];
+    // kein Ereignis: im Hintergrund erreicht das Backend die Oberfläche nicht
+    world.fake.timer = {
+      state: row.state as TimerSnapshot["state"],
+      mode: row.mode as TimerSnapshot["mode"],
+      sessionType: row.sessionType as TimerSnapshot["sessionType"],
+      remaining: Number(row.remaining),
+      total: Number(row.total),
+      todoId: null,
+    };
+  },
+);
+
+When("the app returns to the foreground", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  await act(async () => {
+    document.dispatchEvent(new Event("visibilitychange"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+});
+
+When("the app goes to the background", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+  await act(async () => {
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+});
+
+When("I press the back button of the device", async (world: UiWorld) => {
+  await act(async () => {
+    world.history?.back();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+});
+
+Then("the back button would leave the app", (world: UiWorld) => {
+  expect(world.history?.canGoBack()).toBe(false);
 });

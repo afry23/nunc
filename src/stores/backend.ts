@@ -36,6 +36,14 @@ export async function connectBackend(): Promise<() => void> {
     }),
     events.appReload.listen(() => void reloadAll()),
   ]);
+  // Rückkehr aus dem Hintergrund: Ereignisse sind dort ausgeblieben, der Stand kommt neu aus dem Backend
+  const onVisible = (): void => {
+    if (document.visibilityState === "visible") void reloadAll();
+  };
+  document.addEventListener("visibilitychange", onVisible);
   await reloadAll();
-  return () => unlisten.forEach((fn) => fn());
+  return () => {
+    unlisten.forEach((fn) => fn());
+    document.removeEventListener("visibilitychange", onVisible);
+  };
 }
