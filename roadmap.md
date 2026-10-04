@@ -152,6 +152,19 @@ M0 ──► M1 ──► M2 ──► M3 ──► M4 ──► M5 ──► M6
 
 **Exit-Kriterien M3:** `src/bindings.ts` generiert, alle Commands aus `nunc-go/app.go` (außer Sync/Todoist) abgedeckt.
 
+**Stand:** umgesetzt. Abweichungen und Ergänzungen:
+
+- Die Tauri-Adapter (`TauriEventSink`, `TauriNotifier`) liegen in `src-tauri/src/adapters.rs`, nicht in `nunc-platform`
+  (sie brauchen `AppHandle`); `nunc-platform` enthält die Traits, `SystemClock`, den Keyring-`SecretStore` und Fakes.
+- Zusätzliche Commands: `get_suggested_break`, `show_main_window`. `save_export_to_file` und `select_*` öffnen
+  native Dialoge und sind nicht per Mock-Runtime testbar (manuell prüfen).
+- Nicht übernommen: `GetFlowtimeRules`/`SaveFlowtimeRules` (Bucket-Modus, siehe Backlog), `OpenURL` (opener-Plugin).
+- `save_settings` behält `lastBackupDate` und `backupDir` aus der Datenbank (Besitzer: Backup-Dienst bzw.
+  `select_backup_dir`); ein leeres `backupDir` setzt den Standardordner zurück.
+- Der Mini-Timer lädt die Route `/mini` und entsteht beim ersten Minimieren während eines Timers (M4-10 liefert die Route).
+- Backups liegen standardmäßig in `<app_config_dir>/backups` (die Go-App nutzte `<config>/nunc/backups`, alte Backups
+  werden nicht verschoben).
+
 ---
 
 ## M4 – Frontend Kern / Desktop-MVP (3 Wochen)

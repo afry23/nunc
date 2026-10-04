@@ -21,7 +21,7 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 
 | Schicht | Technik |
 |---|---|
-| Shell | Tauri 2 (`src-tauri/`), Plugins: opener (später notification, dialog, fs, …) |
+| Shell | Tauri 2 (`src-tauri/`), Plugins: opener, notification, dialog, fs, single-instance (Desktop) |
 | Backend | Rust, Edition 2024, Cargo-Workspace |
 | DB | SQLite über `rusqlite` (bundled), WAL, Foreign Keys |
 | Typen Rust↔TS | `tauri-specta` → `src/bindings.ts` |
@@ -32,8 +32,12 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 crates/nunc-core      pure Fachlogik, kein I/O, kein tokio
 crates/nunc-store     rusqlite, Migrationen, Repos, Backup/Restore
 crates/nunc-sync      WebDAV, Google Drive, Todoist (reqwest)
-crates/nunc-platform  Traits/Adapter: Clock, EventSink, Notifier, SecretStore
+crates/nunc-platform  Traits + Fakes: Clock, EventSink, Notifier, SecretStore (Keyring)
 src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)])
+  src/state.rs        AppState (DB, TimerService, Tresor), Start, Restore, Shutdown-Hooks
+  src/timer_service.rs  Timer-Laufzeit: Transitionen persistieren, Events, Benachrichtigung
+  src/adapters.rs     Tauri-Adapter für EventSink/Notifier (brauchen AppHandle)
+  src/commands/       dünne Commands je Bereich, Tests in commands/tests.rs (mock_builder)
 src/                  React-Frontend (src/lib/api.ts = einziger Backend-Zugang)
 features/             Gherkin, EINE Quelle für alle Runner
 docs/adr/             Architecture Decision Records
@@ -44,6 +48,7 @@ docs/adr/             Architecture Decision Records
 **Backend**
 - **Funktionaler Kern, Seiteneffekte am Rand.** `nunc-core` besteht aus puren Funktionen, Zeit kommt über eine
   injizierte `Clock`, Abhängigkeiten über Konstruktoren/Traits, kein globaler veränderlicher Zustand.
+- Sperrreihenfolge: erst `TimerService` (Timer), dann `Db`. Commands ohne Timer sperren nur `Db`.
 - Tauri-Commands in `src-tauri` sind dünn: Argumente prüfen, an Service/Core delegieren, Ergebnis abbilden.
   Keine Fachlogik in `lib.rs`/`commands.rs`.
 - DB-Zugriff nur über `nunc-store`. Mehrschrittige Schreibvorgänge in einer **Transaktion**.

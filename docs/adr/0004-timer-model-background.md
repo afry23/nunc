@@ -94,3 +94,21 @@ Reboot (Plugin bringt `LocalNotificationRestoreReceiver` mit), herstellerspezifi
   (Go ließ ihn stehen); `auto_start_next_pomodoro` wird ausgewertet (Go speicherte nur die Einstellung);
   `long_break_after = 0` heißt nie lange Pause; Pausendauer 0 ergibt keinen Vorschlag.
 - `Clock` (Trait) liegt in `nunc-core::clock`, `SystemClock` folgt in `nunc-platform` (M3-02).
+
+## Umsetzung (M3-04, `src-tauri/src/timer_service.rs`)
+
+- `TimerService` führt aus, was der `Timer` als Daten liefert (`Finish`): jede Transition wird in `active_timer`
+  persistiert, das Ende einer Session (Session, Pomodoro-Zähler, neuer Timer-Zustand) ist **eine** Transaktion
+  (`commit_finish`). Schlägt Speichern fehl, wird der Zustand im Speicher zurückgerollt; der Timer bleibt
+  fällig und der nächste Tick versucht es erneut, es geht nichts verloren.
+- `timer:tick` (jede Sekunde, nur solange der Timer läuft, und bei jeder Transition), `timer:complete` (natürliches
+  Ende und Flowtime-Stop), `timer:stopped` (vorzeitiges Ende), alle typisiert in `src/bindings.ts`.
+- **Benachrichtigung:** Der Notifier meldet über `can_schedule()`, ob das System Benachrichtigungen planen kann.
+  Mobil (`true`) wird sie bei Start/Resume zum Endzeitpunkt geplant (`Timer::due_at`) und bei Pause/Stop/Ende
+  entfernt bzw. ersetzt. Desktop (`false`): das Plugin kennt keine Planung, der laufende Prozess zeigt sie beim
+  Ablauf sofort. Nach Start oder Wiederöffnen verbucht `recover()` einen inzwischen abgelaufenen Countdown zum
+  rechnerischen Ende, **ohne** Sofort-Benachrichtigung.
+- **Resume:** `RunEvent::Resumed` ruft `recover()` auf (Neuberechnung aus dem Zeitstempel, Tick, Notification neu).
+- **iOS-Zeitzonen-Bug (offen aus diesem ADR):** `TauriNotifier` verschiebt das Datum für `Schedule::At` auf iOS um
+  den lokalen UTC-Offset (Option a). Bei einer Zeitumstellung zwischen Planung und Termin ist das um eine Stunde
+  ungenau. Das Patchen des Plugins (Option b) bleibt für M5-03 offen und ist auf einem Gerät zu prüfen.

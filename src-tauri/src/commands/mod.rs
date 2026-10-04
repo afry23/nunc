@@ -7,3 +7,6 @@ pub mod settings;
 pub mod stats;
 pub mod timer;
 pub mod todos;
+
+#[cfg(test)]
+mod tests;

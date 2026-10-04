@@ -48,3 +48,4 @@ tauri-plugin-single-instance = "2"
 
 [dev-dependencies]
 tempfile.workspace = true
+tauri = { version = "2", features = ["test"] }
