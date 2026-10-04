@@ -110,6 +110,7 @@ When(
 
 class FakeViewport extends EventTarget {
   offsetTop = 0;
+  scale = 1;
   constructor(public height: number) {
     super();
   }

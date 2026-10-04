@@ -23,7 +23,9 @@ export function useKeyboardInset(): boolean {
     const update = (): void => {
       const inset = Math.max(
         0,
-        window.innerHeight - viewport.height - viewport.offsetTop,
+        window.innerHeight -
+          viewport.height * viewport.scale -
+          viewport.offsetTop,
       );
       const isOpen = inset >= KEYBOARD_MIN_HEIGHT;
       document.documentElement.style.setProperty(
