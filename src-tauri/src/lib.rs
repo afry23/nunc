@@ -5,6 +5,7 @@ mod db;
 mod error;
 mod events;
 mod lifecycle;
+mod logging;
 mod state;
 mod sync_service;
 mod timer_service;
@@ -104,6 +105,7 @@ pub fn run() {
     let builder_app = builder_app.on_window_event(windows::on_window_event);
 
     let app = builder_app
+        .plugin(logging::plugin())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())

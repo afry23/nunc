@@ -20,11 +20,24 @@ pub struct AppError {
 }
 
 impl AppError {
+    /// Jeder Fehler, der zur Oberfläche geht, landet auch im Protokoll (Eingabefehler nur auf `debug`).
     pub fn new(code: &str, message: impl Into<String>) -> Self {
-        Self {
+        let error = Self {
             code: code.to_owned(),
             message: message.into(),
-        }
+        };
+        let level = match error.code.as_str() {
+            "invalid_input" | "invalid_settings" => log::Level::Debug,
+            "internal" | "database" | "io" => log::Level::Error,
+            _ => log::Level::Warn,
+        };
+        log::log!(
+            level,
+            "Befehl fehlgeschlagen ({}): {}",
+            error.code,
+            error.message
+        );
+        error
     }
 
     /// Ungültige Eingabe des Aufrufers.

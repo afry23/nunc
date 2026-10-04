@@ -1,0 +1,56 @@
+//! Protokoll der App (`tauri-plugin-log`): Datei im Log-Ordner des Systems mit Rotation, in Debug-Builds
+//! zusätzlich Stdout. Tokens und Passwörter gehören nie in eine Meldung (siehe CLAUDE.md „Do Not“).
+
+use log::LevelFilter;
+use tauri::Runtime;
+use tauri::plugin::TauriPlugin;
+use tauri_plugin_log::{Builder, RotationStrategy, Target, TargetKind};
+
+/// Dateiname ohne Endung: `nunc.log`, rotierte Dateien tragen das Datum.
+const LOG_FILE: &str = "nunc";
+/// Eine Datei wird ab dieser Größe rotiert.
+const MAX_FILE_BYTES: u128 = 1_000_000;
+/// So viele rotierte Dateien bleiben liegen, ältere werden gelöscht.
+const KEPT_FILES: usize = 5;
+
+/// Mindeststufe: Debug-Builds protokollieren alles, Release-Builds ab `Info`.
+pub fn default_level(debug: bool) -> LevelFilter {
+    if debug {
+        LevelFilter::Debug
+    } else {
+        LevelFilter::Info
+    }
+}
+
+pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
+    let debug = cfg!(debug_assertions);
+    let mut targets = vec![Target::new(TargetKind::LogDir {
+        file_name: Some(LOG_FILE.to_owned()),
+    })];
+    if debug {
+        targets.push(Target::new(TargetKind::Stdout));
+    }
+    Builder::new()
+        .clear_targets()
+        .targets(targets)
+        .level(default_level(debug))
+        // HTTP-Bibliotheken protokollieren Verbindungsdetails, die niemand braucht
+        .level_for("hyper", LevelFilter::Warn)
+        .level_for("hyper_util", LevelFilter::Warn)
+        .level_for("reqwest", LevelFilter::Warn)
+        .level_for("tao", LevelFilter::Warn)
+        .rotation_strategy(RotationStrategy::KeepSome(KEPT_FILES))
+        .max_file_size(MAX_FILE_BYTES)
+        .build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn release_builds_skip_debug_output() {
+        assert_eq!(default_level(false), LevelFilter::Info);
+        assert_eq!(default_level(true), LevelFilter::Debug);
+    }
+}
