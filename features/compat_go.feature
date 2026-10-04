@@ -96,14 +96,50 @@ Feature: Compatibility with the database of the Go app
   @integration @REQ-compat @desktop @wip
   Scenario: A database written by nunc keeps the Go tables unchanged
 
-  @integration @REQ-compat @desktop @wip
+  @integration @REQ-compat @desktop
   Scenario: On first start the database of the Go app is copied from the old data path
+    Given the Go app left its database in the user config folder "config"
+    When nunc starts with the data folder "data"
+    Then the legacy import result is "imported"
+    And exactly the migrations 1 to 6 are recorded as applied
+    And there are 11 sessions
+    When I list the todos
+    Then the todo list has 5 entries
 
-  @integration @REQ-compat @desktop @wip
+  @integration @REQ-compat @desktop
+  Scenario: A second start does not copy again
+    Given the Go app left its database in the user config folder "config"
+    When nunc starts with the data folder "data"
+    And I add the todo "added by nunc"
+    And nunc starts with the data folder "data"
+    Then the legacy import result is "already_present"
+    When I list the todos
+    Then the todo list has 6 entries
+
+  @integration @REQ-compat @desktop
+  Scenario: Without a Go database nunc starts with an empty one
+    When nunc starts with the data folder "data"
+    Then the legacy import result is "no_legacy_database"
+    When I list the todos
+    Then the todo list is empty
+
+  @integration @REQ-compat @desktop
   Scenario: The original Go database stays untouched after the copy
+    Given the Go app left its database in the user config folder "config"
+    And the state of the folder "config/nunc" is remembered
+    When nunc starts with the data folder "data"
+    And I add the todo "added by nunc"
+    Then the folder "config/nunc" is unchanged
 
-  @integration @REQ-compat @desktop @wip
+  @integration @REQ-compat @desktop
   Scenario: The backup folder setting is taken over with the copy
+    Given the Go app left its database in the user config folder "config"
+    And the Go database has the backup folder "/data/backups/nunc"
+    When nunc starts with the data folder "data"
+    And I load the settings
+    Then the loaded settings are:
+      | setting   | value              |
+      | backupDir | /data/backups/nunc |
 
   @e2e @REQ-compat @manual @wip
   Scenario: A database written by nunc can be opened by the Go app

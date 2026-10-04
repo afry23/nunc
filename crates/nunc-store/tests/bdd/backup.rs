@@ -187,7 +187,9 @@ fn plain_sqlite(world: &mut StoreWorld, name: String) {
 #[when(expr = "the Go fixture is copied to {string}")]
 fn copy_fixture(world: &mut StoreWorld, name: String) {
     let src = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures/go-v5.db");
-    fs::copy(src, world.root().join(name)).unwrap();
+    let dest = world.root().join(name);
+    fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    fs::copy(src, dest).unwrap();
 }
 
 fn restore(world: &mut StoreWorld, name: &str, day: &str) -> Result<(), StoreError> {

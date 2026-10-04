@@ -123,6 +123,15 @@ Feature: Restore
     And the data directory has no leftover restore files
 
   @integration @US-R02
+  Scenario: The chosen backup file is left untouched
+    Given no database exists yet
+    When nunc opens the database
+    And the Go fixture is copied to "src/go-backup.db"
+    And the state of the folder "src" is remembered
+    And I restore "src/go-backup.db" on 2026-10-04
+    Then the folder "src" is unchanged
+
+  @integration @US-R02
   Scenario: A failed restore keeps the original data
     Given no database exists yet
     When nunc opens the database

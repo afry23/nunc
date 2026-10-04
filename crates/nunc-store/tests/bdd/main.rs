@@ -14,6 +14,7 @@ use rusqlite::Connection;
 use tempfile::TempDir;
 
 mod backup;
+mod legacy;
 mod settings;
 mod todos;
 
@@ -33,6 +34,7 @@ pub struct StoreWorld {
     stats: Option<StatsResponse>,
     sync_counter: u32,
     backup: backup::State,
+    legacy: legacy::State,
 }
 
 /// Uhrzeit `HH:MM:SS` am festen Testtag (UTC).

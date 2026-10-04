@@ -3,6 +3,7 @@
 mod backup;
 mod connection;
 mod error;
+mod legacy;
 mod migrations;
 mod restore;
 mod session_repo;
@@ -18,6 +19,7 @@ pub use backup::{
 };
 pub use connection::{open, open_in_memory};
 pub use error::StoreError;
+pub use legacy::{LegacyImport, import_legacy_db, legacy_db_path};
 pub use migrations::{MIGRATIONS, Migration, migrate};
 pub use restore::{restore_backup, validate_backup_file};
 pub use session_repo::{commit_finish, list_sessions};

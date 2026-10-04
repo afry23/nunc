@@ -1,6 +1,6 @@
 //! Restore aus einer Backup-Datei (Go: `app.go RestoreFromBackup`, `ValidateNuncBackupFile`).
 //!
-//! Ablauf: Datei prüfen → Notfall-Backup des aktuellen Standes → Kopie neben der Datenbank vorbereiten und
+//! Ablauf: Kopie neben der Datenbank vorbereiten und prüfen → Notfall-Backup des aktuellen Standes → Kopie
 //! migrieren (so werden auch ältere Go-Backups auf den aktuellen Stand gebracht) → Verbindung schließen →
 //! per `rename` austauschen → neu öffnen. Bis zum Austausch bleibt die Originaldatenbank unberührt; scheitert
 //! der Austausch, wird sie wieder geöffnet.
@@ -74,18 +74,20 @@ pub fn restore_backup(
     backup_dir: &Path,
     today: NaiveDate,
 ) -> Result<(), StoreError> {
-    validate_backup_file(source)?;
-    create_emergency_backup(conn, backup_dir, today)?;
-
-    // Kopie neben der Datenbank (gleiches Dateisystem für das atomare `rename`), migriert und sauber geschlossen
+    // Kopie neben der Datenbank (gleiches Dateisystem für das atomare `rename`). Geprüft und migriert wird nur
+    // die Kopie: schon das Öffnen einer WAL-Datenbank legt `-shm` neben der Quelle an.
     let staged = sidecar(db_path, ".restore");
     let prepare = || -> Result<(), StoreError> {
-        fs::copy(source, &staged)?;
+        fs::copy(source, &staged).map_err(|e| invalid(format!("Datei nicht lesbar ({e})")))?;
+        validate_backup_file(&staged)?;
+        create_emergency_backup(conn, backup_dir, today)?;
         drop(open(&staged)?);
         Ok(())
     };
     if let Err(error) = prepare() {
         discard(&staged);
+        discard(&sidecar(&staged, "-shm"));
+        discard(&sidecar(&staged, "-wal"));
         return Err(error);
     }
 
