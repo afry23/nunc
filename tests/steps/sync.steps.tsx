@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import { expect } from "vitest";
-import { DataTable, Given, Then } from "quickpickle";
+import { act } from "@testing-library/react";
+import { emit } from "@tauri-apps/api/event";
+import { DataTable, Given, Then, When } from "quickpickle";
 import type { UiWorld } from "./world";
 
 Given(
@@ -111,5 +113,74 @@ Then(
     expect(
       ((await screen.findByLabelText(label)) as HTMLInputElement).value,
     ).toBe(value);
+  },
+);
+
+// ---------------------------------------------------------------------------------------------
+// Sync-Status und -Ergebnis
+
+Given(
+  "the sync status is {string} with the last sync at {string}",
+  (world: UiWorld, state: string, lastSyncAt: string) => {
+    world.fake.syncStatus = {
+      state: state as "idle" | "syncing" | "error",
+      lastSyncAt,
+      errorMessage: null,
+    };
+  },
+);
+
+Given(
+  "the next sync imports {int} sessions, {int} todos and {int} conflicts",
+  (world: UiWorld, sessions: number, todos: number, conflicts: number) => {
+    world.fake.syncOutcome = {
+      importedSessions: sessions,
+      importedTodos: todos,
+      conflictedTodos: conflicts,
+    };
+  },
+);
+
+Given("the next sync fails with {string}", (world: UiWorld, error: string) => {
+  world.fake.syncOutcome = { error };
+});
+
+When(
+  "the backend reports the sync status {string}",
+  async (_world: UiWorld, state: string) => {
+    await act(async () => {
+      await emit("sync:status", {
+        state,
+        lastSyncAt: null,
+        errorMessage: null,
+      });
+    });
+  },
+);
+
+When(
+  "the backend reports the sync status {string} with {string}",
+  async (_world: UiWorld, state: string, message: string) => {
+    await act(async () => {
+      await emit("sync:status", {
+        state,
+        lastSyncAt: null,
+        errorMessage: message,
+      });
+    });
+  },
+);
+
+When(
+  "the backend finishes a sync that imported the todos:",
+  async (world: UiWorld, table: DataTable) => {
+    for (const row of table.hashes()) world.fake.addTodo(row.rawText);
+    await act(async () => {
+      await emit("sync:complete", {
+        importedTodos: table.hashes().length,
+        importedSessions: 0,
+        conflictedTodos: 0,
+      });
+    });
   },
 );

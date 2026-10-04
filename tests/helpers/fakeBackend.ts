@@ -4,6 +4,8 @@ import type {
   BackupInfo,
   BackupStatus,
   ConnectionTestResult,
+  SyncResult,
+  SyncStatus,
   WebDavSettings,
   Settings,
   StatsResponse,
@@ -115,6 +117,9 @@ export interface FakeBackend extends BackendMock {
   /** Gespeicherte WebDAV-Einstellungen und das Ergebnis des Verbindungstests. */
   webdav: WebDavSettings;
   webdavTest: ConnectionTestResult;
+  /** Stand der Synchronisierung und was der nächste `sync_now` tut (`null` = nichts zu synchronisieren). */
+  syncStatus: SyncStatus;
+  syncOutcome: SyncResult | { error: string } | null;
   /** Fehler, den `set_sync_provider` meldet (`null` = Erfolg). */
   providerError: { code: string; message: string } | null;
   /** Fehler, den `restore_from_backup` meldet (`null` = Erfolg). */
@@ -183,6 +188,8 @@ export function createFakeBackend(): FakeBackend {
       hasPassword: false,
     },
     webdavTest: { success: true, message: "dav.example.org" },
+    syncStatus: { state: "idle", lastSyncAt: null, errorMessage: null },
+    syncOutcome: { importedTodos: 0, importedSessions: 0, conflictedTodos: 0 },
     exportTarget: "/storage/Download/nunc-backup.db",
   } as unknown as FakeBackend;
   let releaseHeld: (() => void) | undefined;
@@ -368,6 +375,36 @@ export function createFakeBackend(): FakeBackend {
       return null;
     },
     test_webdav_connection: () => fake.webdavTest,
+    get_sync_status: () => fake.syncStatus,
+    sync_in_background: () => null,
+    sync_now: async () => {
+      const outcome = fake.syncOutcome;
+      if (outcome === null) return null;
+      const last = fake.syncStatus.lastSyncAt;
+      await emit("sync:start");
+      await emit("sync:status", {
+        state: "syncing",
+        lastSyncAt: last,
+        errorMessage: null,
+      });
+      if ("error" in outcome) {
+        fake.syncStatus = {
+          state: "error",
+          lastSyncAt: last,
+          errorMessage: outcome.error,
+        };
+        await emit("sync:status", fake.syncStatus);
+        fail("network", outcome.error);
+      }
+      fake.syncStatus = {
+        state: "idle",
+        lastSyncAt: "2026-10-04T10:00:00Z",
+        errorMessage: null,
+      };
+      await emit("sync:status", fake.syncStatus);
+      await emit("sync:complete", outcome);
+      return outcome;
+    },
     set_sync_provider: ({
       provider,
     }: {

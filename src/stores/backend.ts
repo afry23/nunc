@@ -1,8 +1,12 @@
-import { events } from "../lib/api";
+import { commands, events } from "../lib/api";
+import { isMobile } from "../lib/platform";
+import { changedData, describeSyncResult } from "../lib/sync";
 import { useNotificationStore } from "./notificationStore";
 import { useSettingsStore } from "./settingsStore";
+import { useSyncStore } from "./syncStore";
 import { useTimerStore } from "./timerStore";
 import { useTodoStore } from "./todoStore";
+import { useUiStore } from "./uiStore";
 
 /** Lädt alle Stores neu (Start, `app:reload` nach einem Restore). */
 export async function reloadAll(): Promise<void> {
@@ -11,6 +15,7 @@ export async function reloadAll(): Promise<void> {
     useTodoStore.getState().load(),
     useTimerStore.getState().refresh(),
     useNotificationStore.getState().refresh(),
+    useSyncStore.getState().loadStatus(),
   ]);
 }
 
@@ -35,10 +40,28 @@ export async function connectBackend(): Promise<() => void> {
         .setFinish({ kind: "stopped", payload: event.payload });
     }),
     events.appReload.listen(() => void reloadAll()),
+    events.syncStatus.listen((event) => {
+      const status = event.payload;
+      useSyncStore.getState().setStatus(status);
+      // Fehler erscheinen zusätzlich als Hinweis, der nichts blockiert
+      if (status.state === "error" && status.errorMessage)
+        useUiStore.getState().notify(status.errorMessage, "error");
+    }),
+    events.syncComplete.listen((event) => {
+      const result = event.payload;
+      if (!changedData(result)) return;
+      // vom Server übernommene Daten sind im Backend, die Ansichten laden sie neu
+      void useTodoStore.getState().load();
+      const message = describeSyncResult(result);
+      if (message) useUiStore.getState().notify(message);
+    }),
   ]);
   // Rückkehr aus dem Hintergrund: Ereignisse sind dort ausgeblieben, der Stand kommt neu aus dem Backend
   const onVisible = (): void => {
     if (document.visibilityState === "visible") void reloadAll();
+    // Mobil wird die App im Hintergrund eingefroren: vorher noch einmal synchronisieren
+    else if (isMobile())
+      void commands.syncInBackground().catch(() => undefined);
   };
   document.addEventListener("visibilitychange", onVisible);
   await reloadAll();

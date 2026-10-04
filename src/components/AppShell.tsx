@@ -5,12 +5,21 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useShortcuts } from "../hooks/useShortcuts";
 import { shouldRefresh } from "../lib/gestures";
 import { reloadAll } from "../stores/backend";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useSyncStore } from "../stores/syncStore";
 import { useTimerStore } from "../stores/timerStore";
 import { BreakDialog } from "./BreakDialog";
 import { BottomTabs, Sidebar } from "./Navigation";
+import { SyncStatusBar } from "./SyncStatusBar";
 import { Toast } from "./Toast";
 
-const refresh = (): void => void reloadAll();
+/** Aktualisieren per Ziehen: alles neu laden und, wenn ein Anbieter gewählt ist, synchronisieren. */
+const refresh = (): void => {
+  void reloadAll();
+  const settings = useSettingsStore.getState().settings;
+  if (settings && settings.syncProvider !== "none")
+    void useSyncStore.getState().syncNow();
+};
 
 /** Rahmen der Hauptansichten: Seitenleiste (≥ 768 px) oder Tab-Leiste, Meldungen, Pausenvorschlag. */
 export function AppShell() {
@@ -37,6 +46,7 @@ export function AppShell() {
         tabIndex={-1}
         className={`min-w-0 flex-1 outline-none ${wide || keyboardOpen ? "" : "pb-20"}`}
       >
+        <SyncStatusBar />
         <Outlet />
       </main>
       {!wide && !keyboardOpen && <BottomTabs />}

@@ -3,9 +3,11 @@ import { isMobile } from "../lib/platform";
 import type { SyncProvider } from "../lib/api";
 import { isWebDavComplete } from "../lib/sync";
 import { useSettingsStore } from "../stores/settingsStore";
+import { describeSyncResult } from "../lib/sync";
 import { useSyncStore } from "../stores/syncStore";
+import { useUiStore } from "../stores/uiStore";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { Segmented } from "./ui";
+import { Button, Segmented } from "./ui";
 import { WebDavForm } from "./WebDavForm";
 
 const PROVIDER_LABELS: Record<SyncProvider, string> = {
@@ -20,6 +22,9 @@ export function SyncSection() {
   const setProvider = useSettingsStore((s) => s.setSyncProvider);
   const [pending, setPending] = useState<SyncProvider | null>(null);
   const webdav = useSyncStore((s) => s.webdav);
+  const syncing = useSyncStore((s) => s.status.state === "syncing");
+  const syncNow = useSyncStore((s) => s.syncNow);
+  const notify = useUiStore((s) => s.notify);
   const mobile = isMobile();
 
   useEffect(() => {
@@ -36,6 +41,13 @@ export function SyncSection() {
     ...(mobile ? [] : [{ value: "google_drive" as const, disabled: true }]),
     { value: "webdav" },
   ];
+
+  const runSync = async (): Promise<void> => {
+    const result = await syncNow();
+    // Änderungen meldet `sync:complete`; hier nur der Fall „nichts zu tun“
+    if (result && describeSyncResult(result) === null)
+      notify("Bereits auf dem neuesten Stand.");
+  };
 
   const choose = (next: SyncProvider): void => {
     if (next === provider) return;
@@ -62,6 +74,17 @@ export function SyncSection() {
           <p className="text-sm text-on-surface-variant">
             Google Drive folgt in einer späteren Version.
           </p>
+        )}
+        {provider !== "none" && (
+          <div>
+            <Button
+              disabled={syncing}
+              aria-busy={syncing}
+              onClick={() => void runSync()}
+            >
+              {syncing ? "Synchronisiere …" : "Jetzt synchronisieren"}
+            </Button>
+          </div>
         )}
       </div>
 

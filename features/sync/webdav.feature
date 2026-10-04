@@ -477,11 +477,120 @@ Feature: WebDAV sync
     Then the runner failed with "401 Unauthorized – Benutzername oder Passwort falsch"
     And the settings have no last sync time
 
-  @ui @US-Sync-02-WebDAV @wip
+  @ui @US-Sync-02-WebDAV
   Scenario: The status bar shows idle, syncing and error
+    Given the setting "syncProvider" is "webdav"
+    And the sync status is "idle" with the last sync at "2026-10-04T12:00:00Z"
+    When I open the app
+    Then I see "Zuletzt synchronisiert: 04.10.2026"
+    When the backend reports the sync status "syncing"
+    Then I see "Synchronisiere …"
+    When the backend reports the sync status "error" with "401 Unauthorized – Benutzername oder Passwort falsch"
+    Then I see "Sync-Fehler: 401 Unauthorized – Benutzername oder Passwort falsch"
+    And I see the buttons "Erneut versuchen"
+    When the backend reports the sync status "idle"
+    Then I do not see "Sync-Fehler"
 
-  @ui @US-Sync-02-WebDAV @wip
+  @ui @US-Sync-02-WebDAV
+  Scenario: The status bar says so when nothing was synced yet
+    Given the setting "syncProvider" is "webdav"
+    When I open the app
+    Then I see "Noch nicht synchronisiert"
+
+  @ui @US-Sync-02-WebDAV
+  Scenario: The status bar is hidden while no sync provider is selected
+    When I open the app
+    Then I do not see "synchronisiert"
+    And I do not see "Synchronisiere"
+  @ui @US-Sync-02-WebDAV
   Scenario: A sync error is shown as a non-blocking notification
-
-  @ui @US-Sync-02-WebDAV @wip
+    Given the setting "syncProvider" is "webdav"
+    When I open the app
+    And the backend reports the sync status "error" with "Verbindung abgelehnt – Server nicht erreichbar"
+    Then I see "Verbindung abgelehnt – Server nicht erreichbar"
+    And I do not see a dialog
+    And I see the buttons "Meldung schließen"
+  @ui @US-Sync-02-WebDAV
   Scenario: The sync now button starts a sync
+    Given the setting "syncProvider" is "webdav"
+    And the next sync imports 2 sessions, 3 todos and 0 conflicts
+    When I open the app at "/settings"
+    And I click "Jetzt synchronisieren"
+    Then the backend received "sync_now"
+    And I see "2 Sessions und 3 Aufgaben importiert."
+    And I see "Zuletzt synchronisiert: 04.10.2026"
+
+  @ui @US-Sync-02-WebDAV
+  Scenario: A sync without news says so
+    Given the setting "syncProvider" is "webdav"
+    When I open the app at "/settings"
+    And I click "Jetzt synchronisieren"
+    Then I see "Bereits auf dem neuesten Stand."
+
+  @ui @US-Sync-02-WebDAV
+  Scenario: Replaced todos are reported as a conflict hint
+    Given the setting "syncProvider" is "webdav"
+    And the next sync imports 0 sessions, 0 todos and 2 conflicts
+    When I open the app at "/settings"
+    And I click "Jetzt synchronisieren"
+    Then I see "2 Aufgaben wurden durch neuere Versionen vom Server ersetzt."
+
+  @ui @US-Sync-02-WebDAV
+  Scenario: The sync now button is only offered while a provider is selected
+    When I open the app at "/settings"
+    Then I do not see the button "Jetzt synchronisieren"
+
+  @ui @US-Sync-02-WebDAV
+  Scenario: A failed manual sync shows the error and can be retried
+    Given the setting "syncProvider" is "webdav"
+    And the next sync fails with "Zeitüberschreitung – Server antwortet nicht"
+    When I open the app at "/settings"
+    And I click "Jetzt synchronisieren"
+    Then I see "Sync-Fehler: Zeitüberschreitung – Server antwortet nicht"
+    And I see the buttons "Erneut versuchen"
+
+  @ui @US-Sync-02-WebDAV
+  Scenario: Imported todos appear without reloading the app
+    Given the setting "syncProvider" is "webdav"
+    When I open the app
+    And the backend finishes a sync that imported the todos:
+      | rawText         |
+      | From the server |
+    And I click "Aufgaben"
+    Then I see "From the server"
+    And I see "1 Aufgabe importiert."
+
+  @ui @US-Sync-02-WebDAV @mobile
+  Scenario: Going to the background asks the backend for a last sync on mobile
+    Given the platform is "mobile"
+    And the setting "syncProvider" is "webdav"
+    When I open the app
+    And the app goes to the background
+    Then the backend received "sync_in_background"
+
+  @ui @US-Sync-02-WebDAV @desktop
+  Scenario: The desktop does not sync when the window loses visibility
+    Given the platform is "desktop"
+    And the setting "syncProvider" is "webdav"
+    When I open the app
+    And the app goes to the background
+    Then the backend did not receive "sync_in_background"
+
+  @ui @US-Sync-02-WebDAV @mobile
+  Scenario: Pulling down also synchronizes while a provider is selected
+    Given the platform is "mobile"
+    And the viewport is 390 pixels wide
+    And the setting "syncProvider" is "webdav"
+    When I open the app at "/todos"
+    And I pull the page down by 200 pixels
+    And I release the page
+    Then the backend received "sync_now"
+
+  @ui @US-Sync-02-WebDAV @mobile
+  Scenario: Pulling down does not sync without a provider
+    Given the platform is "mobile"
+    And the viewport is 390 pixels wide
+    When I open the app at "/todos"
+    And I pull the page down by 200 pixels
+    And I release the page
+    Then the backend did not receive "sync_now"
