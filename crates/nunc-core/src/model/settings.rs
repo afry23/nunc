@@ -73,6 +73,10 @@ pub struct Settings {
     pub flowtime_min_flow_state_min: u32,
     /// Sprache der Oberfläche; die Go-App kennt den Schlüssel nicht und ignoriert ihn.
     pub language: Language,
+    /// Lokale HTTP-Schnittstelle (nur Desktop, ADR 0013) an/aus; Go ignoriert den Schlüssel.
+    pub api_enabled: bool,
+    /// Gewünschter Port der lokalen Schnittstelle (1024–65535); ist er belegt, nimmt der Server den nächsten freien.
+    pub api_port: u32,
 }
 
 /// Eine verletzte Einstellungsgrenze.
@@ -111,6 +115,11 @@ impl Settings {
             "flowtimeMinFlowStateMin",
             "1–60",
         );
+        check(
+            (1024..=65535).contains(&self.api_port),
+            "apiPort",
+            "1024–65535",
+        );
         if issues.is_empty() {
             Ok(())
         } else {
@@ -142,6 +151,8 @@ impl Default for Settings {
             flowtime_ratio: 0.2,
             flowtime_min_flow_state_min: 15,
             language: Language::System,
+            api_enabled: false,
+            api_port: 42820,
         }
     }
 }
@@ -258,13 +269,17 @@ mod tests {
             "flowtimeRatio",
             "flowtimeMinFlowStateMin",
             "language",
+            "apiEnabled",
+            "apiPort",
         ] {
             assert!(value.get(key).is_some(), "Schlüssel {key} fehlt");
         }
-        assert_eq!(value.as_object().unwrap().len(), 20);
+        assert_eq!(value.as_object().unwrap().len(), 22);
         assert_eq!(value["activeMode"], "pomodoro");
         assert_eq!(value["syncProvider"], "none");
         assert_eq!(value["language"], "system");
+        assert_eq!(value["apiEnabled"], false);
+        assert_eq!(value["apiPort"], 42820);
     }
 
     #[test]

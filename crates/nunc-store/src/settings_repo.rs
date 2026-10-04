@@ -127,10 +127,12 @@ fn settings_from_kv(kv: &HashMap<String, String>) -> Settings {
     if let Some(language) = get("language").and_then(|v| v.parse().ok()) {
         s.language = language;
     }
+    flag("api_enabled", &mut s.api_enabled);
+    number("api_port", &mut s.api_port);
     s
 }
 
-fn kv_from_settings(s: &Settings) -> [(&'static str, String); 20] {
+fn kv_from_settings(s: &Settings) -> [(&'static str, String); 22] {
     [
         ("pomodoro_min", s.pomodoro_min.to_string()),
         ("short_break_min", s.short_break_min.to_string()),
@@ -158,6 +160,8 @@ fn kv_from_settings(s: &Settings) -> [(&'static str, String); 20] {
             s.flowtime_min_flow_state_min.to_string(),
         ),
         ("language", s.language.as_str().to_owned()),
+        ("api_enabled", s.api_enabled.to_string()),
+        ("api_port", s.api_port.to_string()),
     ]
 }
 
@@ -240,6 +244,8 @@ mod tests {
             flowtime_ratio: 0.35,
             flowtime_min_flow_state_min: 40,
             language: Language::En,
+            api_enabled: true,
+            api_port: 43000,
         };
         save_settings(&mut conn, &s).unwrap();
         assert_eq!(load_settings(&conn).unwrap(), s);

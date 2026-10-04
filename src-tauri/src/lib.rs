@@ -1,4 +1,6 @@
 mod adapters;
+#[cfg(desktop)]
+mod api_service;
 mod commands;
 mod credentials;
 mod db;
@@ -21,11 +23,14 @@ use tauri_specta::{Builder, collect_commands, collect_events};
 const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/bindings.ts");
 
 fn specta_builder() -> Builder<tauri::Wry> {
-    use commands::{app, backup, notifications, settings, stats, sync, timer, todos, todotxt};
+    use commands::{api, app, backup, notifications, settings, stats, sync, timer, todos, todotxt};
 
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             app::app_info,
+            api::get_api_status::<tauri::Wry>,
+            api::get_api_token::<tauri::Wry>,
+            api::regenerate_api_token::<tauri::Wry>,
             app::show_main_window::<tauri::Wry>,
             settings::get_settings,
             settings::save_settings::<tauri::Wry>,

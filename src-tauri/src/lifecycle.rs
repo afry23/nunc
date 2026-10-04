@@ -38,6 +38,8 @@ pub fn setup<R: Runtime>(app: &App<R>) -> Result<(), Box<dyn std::error::Error>>
         state.on_shutdown(move || runtime.block_on(sync.sync_on_quit()));
     }
     spawn_ticker(&handle);
+    #[cfg(desktop)]
+    start_api(&handle);
     Ok(())
 }
 
@@ -140,4 +142,25 @@ fn spawn_ticker<R: Runtime>(handle: &AppHandle<R>) {
             }
         }
     });
+}
+
+/// Lokale Schnittstelle: Dienst anlegen und, wenn eingeschaltet, den Server starten (ADR 0013).
+#[cfg(desktop)]
+fn start_api<R: Runtime>(handle: &AppHandle<R>) {
+    use crate::api_service::{ApiService, AppBackend};
+
+    let state = handle.state::<AppState>();
+    let service = ApiService::new(state.secrets.clone(), Arc::new(AppBackend(handle.clone())));
+    handle.manage(service);
+    let settings = state.db.with(|conn| nunc_store::load_settings(conn));
+    let Ok(settings) = settings else { return };
+    if settings.api_enabled {
+        let handle = handle.clone();
+        state.runtime.spawn(async move {
+            handle
+                .state::<ApiService>()
+                .apply(settings.api_enabled, settings.api_port)
+                .await;
+        });
+    }
 }

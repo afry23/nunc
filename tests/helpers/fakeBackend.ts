@@ -44,6 +44,8 @@ export const DEFAULT_SETTINGS: Settings = {
   flowtimeRatio: 0.2,
   flowtimeMinFlowStateMin: 15,
   language: "de",
+  apiEnabled: false,
+  apiPort: 42820,
 };
 
 export const EMPTY_STATS: StatsResponse = {

@@ -32,7 +32,14 @@ pub fn save_settings<R: Runtime>(
         nunc_store::save_settings(conn, &settings)
     })?;
     #[cfg(desktop)]
-    crate::tray::set_visible(&app, settings.system_tray_enabled);
+    {
+        use tauri::Manager;
+        crate::tray::set_visible(&app, settings.system_tray_enabled);
+        // Befehle ohne Laufzeitkontext (Hauptthread): hier darf blockiert werden, bis der Server umgestellt ist
+        if let Some(api) = app.try_state::<crate::api_service::ApiService>() {
+            tauri::async_runtime::block_on(api.apply(settings.api_enabled, settings.api_port));
+        }
+    }
     #[cfg(mobile)]
     let _ = app;
     Ok(())
