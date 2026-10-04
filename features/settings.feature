@@ -65,6 +65,28 @@ Feature: Settings
       | syncProvider            | none     |
       | flowtimeRatio           | 0.2      |
       | flowtimeMinFlowStateMin | 15       |
+      | language                | system   |
+
+  @integration @REQ-5.4
+  Scenario: A language that is not offered falls back to the system language
+    Given no database exists yet
+    When nunc opens the database
+    And the settings table has "language" = "klingon"
+    And I load the settings
+    Then the loaded settings are:
+      | setting  | value  |
+      | language | system |
+
+  @integration @REQ-5.4
+  Scenario: The chosen language is persisted
+    Given no database exists yet
+    When nunc opens the database
+    And I load the settings
+    And I set "language" to "en"
+    And I save the settings
+    Then the settings table contains:
+      | key      | value |
+      | language | en    |
 
   @integration @REQ-5
   Scenario: Saved settings are returned again

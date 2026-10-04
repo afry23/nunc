@@ -150,6 +150,3 @@ Feature: Session export
   @domain @property @REQ-11
   Scenario: The CSV export can be read back for any text
     Then the property "the CSV export can be read back for any text" holds for 200 random cases
-
-  @ui @REQ-11 @mobile @wip
-  Scenario: The export is handed to the share sheet

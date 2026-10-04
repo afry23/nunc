@@ -1,3 +1,5 @@
+import { t, type MessageKey } from "../i18n";
+
 /** Reine Formatierungs- und Datumshilfen. Kalendertage sind immer lokale Tage (`YYYY-MM-DD`). */
 
 const pad = (n: number): string => String(n).padStart(2, "0");
@@ -38,17 +40,18 @@ export function addDays(date: Date, days: number): Date {
   return next;
 }
 
-const WEEKDAYS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-
 /** Kurzer Wochentag (`Mo`) eines Datums `YYYY-MM-DD`. */
 export function weekdayLabel(isoDate: string): string {
-  return WEEKDAYS[parseIsoDate(isoDate).getDay()];
+  return t(`weekday.short.${parseIsoDate(isoDate).getDay()}` as MessageKey);
 }
 
 /** `04.10.` für ein Datum `YYYY-MM-DD`. */
 export function shortDate(isoDate: string): string {
   const d = parseIsoDate(isoDate);
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.`;
+  return t("format.shortDate", {
+    day: pad(d.getDate()),
+    month: pad(d.getMonth() + 1),
+  });
 }
 
 /** Größe in Bytes als `12 KB` / `3,4 MB`. */
@@ -56,14 +59,22 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const kb = bytes / 1024;
   if (kb < 1024) return `${Math.round(kb)} KB`;
-  return `${(kb / 1024).toFixed(1).replace(".", ",")} MB`;
+  return `${(kb / 1024).toFixed(1).replace(".", t("format.decimal"))} MB`;
 }
 
 /** Zeitpunkt (RFC 3339) in lokaler Zeit als `04.10.2026, 08:30`. */
 export function formatDateTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const date = t("format.date", {
+    day: pad(d.getDate()),
+    month: pad(d.getMonth() + 1),
+    year: d.getFullYear(),
+  });
+  return t("format.dateTime", {
+    date,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  });
 }
 
 /** Uhrzeit eines Zeitpunkts (RFC 3339) in lokaler Zeit als `08:30`. */
@@ -77,7 +88,11 @@ export function formatTimeOfDay(iso: string): string {
 export function formatUtcDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return `${pad(d.getUTCDate())}.${pad(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`;
+  return t("format.date", {
+    day: pad(d.getUTCDate()),
+    month: pad(d.getUTCMonth() + 1),
+    year: d.getUTCFullYear(),
+  });
 }
 
 /** Flowtime-Verhältnis als Badge: `1 : 0.2`. */
@@ -92,22 +107,11 @@ export function ratioAnchor(ratio: number): "STRICT" | "BALANCED" | "RELAXED" {
   return "RELAXED";
 }
 
-const MONTHS = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-];
-
 /** `Oktober 2026` für Jahr und Monat (1–12). */
 export function monthLabel(year: number, month: number): string {
-  return `${MONTHS[month - 1] ?? month} ${year}`;
+  const name =
+    month >= 1 && month <= 12
+      ? t(`month.${month}` as MessageKey)
+      : String(month);
+  return `${name} ${year}`;
 }

@@ -132,6 +132,3 @@ Feature: Flowtime break recommendation
     And 5 minutes pass
     And I stop the timer
     Then nothing starts automatically
-
-  @integration @US-FT-02 @wip
-  Scenario: Default flowtime settings are ratio 0.2 and minimum flow state 15

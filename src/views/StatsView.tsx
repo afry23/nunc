@@ -11,27 +11,19 @@ import {
   type StatsRequest,
   type StatsResponse,
 } from "../lib/api";
+import { useT } from "../i18n";
 import { formatMinutes, monthLabel } from "../lib/format";
-import {
-  PERIOD_NAMES,
-  fillDays,
-  periodRange,
-  periodTotals,
-} from "../lib/stats";
+import { periodName, fillDays, periodRange, periodTotals } from "../lib/stats";
 import { useUiStore } from "../stores/uiStore";
 
-const PERIODS: { value: StatsPeriod; label: string }[] = [
-  { value: "day", label: "Tag" },
-  { value: "week", label: "Woche" },
-  { value: "month", label: "Monat" },
-  { value: "year", label: "Jahr" },
-];
+const PERIODS: StatsPeriod[] = ["day", "week", "month", "year"];
 
 type Loaded =
   | { period: StatsPeriod; request: StatsRequest; response: StatsResponse }
   | { period: StatsPeriod; error: string };
 
 export function StatsView() {
+  const t = useT();
   const [period, setPeriod] = useState<StatsPeriod>("week");
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
@@ -78,7 +70,7 @@ export function StatsView() {
       const path = await unwrap(
         commands.saveExportToFile(data.request, format),
       );
-      if (path) notify(`Export gespeichert: ${path}`);
+      if (path) notify(t("stats.exportSaved", { path }));
     } catch (error) {
       fail(error);
     }
@@ -97,16 +89,19 @@ export function StatsView() {
     >
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <SectionLabel>Leistung</SectionLabel>
+          <SectionLabel>{t("stats.eyebrow")}</SectionLabel>
           <h1 id="stats-heading" className="headline-md">
-            Statistik
+            {t("stats.title")}
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Segmented
-            label="Zeitraum"
+            label={t("stats.period")}
             value={period}
-            options={PERIODS}
+            options={PERIODS.map((value) => ({
+              value,
+              label: t(`stats.range.${value}`),
+            }))}
             onChange={setPeriod}
           />
           <div className="relative">
@@ -116,12 +111,12 @@ export function StatsView() {
               disabled={!data}
               onClick={() => setExportOpen(!exportOpen)}
             >
-              <DownloadIcon /> Exportieren
+              <DownloadIcon /> {t("stats.export")}
             </Button>
             {exportOpen && (
               <div
                 role="group"
-                aria-label="Exportformat"
+                aria-label={t("stats.exportFormat")}
                 className="glass shadow-ambient absolute right-0 z-10 mt-2 flex flex-col gap-1 rounded-xl p-2"
               >
                 <Button variant="ghost" onClick={() => void exportAs("csv")}>
@@ -144,11 +139,13 @@ export function StatsView() {
           {current.error}
         </p>
       )}
-      {!current && <p className="text-on-surface-variant">Lade Statistik …</p>}
+      {!current && (
+        <p className="text-on-surface-variant">{t("stats.loading")}</p>
+      )}
 
       {response && empty && (
         <p className="rounded-xl bg-surface-container-low p-8 text-center text-on-surface-variant">
-          Keine Sitzungen im gewählten Zeitraum.
+          {t("stats.none")}
         </p>
       )}
 
@@ -156,48 +153,50 @@ export function StatsView() {
         <>
           <dl className="grid grid-cols-2 gap-4 lg:grid-cols-3">
             <Kpi
-              label="Pomodoros"
+              label={t("stats.kpi.pomodoros")}
               value={String(totals.pomodoros)}
-              hint={PERIOD_NAMES[period]}
+              hint={periodName(period)}
             />
             <Kpi
-              label="Fokuszeit"
+              label={t("stats.kpi.focus")}
               value={formatMinutes(totals.workMinutes)}
-              hint={PERIOD_NAMES[period]}
+              hint={periodName(period)}
             />
             <Kpi
-              label="Ø Pomodoros / Tag"
+              label={t("stats.kpi.perDay")}
               value={totals.perDay.toFixed(1)}
-              hint={PERIOD_NAMES[period]}
+              hint={periodName(period)}
             />
             <Kpi
-              label="Aktuelle Serie"
-              value={`${response.currentStreak} ${response.currentStreak === 1 ? "Tag" : "Tage"}`}
+              label={t("stats.kpi.currentStreak")}
+              value={t("stats.days", { count: response.currentStreak })}
             />
             <Kpi
-              label="Längste Serie"
-              value={`${response.longestStreak} ${response.longestStreak === 1 ? "Tag" : "Tage"}`}
+              label={t("stats.kpi.longestStreak")}
+              value={t("stats.days", { count: response.longestStreak })}
             />
             <Kpi
-              label="Gesamt"
-              value={`${response.totalPomodoros} Pomodoros`}
-              hint={`${formatMinutes(response.totalWorkMin)} · alle Zeit`}
+              label={t("stats.kpi.total")}
+              value={t("stats.pomodoros", { count: response.totalPomodoros })}
+              hint={t("stats.allTime", {
+                time: formatMinutes(response.totalWorkMin),
+              })}
             />
           </dl>
 
           <Card
-            title="Arbeitszeit pro Tag"
-            caption="Zahl über dem Balken: Pomodoros"
+            title={t("stats.card.workPerDay")}
+            caption={t("stats.card.workPerDayCaption")}
           >
             <BarChart days={days} />
           </Card>
 
           {days.length > 1 && (
             <>
-              <Card title="Pomodoros pro Tag">
+              <Card title={t("stats.card.pomodorosPerDay")}>
                 <LineChart days={days} />
               </Card>
-              <Card title="Kalender">
+              <Card title={t("stats.card.calendar")}>
                 <Heatmap days={days} />
               </Card>
             </>
@@ -205,19 +204,21 @@ export function StatsView() {
 
           {(period === "month" || period === "year") &&
             response.monthly.length > 0 && (
-              <Card title="Pomodoros pro Monat">
+              <Card title={t("stats.card.perMonth")}>
                 <table
-                  aria-label="Pomodoros pro Monat"
+                  aria-label={t("stats.card.perMonth")}
                   className="w-full text-left"
                 >
                   <thead className="label-md text-on-surface-variant">
                     <tr>
-                      <th className="pb-2 font-semibold">Monat</th>
-                      <th className="pb-2 text-right font-semibold">
-                        Pomodoros
+                      <th className="pb-2 font-semibold">
+                        {t("stats.col.month")}
                       </th>
                       <th className="pb-2 text-right font-semibold">
-                        Fokuszeit
+                        {t("stats.col.pomodoros")}
+                      </th>
+                      <th className="pb-2 text-right font-semibold">
+                        {t("stats.col.focus")}
                       </th>
                     </tr>
                   </thead>
@@ -241,14 +242,14 @@ export function StatsView() {
             )}
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card title="Projekte">
+            <Card title={t("stats.card.projects")}>
               {response.projects.length === 0 ? (
                 <p className="text-on-surface-variant">
-                  Keine Projekt-Tags in diesem Zeitraum.
+                  {t("stats.noProjects")}
                 </p>
               ) : (
                 <PieChart
-                  label="Arbeitszeit nach Projekt"
+                  label={t("stats.pie")}
                   entries={response.projects.map((p) => ({
                     label: p.project,
                     value: p.workMinutes,
@@ -256,10 +257,10 @@ export function StatsView() {
                 />
               )}
             </Card>
-            <Card title="Kontexte">
+            <Card title={t("stats.card.contexts")}>
               {response.contexts.length === 0 ? (
                 <p className="text-on-surface-variant">
-                  Keine Kontext-Tags in diesem Zeitraum.
+                  {t("stats.noContexts")}
                 </p>
               ) : (
                 <ul className="flex flex-col gap-2">
@@ -278,11 +279,9 @@ export function StatsView() {
             </Card>
           </div>
 
-          <Card title="Top-Aufgaben">
+          <Card title={t("stats.card.topTodos")}>
             {response.topTodos.length === 0 ? (
-              <p className="text-on-surface-variant">
-                Noch keine Aufgaben mit Sitzungen.
-              </p>
+              <p className="text-on-surface-variant">{t("stats.noTopTodos")}</p>
             ) : (
               <ol className="flex flex-col gap-3">
                 {response.topTodos.map((todo) => (

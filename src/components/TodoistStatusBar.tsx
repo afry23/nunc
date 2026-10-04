@@ -1,8 +1,10 @@
+import { useT } from "../i18n";
 import { useTodoistStore } from "../stores/todoistStore";
 import { todoistStatusText } from "./TodoistSection";
 
 /** Schmale Statuszeile für Todoist (nur sichtbar, solange ein Konto verbunden ist). */
 export function TodoistStatusBar() {
+  const t = useT();
   const connected = useTodoistStore((s) => s.account?.connected ?? false);
   const status = useTodoistStore((s) => s.status);
   if (!connected) return null;
@@ -10,7 +12,7 @@ export function TodoistStatusBar() {
   return (
     <div
       role="status"
-      aria-label="Todoist-Status"
+      aria-label={t("todoist.statusLabel")}
       data-testid="todoist-status"
       data-state={status.state}
       title={status.errorMessage ?? undefined}

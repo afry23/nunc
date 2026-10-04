@@ -2,12 +2,14 @@ import { RingTimer } from "../components/RingTimer";
 import { Button } from "../components/ui";
 import { useViewportSize } from "../hooks/useMediaQuery";
 import { commands } from "../lib/api";
+import { useT } from "../i18n";
 import { miniRingSize } from "../lib/timer";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTimerStore } from "../stores/timerStore";
 
 /** Kompakter Timer für das zweite Fenster (always-on-top). */
 export function MiniTimerView() {
+  const t = useT();
   const snapshot = useTimerStore((s) => s.snapshot);
   const { pause, resume, stop } = useTimerStore.getState();
   const settings = useSettingsStore((s) => s.settings);
@@ -17,7 +19,7 @@ export function MiniTimerView() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-3 overflow-hidden bg-surface-container-lowest p-3">
-      <h1 className="sr-only">Mini-Timer</h1>
+      <h1 className="sr-only">{t("mini.title")}</h1>
       <RingTimer
         snapshot={snapshot}
         idleSeconds={idleSeconds}
@@ -26,19 +28,19 @@ export function MiniTimerView() {
       />
       <div className="flex gap-2">
         {snapshot.state === "running" && (
-          <Button onClick={() => void pause()}>Pause</Button>
+          <Button onClick={() => void pause()}>{t("timer.pause")}</Button>
         )}
         {snapshot.state === "paused" && (
           <Button variant="primary" onClick={() => void resume()}>
-            Fortsetzen
+            {t("timer.resume")}
           </Button>
         )}
         {snapshot.state !== "idle" && (
-          <Button onClick={() => void stop()}>Stop</Button>
+          <Button onClick={() => void stop()}>{t("timer.stop")}</Button>
         )}
       </div>
       <Button variant="ghost" onClick={() => void commands.showMainWindow()}>
-        Zur App
+        {t("mini.toApp")}
       </Button>
     </main>
   );

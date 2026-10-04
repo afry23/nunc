@@ -43,6 +43,7 @@ export const DEFAULT_SETTINGS: Settings = {
   syncProvider: "none",
   flowtimeRatio: 0.2,
   flowtimeMinFlowStateMin: 15,
+  language: "de",
 };
 
 export const EMPTY_STATS: StatsResponse = {

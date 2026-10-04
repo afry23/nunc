@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 import type { TimerSnapshot } from "../lib/api";
 import { formatClock } from "../lib/format";
 import {
@@ -27,6 +28,7 @@ export function RingTimer({
   size?: number;
   compact?: boolean;
 }) {
+  const t = useT();
   const idle = snapshot.state === "idle";
   const color = sessionColor(snapshot.mode, snapshot.sessionType);
   const seconds = idle ? idleSeconds : snapshot.remaining;
@@ -36,7 +38,7 @@ export function RingTimer({
   return (
     <div
       role="timer"
-      aria-label={idle ? "Timer" : label}
+      aria-label={idle ? t("timer.title") : label}
       data-state={snapshot.state}
       data-session={snapshot.sessionType}
       data-mode={snapshot.mode}
@@ -85,7 +87,7 @@ export function RingTimer({
         {!compact && !idle && (
           <span className="label-md mt-3 rounded-lg bg-surface-container-high px-3 py-1 text-on-surface-variant">
             {label}
-            {snapshot.state === "paused" ? " · pausiert" : ""}
+            {snapshot.state === "paused" ? t("timer.pausedSuffix") : ""}
           </span>
         )}
       </div>

@@ -10,6 +10,16 @@ Feature: Timer persistence
     Then the restored timer is running for todo 4
     And 900 seconds remain at 09:10:00
 
+  # NFR „kein Datenverlust bei Kill während des Timers“ (roadmap M8-01)
+  @integration @REQ-13
+  Scenario: A running timer survives the process being killed without a clean shutdown
+    Given no database exists yet
+    When nunc opens the database
+    And a pomodoro for todo 4 is started at 09:00:00 and saved
+    And the app is killed and restarted
+    Then the restored timer is running for todo 4
+    And 900 seconds remain at 09:10:00
+
   @integration @REQ-13
   Scenario: A paused timer is restored after an app restart
     Given no database exists yet
@@ -122,6 +132,19 @@ Feature: Timer persistence
     And 3 hours pass without a tick
     Then 900 seconds remain
     And the timer is paused
+
+  # NFR „Timer-Drift < 1 s/h“ (roadmap M8-01): die Zeit kommt aus Zeitstempeln, verspätete Ticks summieren nichts auf.
+  @domain @REQ-13
+  Scenario: Irregular and missing ticks do not add up to a drift over an hour
+    Given it is 09:00:00
+    When I start a flowtime session
+    And 7 seconds pass
+    And 13 minutes pass without a tick
+    And 1 seconds pass
+    And 29 minutes pass
+    And 17 minutes pass without a tick
+    And 52 seconds pass
+    Then 3600 seconds have elapsed
 
   # e2e/mobile/kill-resume.yaml
   @e2e @REQ-13 @mobile

@@ -1,10 +1,12 @@
 import { useEffect } from "react";
+import { useT } from "../i18n";
 import { useUiStore } from "../stores/uiStore";
 import { CloseIcon } from "./icons";
 import { IconButton } from "./ui";
 
 /** Einblendung für Fehler und Hinweise; Fehler bleiben, bis sie geschlossen werden. */
 export function Toast() {
+  const t = useT();
   const notice = useUiStore((s) => s.notice);
   const dismiss = useUiStore((s) => s.dismiss);
 
@@ -25,7 +27,7 @@ export function Toast() {
       >
         {notice.message}
       </p>
-      <IconButton label="Meldung schließen" onClick={dismiss}>
+      <IconButton label={t("toast.close")} onClick={dismiss}>
         <CloseIcon />
       </IconButton>
     </div>

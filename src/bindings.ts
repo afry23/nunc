@@ -270,6 +270,9 @@ export type FinishPayload = {
 	suggestedBreak: BreakSuggestion | null,
 };
 
+/**  Sprache der Oberfläche (`system` folgt dem Betriebssystem). */
+export type Language = "system" | "de" | "en";
+
 /**  Kennzahlen je Kalendermonat im Zeitraum. */
 export type MonthlyStats = {
 	year: number,
@@ -345,6 +348,8 @@ export type Settings = {
 	flowtimeRatio: number | null,
 	/**  Mindest-Arbeitszeit in Minuten (1–60), ab der eine Pause empfohlen wird. */
 	flowtimeMinFlowStateMin: number,
+	/**  Sprache der Oberfläche; die Go-App kennt den Schlüssel nicht und ignoriert ihn. */
+	language: Language,
 };
 
 /**  Sortierrichtung. Fehlende Werte (keine Priorität, kein Datum) stehen in beiden Richtungen zuletzt. */

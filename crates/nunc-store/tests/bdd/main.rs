@@ -263,6 +263,15 @@ fn restart(world: &mut StoreWorld) {
     world.timer = nunc_store::load_timer(world.conn()).expect("Timer laden");
 }
 
+/// Ein beendeter Prozess schließt seine Verbindung nicht: kein Checkpoint, die WAL-Datei bleibt liegen.
+#[when("the app is killed and restarted")]
+fn kill_and_restart(world: &mut StoreWorld) {
+    if let Some(conn) = world.conn.take() {
+        std::mem::forget(conn);
+    }
+    restart(world);
+}
+
 #[then(expr = "the restored timer is running for todo {int}")]
 fn restored_running(world: &mut StoreWorld, todo_id: i32) {
     assert_eq!(world.timer.state(), TimerState::Running);

@@ -15,6 +15,8 @@
     "test:bdd": "vitest run features --passWithNoTests",
     "test:e2e": "wdio run e2e/wdio.conf.ts",
     "mutate:rust": "cargo mutants -p nunc-core -p nunc-store",
+    "version:set": "node scripts/bump-version.mjs",
+    "docs:report": "node scripts/docs-report.mjs --check --results target/bdd/domain.json",
     "test:mobile": "maestro test e2e/mobile"
   },
   "dependencies": {

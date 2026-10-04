@@ -4,6 +4,7 @@ import {
   requestNotificationPermission,
   type NotificationInfo,
 } from "../lib/notifications";
+import { t } from "../i18n";
 import { isMobile } from "../lib/platform";
 import { useSettingsStore } from "./settingsStore";
 import { useUiStore } from "./uiStore";
@@ -52,11 +53,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     if (get().info?.permission === "prompt") await get().request();
     if (get().info?.permission === "denied" && !hinted) {
       hinted = true;
-      useUiStore
-        .getState()
-        .notify(
-          "Benachrichtigungen sind blockiert. Der Timer läuft weiter, meldet sein Ende aber nur bei geöffneter App.",
-        );
+      useUiStore.getState().notify(t("notifications.blockedHint"));
     }
   },
 }));

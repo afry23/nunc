@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import type { DailyStats, StatsPeriod } from "../bindings";
 import { addDays, parseIsoDate, toIsoDate } from "./format";
 
@@ -197,9 +198,6 @@ export function periodTotals(days: DayPoint[]): {
 }
 
 /** Bezeichnung des Auswertungsfensters für die Anzeige. */
-export const PERIOD_NAMES: Record<StatsPeriod, string> = {
-  day: "Heute",
-  week: "Letzte 7 Tage",
-  month: "Letzte 30 Tage",
-  year: "Letzte 365 Tage",
-};
+export function periodName(period: StatsPeriod): string {
+  return t(`stats.period.${period}`);
+}

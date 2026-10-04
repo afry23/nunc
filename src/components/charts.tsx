@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { shortDate, formatMinutes, weekdayLabel } from "../lib/format";
 import {
   barLayout,
@@ -41,7 +42,7 @@ export function BarChart({ days }: { days: DayPoint[] }) {
     <svg
       role="img"
       data-testid="chart-bar"
-      aria-label={`Arbeitszeit pro Tag, insgesamt ${formatMinutes(total)}`}
+      aria-label={t("charts.bar", { total: formatMinutes(total) })}
       viewBox={`0 0 ${W} ${H + LABEL_H}`}
       className="w-full"
     >
@@ -59,7 +60,13 @@ export function BarChart({ days }: { days: DayPoint[] }) {
               fill="var(--color-primary)"
               opacity={bar.value > 0 ? 1 : 0.2}
             >
-              <title>{`${day.date}: ${day.pomodoroCount} Pomodoros, ${formatMinutes(bar.value)}`}</title>
+              <title>
+                {t("charts.barTitle", {
+                  date: day.date,
+                  count: day.pomodoroCount,
+                  time: formatMinutes(bar.value),
+                })}
+              </title>
             </rect>
             {labelled && (
               <text
@@ -105,7 +112,7 @@ export function LineChart({ days }: { days: DayPoint[] }) {
     <svg
       role="img"
       data-testid="chart-line"
-      aria-label={`Pomodoros pro Tag, insgesamt ${total}`}
+      aria-label={t("charts.line", { total })}
       viewBox={`0 0 ${W} ${H + LABEL_H}`}
       className="w-full"
     >
@@ -125,7 +132,12 @@ export function LineChart({ days }: { days: DayPoint[] }) {
           r={days.length > 31 ? 0 : 4}
           fill="var(--color-primary)"
         >
-          <title>{`${days[index].date}: ${days[index].pomodoroCount} Pomodoros`}</title>
+          <title>
+            {t("charts.lineTitle", {
+              date: days[index].date,
+              count: days[index].pomodoroCount,
+            })}
+          </title>
         </circle>
       ))}
       {labelled &&
@@ -177,7 +189,7 @@ export function Heatmap({ days }: { days: DayPoint[] }) {
       <svg
         role="img"
         data-testid="chart-heatmap"
-        aria-label="Kalender der Pomodoros pro Tag"
+        aria-label={t("charts.heatmap")}
         viewBox={`0 0 ${width} ${height}`}
         width={width}
         height={height}
@@ -195,7 +207,9 @@ export function Heatmap({ days }: { days: DayPoint[] }) {
             opacity={LEVEL_OPACITY[cell.level]}
             data-level={cell.level}
           >
-            <title>{`${cell.date}: ${cell.count} Pomodoros`}</title>
+            <title>
+              {t("charts.heatmapTitle", { date: cell.date, count: cell.count })}
+            </title>
           </rect>
         ))}
       </svg>

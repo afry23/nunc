@@ -17,19 +17,21 @@ import { useState, type FormEvent } from "react";
 import { PlusIcon } from "../components/icons";
 import { TodoItem } from "../components/TodoItem";
 import { Button, Chip, SectionLabel } from "../components/ui";
+import { useT } from "../i18n";
 import type { TodoSort } from "../lib/api";
 import { collectTags, moveItem } from "../lib/todos";
 import { useTodoStore } from "../stores/todoStore";
 
-const SORTS: { value: TodoSort; label: string }[] = [
-  { value: "manual", label: "Manuell" },
-  { value: "priority", label: "Priorität" },
-  { value: "created_at", label: "Erstellt am" },
-  { value: "pomodoro_count", label: "Pomodoros" },
-  { value: "alphabetical", label: "Alphabetisch" },
+const SORTS: TodoSort[] = [
+  "manual",
+  "priority",
+  "created_at",
+  "pomodoro_count",
+  "alphabetical",
 ];
 
 export function TodoView() {
+  const t = useT();
   const all = useTodoStore((s) => s.all);
   const visible = useTodoStore((s) => s.visible);
   const filter = useTodoStore((s) => s.filter);
@@ -60,7 +62,7 @@ export function TodoView() {
   const tags = collectTags(all);
   const priorities = [
     ...new Set(
-      all.map((t) => t.priority).filter((p): p is string => p !== null),
+      all.map((todo) => todo.priority).filter((p): p is string => p !== null),
     ),
   ].sort();
   const filtering =
@@ -68,7 +70,7 @@ export function TodoView() {
       0 || filter.text !== "";
   const canReorder =
     sort === "manual" && direction === "ascending" && !filtering;
-  const completedCount = all.filter((t) => t.completed).length;
+  const completedCount = all.filter((todo) => todo.completed).length;
 
   const submit = async (event: FormEvent): Promise<void> => {
     event.preventDefault();
@@ -79,7 +81,7 @@ export function TodoView() {
   const onDragEnd = (event: DragEndEvent): void => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const ids = visible.map((t) => t.id);
+    const ids = visible.map((todo) => todo.id);
     void reorderVisible(
       moveItem(
         ids,
@@ -97,15 +99,13 @@ export function TodoView() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 id="todos-heading" className="headline-md">
-            Aufgaben
+            {t("todos.title")}
           </h1>
-          <p className="text-on-surface-variant">
-            Prioritätenliste in todo.txt-Syntax.
-          </p>
+          <p className="text-on-surface-variant">{t("todos.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor="todo-sort" className="sr-only">
-            Sortierung
+            {t("todos.sort.label")}
           </label>
           <select
             id="todo-sort"
@@ -113,17 +113,17 @@ export function TodoView() {
             onChange={(event) => void setSort(event.target.value as TodoSort)}
             className="min-h-11 rounded-lg bg-surface-container-high px-3"
           >
-            {SORTS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+            {SORTS.map((value) => (
+              <option key={value} value={value}>
+                {t(`todos.sort.${value}`)}
               </option>
             ))}
           </select>
           <Button
             aria-label={
               direction === "ascending"
-                ? "Aufsteigend sortiert"
-                : "Absteigend sortiert"
+                ? t("todos.sort.ascending")
+                : t("todos.sort.descending")
             }
             onClick={() =>
               void setSort(
@@ -143,13 +143,13 @@ export function TodoView() {
       >
         <PlusIcon />
         <label htmlFor="todo-input" className="sr-only">
-          Neue Aufgabe
+          {t("todos.new")}
         </label>
         <input
           id="todo-input"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="(A) Dokumentation fertig +projekt @kontext"
+          placeholder={t("todos.placeholder")}
           autoComplete="off"
           className="min-h-11 min-w-0 flex-1 bg-transparent px-2 placeholder:text-on-surface-variant focus:outline-none"
         />
@@ -159,26 +159,30 @@ export function TodoView() {
           className="shrink-0 px-3 text-sm sm:px-5 sm:text-base"
           disabled={draft.trim() === ""}
         >
-          Hinzufügen
+          {t("todos.add")}
         </Button>
       </form>
 
-      <div className="flex flex-col gap-3" role="group" aria-label="Filter">
+      <div
+        className="flex flex-col gap-3"
+        role="group"
+        aria-label={t("todos.filter")}
+      >
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="todo-search" className="sr-only">
-            Aufgaben durchsuchen
+            {t("todos.search.label")}
           </label>
           <input
             id="todo-search"
             type="search"
             value={filter.text}
             onChange={(event) => void setText(event.target.value)}
-            placeholder="Suchen …"
+            placeholder={t("todos.search.placeholder")}
             className="min-h-11 min-w-48 flex-1 rounded-sm bg-surface-container-highest px-3 focus:bg-secondary-container"
           />
           {filtering && (
             <Button variant="ghost" onClick={() => void clearFilters()}>
-              Filter zurücksetzen
+              {t("todos.filter.reset")}
             </Button>
           )}
         </div>
@@ -186,7 +190,7 @@ export function TodoView() {
           tags.contexts.length > 0 ||
           priorities.length > 0) && (
           <div className="flex flex-wrap items-center gap-2">
-            <SectionLabel>Filter</SectionLabel>
+            <SectionLabel>{t("todos.filter")}</SectionLabel>
             {priorities.map((p) => (
               <Chip
                 key={p}
@@ -220,9 +224,7 @@ export function TodoView() {
 
       {visible.length === 0 ? (
         <p className="rounded-xl bg-surface-container-low p-6 text-center text-on-surface-variant">
-          {filtering
-            ? "Keine Aufgabe passt zu den Filtern."
-            : "Noch keine Aufgaben. Lege oben die erste an."}
+          {filtering ? t("todos.emptyFiltered") : t("todos.empty")}
         </p>
       ) : (
         <DndContext
@@ -231,10 +233,10 @@ export function TodoView() {
           onDragEnd={onDragEnd}
         >
           <SortableContext
-            items={visible.map((t) => t.id)}
+            items={visible.map((todo) => todo.id)}
             strategy={verticalListSortingStrategy}
           >
-            <ul aria-label="Aufgabenliste" className="flex flex-col gap-3">
+            <ul aria-label={t("todos.list")} className="flex flex-col gap-3">
               {visible.map((todo, index) => (
                 <TodoItem
                   key={todo.id}
@@ -256,8 +258,8 @@ export function TodoView() {
           onClick={() => void setShowCompleted(!showCompleted)}
         >
           {showCompleted
-            ? "Erledigte ausblenden"
-            : `Erledigte anzeigen (${completedCount})`}
+            ? t("todos.completed.hide")
+            : t("todos.completed.show", { count: completedCount })}
         </Button>
       )}
     </section>

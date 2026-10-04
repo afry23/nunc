@@ -114,4 +114,3 @@ Feature: Statistics view
       | 2       | 6         | 150     |
     When I open the app at "/stats"
     Then the bar chart labels the days with "0, 6, 0, 4"
-

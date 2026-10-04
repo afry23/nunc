@@ -1,16 +1,14 @@
 import { useEffect, useId, useRef } from "react";
+import { useT } from "../i18n";
 import { useSyncStore } from "../stores/syncStore";
 import { Button } from "./ui";
-
-function countText(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
 
 /**
  * Angebot auf einem Gerät ohne Daten: den Stand aus Google Drive übernehmen. Zeigt während des Imports einen
  * Fortschrittsbalken und danach eine Zusammenfassung.
  */
 export function ImportDialog() {
+  const t = useT();
   const offer = useSyncStore((s) => s.importOffer);
   const { runImport, closeImport } = useSyncStore.getState();
   const titleId = useId();
@@ -29,26 +27,24 @@ export function ImportDialog() {
         className="glass shadow-ambient w-full max-w-md rounded-2xl p-6"
       >
         <h2 id={titleId} className="headline-md">
-          Vorhandene Daten von Google Drive importieren?
+          {t("import.title")}
         </h2>
         <div className="mt-3 flex flex-col gap-3 text-on-surface-variant">
           {offer.phase === "offer" && (
             <>
               <p>
-                Auf Google Drive liegen{" "}
-                {countText(info.todoCount, "Aufgabe", "Aufgaben")} und{" "}
-                {countText(info.sessionCount, "Session", "Sessions")}.
+                {t("import.offer", {
+                  todos: t("import.todos", { count: info.todoCount }),
+                  sessions: t("import.sessions", { count: info.sessionCount }),
+                })}
               </p>
-              <p className="text-sm">
-                Mit „Leer starten“ werden die Daten erst beim nächsten Abgleich
-                übernommen.
-              </p>
+              <p className="text-sm">{t("import.emptyHint")}</p>
             </>
           )}
           {offer.phase === "running" && (
             <div
               role="progressbar"
-              aria-label="Import läuft"
+              aria-label={t("import.running")}
               className="h-2 overflow-hidden rounded-full bg-surface-container-highest"
             >
               <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
@@ -60,25 +56,25 @@ export function ImportDialog() {
           {offer.phase === "offer" && (
             <>
               <Button variant="ghost" onClick={closeImport}>
-                Leer starten
+                {t("import.startEmpty")}
               </Button>
               <Button
                 ref={first}
                 variant="primary"
                 onClick={() => void runImport()}
               >
-                Importieren
+                {t("import.import")}
               </Button>
             </>
           )}
           {offer.phase === "running" && (
             <Button variant="primary" disabled>
-              Importiere …
+              {t("import.importing")}
             </Button>
           )}
           {offer.phase === "done" && (
             <Button ref={first} variant="primary" onClick={closeImport}>
-              Fertig
+              {t("import.done")}
             </Button>
           )}
         </div>

@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
+import { useT } from "../i18n";
 import { sessionLabel } from "../lib/timer";
 import { useTimerStore } from "../stores/timerStore";
 import { Button } from "./ui";
 
 /** Nach einer abgeschlossenen Arbeitssession: empfohlene Pause starten oder auf später verschieben. */
 export function BreakDialog() {
+  const t = useT();
   const finish = useTimerStore((s) => s.finish);
   const dismiss = useTimerStore((s) => s.dismissFinish);
   const startBreak = useTimerStore((s) => s.startBreak);
@@ -36,12 +38,14 @@ export function BreakDialog() {
         className="glass shadow-ambient w-full max-w-sm rounded-2xl p-6 text-center"
       >
         <h2 id="break-title" className="headline-md">
-          {session.mode === "flowtime" ? "Flow beendet" : "Pomodoro geschafft"}
+          {session.mode === "flowtime"
+            ? t("timer.flowDone")
+            : t("timer.pomodoroDone")}
         </h2>
         <p className="mt-3 text-on-surface-variant">
-          Empfohlene Pause:{" "}
+          {t("timer.suggested")}{" "}
           <strong className="text-on-surface">
-            {suggestion.minutes} Minuten
+            {t("timer.minutes", { count: suggestion.minutes })}
           </strong>{" "}
           ({kind})
         </p>
@@ -51,10 +55,10 @@ export function BreakDialog() {
             variant="primary"
             onClick={() => void startBreak()}
           >
-            Pause starten
+            {t("timer.startBreak")}
           </Button>
           <Button variant="ghost" onClick={dismiss}>
-            Später
+            {t("timer.later")}
           </Button>
         </div>
       </div>

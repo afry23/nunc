@@ -3,14 +3,14 @@
  * Namen wie in den Einstellungen: `bell` (Glocke), `ding`, `digital`.
  */
 
+import { t } from "../i18n";
+
 export const SOUND_NAMES = ["bell", "ding", "digital"] as const;
 export type SoundName = (typeof SOUND_NAMES)[number];
 
-export const SOUND_LABELS: Record<SoundName, string> = {
-  bell: "Glocke",
-  ding: "Ding",
-  digital: "Digital",
-};
+export function soundLabel(name: SoundName): string {
+  return t(`sound.${name}`);
+}
 
 type Tone = {
   freq: number;

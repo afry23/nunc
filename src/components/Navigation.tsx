@@ -1,31 +1,31 @@
 import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { useT, type MessageKey } from "../i18n";
 import { useUiStore } from "../stores/uiStore";
 import { isMobile } from "../lib/platform";
 import { BarsIcon, CheckIcon, GearIcon, SidebarIcon, TimerIcon } from "./icons";
 
 export const NAV_ITEMS: {
   to: "/" | "/todos" | "/stats" | "/settings";
-  label: string;
+  label: MessageKey;
   icon: ReactNode;
 }[] = [
-  { to: "/", label: "Timer", icon: <TimerIcon /> },
-  { to: "/todos", label: "Aufgaben", icon: <CheckIcon /> },
-  { to: "/stats", label: "Statistik", icon: <BarsIcon /> },
-  { to: "/settings", label: "Einstellungen", icon: <GearIcon /> },
+  { to: "/", label: "nav.timer", icon: <TimerIcon /> },
+  { to: "/todos", label: "nav.todos", icon: <CheckIcon /> },
+  { to: "/stats", label: "nav.stats", icon: <BarsIcon /> },
+  { to: "/settings", label: "nav.settings", icon: <GearIcon /> },
 ];
 
 /** Seitenleiste ab 768 px Breite; einklappbar auf reine Icons (Beschriftung bleibt für Screenreader und Tooltip). */
 export function Sidebar() {
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggle = useUiStore((s) => s.toggleSidebar);
-  const label = collapsed
-    ? "Seitenleiste ausklappen"
-    : "Seitenleiste einklappen";
+  const t = useT();
+  const label = collapsed ? t("nav.expand") : t("nav.collapse");
 
   return (
     <nav
-      aria-label="Hauptnavigation"
+      aria-label={t("nav.main")}
       data-testid="sidebar"
       data-collapsed={collapsed}
       className={`flex shrink-0 flex-col gap-1 bg-surface-container-lowest transition-[width] duration-200 ${
@@ -40,7 +40,7 @@ export function Sidebar() {
         <Link
           key={item.to}
           to={item.to}
-          title={collapsed ? item.label : undefined}
+          title={collapsed ? t(item.label) : undefined}
           activeOptions={{ exact: item.to === "/" }}
           activeProps={{
             "aria-current": "page",
@@ -56,7 +56,7 @@ export function Sidebar() {
         >
           {item.icon}
           <span className={collapsed ? "sr-only" : undefined}>
-            {item.label}
+            {t(item.label)}
           </span>
         </Link>
       ))}
@@ -71,7 +71,7 @@ export function Sidebar() {
         }`}
       >
         <SidebarIcon />
-        {!collapsed && <span>Einklappen</span>}
+        {!collapsed && <span>{t("nav.collapseShort")}</span>}
       </button>
     </nav>
   );
@@ -85,13 +85,14 @@ export function Sidebar() {
  * zum Timer und erst von dort aus der App, statt durch alle besuchten Tabs zu laufen.
  */
 export function BottomTabs() {
+  const t = useT();
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onTab = pathname !== "/";
 
   return (
     <nav
-      aria-label="Hauptnavigation"
+      aria-label={t("nav.main")}
       data-testid="tabbar"
       className="safe-bottom fixed inset-x-0 bottom-0 z-30 flex bg-surface-container-lowest"
     >
@@ -117,7 +118,7 @@ export function BottomTabs() {
           className="flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs font-semibold"
         >
           {item.icon}
-          {item.label}
+          {t(item.label)}
         </Link>
       ))}
     </nav>

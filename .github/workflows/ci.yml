@@ -65,12 +65,18 @@ jobs:
           cargo test -p nunc export_bindings
           git diff --exit-code src/bindings.ts
 
+      # Abnahme (M8-08): keine @wip-Szenarien, jedes mit Ebene und Story; erzeugt Traceability und Living Documentation
+      - name: Traceability-Report und Living Documentation
+        run: npm run docs:report
+
       - name: Cucumber-Report hochladen
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cucumber-report
-          path: target/bdd/
+          path: |
+            target/bdd/
+            target/docs/
           if-no-files-found: warn
 
   # Desktop-Build-Matrix (ohne Installer, die entstehen in M8)

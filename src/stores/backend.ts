@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { commands, events } from "../lib/api";
 import { isMobile } from "../lib/platform";
 import { changedData, describeSyncResult } from "../lib/sync";
@@ -69,7 +70,8 @@ export async function connectBackend(): Promise<() => void> {
       if (!changedData(result)) return;
       void useTodoStore.getState().load();
       const message = describeSyncResult(result);
-      if (message) useUiStore.getState().notify(`Todoist: ${message}`);
+      if (message)
+        useUiStore.getState().notify(t("todoist.notice", { message }));
     }),
   ]);
   // Rückkehr aus dem Hintergrund: Ereignisse sind dort ausgeblieben, der Stand kommt neu aus dem Backend
