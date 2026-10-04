@@ -1,6 +1,8 @@
 //! Echte Systemzeit und Umrechnung in die lokale Zeitzone.
 
-use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Utc};
+use std::sync::Mutex;
+
+use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime, Utc};
 use nunc_core::clock::Clock;
 
 /// Die Uhr des Betriebssystems.
@@ -10,6 +12,38 @@ pub struct SystemClock;
 impl Clock for SystemClock {
     fn now(&self) -> DateTime<Utc> {
         Utc::now()
+    }
+}
+
+/// Von Hand gestellte Uhr (Tests).
+#[derive(Debug)]
+pub struct ManualClock {
+    now: Mutex<DateTime<Utc>>,
+}
+
+impl ManualClock {
+    pub fn new(now: DateTime<Utc>) -> Self {
+        Self {
+            now: Mutex::new(now),
+        }
+    }
+
+    pub fn set(&self, now: DateTime<Utc>) {
+        if let Ok(mut current) = self.now.lock() {
+            *current = now;
+        }
+    }
+
+    pub fn advance(&self, by: Duration) {
+        if let Ok(mut current) = self.now.lock() {
+            *current += by;
+        }
+    }
+}
+
+impl Clock for ManualClock {
+    fn now(&self) -> DateTime<Utc> {
+        self.now.lock().map(|now| *now).unwrap_or_default()
     }
 }
 
@@ -34,6 +68,17 @@ mod tests {
         let before = Utc::now();
         let now = SystemClock.now();
         assert!(now >= before && now - before < chrono::Duration::seconds(5));
+    }
+
+    #[test]
+    fn manual_clock_moves_only_when_told() {
+        let start = Utc.with_ymd_and_hms(2026, 10, 4, 9, 0, 0).unwrap();
+        let clock = ManualClock::new(start);
+        assert_eq!(clock.now(), start);
+        clock.advance(Duration::minutes(5));
+        assert_eq!(clock.now(), start + Duration::minutes(5));
+        clock.set(start);
+        assert_eq!(clock.now(), start);
     }
 
     #[test]

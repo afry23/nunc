@@ -8,7 +8,7 @@ mod events;
 mod notify;
 mod secret;
 
-pub use clock::{SystemClock, to_local, to_local_date};
+pub use clock::{ManualClock, SystemClock, to_local, to_local_date};
 pub use events::{EventSink, RecordingEventSink};
 pub use notify::{Notifier, NotifyError, RecordingNotifier, Reminder};
 pub use secret::{
