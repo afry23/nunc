@@ -123,5 +123,11 @@ Feature: Timer persistence
     Then 900 seconds remain
     And the timer is paused
 
-  @e2e @REQ-13 @mobile @wip
+  # e2e/mobile/kill-resume.yaml
+  @e2e @REQ-13 @mobile
   Scenario: A running timer survives killing the app
+    Given the app is installed with a clean state
+    When I start a pomodoro
+    And the app process is killed
+    And the app is started again
+    Then the timer is still running with less than 25 minutes remaining

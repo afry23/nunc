@@ -19,3 +19,6 @@ Fixtures für Kompatibilitätsszenarien: [`tests/fixtures/`](../tests/fixtures/R
 
 **UI-Szenarien (`@ui`)** liegen in `ui/*.feature`, getrennt von den Domänen-Dateien, weil deren `Background` zu den Rust-Runnern gehört.
 Steps: `tests/steps/`, Fake-Backend mit Zustand: `tests/helpers/fakeBackend.ts`. E2E (`@e2e @desktop`): `e2e/`, `npm run test:e2e`.
+
+**Mobile-E2E (`@e2e @mobile`)** setzen die Maestro-Flows in `e2e/mobile/` um (`npm run test:mobile`, siehe `e2e/mobile/README.md`);
+ein Kommentar über dem Szenario nennt den Flow. Kein Cucumber-Runner führt diese Szenarien aus.

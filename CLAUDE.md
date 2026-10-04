@@ -42,7 +42,7 @@ src/                  React-Frontend (src/lib/api.ts = einziger Backend-Zugang)
   src/lib/            reine Hilfen (format, timer, todos, stats, shortcuts, sound), je mit Unit-Test
   src/stores/         Zustand: timer (nur Snapshot), todos, settings, ui; stores/backend.ts verdrahtet Events
   src/views/          Timer, Todos, Stats, Settings, MiniTimer; src/components/ Ring, Charts, Shell, Dialog
-  tests/              steps/ (quickpickle), helpers/fakeBackend.ts; e2e/ WebdriverIO + tauri-driver
+  tests/              steps/ (quickpickle), helpers/fakeBackend.ts; e2e/ WebdriverIO + tauri-driver, e2e/mobile/ Maestro
 features/             Gherkin, EINE Quelle für alle Runner
 docs/adr/             Architecture Decision Records
 ```
@@ -92,6 +92,7 @@ cargo test -p nunc-core --test bdd      # @domain (NUNC_BDD_REPORT=/abs/pfad.jso
 cargo test -p nunc-store --test bdd     # @integration (Temp-Ordner, echte SQLite-Dateien)
 npm run test:bdd                        # @ui (features/ui/*.feature)
 npm run test:e2e                        # @e2e @desktop, braucht tauri-driver (Linux/Windows)
+npm run test:mobile                     # @e2e @mobile, Maestro-Flows gegen Emulator/Gerät (e2e/mobile/README.md)
 ```
 
 Go-Interop (manuell, braucht `../nunc-go` und Go): `tests/interop/go-reads-nunc-db.sh`.
@@ -143,6 +144,12 @@ oder specta-Typen `cargo test -p nunc export_bindings` ausführen und `src/bindi
   eigene Wegwerf-Einträge. Secrets der Go-App werden nicht übernommen (ADR 0005).
 - Headless-iOS-Simulator: kein `Simulator.app`, `simctl` kann nicht tippen; UI-Interaktion braucht XCUITest oder ein
   Gerät.
+- Mobil: „mobil“ entscheidet `isMobile()` (`src/lib/platform.ts`, `plugin-os`), nicht der User-Agent. Android-Funktionen ohne Plugin
+  laufen über die Brücke `window.NuncAndroid` (`MainActivity.kt`, nur lesen/Einstellungen öffnen). Die Android-App ist Edge-to-edge:
+  Tastaturabstand setzt `MainActivity.kt`. Nach Layout-Änderungen auf schmalen Screens (≈ 411 px) auf horizontalen Überlauf prüfen:
+  der macht die WebView kleiner und schiebt die Tab-Leiste weg.
+- Android-Build/Emulator: `npm run tauri android build -- --debug --apk --target aarch64`, `adb install -r …/app-universal-debug.apk`;
+  WebView per `adb forward tcp:9333 localabstract:webview_devtools_remote_<pid>` inspizierbar (CDP).
 
 ## Do Not
 
