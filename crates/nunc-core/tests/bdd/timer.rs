@@ -131,6 +131,17 @@ fn minutes_pass(world: &mut DomainWorld, minutes: i64) {
     world.timer.advance(Duration::minutes(minutes));
 }
 
+/// Die App war im Hintergrund: es gab keinen `timer.tick`, nur die Uhr ist weitergelaufen.
+#[when(expr = "{int} minutes pass without a tick")]
+fn minutes_pass_without_tick(world: &mut DomainWorld, minutes: i64) {
+    world.timer.advance(Duration::minutes(minutes));
+}
+
+#[when(expr = "{int} hours pass without a tick")]
+fn hours_pass_without_tick(world: &mut DomainWorld, hours: i64) {
+    world.timer.advance(Duration::hours(hours));
+}
+
 #[when(expr = "{int} hours pass")]
 fn hours_pass(world: &mut DomainWorld, hours: i64) {
     world.timer.advance(Duration::hours(hours));

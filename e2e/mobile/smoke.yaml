@@ -1,0 +1,23 @@
+# Mobile-E2E-Smoke (M5-06): Start, Todo anlegen, Timer starten und stoppen.
+# Szenario: features/e2e/mobile.feature "A todo can be created and a timer started on a phone"
+appId: com.afry.nunc
+name: Smoke
+---
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: allow
+- assertVisible: "25:00"
+- tapOn: "Aufgaben"
+- tapOn:
+    id: "todo-input"
+- inputText: "(A) Maestro-Test +e2e"
+- tapOn: "Hinzufügen"
+- assertVisible: ".*Maestro-Test.*"
+- tapOn: "Timer"
+- tapOn: "Start"
+- assertVisible: "(24|25):[0-5][0-9]"
+- tapOn: "Pause"
+- assertVisible: "Fortsetzen"
+- tapOn: "Stop"
+- assertVisible: "25:00"

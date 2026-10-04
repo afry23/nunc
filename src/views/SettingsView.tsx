@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from "react";
 import { InfoIcon } from "../components/icons";
+import { NotificationHint } from "../components/NotificationHint";
 import { Button, SectionLabel, Toggle } from "../components/ui";
 import type { Settings } from "../lib/api";
 import { ratioAnchor, ratioBadge } from "../lib/format";
@@ -147,6 +148,7 @@ function SettingsForm({ stored }: { stored: Settings }) {
       </Section>
 
       <Section title="Benachrichtigungen und Ton">
+        <NotificationHint withRequest />
         <div className="flex flex-col gap-4 rounded-2xl bg-surface-container-low p-5">
           <Toggle
             label="Benachrichtigungen"
@@ -175,7 +177,7 @@ function SettingsForm({ stored }: { stored: Settings }) {
                 onChange={(event) =>
                   set("soundVolume", Number(event.target.value))
                 }
-                className="accent-[var(--color-primary)]"
+                className="h-11 accent-[var(--color-primary)]"
               />
             </label>
           </div>
@@ -296,7 +298,7 @@ function RatioSlider({
         onChange={(event) =>
           onChange(Math.round(Number(event.target.value) * 100) / 100)
         }
-        className="accent-[var(--color-primary)]"
+        className="h-11 accent-[var(--color-primary)]"
       />
       <div
         className="label-md flex justify-between text-on-surface-variant"

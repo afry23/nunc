@@ -88,6 +88,25 @@
   #root {
     min-height: 100dvh;
   }
+  html {
+    /* kein natives Pull-to-refresh/Gummiband der WebView: das übernimmt usePullToRefresh */
+    overscroll-behavior-y: contain;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Touch-Geräte: jedes Bedienelement mindestens 44 px hoch (Zuverlässigkeitsnetz zu den Klassen) */
+  @media (pointer: coarse) {
+    button,
+    a[href],
+    select,
+    summary,
+    input:not([type="checkbox"], [type="radio"], [type="hidden"]) {
+      min-height: 44px;
+    }
+    button,
+    a[href] {
+      touch-action: manipulation;
+    }
+  }
   :focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;

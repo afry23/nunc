@@ -7,6 +7,7 @@ import {
   type TimerMode,
   type TimerSnapshot,
 } from "../lib/api";
+import { useNotificationStore } from "./notificationStore";
 import { useUiStore } from "./uiStore";
 
 export const IDLE: TimerSnapshot = {
@@ -84,10 +85,12 @@ export const useTimerStore = create<TimerStoreState>((set, get) => {
     },
     start: async (mode) => {
       set({ finish: null });
+      await useNotificationStore.getState().ensureForTimer();
       await run(() => commands.startTimer(mode, get().selectedTodoId));
     },
     startBreak: async () => {
       set({ finish: null });
+      await useNotificationStore.getState().ensureForTimer();
       await run(() => commands.startBreak());
     },
     pause: () => run(() => commands.pauseTimer()),

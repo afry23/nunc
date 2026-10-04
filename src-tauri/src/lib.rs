@@ -18,7 +18,7 @@ use tauri_specta::{Builder, collect_commands, collect_events};
 const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/bindings.ts");
 
 fn specta_builder() -> Builder<tauri::Wry> {
-    use commands::{app, backup, settings, stats, timer, todos};
+    use commands::{app, backup, notifications, settings, stats, timer, todos};
 
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
@@ -48,6 +48,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             backup::restore_from_backup,
             backup::select_backup_dir::<tauri::Wry>,
             backup::select_restore_file::<tauri::Wry>,
+            notifications::get_notification_status::<tauri::Wry>,
+            notifications::request_notification_permission::<tauri::Wry>,
         ])
         .events(collect_events![
             events::TimerTick,
@@ -81,6 +83,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_os::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);

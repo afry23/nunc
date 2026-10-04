@@ -7,7 +7,7 @@ use std::time::Duration;
 use nunc_platform::{KeyringSecretStore, SecretStore, SystemClock, UnavailableSecretStore};
 use tauri::{App, AppHandle, Manager, RunEvent, Runtime};
 
-use crate::adapters::{TauriEventSink, TauriNotifier};
+use crate::adapters::{TauriEventSink, TauriNotifier, create_timer_channel};
 use crate::error::AppError;
 use crate::state::{AppPaths, AppState, Platform};
 
@@ -16,6 +16,10 @@ pub fn setup<R: Runtime>(app: &App<R>) -> Result<(), Box<dyn std::error::Error>>
     let handle = app.handle().clone();
     let state = AppState::open(app_paths(&handle)?, platform(&handle))?;
     app.manage(state);
+
+    if let Err(error) = create_timer_channel(&handle) {
+        log::warn!("Benachrichtigungskanal nicht angelegt: {error}");
+    }
 
     let state = app.state::<AppState>();
     if let Err(error) = state.timer.recover() {

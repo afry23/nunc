@@ -83,6 +83,15 @@ export const commands = {
 	selectBackupDir: () => typedError<string | null, AppError>(__TAURI_INVOKE("select_backup_dir")),
 	/**  Öffnet den Datei-Dialog für eine Backup-Datei (`.db`). `None` bei Abbruch. */
 	selectRestoreFile: () => typedError<string | null, AppError>(__TAURI_INVOKE("select_restore_file")),
+	/**  Aktueller Stand, ohne den Nutzer zu fragen. */
+	getNotificationStatus: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("get_notification_status")),
+	/**
+	 *  Fragt die Berechtigung an (Systemdialog, falls noch offen) und liefert den neuen Stand.
+	 * 
+	 *  Der Aufruf wartet auf die Antwort des Nutzers und läuft deshalb nicht auf dem Hauptthread, den der
+	 *  Systemdialog selbst braucht.
+	 */
+	requestNotificationPermission: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("request_notification_permission")),
 };
 
 /** Events */
@@ -176,6 +185,14 @@ export type MonthlyStats = {
 	month: number,
 	pomodoroCount: number,
 	workMinutes: number,
+};
+
+export type NotificationPermission = "granted" | "denied" | 
+/**  Noch nicht entschieden: die Abfrage zeigt den Systemdialog. */
+"prompt";
+
+export type NotificationStatus = {
+	permission: NotificationPermission,
 };
 
 /**  Arbeitszeit pro `+project`-Tag. */

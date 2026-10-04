@@ -109,3 +109,43 @@ Feature: Todo list
     Then the todo list shows "Bericht +work"
     When I enter "" into the field "Aufgaben durchsuchen"
     Then the todo list shows "Bericht +work, Einkaufen @street"
+
+  @ui @REQ-4.2 @mobile
+  Scenario: Reorder todos by touch
+    Given the platform is "mobile"
+    And the todos:
+      | rawText |
+      | Eins    |
+      | Zwei    |
+      | Drei    |
+    When I open the app at "/todos"
+    Then I see the buttons "Verschieben: Eins, Nach unten: Eins"
+    When I click "Nach unten: Eins"
+    Then the backend received "reorder_todos" with:
+      """
+      { "ids": [2, 1, 3] }
+      """
+    And the todo list shows "Zwei, Eins, Drei"
+
+  @ui @REQ-4.2 @mobile
+  Scenario: Swiping a todo to the right completes it
+    Given the platform is "mobile"
+    And the todos:
+      | rawText   |
+      | Einkaufen |
+    When I open the app at "/todos"
+    And I swipe the todo "Einkaufen" to the right by 120 pixels
+    Then the backend received "set_todo_completed" with:
+      """
+      { "id": 1, "completed": true }
+      """
+
+  @ui @REQ-4.2 @mobile
+  Scenario: A short or vertical swipe does not complete a todo
+    Given the platform is "mobile"
+    And the todos:
+      | rawText   |
+      | Einkaufen |
+    When I open the app at "/todos"
+    And I swipe the todo "Einkaufen" to the right by 30 pixels
+    Then the backend did not receive "set_todo_completed"

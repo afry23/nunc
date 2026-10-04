@@ -1,0 +1,31 @@
+# Ablauf im Hintergrund: die geplante Benachrichtigung kommt pünktlich, nach der Rückkehr stimmt der Stand.
+# Szenario: features/e2e/mobile.feature "The end of a session in the background is announced"
+# Android-Emulator: `openNotification` gibt es nur dort. Der Pomodoro wird auf 1 Minute gestellt.
+appId: com.afry.nunc
+name: Hintergrund und Benachrichtigung
+---
+- launchApp:
+    clearState: true
+    permissions:
+      notifications: allow
+- tapOn: "Einstellungen"
+- tapOn:
+    text: "Arbeitszeit"
+- eraseText: 3
+- inputText: "1"
+- tapOn: "Speichern"
+- tapOn: "Timer"
+- assertVisible: "01:00"
+- tapOn: "Start"
+- pressKey: home
+# Maestro hat kein „sleep“: eine absichtlich unerfüllte, optionale Bedingung wartet bis zum Timeout
+- extendedWaitUntil:
+    visible: "wartet-auf-nichts"
+    timeout: 70000
+    optional: true
+- openNotification
+- assertVisible: "Pomodoro geschafft"
+- tapOn: "Pomodoro geschafft"
+# Zurück in der App: der abgelaufene Timer ist verbucht, nichts läuft mehr
+- assertVisible: "01:00"
+- assertVisible: "Start"

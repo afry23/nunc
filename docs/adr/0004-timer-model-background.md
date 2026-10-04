@@ -112,3 +112,16 @@ Reboot (Plugin bringt `LocalNotificationRestoreReceiver` mit), herstellerspezifi
 - **iOS-Zeitzonen-Bug (offen aus diesem ADR):** `TauriNotifier` verschiebt das Datum für `Schedule::At` auf iOS um
   den lokalen UTC-Offset (Option a). Bei einer Zeitumstellung zwischen Planung und Termin ist das um eine Stunde
   ungenau. Das Patchen des Plugins (Option b) bleibt für M5-03 offen und ist auf einem Gerät zu prüfen.
+
+## Umsetzung (M5-03/M5-04, Mobile)
+
+- Android-Manifest: `USE_EXACT_ALARM` (Android 13+, automatisch gewährt) und `SCHEDULE_EXACT_ALARM` mit `maxSdkVersion="32"`
+  (Android 12/12L). Ob die App genaue Alarme setzen darf, liefert `MainActivity.kt` über die Brücke `window.NuncAndroid`; fehlt die
+  Erlaubnis, zeigt die App einen Hinweis mit Sprung in „Wecker & Erinnerungen“.
+- Die Notification-Berechtigung wird vor dem ersten Timer-Start angefragt (`request_notification_permission`), der Timer startet in jedem
+  Fall. Android bekommt den Kanal `timer` (hohe Wichtigkeit); ohne Kanal stellt Android nichts zu.
+- Rückkehr aus dem Hintergrund: Rust rechnet bei `RunEvent::Resumed` aus dem Zeitstempel neu, das Frontend lädt bei `visibilitychange` alle Stores
+  neu (Ereignisse bleiben im Hintergrund aus). Ein im Hintergrund abgelaufener Timer wird verbucht; der Pausenvorschlag kommt über `get_suggested_break`,
+  der Dialog erscheint dabei nicht (kein `timer:complete`-Ereignis).
+- Auf dem Emulator (Android 16, API 37) geprüft: Brücke, Exact-Alarm-Erlaubnis, Tastatur. Die Zustellung der geplanten Notification wurde im
+  Spike gemessen; der iOS-Zeitzonen-Fix (Plugin patchen) und echte Geräte bleiben offen.

@@ -161,8 +161,5 @@ Feature: Todo management
       | field         | value |
       | pomodoroCount | 2     |
 
-  @ui @REQ-4.2 @mobile @wip
-  Scenario: Reorder todos by touch
-
   @e2e @REQ-4.3 @desktop @wip
   Scenario: Create a todo and finish a pomodoro on it
