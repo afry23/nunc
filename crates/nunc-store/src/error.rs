@@ -5,6 +5,8 @@ pub enum StoreError {
     Io(#[from] std::io::Error),
     #[error("SQLite-Fehler: {0}")]
     Sqlite(#[from] rusqlite::Error),
+    #[error("Gespeicherter Zustand nicht lesbar: {0}")]
+    Json(#[from] serde_json::Error),
     #[error("Migration {version} fehlgeschlagen: {source}")]
     Migration {
         version: u32,
