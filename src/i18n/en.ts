@@ -360,4 +360,23 @@ export const en: Record<keyof typeof de, string> = {
     "Closing the window sends the app to the tray instead of quitting",
   "settings.ratio": "Work-to-break ratio",
   "language.section": "Interface",
+  "api.title": "Local interface",
+  "api.description":
+    "Other programs on this computer can exchange tasks in todo.txt format and read their status. The interface is only reachable via 127.0.0.1 and protected by a token.",
+  "api.enable": "Enable local interface",
+  "api.port": "Port",
+  "api.unsaved": "Apply with “Save”.",
+  "api.status.off": "The interface is off.",
+  "api.status.running": "Running on http://127.0.0.1:{port}",
+  "api.status.error": "The interface is not running: {message}",
+  "api.token.show": "Show token",
+  "api.token.hide": "Hide token",
+  "api.token.label": "Access token",
+  "api.token.regenerate": "Generate new token",
+  "api.token.regenerated": "New token generated.",
+  "api.token.confirm.title": "Generate a new token?",
+  "api.token.confirm.body":
+    "Programs using the old token lose access immediately.",
+  "api.token.confirm.button": "Generate",
+  "api.example": "Example for reading the tasks:",
 };

@@ -108,6 +108,11 @@ export interface FakeBackend extends BackendMock {
   /** Ergebnis von `import_todotxt_file` (`null` = Dialog abgebrochen) und von `save_todotxt_file`. */
   todotxtImport: { added: number; duplicates: number } | null;
   todotxtExportPath: string | null;
+  /** Fehler, den `get_api_status` meldet, obwohl die Schnittstelle laufen soll (`null` = läuft). */
+  apiError: string | null;
+  /** Token der lokalen Schnittstelle; `regenerate_api_token` setzt `apiNextToken`. */
+  apiToken: string;
+  apiNextToken: string;
   /** Backups im Backup-Ordner (neueste zuerst); Status und Liste leiten sich daraus ab. */
   backups: BackupEntry[];
   /** Todo-Zeilen je Backup-Pfad, die ein Restore einspielt. */
@@ -189,6 +194,9 @@ export function createFakeBackend(): FakeBackend {
     exportPath: "/tmp/export.csv" as string | null,
     todotxtImport: null as { added: number; duplicates: number } | null,
     todotxtExportPath: null as string | null,
+    apiError: null as string | null,
+    apiToken: "test-token",
+    apiNextToken: "new-token",
     notificationPermission: "granted",
     permissionAnswer: "granted",
     backups: [],
@@ -400,6 +408,16 @@ export function createFakeBackend(): FakeBackend {
     get_suggested_break: () => fake.suggestedBreak,
     get_stats: () => fake.stats,
     save_export_to_file: () => fake.exportPath,
+    get_api_status: () => ({
+      running: fake.settings.apiEnabled && fake.apiError === null,
+      port: fake.settings.apiEnabled ? fake.settings.apiPort : null,
+      error: fake.settings.apiEnabled ? fake.apiError : null,
+    }),
+    get_api_token: () => fake.apiToken,
+    regenerate_api_token: () => {
+      fake.apiToken = fake.apiNextToken;
+      return fake.apiToken;
+    },
     import_todotxt_file: () => fake.todotxtImport,
     save_todotxt_file: () => fake.todotxtExportPath,
     show_main_window: () => null,

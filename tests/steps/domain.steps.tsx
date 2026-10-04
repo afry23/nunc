@@ -204,6 +204,13 @@ Given(
   },
 );
 
+Given(
+  "the local interface cannot start because {string}",
+  (world: UiWorld, message: string) => {
+    world.fake.apiError = message;
+  },
+);
+
 Given("the todo.txt import dialog is cancelled", (world: UiWorld) => {
   world.fake.todotxtImport = null;
 });

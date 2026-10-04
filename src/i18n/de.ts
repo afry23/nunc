@@ -363,4 +363,23 @@ export const de = {
     "Das Fenster schließt in den Tray statt die App zu beenden",
   "settings.ratio": "Arbeit-zu-Pause-Verhältnis",
   "language.section": "Oberfläche",
+  "api.title": "Lokale Schnittstelle",
+  "api.description":
+    "Andere Programme auf diesem Rechner können Aufgaben im todo.txt-Format austauschen und ihren Status abfragen. Die Schnittstelle ist nur über 127.0.0.1 erreichbar und durch ein Token geschützt.",
+  "api.enable": "Lokale Schnittstelle aktivieren",
+  "api.port": "Port",
+  "api.unsaved": "Mit „Speichern“ übernehmen.",
+  "api.status.off": "Die Schnittstelle ist aus.",
+  "api.status.running": "Läuft auf http://127.0.0.1:{port}",
+  "api.status.error": "Die Schnittstelle läuft nicht: {message}",
+  "api.token.show": "Token anzeigen",
+  "api.token.hide": "Token verbergen",
+  "api.token.label": "Zugriffstoken",
+  "api.token.regenerate": "Token neu erzeugen",
+  "api.token.regenerated": "Neues Token erzeugt.",
+  "api.token.confirm.title": "Neues Token erzeugen?",
+  "api.token.confirm.body":
+    "Programme mit dem alten Token verlieren sofort den Zugriff.",
+  "api.token.confirm.button": "Neu erzeugen",
+  "api.example": "Beispiel zum Abfragen der Aufgaben:",
 } as const satisfies Record<string, string>;

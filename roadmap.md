@@ -363,6 +363,8 @@ Play-Console- und TestFlight-Upload, Windows-/Mobil-Messung, Maestro. Entscheidu
 |---|---|
 | todo.txt Import/Export (`@REQ-4.4`) | Dateidialog in der Aufgaben-Ansicht (Desktop und Mobil), Import fügt nur neue Zeilen an (Dubletten über den Zeilentext, Leerzeilen, BOM und `\r\n` werden toleriert, UTF-8, höchstens 5 MB), Export schreibt alle aktiven Aufgaben in manueller Reihenfolge. Kern: `nunc-core::todotxt_file`, Store: `import_todotxt` (eine Transaktion), Commands `import_todotxt_file`/`save_todotxt_file`. Die Dialoge sind nicht per Mock-Runtime testbar (manuell prüfen, besonders `content://`-Ziele auf Android). |
 
+| Lokale HTTP-Schnittstelle (`@REQ-API`) | Desktop, aus, `127.0.0.1` + Token: todo.txt lesen/anlegen, Aufgabenstatus abfragen/abhaken (ADR 0013). Crate `nunc-api` (pures Routing + hyper-Server), `ApiService` in `src-tauri`, Abschnitt „Lokale Schnittstelle“ in den Einstellungen. **Manuell prüfen:** echter Schlüsselspeicher (Token), Verhalten bei belegtem Port. Später: Timer-Status, Statistik, Änderungs-Benachrichtigung. |
+
 ## Nach 1.0 (Backlog)
 
 | Thema | Notiz |

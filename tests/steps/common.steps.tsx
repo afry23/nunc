@@ -436,6 +436,10 @@ Then(
   },
 );
 
+Then("the field {string} does not exist", (_world: UiWorld, label: string) => {
+  expect(screen.queryByLabelText(label)).toBeNull();
+});
+
 Then("the field {string} is empty", (_world: UiWorld, label: string) => {
   expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe("");
 });
