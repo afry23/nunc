@@ -239,6 +239,7 @@ Feature: WebDAV sync
     Given a WebDAV server with the folder "/nunc/" that requires digest authentication for "me" with password "secret"
     When I sync as "me" with password "secret" using "basic"
     Then the sync fails with "Der Server verlangt Digest-Authentifizierung, eingestellt ist Basic"
+    And the server received 1 requests
   @integration @sync @US-Sync-02-WebDAV
   Scenario: The remote folder is created with MKCOL when missing
     Given a WebDAV server without folders
@@ -246,6 +247,16 @@ Feature: WebDAV sync
     Then the sync succeeds
     And the server created the folders "/files/ /files/nunc/" in this order
     And the server holds the sync file "/files/nunc/nunc-sync.json"
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A folder that another device creates at the same moment is accepted
+    Given a WebDAV server with the folder "/nunc/"
+    And the server hides the existing folder from lookups
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    Then the sync succeeds
+    And the sync file on the server has the todos "Task"
+
   @integration @sync @US-Sync-02-WebDAV
   Scenario: The sync file is created on the first sync
     Given a WebDAV server with the folder "/nunc/"

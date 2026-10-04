@@ -39,6 +39,8 @@ pub struct DavState {
     pub interfere_always: bool,
     pub log: Vec<Logged>,
     pub digest_accepted: bool,
+    /// PROPFIND meldet vorhandene Ordner als fehlend (ein anderes Gerät legt sie gerade an).
+    pub propfind_blind: bool,
 }
 
 impl Default for DavState {
@@ -53,6 +55,7 @@ impl Default for DavState {
             interfere_always: false,
             log: Vec::new(),
             digest_accepted: false,
+            propfind_blind: false,
         }
     }
 }
@@ -256,11 +259,13 @@ fn handle(state: &mut DavState, request: &Request, method: &str, path: &str) -> 
         return Reply::new(status);
     }
     match method {
-        "PROPFIND" => Reply::new(if state.folders.contains(path) || path == "/" {
-            207
-        } else {
-            404
-        }),
+        "PROPFIND" => Reply::new(
+            if (state.folders.contains(path) && !state.propfind_blind) || path == "/" {
+                207
+            } else {
+                404
+            },
+        ),
         "MKCOL" => {
             if state.folders.contains(path) {
                 Reply::new(405)

@@ -46,6 +46,16 @@ async fn server_without_folders(world: &mut SyncWorld) {
     world.dav = Some(Dav::start().await);
 }
 
+#[given("the server hides the existing folder from lookups")]
+fn server_blind(world: &mut SyncWorld) {
+    world.dav().with(|state| state.propfind_blind = true);
+}
+
+#[then(expr = "the server received {int} requests")]
+fn request_count(world: &mut SyncWorld, count: usize) {
+    assert_eq!(world.dav().with(|state| state.log.len()), count);
+}
+
 #[given("the server does not support ETags")]
 fn server_without_etags(world: &mut SyncWorld) {
     world.dav().with(|state| state.etags = false);
