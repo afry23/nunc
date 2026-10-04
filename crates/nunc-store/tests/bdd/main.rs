@@ -6,7 +6,10 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use chrono::{DateTime, NaiveTime, Utc};
 use cucumber::{World, given, then, when};
+use nunc_core::model::{Settings, TimerMode, TimerState};
+use nunc_core::timer::Timer;
 use rusqlite::Connection;
 use tempfile::TempDir;
 
@@ -18,6 +21,28 @@ pub struct StoreWorld {
     conn: Option<Connection>,
     /// `schema_migrations` direkt nach dem ersten Öffnen: version → applied_at
     first_migrations: Option<BTreeMap<i64, String>>,
+    /// `sqlite_master`-Definitionen vor dem Öffnen: Name → SQL
+    schema_before: Option<BTreeMap<String, String>>,
+    timer: Timer,
+}
+
+/// Uhrzeit `HH:MM:SS` am festen Testtag (UTC).
+fn at(time: &str) -> DateTime<Utc> {
+    let t = NaiveTime::parse_from_str(time, "%H:%M:%S").unwrap_or_else(|_| panic!("Zeit {time:?}"));
+    DateTime::parse_from_rfc3339("2026-10-04T00:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc)
+        + (t - NaiveTime::MIN)
+}
+
+fn schema(conn: &Connection) -> BTreeMap<String, String> {
+    let mut stmt = conn
+        .prepare("SELECT name, sql FROM sqlite_master WHERE sql IS NOT NULL")
+        .unwrap();
+    stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect()
 }
 
 impl StoreWorld {
@@ -75,6 +100,7 @@ fn go_fixture(world: &mut StoreWorld) {
         .collect();
     drop(stmt);
     world.first_migrations = Some(rows);
+    world.schema_before = Some(schema(&before));
 }
 
 #[when("nunc opens the database")]
@@ -107,6 +133,26 @@ fn timestamps_unchanged(world: &mut StoreWorld) {
     for (version, applied_at) in first {
         assert_eq!(now.get(&version), Some(&applied_at), "Version {version}");
     }
+}
+
+#[then(expr = "exactly the migrations {int} to {int} are recorded as applied")]
+fn migrations_exactly(world: &mut StoreWorld, from: i64, to: i64) {
+    let versions: Vec<i64> = world.migrations().into_keys().collect();
+    assert_eq!(versions, (from..=to).collect::<Vec<_>>());
+}
+
+#[then("the Go tables keep their definition")]
+fn go_tables_unchanged(world: &mut StoreWorld) {
+    let before = world.schema_before.clone().expect("kein Ausgangsstand");
+    let now = schema(world.conn());
+    for (name, sql) in before {
+        assert_eq!(now.get(&name), Some(&sql), "{name}");
+    }
+}
+
+#[then(expr = "the table {string} exists")]
+fn table_exists(world: &mut StoreWorld, table: String) {
+    tables_exist(world, table);
 }
 
 #[then(expr = "the tables {string} exist")]
@@ -151,6 +197,71 @@ fn journal_mode(world: &mut StoreWorld, expected: String) {
         .query_row("PRAGMA journal_mode", [], |r| r.get(0))
         .unwrap();
     assert_eq!(mode, expected);
+}
+
+#[when(expr = "a pomodoro for todo {int} is started at {word} and saved")]
+fn start_and_save(world: &mut StoreWorld, todo_id: i32, time: String) {
+    let now = at(&time);
+    world
+        .timer
+        .start(
+            now,
+            TimerMode::Pomodoro,
+            Some(todo_id),
+            &Settings::default(),
+        )
+        .expect("start");
+    nunc_store::save_timer(world.conn(), &world.timer, now).expect("save");
+}
+
+#[when(expr = "the timer is paused at {word} and saved")]
+fn pause_and_save(world: &mut StoreWorld, time: String) {
+    let now = at(&time);
+    world.timer.pause(now).expect("pause");
+    nunc_store::save_timer(world.conn(), &world.timer, now).expect("save");
+}
+
+#[when(expr = "the timer is stopped at {word} and saved")]
+fn stop_and_save(world: &mut StoreWorld, time: String) {
+    let now = at(&time);
+    world.timer.stop(now, &Settings::default()).expect("stop");
+    nunc_store::save_timer(world.conn(), &world.timer, now).expect("save");
+}
+
+#[when(expr = "the timer is expired at {word} and saved")]
+fn expire_and_save(world: &mut StoreWorld, time: String) {
+    let now = at(&time);
+    let finish = world.timer.tick(now, &Settings::default());
+    assert!(finish.is_some(), "Timer nicht abgelaufen");
+    nunc_store::save_timer(world.conn(), &world.timer, now).expect("save");
+}
+
+#[when("the app restarts")]
+fn restart(world: &mut StoreWorld) {
+    let path = world.path.clone().expect("kein Pfad");
+    world.open(path);
+    world.timer = nunc_store::load_timer(world.conn()).expect("Timer laden");
+}
+
+#[then(expr = "the restored timer is running for todo {int}")]
+fn restored_running(world: &mut StoreWorld, todo_id: i32) {
+    assert_eq!(world.timer.state(), TimerState::Running);
+    assert_eq!(world.timer.active().and_then(|a| a.todo_id), Some(todo_id));
+}
+
+#[then("the restored timer is paused")]
+fn restored_paused(world: &mut StoreWorld) {
+    assert_eq!(world.timer.state(), TimerState::Paused);
+}
+
+#[then("the restored timer is idle")]
+fn restored_idle(world: &mut StoreWorld) {
+    assert_eq!(world.timer.state(), TimerState::Idle);
+}
+
+#[then(expr = "{int} seconds remain at {word}")]
+fn remaining(world: &mut StoreWorld, seconds: u32, time: String) {
+    assert_eq!(world.timer.snapshot(at(&time)).remaining, seconds);
 }
 
 const FEATURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../features");

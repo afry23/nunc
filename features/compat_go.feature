@@ -10,8 +10,12 @@ Feature: Compatibility with the database of the Go app
     And the table "todos" contains 6 rows
     And the table "sessions" contains 11 rows
 
-  @integration @REQ-compat @desktop @wip
+  @integration @REQ-compat @desktop
   Scenario: Only the additive migration 006 is applied on top
+    Given the Go fixture database
+    When nunc opens the database
+    Then exactly the migrations 1 to 6 are recorded as applied
+    And the migration timestamps did not change
 
   @integration @REQ-compat @desktop @wip
   Scenario: Settings and their defaults match the Go keys

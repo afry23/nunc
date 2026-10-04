@@ -1,11 +1,24 @@
 Feature: Timer persistence
   Source: PLAN 1.4, REQUIREMENTS 13 (timer state survives an app restart)
 
-  @integration @REQ-13 @wip
+  @integration @REQ-13
   Scenario: A running timer is restored after an app restart
+    Given no database exists yet
+    When nunc opens the database
+    And a pomodoro for todo 4 is started at 09:00:00 and saved
+    And the app restarts
+    Then the restored timer is running for todo 4
+    And 900 seconds remain at 09:10:00
 
-  @integration @REQ-13 @wip
+  @integration @REQ-13
   Scenario: A paused timer is restored after an app restart
+    Given no database exists yet
+    When nunc opens the database
+    And a pomodoro for todo 4 is started at 09:00:00 and saved
+    And the timer is paused at 09:10:00 and saved
+    And the app restarts
+    Then the restored timer is paused
+    And 900 seconds remain at 11:00:00
 
   @domain @REQ-13
   Scenario: A timer that expired while the app was closed is completed with its original end time
@@ -45,14 +58,33 @@ Feature: Timer persistence
     And I finish 1 pomodoros in a row
     Then the suggested break is a long_break of 25 minutes
 
-  @integration @REQ-13 @wip
-  Scenario: The active timer is removed when it is stopped or completed
+  @integration @REQ-13
+  Scenario Outline: The active timer is removed when it is stopped or completed
+    Given no database exists yet
+    When nunc opens the database
+    And a pomodoro for todo 4 is started at 09:00:00 and saved
+    And the timer is <end> at <time> and saved
+    And the app restarts
+    Then the restored timer is idle
 
-  @integration @REQ-13 @wip
+    Examples:
+      | end     | time     |
+      | stopped | 09:10:00 |
+      | expired | 09:30:00 |
+
+  @integration @REQ-13
   Scenario: Starting without an active timer starts idle
+    Given no database exists yet
+    When nunc opens the database
+    And the app restarts
+    Then the restored timer is idle
 
-  @integration @REQ-13 @wip
+  @integration @REQ-13
   Scenario: The active timer table is added by an additive migration
+    Given the Go fixture database
+    When nunc opens the database
+    Then the table "active_timer" exists
+    And the Go tables keep their definition
 
   @domain @REQ-13 @mobile @wip
   Scenario: Resuming from the background recalculates the remaining time
