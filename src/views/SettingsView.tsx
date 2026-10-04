@@ -175,7 +175,7 @@ function SettingsForm({ stored }: { stored: Settings }) {
                 onChange={(event) =>
                   set("soundVolume", Number(event.target.value))
                 }
-                className="accent-[var(--color-primary)]"
+                className="h-11 accent-[var(--color-primary)]"
               />
             </label>
           </div>
@@ -296,7 +296,7 @@ function RatioSlider({
         onChange={(event) =>
           onChange(Math.round(Number(event.target.value) * 100) / 100)
         }
-        className="accent-[var(--color-primary)]"
+        className="h-11 accent-[var(--color-primary)]"
       />
       <div
         className="label-md flex justify-between text-on-surface-variant"
