@@ -15,7 +15,7 @@ use tempfile::TempDir;
 
 use crate::state::{AppPaths, AppState, Platform};
 
-use super::{app, backup, settings, stats, timer, todos};
+use super::{app, backup, notifications, settings, stats, timer, todos};
 
 struct Harness {
     _dir: TempDir,
@@ -50,6 +50,7 @@ impl Harness {
         .unwrap();
 
         let app = mock_builder()
+            .plugin(tauri_plugin_notification::init())
             .invoke_handler(generate_handler![
                 app::app_info,
                 settings::get_settings,
@@ -73,6 +74,8 @@ impl Harness {
                 backup::trigger_backup,
                 backup::list_backups,
                 backup::restore_from_backup,
+                notifications::get_notification_status,
+                notifications::request_notification_permission,
             ])
             .build(mock_context(noop_assets()))
             .unwrap();
@@ -133,6 +136,20 @@ fn texts(todos: &Value) -> Vec<&str> {
         .iter()
         .map(|todo| todo["rawText"].as_str().unwrap())
         .collect()
+}
+
+/// Auf dem Desktop ist die Berechtigung immer erteilt; die Abfrage fragt niemanden.
+#[test]
+fn notification_permission_is_granted_on_desktop() {
+    let h = Harness::new();
+    assert_eq!(
+        h.ok("get_notification_status", json!({})),
+        json!({ "permission": "granted" })
+    );
+    assert_eq!(
+        h.ok("request_notification_permission", json!({})),
+        json!({ "permission": "granted" })
+    );
 }
 
 #[test]

@@ -160,3 +160,44 @@ Then(
     );
   },
 );
+
+// ---------------------------------------------------------------------------------------------
+// Benachrichtigungen
+
+Given(
+  "the notification permission is {string}",
+  (world: UiWorld, permission: string) => {
+    world.fake.notificationPermission =
+      permission as typeof world.fake.notificationPermission;
+  },
+);
+
+Given(
+  "the user answers the permission dialog with {string}",
+  (world: UiWorld, answer: string) => {
+    world.fake.permissionAnswer = answer as typeof world.fake.permissionAnswer;
+  },
+);
+
+const androidCalls: string[] = [];
+
+/** Android-Brücke aus `MainActivity.kt`; das Szenario setzt zusätzlich die Plattform „mobile“ (Android-Agent). */
+function installAndroid(exactAlarms: boolean): void {
+  androidCalls.length = 0;
+  window.NuncAndroid = {
+    canScheduleExactAlarms: () => exactAlarms,
+    openExactAlarmSettings: () => androidCalls.push("exact"),
+    openNotificationSettings: () => androidCalls.push("notifications"),
+  };
+}
+
+Given("exact alarms are not allowed", () => installAndroid(false));
+Given("exact alarms are allowed", () => installAndroid(true));
+
+Then("Android opens the exact alarm settings", () => {
+  expect(androidCalls).toEqual(["exact"]);
+});
+
+Then("Android opens the notification settings", () => {
+  expect(androidCalls).toEqual(["notifications"]);
+});

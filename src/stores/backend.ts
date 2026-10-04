@@ -1,4 +1,5 @@
 import { events } from "../lib/api";
+import { useNotificationStore } from "./notificationStore";
 import { useSettingsStore } from "./settingsStore";
 import { useTimerStore } from "./timerStore";
 import { useTodoStore } from "./todoStore";
@@ -9,6 +10,7 @@ export async function reloadAll(): Promise<void> {
     useSettingsStore.getState().load(),
     useTodoStore.getState().load(),
     useTimerStore.getState().refresh(),
+    useNotificationStore.getState().refresh(),
   ]);
 }
 
