@@ -36,6 +36,10 @@ When("the pomodoro has ended", async () => {
     timeout: 20_000,
     timeoutMsg: "Der Pomodoro ist nicht abgelaufen",
   });
+  // der Pausenvorschlag liegt als Dialog über der Oberfläche
+  await $('[role="dialog"]').waitForDisplayed();
+  await clickByName("Später");
+  await $('[role="dialog"]').waitForExist({ reverse: true });
 });
 
 Then("the statistics show {int} pomodoro", async (count: number) => {
