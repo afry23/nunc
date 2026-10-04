@@ -86,6 +86,8 @@ pub struct SyncCoordinator {
     runtime: Handle,
     mobile: bool,
     timing: Timing,
+    /// Welche Anlässe diesen Koordinator überhaupt auslösen.
+    accepts: fn(Trigger) -> bool,
     status: Mutex<SyncStatus>,
     /// Serialisiert die Läufe.
     gate: tokio::sync::Mutex<()>,
@@ -102,12 +104,35 @@ impl SyncCoordinator {
         timing: Timing,
         last_sync_at: Option<String>,
     ) -> Arc<Self> {
+        Self::filtered(
+            runner,
+            observer,
+            runtime,
+            mobile,
+            timing,
+            last_sync_at,
+            |_| true,
+        )
+    }
+
+    /// Wie [`SyncCoordinator::new`], reagiert aber nur auf die Anlässe, für die `accepts` `true` sagt
+    /// (Todoist: Start, Todo-Änderung, Verbinden).
+    pub fn filtered(
+        runner: Arc<dyn SyncRunner>,
+        observer: Arc<dyn SyncObserver>,
+        runtime: Handle,
+        mobile: bool,
+        timing: Timing,
+        last_sync_at: Option<String>,
+        accepts: fn(Trigger) -> bool,
+    ) -> Arc<Self> {
         Arc::new(Self {
             runner,
             observer,
             runtime,
             mobile,
             timing,
+            accepts,
             status: Mutex::new(SyncStatus::idle(last_sync_at)),
             gate: tokio::sync::Mutex::new(()),
             debounce_generation: AtomicU64::new(0),
@@ -174,7 +199,7 @@ impl SyncCoordinator {
 
     /// Meldet einen Anlass. Kehrt sofort zurück; der Lauf geschieht im Hintergrund. Fehler stehen im Status.
     pub fn trigger(self: &Arc<Self>, trigger: Trigger) {
-        if !trigger.applies(self.mobile) {
+        if !trigger.applies(self.mobile) || !(self.accepts)(trigger) {
             return;
         }
         let this = self.clone();

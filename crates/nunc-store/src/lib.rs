@@ -12,6 +12,7 @@ mod sync_repo;
 mod time;
 mod timer_state;
 mod todo_repo;
+mod todoist_repo;
 
 pub use backup::{
     BackupResult, backup_dir_status, backup_if_needed, create_emergency_backup,
@@ -35,4 +36,8 @@ pub use timer_state::{load_timer, save_timer};
 pub use todo_repo::{
     add_todo, delete_todo, increment_pomodoro_count, list_all_todos, list_todos, reorder_todos,
     set_todo_completed, update_todo,
+};
+pub use todoist_repo::{
+    TodoistApplied, TodoistWrite, add_todoist_mapping, apply_todoist_writes, list_local_todos,
+    list_todoist_mappings, remove_todoist_mappings,
 };

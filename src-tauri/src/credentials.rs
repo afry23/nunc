@@ -30,6 +30,19 @@ pub fn google() -> Credentials {
     }
 }
 
+pub fn todoist() -> Credentials {
+    Credentials {
+        client_id: pick(
+            "NUNC_TODOIST_CLIENT_ID",
+            option_env!("NUNC_TODOIST_CLIENT_ID"),
+        ),
+        client_secret: pick(
+            "NUNC_TODOIST_CLIENT_SECRET",
+            option_env!("NUNC_TODOIST_CLIENT_SECRET"),
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

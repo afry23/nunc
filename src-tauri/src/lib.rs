@@ -63,6 +63,11 @@ fn specta_builder() -> Builder<tauri::Wry> {
             sync::disconnect_drive,
             sync::check_sync_import,
             sync::finish_connect,
+            sync::get_todoist_status,
+            sync::connect_todoist,
+            sync::disconnect_todoist,
+            sync::get_todoist_sync_status,
+            sync::todoist_sync_now,
             notifications::get_notification_status::<tauri::Wry>,
             notifications::request_notification_permission::<tauri::Wry>,
         ])
@@ -74,6 +79,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             events::SyncStart,
             events::SyncStatusChanged,
             events::SyncComplete,
+            events::TodoistSyncStatus,
+            events::TodoistSyncComplete,
         ])
         // Dateigrößen liegen weit unter 2^53; `u64` darf daher als `number` exportiert werden.
         .dangerously_cast_bigints_to_number()

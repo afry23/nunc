@@ -19,6 +19,8 @@ mod dav;
 mod google;
 mod google_steps;
 mod steps;
+mod todoist_server;
+mod todoist_steps;
 
 pub use dav::Dav;
 
@@ -43,6 +45,46 @@ impl TestStore {
         let mut counter = self.counter.lock().unwrap();
         *counter += 1;
         format!("{prefix}-{counter}")
+    }
+}
+
+impl nunc_sync::TodoistStore for TestStore {
+    fn local_todos(&self) -> Result<Vec<nunc_core::todoist_mapping::LocalTodo>, StoreError> {
+        nunc_store::list_local_todos(&self.conn.lock().unwrap())
+    }
+
+    fn mappings(&self) -> Result<Vec<nunc_core::todoist_mapping::TodoistMapping>, StoreError> {
+        nunc_store::list_todoist_mappings(&self.conn.lock().unwrap())
+    }
+
+    fn add_mapping(
+        &self,
+        todo_id: i32,
+        task_id: &str,
+        at: DateTime<Utc>,
+    ) -> Result<(), StoreError> {
+        nunc_store::add_todoist_mapping(&self.conn.lock().unwrap(), todo_id, task_id, at)
+    }
+
+    fn remove_mappings(&self, task_ids: &[String]) -> Result<(), StoreError> {
+        nunc_store::remove_todoist_mappings(&self.conn.lock().unwrap(), task_ids)
+    }
+
+    fn apply(
+        &self,
+        writes: &[nunc_store::TodoistWrite],
+        today: chrono::NaiveDate,
+        now: DateTime<Utc>,
+    ) -> Result<nunc_store::TodoistApplied, StoreError> {
+        nunc_store::apply_todoist_writes(&mut self.conn.lock().unwrap(), writes, today, now)
+    }
+
+    fn record_sync(&self, at: DateTime<Utc>) -> Result<(), StoreError> {
+        nunc_store::set_todoist_last_sync_at(&self.conn.lock().unwrap(), at)
+    }
+
+    fn new_sync_id(&self) -> String {
+        self.next_id("remote")
     }
 }
 
@@ -97,6 +139,7 @@ pub struct SyncWorld {
     pub config: Option<WebDavConfig>,
     pub coord: coord::State,
     pub google: google_steps::State,
+    pub todoist: todoist_steps::State,
 }
 
 impl std::fmt::Debug for SyncWorld {
@@ -123,6 +166,7 @@ impl SyncWorld {
             config: None,
             coord: coord::State::default(),
             google: google_steps::State::default(),
+            todoist: todoist_steps::State::default(),
         })
     }
 

@@ -28,6 +28,7 @@ pub fn setup<R: Runtime>(app: &App<R>) -> Result<(), Box<dyn std::error::Error>>
     }
     spawn_startup_backup(&handle);
     state.sync.trigger(Trigger::Start);
+    state.todoist.trigger(Trigger::Start);
     // Beim Beenden noch einmal synchronisieren, höchstens wenige Sekunden lang (nur Desktop: Mobilgeräte
     // beenden die App ohne Vorwarnung, dort greift der Sync beim Wechsel in den Hintergrund)
     #[cfg(desktop)]

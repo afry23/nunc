@@ -88,6 +88,10 @@ impl Harness {
                 sync::disconnect_drive,
                 sync::check_sync_import,
                 sync::finish_connect,
+                sync::get_todoist_status,
+                sync::disconnect_todoist,
+                sync::get_todoist_sync_status,
+                sync::todoist_sync_now,
                 notifications::get_notification_status,
                 notifications::request_notification_permission,
             ])
@@ -334,6 +338,19 @@ fn google_drive_is_not_connected_until_the_user_signs_in() {
     assert_eq!(h.ok("disconnect_drive", json!({}))["connected"], false);
     // ohne Verbindung gibt es nichts zu prüfen, und es wird kein Netzwerk berührt
     assert_eq!(h.err_code("check_sync_import", json!({})), "not_connected");
+}
+
+#[test]
+fn todoist_is_not_connected_until_the_user_signs_in() {
+    let h = Harness::new();
+    let status = h.ok("get_todoist_status", json!({}));
+    assert_eq!(status["connected"], false);
+    assert!(status["email"].is_null() && status["avatarUrl"].is_null());
+    assert_eq!(h.ok("disconnect_todoist", json!({}))["connected"], false);
+    let sync = h.ok("get_todoist_sync_status", json!({}));
+    assert_eq!(sync["state"], "idle");
+    // ohne Verbindung gibt es nichts abzugleichen
+    assert!(h.ok("todoist_sync_now", json!({})).is_null());
 }
 
 #[test]

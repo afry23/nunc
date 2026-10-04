@@ -115,7 +115,7 @@ impl Default for State {
 }
 
 impl State {
-    fn coordinator(&mut self) -> Arc<SyncCoordinator> {
+    pub fn coordinator(&mut self) -> Arc<SyncCoordinator> {
         self.coordinator
             .get_or_insert_with(|| {
                 SyncCoordinator::new(

@@ -6,6 +6,7 @@ mod drive;
 mod engine;
 mod error;
 pub mod oauth;
+mod todoist;
 pub(crate) mod webdav;
 
 pub use config::{
@@ -20,4 +21,8 @@ pub use drive::{
 };
 pub use engine::{SyncSetup, SyncStore, WebDavRunner, sync_webdav};
 pub use error::SyncError;
+pub use todoist::{
+    Account, CALLBACK_PORTS, Named, TaskPayload, TodoistClient, TodoistConfig, TodoistRunner,
+    TodoistService, TodoistStore, sync_todoist,
+};
 pub use webdav::{Precondition, Remote, SYNC_FILE_NAME, WebDavClient};

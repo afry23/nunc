@@ -14,7 +14,7 @@ use nunc_store::{
     BackupResult, LegacyImport, backup_if_needed, device_id, import_legacy_db, open,
     resolve_backup_dir, restore_backup,
 };
-use nunc_sync::{DriveService, SyncCoordinator, Trigger};
+use nunc_sync::{DriveService, SyncCoordinator, TodoistService, Trigger};
 
 use crate::db::Db;
 use crate::error::AppError;
@@ -66,6 +66,9 @@ pub struct AppState {
     pub sync: Arc<SyncCoordinator>,
     pub drive: Arc<DriveService>,
     pub sync_store: Arc<sync_service::DbSyncStore>,
+    /// Todoist: eigener Koordinator, unabhängig vom Sync-Anbieter.
+    pub todoist: Arc<SyncCoordinator>,
+    pub todoist_service: Arc<TodoistService>,
     pub opener: Arc<dyn UrlOpener>,
     pub runtime: tokio::runtime::Handle,
     shutdown_hooks: Mutex<Vec<ShutdownHook>>,
@@ -114,10 +117,18 @@ impl AppState {
             sync,
             drive: services.drive,
             sync_store: services.store,
+            todoist: services.todoist,
+            todoist_service: services.todoist_service,
             opener: platform.opener,
             runtime: platform.runtime,
             shutdown_hooks: Mutex::new(Vec::new()),
         })
+    }
+
+    /// Ein Todo wurde angelegt, geändert, abgehakt oder gelöscht: Sync-Anbieter und Todoist gleichen ab.
+    pub fn todos_changed(&self) {
+        self.sync.trigger(Trigger::TodoChanged);
+        self.todoist.trigger(Trigger::TodoChanged);
     }
 
     /// Meldet `hook` für das Beenden der App an (z. B. der Sync, der beim Schließen noch einmal läuft, M6-07).

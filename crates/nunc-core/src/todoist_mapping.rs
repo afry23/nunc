@@ -217,6 +217,25 @@ fn is_tag_word(word: &str) -> bool {
     word.len() > 1 && (word.starts_with('+') || word.starts_with('@'))
 }
 
+/// Sagen beide Todos für Todoist dasselbe? Verglichen wird, was Todoist kennt: Inhalt, Priorität, Projekt,
+/// Labels (ohne Reihenfolge, Groß-/Kleinschreibung egal) und ob erledigt. Die Schreibweise der Zeile (etwa das
+/// Erstellungsdatum, das Todoist liefert) spielt keine Rolle.
+pub fn same_on_todoist(a: &Todo, b: &Todo) -> bool {
+    let fold = |todo: &Todo| {
+        let request = map_todo_to_task(todo);
+        let mut labels: Vec<String> = request.labels.iter().map(|l| l.to_lowercase()).collect();
+        labels.sort();
+        (
+            request.content,
+            request.priority,
+            request.project_name.map(|name| name.to_lowercase()),
+            labels,
+            todo.completed,
+        )
+    };
+    fold(a) == fold(b)
+}
+
 /// Last-Write-Wins zwischen lokalen Todos und Todoist-Aufgaben.
 ///
 /// - lokal gelöscht + Mapping → in Todoist schließen
@@ -302,4 +321,51 @@ pub fn merge_todoist(
         });
     }
     merge
+}
+
+#[cfg(test)]
+mod same_on_todoist_tests {
+    use super::*;
+    use crate::todotxt::parse_line;
+
+    fn todo(raw: &str) -> Todo {
+        let parsed = parse_line(raw);
+        Todo {
+            id: 1,
+            raw_text: raw.to_owned(),
+            priority: parsed.priority,
+            completed: parsed.completed,
+            completed_at: parsed.completed_at,
+            created_at: parsed.created_at,
+            description: parsed.description,
+            project_tags: parsed.project_tags,
+            context_tags: parsed.context_tags,
+            pomodoro_count: 0,
+            position: 0,
+        }
+    }
+
+    #[test]
+    fn the_creation_date_label_order_and_case_do_not_matter() {
+        let local = todo("(A) Report +Work @desk @new");
+        assert!(same_on_todoist(
+            &local,
+            &todo("(A) 2026-10-04 Report +work @NEW @desk")
+        ));
+    }
+
+    #[test]
+    fn every_field_todoist_knows_makes_a_difference() {
+        let base = todo("(A) Report +Work @desk");
+        for other in [
+            "(A) Other +Work @desk",
+            "(B) Report +Work @desk",
+            "(A) Report +Home @desk",
+            "(A) Report +Work @desk @more",
+            "(A) Report +Work",
+            "x 2026-10-04 Report +Work @desk",
+        ] {
+            assert!(!same_on_todoist(&base, &todo(other)), "{other}");
+        }
+    }
 }
