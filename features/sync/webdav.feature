@@ -330,23 +330,152 @@ Feature: WebDAV sync
     When I sync
     Then the sync fails with "Die Sync-Datei wurde auf dem Server gleichzeitig geändert"
     And the server received 3 uploads
-  @integration @US-Sync-02-WebDAV @wip
+  @integration @sync @US-Sync-02-WebDAV
   Scenario: Concurrent sync calls are serialized
-
-  @integration @US-Sync-02-WebDAV @wip
+    Given a sync coordinator whose runs take 80 ms
+    When 3 syncs are requested at the same time
+    Then 3 sync runs have happened one after the other
+  @integration @sync @US-Sync-02-WebDAV
   Scenario: A sync runs at app start
-
-  @integration @US-Sync-02-WebDAV @wip
+    Given a sync coordinator whose runs take 0 ms
+    When the app starts
+    Then within 500 ms 1 sync runs have happened
+  @integration @sync @US-Sync-02-WebDAV
   Scenario: A sync runs after a finished or aborted session
-
-  @integration @US-Sync-02-WebDAV @wip
+    Given a sync coordinator whose runs take 0 ms
+    When a session finishes
+    And a session is aborted
+    Then within 500 ms 2 sync runs have happened
+  @integration @sync @US-Sync-02-WebDAV
   Scenario: A sync runs after a todo change, debounced
+    Given a sync coordinator whose runs take 0 ms
+    And the debounce time is 150 ms
+    When 4 todos change within 80 ms
+    Then no sync run has happened yet
+    And within 1000 ms 1 sync runs have happened
 
-  @integration @US-Sync-02-WebDAV @desktop @wip
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A todo change after a quiet period starts the next sync
+    Given a sync coordinator whose runs take 0 ms
+    And the debounce time is 50 ms
+    When a todo changes
+    And I wait 300 ms
+    And a todo changes
+    Then within 1000 ms 2 sync runs have happened
+  @integration @sync @US-Sync-02-WebDAV @desktop
   Scenario: A sync runs at quit and delays closing by at most five seconds
+    Given a sync coordinator whose runs take 100 ms
+    And the quit limit is 1000 ms
+    When the app quits
+    Then closing waited for 1 finished sync run
 
-  @integration @US-Sync-02-WebDAV @mobile @wip
+  @integration @sync @US-Sync-02-WebDAV @desktop
+  Scenario: A slow sync cannot hold up quitting beyond the limit
+    Given a sync coordinator whose runs take 3000 ms
+    And the quit limit is 200 ms
+    When the app quits
+    Then closing was delayed by less than 1500 ms
+
+  @integration @sync @US-Sync-02-WebDAV @desktop
+  Scenario: A todo change still waiting for its quiet period is covered by the quit sync
+    Given a sync coordinator whose runs take 0 ms
+    And the debounce time is 300 ms
+    When a todo changes
+    And the app quits
+    Then within 800 ms 1 sync runs have happened
+
+  @integration @sync @US-Sync-02-WebDAV @desktop
+  Scenario: Resume and background are no reasons to sync on the desktop
+    Given a sync coordinator whose runs take 0 ms
+    When the app resumes
+    And the app goes to the background
+    Then within 300 ms 0 sync runs have happened
+  @integration @sync @US-Sync-02-WebDAV @mobile
   Scenario: A sync runs on resume and when going to the background
+    Given a sync coordinator whose runs take 0 ms
+    And the coordinator runs on mobile
+    When the app resumes
+    And the app goes to the background
+    Then within 500 ms 2 sync runs have happened
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A sync reports its progress
+    Given a sync coordinator whose runs take 0 ms
+    And the next run imports 2 todos and 1 sessions with 0 conflicts
+    When I sync now
+    Then the observer saw: "start, status syncing, status idle, complete 2 1 0"
+    And the sync status is "idle 2026-10-04T09:00:00Z -"
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A failing sync shows an error and the next sync recovers
+    Given a sync coordinator whose runs take 0 ms
+    And the next run fails with "Verbindung abgelehnt – Server nicht erreichbar"
+    When I sync now
+    Then the sync call failed with "Verbindung abgelehnt – Server nicht erreichbar"
+    And the sync status is "error - Verbindung abgelehnt – Server nicht erreichbar"
+    And the observer saw: "start, status syncing, status error"
+    When I sync now
+    Then the sync status is "idle 2026-10-04T09:00:00Z -"
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: The time of the last sync survives an error
+    Given a sync coordinator whose runs take 0 ms
+    When I sync now
+    And the next run fails with "Zeitüberschreitung – Server antwortet nicht"
+    And I sync now
+    Then the sync status is "error 2026-10-04T09:00:00Z Zeitüberschreitung – Server antwortet nicht"
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: Nothing is synchronized while no provider is selected
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the sync provider is "none"
+    And the WebDAV settings point to the server for "me" with password "secret"
+    When the WebDAV runner runs
+    Then the runner did nothing
+    And the server did not receive any request
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: Nothing is synchronized while the sync is paused
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the sync provider is "webdav"
+    And the sync is paused
+    And the WebDAV settings point to the server for "me" with password "secret"
+    When the WebDAV runner runs
+    Then the runner did nothing
+    And the server did not receive any request
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: An incomplete setup is reported
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the sync provider is "webdav"
+    And the WebDAV settings are incomplete
+    When the WebDAV runner runs
+    Then the runner failed with "WebDAV ist nicht vollständig eingerichtet"
+    And the server did not receive any request
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A successful run records the time of the last sync
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the local todos "Task"
+    And the sync provider is "webdav"
+    And the WebDAV settings point to the server for "me" with password "secret"
+    When the WebDAV runner runs
+    Then the runner reports the finish time "2026-10-04T09:00:00Z"
+    And the last sync time in the settings is "2026-10-04T09:00:00Z"
+    And the sync file on the server has the todos "Task"
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A failed run does not record a time
+    Given a WebDAV server with the folder "/nunc/" that requires basic authentication for "me" with password "secret"
+    And no database exists yet
+    And the sync provider is "webdav"
+    And the WebDAV settings point to the server for "me" with password "wrong"
+    When the WebDAV runner runs
+    Then the runner failed with "401 Unauthorized – Benutzername oder Passwort falsch"
+    And the settings have no last sync time
 
   @ui @US-Sync-02-WebDAV @wip
   Scenario: The status bar shows idle, syncing and error

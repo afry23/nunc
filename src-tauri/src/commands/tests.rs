@@ -45,6 +45,7 @@ impl Harness {
                 events: events.clone(),
                 notifier: Arc::new(RecordingNotifier::new(false)),
                 secrets: Arc::new(MemorySecretStore::default()),
+                runtime: crate::state::test_runtime(),
             },
         )
         .unwrap();
@@ -77,6 +78,9 @@ impl Harness {
                 backup::export_backup,
                 sync::set_sync_provider,
                 sync::get_webdav_config,
+                sync::get_sync_status,
+                sync::sync_now,
+                sync::sync_in_background,
                 sync::save_webdav_config,
                 sync::test_webdav_connection,
                 notifications::get_notification_status,
@@ -314,6 +318,40 @@ fn the_connection_test_reports_failures_as_a_result_not_an_error() {
     );
     assert_eq!(result["success"], false);
     assert_eq!(result["message"], "Ungültige Server-Adresse: kein-url");
+}
+
+#[test]
+fn sync_now_does_nothing_without_a_provider_and_reports_an_incomplete_setup() {
+    let h = Harness::new();
+    let status = h.ok("get_sync_status", json!({}));
+    assert_eq!(status["state"], "idle");
+    assert!(status["lastSyncAt"].is_null());
+
+    assert!(h.ok("sync_now", json!({})).is_null());
+    assert!(h.events.names().iter().any(|n| n == "sync:start"));
+    assert_eq!(h.ok("get_sync_status", json!({}))["state"], "idle");
+
+    h.ok("set_sync_provider", json!({ "provider": "webdav" }));
+    assert_eq!(h.err_code("sync_now", json!({})), "sync_not_configured");
+    let status = h.ok("get_sync_status", json!({}));
+    assert_eq!(status["state"], "error");
+    assert_eq!(
+        status["errorMessage"],
+        "WebDAV ist nicht vollständig eingerichtet"
+    );
+    let names = h.events.names();
+    assert!(names.iter().any(|n| n == "sync:status"));
+    assert!(!names.iter().any(|n| n == "sync:complete"));
+}
+
+#[test]
+fn a_paused_sync_does_nothing_even_with_a_provider() {
+    let h = Harness::new();
+    h.ok("set_sync_provider", json!({ "provider": "webdav" }));
+    let mut settings = h.ok("get_settings", json!({}));
+    settings["syncEnabled"] = json!(false);
+    h.ok("save_settings", json!({ "settings": settings }));
+    assert!(h.ok("sync_now", json!({})).is_null());
 }
 
 #[test]

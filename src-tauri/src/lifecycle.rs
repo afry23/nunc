@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use nunc_platform::{KeyringSecretStore, SecretStore, SystemClock, UnavailableSecretStore};
+use nunc_sync::Trigger;
 use tauri::{App, AppHandle, Manager, RunEvent, Runtime};
 
 use crate::adapters::{TauriEventSink, TauriNotifier, create_timer_channel};
@@ -26,6 +27,15 @@ pub fn setup<R: Runtime>(app: &App<R>) -> Result<(), Box<dyn std::error::Error>>
         log::error!("Timer-Wiederherstellung fehlgeschlagen: {error}");
     }
     spawn_startup_backup(&handle);
+    state.sync.trigger(Trigger::Start);
+    // Beim Beenden noch einmal synchronisieren, höchstens wenige Sekunden lang (nur Desktop: Mobilgeräte
+    // beenden die App ohne Vorwarnung, dort greift der Sync beim Wechsel in den Hintergrund)
+    #[cfg(desktop)]
+    {
+        let sync = state.sync.clone();
+        let runtime = state.runtime.clone();
+        state.on_shutdown(move || runtime.block_on(sync.sync_on_quit()));
+    }
     spawn_ticker(&handle);
     Ok(())
 }
@@ -39,6 +49,9 @@ pub fn on_run_event<R: Runtime>(app: &AppHandle<R>, event: RunEvent) {
                 && let Err(error) = state.timer.recover()
             {
                 log::error!("Timer nach dem Hintergrund nicht aktualisiert: {error}");
+            }
+            if let Some(state) = app.try_state::<AppState>() {
+                state.sync.trigger(Trigger::Resume);
             }
         }
         #[cfg(target_os = "macos")]
@@ -94,6 +107,7 @@ fn platform<R: Runtime>(handle: &AppHandle<R>) -> Platform {
         events: Arc::new(TauriEventSink(handle.clone())),
         notifier: Arc::new(TauriNotifier(handle.clone())),
         secrets,
+        runtime: tauri::async_runtime::handle().inner().clone(),
     }
 }
 

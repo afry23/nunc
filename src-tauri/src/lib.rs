@@ -5,6 +5,7 @@ mod error;
 mod events;
 mod lifecycle;
 mod state;
+mod sync_service;
 mod timer_service;
 #[cfg(desktop)]
 mod tray;
@@ -53,6 +54,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
             sync::get_webdav_config,
             sync::save_webdav_config,
             sync::test_webdav_connection,
+            sync::get_sync_status,
+            sync::sync_now,
+            sync::sync_in_background,
             notifications::get_notification_status::<tauri::Wry>,
             notifications::request_notification_permission::<tauri::Wry>,
         ])
@@ -61,6 +65,9 @@ fn specta_builder() -> Builder<tauri::Wry> {
             events::TimerComplete,
             events::TimerStopped,
             events::AppReload,
+            events::SyncStart,
+            events::SyncStatusChanged,
+            events::SyncComplete,
         ])
         // Dateigrößen liegen weit unter 2^53; `u64` darf daher als `number` exportiert werden.
         .dangerously_cast_bigints_to_number()

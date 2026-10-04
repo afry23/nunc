@@ -16,6 +16,17 @@ impl Db {
         Self(Mutex::new(conn))
     }
 
+    /// Wie [`Db::with`] für Aufrufer, die [`StoreError`](nunc_store::StoreError) selbst weitergeben (der Sync).
+    pub fn with_store<T>(
+        &self,
+        f: impl FnOnce(&mut Connection) -> Result<T, nunc_store::StoreError>,
+    ) -> Result<T, nunc_store::StoreError> {
+        let mut conn = self.0.lock().map_err(|_| {
+            nunc_store::StoreError::BackupDir("Datenbank gesperrt (vergiftete Sperre)".to_owned())
+        })?;
+        f(&mut conn)
+    }
+
     /// Führt `f` mit exklusivem Zugriff auf die Verbindung aus.
     pub fn with<T, E>(&self, f: impl FnOnce(&mut Connection) -> Result<T, E>) -> Result<T, AppError>
     where

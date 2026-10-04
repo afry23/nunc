@@ -14,6 +14,7 @@ use nunc_store::{Connection, StoreError};
 use nunc_sync::{SyncError, SyncStore};
 use tempfile::TempDir;
 
+mod coord;
 mod dav;
 mod steps;
 
@@ -49,6 +50,20 @@ impl SyncStore for TestStore {
         nunc_store::build_sync_file(&conn, &self.device_id, now, || self.next_id("gen"))
     }
 
+    fn setup(&self) -> Result<nunc_sync::SyncSetup, StoreError> {
+        let conn = self.conn.lock().unwrap();
+        let settings = nunc_store::load_settings(&conn)?;
+        Ok(nunc_sync::SyncSetup {
+            provider: settings.sync_provider,
+            enabled: settings.sync_enabled,
+            webdav: nunc_store::load_webdav_config(&conn)?,
+        })
+    }
+
+    fn record_sync(&self, at: DateTime<Utc>) -> Result<(), StoreError> {
+        nunc_store::set_last_sync_at(&self.conn.lock().unwrap(), at)
+    }
+
     fn apply_remote(
         &self,
         todos: &[nunc_core::model::SyncTodo],
@@ -74,6 +89,7 @@ pub struct SyncWorld {
     pub outcome: Option<Result<SyncResult, SyncError>>,
     pub test_result: Option<ConnectionTestResult>,
     pub config: Option<WebDavConfig>,
+    pub coord: coord::State,
 }
 
 impl std::fmt::Debug for SyncWorld {
@@ -98,6 +114,7 @@ impl SyncWorld {
             outcome: None,
             test_result: None,
             config: None,
+            coord: coord::State::default(),
         })
     }
 

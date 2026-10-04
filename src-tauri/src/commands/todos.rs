@@ -1,5 +1,6 @@
 use nunc_core::model::Todo;
 use nunc_core::todo_query::{SortDirection, TodoFilter, TodoSort, query_todos};
+use nunc_sync::Trigger;
 use tauri::State;
 
 use crate::error::AppError;
@@ -30,9 +31,11 @@ pub fn add_todo(state: State<'_, AppState>, raw_text: String) -> Result<Todo, Ap
     let raw_text = non_empty(&raw_text)?;
     let sync_id = uuid::Uuid::new_v4().to_string();
     let now = state.clock.now();
-    state
+    let todo = state
         .db
-        .with(|conn| nunc_store::add_todo(conn, raw_text, &sync_id, now))
+        .with(|conn| nunc_store::add_todo(conn, raw_text, &sync_id, now))?;
+    state.sync.trigger(Trigger::TodoChanged);
+    Ok(todo)
 }
 
 /// Ersetzt den Text eines Todos (Position, Pomodoro-Zähler und Sync-Kennung bleiben).
@@ -45,9 +48,11 @@ pub fn update_todo(
 ) -> Result<Todo, AppError> {
     let raw_text = non_empty(&raw_text)?;
     let now = state.clock.now();
-    state
+    let todo = state
         .db
-        .with(|conn| nunc_store::update_todo(conn, id, raw_text, now))
+        .with(|conn| nunc_store::update_todo(conn, id, raw_text, now))?;
+    state.sync.trigger(Trigger::TodoChanged);
+    Ok(todo)
 }
 
 /// Löscht ein Todo (als Löschmarke, damit der Sync es weiterträgt).
@@ -55,7 +60,11 @@ pub fn update_todo(
 #[specta::specta]
 pub fn delete_todo(state: State<'_, AppState>, id: i32) -> Result<(), AppError> {
     let now = state.clock.now();
-    state.db.with(|conn| nunc_store::delete_todo(conn, id, now))
+    state
+        .db
+        .with(|conn| nunc_store::delete_todo(conn, id, now))?;
+    state.sync.trigger(Trigger::TodoChanged);
+    Ok(())
 }
 
 #[tauri::command]
@@ -67,9 +76,11 @@ pub fn set_todo_completed(
 ) -> Result<Todo, AppError> {
     let now = state.clock.now();
     let today = state.today();
-    state
+    let todo = state
         .db
-        .with(|conn| nunc_store::set_todo_completed(conn, id, completed, today, now))
+        .with(|conn| nunc_store::set_todo_completed(conn, id, completed, today, now))?;
+    state.sync.trigger(Trigger::TodoChanged);
+    Ok(todo)
 }
 
 /// Setzt die manuelle Reihenfolge: das erste Element bekommt Position 0.

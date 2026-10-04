@@ -110,6 +110,20 @@ export const commands = {
 	 *  gespeicherte.
 	 */
 	testWebdavConnection: (config: WebDavConfig, password: string | null) => typedError<ConnectionTestResult, AppError>(__TAURI_INVOKE("test_webdav_connection", { config, password })),
+	/**  Zustand der Synchronisierung (für die Statusleiste beim Öffnen; danach kommt `sync:status`). */
+	getSyncStatus: () => __TAURI_INVOKE<SyncStatus>("get_sync_status"),
+	/**
+	 *  Synchronisiert jetzt und wartet auf das Ergebnis. `None`, wenn nichts zu synchronisieren ist (kein Anbieter
+	 *  gewählt oder Sync pausiert). Ein Fehler steht zusätzlich im Status.
+	 */
+	syncNow: () => typedError<{
+	importedTodos: number,
+	importedSessions: number,
+	/**  Lokale Todos, die durch eine neuere Server-Version ersetzt wurden. */
+	conflictedTodos: number,
+} | null, AppError>(__TAURI_INVOKE("sync_now")),
+	/**  Die App geht in den Hintergrund (Mobil): ein letzter Sync, bevor das Betriebssystem sie einfriert. */
+	syncInBackground: () => __TAURI_INVOKE<void>("sync_in_background"),
 	/**  Aktueller Stand, ohne den Nutzer zu fragen. */
 	getNotificationStatus: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("get_notification_status")),
 	/**
@@ -124,6 +138,9 @@ export const commands = {
 /** Events */
 export const events = {
 	appReload: makeEvent<AppReload>("app:reload"),
+	syncComplete: makeEvent<SyncComplete>("sync:complete"),
+	syncStart: makeEvent<SyncStart>("sync:start"),
+	syncStatus: makeEvent<SyncStatusChanged>("sync:status"),
 	timerComplete: makeEvent<TimerComplete>("timer:complete"),
 	timerStopped: makeEvent<TimerStopped>("timer:stopped"),
 	timerTick: makeEvent<TimerTick>("timer:tick"),
@@ -334,8 +351,36 @@ export type StatsResponse = {
 	longestStreak: number,
 };
 
+/**  Ein Sync-Lauf ist gelungen; die Nutzlast sagt, was vom Server übernommen wurde. */
+export type SyncComplete = SyncResult;
+
 /**  Aktiver Sync-Provider (exklusiv). */
 export type SyncProvider = "none" | "google_drive" | "webdav";
+
+/**  Was ein Sync-Lauf vom Server übernommen hat (`sync:complete`). */
+export type SyncResult = {
+	importedTodos: number,
+	importedSessions: number,
+	/**  Lokale Todos, die durch eine neuere Server-Version ersetzt wurden. */
+	conflictedTodos: number,
+};
+
+/**  Ein Sync-Lauf beginnt. */
+export type SyncStart = null;
+
+/**  Zustand der Synchronisierung. */
+export type SyncState = "idle" | "syncing" | "error";
+
+/**  Nutzlast von `sync:status` und Ergebnis von `get_sync_status`. */
+export type SyncStatus = {
+	state: SyncState,
+	/**  RFC 3339; `None`, solange noch nie synchronisiert wurde. */
+	lastSyncAt: string | null,
+	errorMessage: string | null,
+};
+
+/**  Der Sync-Zustand hat sich geändert (`idle` · `syncing` · `error`). */
+export type SyncStatusChanged = SyncStatus;
 
 /**  Session natürlich abgelaufen (oder Flowtime-Arbeit beendet). */
 export type TimerComplete = FinishPayload;

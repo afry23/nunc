@@ -1,7 +1,9 @@
 //! Commands für Sync-Anbieter, WebDAV-Konfiguration und Synchronisierung.
 
-use nunc_core::model::{ConnectionTestResult, SyncProvider, WebDavConfig, is_http_url};
-use nunc_sync::WebDavClient;
+use nunc_core::model::{
+    ConnectionTestResult, SyncProvider, SyncResult, SyncStatus, WebDavConfig, is_http_url,
+};
+use nunc_sync::{Trigger, WebDavClient};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::State;
@@ -100,4 +102,27 @@ pub async fn test_webdav_connection(
             message: error.to_string(),
         },
     })
+}
+
+/// Zustand der Synchronisierung (für die Statusleiste beim Öffnen; danach kommt `sync:status`).
+#[tauri::command]
+#[specta::specta]
+pub fn get_sync_status(state: State<'_, AppState>) -> SyncStatus {
+    state.sync.status()
+}
+
+/// Synchronisiert jetzt und wartet auf das Ergebnis. `None`, wenn nichts zu synchronisieren ist (kein Anbieter
+/// gewählt oder Sync pausiert). Ein Fehler steht zusätzlich im Status.
+#[tauri::command]
+#[specta::specta]
+pub async fn sync_now(state: State<'_, AppState>) -> Result<Option<SyncResult>, AppError> {
+    let sync = state.sync.clone();
+    Ok(sync.sync_now().await?)
+}
+
+/// Die App geht in den Hintergrund (Mobil): ein letzter Sync, bevor das Betriebssystem sie einfriert.
+#[tauri::command]
+#[specta::specta]
+pub fn sync_in_background(state: State<'_, AppState>) {
+    state.sync.trigger(Trigger::Background);
 }

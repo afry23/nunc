@@ -3173,6 +3173,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "cucumber",
+ "log",
  "md-5",
  "nunc-core",
  "nunc-platform",

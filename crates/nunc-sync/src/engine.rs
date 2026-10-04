@@ -3,21 +3,39 @@
 
 use chrono::{DateTime, Utc};
 use nunc_core::clock::Clock;
-use nunc_core::model::{SyncFile, SyncResult, SyncSession, SyncTodo};
+use std::sync::Arc;
+
+use nunc_core::model::{SyncFile, SyncProvider, SyncResult, SyncSession, SyncTodo, WebDavConfig};
 use nunc_core::sync_merge::{merge_sessions, merge_todos};
+use nunc_platform::SecretStore;
 use nunc_store::{Applied, StoreError};
 
 use crate::SyncError;
+use crate::config::{SECRET_ACCOUNT, SECRET_SERVICE};
+use crate::coordinator::{RunFuture, SyncRunner};
 use crate::webdav::{Precondition, WebDavClient};
 
 /// Wie oft ein Lauf neu ansetzt, wenn jemand gleichzeitig die Datei auf dem Server ändert.
 const MAX_ATTEMPTS: usize = 3;
+
+/// Was der Sync von den Einstellungen wissen muss.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SyncSetup {
+    pub provider: SyncProvider,
+    /// `false` = Sync pausiert (Zugangsdaten bleiben).
+    pub enabled: bool,
+    pub webdav: WebDavConfig,
+}
 
 /// Die lokale Datenbank aus Sicht des Syncs. Die Methoden sind synchron und halten Sperren nur kurz, nie über
 /// einen Netzwerkzugriff hinweg.
 pub trait SyncStore: Send + Sync {
     /// Lokaler Stand (vergibt fehlende `sync_id`s).
     fn local_file(&self, now: DateTime<Utc>) -> Result<SyncFile, StoreError>;
+    /// Gewählter Anbieter und WebDAV-Einstellungen.
+    fn setup(&self) -> Result<SyncSetup, StoreError>;
+    /// Merkt sich den Zeitpunkt des letzten erfolgreichen Syncs.
+    fn record_sync(&self, at: DateTime<Utc>) -> Result<(), StoreError>;
     /// Spielt Änderungen vom Server atomar ein.
     fn apply_remote(
         &self,
@@ -84,4 +102,52 @@ pub async fn sync_webdav(
         }
     }
     Err(SyncError::Conflict)
+}
+
+/// Der Sync-Lauf gegen WebDAV für den [`SyncCoordinator`](crate::SyncCoordinator): prüft, ob überhaupt
+/// WebDAV gewählt ist, holt das Passwort aus dem Tresor und führt [`sync_webdav`] aus.
+pub struct WebDavRunner {
+    store: Arc<dyn SyncStore>,
+    secrets: Arc<dyn SecretStore>,
+    clock: Arc<dyn Clock>,
+}
+
+impl WebDavRunner {
+    pub fn new(
+        store: Arc<dyn SyncStore>,
+        secrets: Arc<dyn SecretStore>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
+        Self {
+            store,
+            secrets,
+            clock,
+        }
+    }
+}
+
+impl SyncRunner for WebDavRunner {
+    fn run(&self) -> RunFuture {
+        let store = self.store.clone();
+        let secrets = self.secrets.clone();
+        let clock = self.clock.clone();
+        Box::pin(async move {
+            let setup = store.setup()?;
+            if setup.provider != SyncProvider::Webdav || !setup.enabled {
+                return Ok(None);
+            }
+            let password = secrets.get(SECRET_SERVICE, SECRET_ACCOUNT)?;
+            let Some(password) = password.filter(|_| setup.webdav.is_complete()) else {
+                return Err(SyncError::NotConfigured);
+            };
+            let client = WebDavClient::new(setup.webdav, password)?;
+            let result = sync_webdav(&client, &*store, &*clock).await?;
+            let finished = clock.now();
+            store.record_sync(finished)?;
+            Ok(Some((
+                result,
+                finished.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            )))
+        })
+    }
 }
