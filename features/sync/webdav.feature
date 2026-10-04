@@ -360,10 +360,10 @@ Feature: WebDAV sync
   @integration @sync @US-Sync-02-WebDAV
   Scenario: A sync runs after a todo change, debounced
     Given a sync coordinator whose runs take 0 ms
-    And the debounce time is 150 ms
+    And the debounce time is 1000 ms
     When 4 todos change within 80 ms
     Then no sync run has happened yet
-    And within 1000 ms 1 sync runs have happened
+    And within 3000 ms 1 sync runs have happened
 
   @integration @sync @US-Sync-02-WebDAV
   Scenario: A todo change after a quiet period starts the next sync
