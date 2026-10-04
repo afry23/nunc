@@ -36,5 +36,6 @@ After(async () => {
   resetBackend();
   resetStores();
   vi.restoreAllMocks();
+  localStorage.clear();
   Reflect.deleteProperty(window, "matchMedia");
 });

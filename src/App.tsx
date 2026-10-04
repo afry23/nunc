@@ -11,6 +11,7 @@ function App({ history }: { history?: RouterHistory }) {
   const isMini = router.state.location.pathname === "/mini";
 
   useEffect(() => {
+    useUiStore.getState().restorePrefs();
     let disconnect: (() => void) | undefined;
     let cancelled = false;
     connectBackend()

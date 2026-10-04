@@ -262,6 +262,38 @@ Then(
   },
 );
 
+Given("the sidebar was collapsed earlier", () => {
+  localStorage.setItem("nunc.sidebarCollapsed", "1");
+});
+
+Then("the sidebar is collapsed", async () => {
+  await waitFor(() =>
+    expect(screen.getByTestId("sidebar").getAttribute("data-collapsed")).toBe(
+      "true",
+    ),
+  );
+});
+
+Then("the sidebar is expanded", async () => {
+  await waitFor(() =>
+    expect(screen.getByTestId("sidebar").getAttribute("data-collapsed")).toBe(
+      "false",
+    ),
+  );
+});
+
+Then(
+  "the navigation still offers {string}",
+  (_world: UiWorld, entries: string) => {
+    const nav = screen.getByRole("navigation", { name: "Hauptnavigation" });
+    expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((link) => normalize(link.textContent)),
+    ).toEqual(names(entries));
+  },
+);
+
 Then("I see a sidebar", () => {
   expect(screen.getByTestId("sidebar")).toBeTruthy();
 });

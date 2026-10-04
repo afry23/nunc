@@ -35,3 +35,22 @@ Feature: Navigation
 
   @ui @REQ-8 @mobile @wip
   Scenario: The back button navigates instead of closing the app
+
+  @ui @REQ-responsive
+  Scenario: The sidebar can be collapsed to icons and expanded again
+    When I open the app
+    Then the sidebar is expanded
+    When I click "Seitenleiste einklappen"
+    Then the sidebar is collapsed
+    And the navigation still offers "Timer, Aufgaben, Statistik, Einstellungen"
+    When I click "Aufgaben"
+    Then I see the heading "Aufgaben"
+    And the sidebar is collapsed
+    When I click "Seitenleiste ausklappen"
+    Then the sidebar is expanded
+
+  @ui @REQ-responsive
+  Scenario: The collapsed sidebar is remembered
+    Given the sidebar was collapsed earlier
+    When I open the app
+    Then the sidebar is collapsed
