@@ -28,3 +28,19 @@ Schicht-Trennung).
 - Schemaänderungen sind in der Praxis append-only; Umbauten bestehender Spalten sind ausgeschlossen, solange
   die Go-App parallel genutzt wird.
 - `bundled` verlängert die Erstkompilierung (C-Compiler nötig); in CI mit Rust-Cache abgefangen.
+
+## Umsetzung (M2)
+
+- **Migrationen:** 001–005 byte-identisch aus `nunc-go`, 006 `active_timer` (eine Zeile, JSON des `Timer`). Jede
+  Migration läuft samt `schema_migrations`-Eintrag in einer Transaktion; maßgeblich ist wie in Go das Vorhandensein
+  der Version, höhere unbekannte Versionen bleiben unberührt. Das DDL von `schema_migrations` ist wortgleich zu Go.
+- **Session abschließen:** `commit_finish` schreibt Session, Pomodoro-Zähler und neuen Timer-Zustand in **einer**
+  Transaktion (sonst entstünde nach einem Absturz eine doppelte Session).
+- **Backup:** `VACUUM INTO` in `….db.tmp`, dann `rename`. Regeln (wann, Namen, Rotation) in `nunc-core`.
+- **Restore:** Kopie neben der Datenbank vorbereiten, **dort** prüfen (SQLite-Kopf, `quick_check`, Basis-Migration,
+  keine unbekannte neuere Schema-Version) und migrieren, Notfall-Backup, Verbindung schließen, `rename`, neu öffnen.
+  Die Originaldatenbank bleibt bis zum Austausch unberührt; die gewählte Datei wird nie geöffnet (schon ein
+  Read-only-Öffnen einer WAL-Datenbank legt `-shm` daneben an).
+- **Legacy-Übernahme:** gleiches Vorgehen für `…/nunc/nunc.db` der Go-App inklusive noch nicht eingespieltem `-wal`.
+- **Interop:** `tests/interop/go-reads-nunc-db.sh` lässt die Go-Logik eine von nunc geschriebene Datenbank (und
+  ihr Backup) lesen.

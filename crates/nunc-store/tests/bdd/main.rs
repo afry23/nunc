@@ -14,6 +14,7 @@ use rusqlite::Connection;
 use tempfile::TempDir;
 
 mod backup;
+mod compat;
 mod legacy;
 mod settings;
 mod todos;

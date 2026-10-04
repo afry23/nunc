@@ -80,8 +80,11 @@ undefined/pending Steps (der Rust-Runner bricht bei übersprungenen Steps ab).
 
 ```bash
 cargo test -p nunc-core --test bdd      # @domain (NUNC_BDD_REPORT=/abs/pfad.json schreibt zusätzlich JSON)
+cargo test -p nunc-store --test bdd     # @integration (Temp-Ordner, echte SQLite-Dateien)
 npm run test:bdd                        # @ui
 ```
+
+Go-Interop (manuell, braucht `../nunc-go` und Go): `tests/interop/go-reads-nunc-db.sh`.
 
 Step-Definitions: Rust in `crates/*/tests/bdd/` (`main.rs` mit gemeinsamer `DomainWorld`, ein Modul pro Themenbereich), TypeScript in `tests/steps/` (`tests/helpers/ipc.ts` →
 `mockBackend({ app_info: () => … })`). Details: ADR 0006.

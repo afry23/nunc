@@ -93,8 +93,19 @@ Feature: Compatibility with the database of the Go app
     And exactly the migrations 1 to 6 are recorded as applied
     And there are 11 sessions
 
-  @integration @REQ-compat @desktop @wip
+  @integration @REQ-compat @desktop
   Scenario: A database written by nunc keeps the Go tables unchanged
+    Given no database exists yet
+    When nunc opens the database
+    And I add the todo "(A) 2026-10-01 Write report +work"
+    And a pomodoro for todo 1 is started at 09:00:00 and saved
+    And the pomodoro is finished at 09:25:00 and stored
+    And I load the settings
+    And I set "pomodoroMin" to "30"
+    And I save the settings
+    Then the Go tables keep the definitions of the Go fixture
+    And the settings keys are all known to the Go app
+    And the rows written by nunc use the Go formats
 
   @integration @REQ-compat @desktop
   Scenario: On first start the database of the Go app is copied from the old data path
@@ -141,5 +152,10 @@ Feature: Compatibility with the database of the Go app
       | setting   | value              |
       | backupDir | /data/backups/nunc |
 
-  @e2e @REQ-compat @manual @wip
+  @e2e @REQ-compat @manual
   Scenario: A database written by nunc can be opened by the Go app
+    Given the repository checkout contains ../nunc-go and Go is installed
+    When I run "tests/interop/go-reads-nunc-db.sh"
+    Then the Go app logic reads the todos, the settings and the statistics without an error
+    And the integrity check of the database is "ok"
+    And the backup written by nunc passes the Go restore validation
