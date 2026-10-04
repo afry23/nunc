@@ -1,10 +1,10 @@
 //! Persistierter Timer-Zustand (`active_timer`, Migration 006).
 
-use chrono::{DateTime, SecondsFormat, Utc};
+use chrono::{DateTime, Utc};
 use nunc_core::timer::Timer;
 use rusqlite::{Connection, OptionalExtension, params};
 
-use crate::StoreError;
+use crate::{StoreError, time::to_text};
 
 /// Speichert den kompletten Timer-Zustand (laufende Session, Zyklus, Break-Vorschlag).
 /// Nach jeder Transition aufrufen. Ein Timer im Ausgangszustand löscht die Zeile.
@@ -16,10 +16,7 @@ pub fn save_timer(conn: &Connection, timer: &Timer, now: DateTime<Utc>) -> Resul
     conn.execute(
         "INSERT INTO active_timer (id, state, updated_at) VALUES (1, ?1, ?2)
          ON CONFLICT(id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at",
-        params![
-            serde_json::to_string(timer)?,
-            now.to_rfc3339_opts(SecondsFormat::Secs, true)
-        ],
+        params![serde_json::to_string(timer)?, to_text(now)],
     )?;
     Ok(())
 }

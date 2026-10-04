@@ -73,6 +73,22 @@ Feature: Timer persistence
       | expired | 09:30:00 |
 
   @integration @REQ-13
+  Scenario: Finishing a pomodoro stores the session, the count and the idle timer together
+    Given no database exists yet
+    When nunc opens the database
+    And I add the todo "Focus"
+    And a pomodoro for todo 1 is started at 09:00:00 and saved
+    And the pomodoro is finished at 09:25:00 and stored
+    And the app restarts
+    Then the restored timer is idle
+    And the sessions are:
+      | status    | todoId | actualMin | plannedMin |
+      | completed | 1      | 25        | 25         |
+    And the todo 1 is:
+      | field         | value |
+      | pomodoroCount | 1     |
+
+  @integration @REQ-13
   Scenario: Starting without an active timer starts idle
     Given no database exists yet
     When nunc opens the database

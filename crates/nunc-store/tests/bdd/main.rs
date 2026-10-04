@@ -8,12 +8,13 @@ use std::path::PathBuf;
 
 use chrono::{DateTime, NaiveTime, Utc};
 use cucumber::{World, given, then, when};
-use nunc_core::model::{Settings, TimerMode, TimerState};
+use nunc_core::model::{Settings, StatsResponse, TimerMode, TimerState, Todo};
 use nunc_core::timer::Timer;
 use rusqlite::Connection;
 use tempfile::TempDir;
 
 mod settings;
+mod todos;
 
 /// Gemeinsamer Zustand der `@integration`-Szenarien.
 #[derive(Debug, Default, World)]
@@ -27,6 +28,9 @@ pub struct StoreWorld {
     schema_before: Option<BTreeMap<String, String>>,
     timer: Timer,
     settings: Settings,
+    todos: Vec<Todo>,
+    stats: Option<StatsResponse>,
+    sync_counter: u32,
 }
 
 /// Uhrzeit `HH:MM:SS` am festen Testtag (UTC).
@@ -52,6 +56,10 @@ impl StoreWorld {
     fn dir(&mut self) -> &TempDir {
         self.dir
             .get_or_insert_with(|| tempfile::tempdir().expect("Temp-Ordner"))
+    }
+
+    fn conn_mut(&mut self) -> &mut Connection {
+        self.conn.as_mut().expect("Datenbank nicht geöffnet")
     }
 
     fn conn(&self) -> &Connection {

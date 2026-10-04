@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::StoreWorld;
 
-fn rows(step: &Step) -> &[Vec<String>] {
+pub(crate) fn rows(step: &Step) -> &[Vec<String>] {
     &step.table.as_ref().expect("Tabelle fehlt").rows[1..]
 }
 
@@ -14,8 +14,9 @@ fn literal(text: &str) -> Value {
     serde_json::from_str(text).unwrap_or_else(|_| Value::String(text.to_owned()))
 }
 
-fn as_text(value: &Value) -> String {
+pub(crate) fn as_text(value: &Value) -> String {
     match value {
+        Value::Null => String::new(),
         Value::String(s) => s.clone(),
         other => other.to_string(),
     }
