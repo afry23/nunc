@@ -12,7 +12,7 @@ export default defineConfig(() => ({
   // Unit-Tests (src/**) und BDD-Features (features/**, nur @ui – siehe tests/steps/hooks.steps.ts)
   test: {
     environment: "jsdom",
-    include: ["src/**/*.test.{ts,tsx}", "features/**/*.feature"],
+    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mjs", "features/**/*.feature"],
     setupFiles: ["tests/steps/index.ts"],
     server: { deps: { inline: ["quickpickle"] } },
   },

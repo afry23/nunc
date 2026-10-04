@@ -359,4 +359,3 @@ Feature: Todoist field mapping and merge
       | nunc_id | task_id |
     When I merge the Todoist state
     Then the todos to create in Todoist are "1 2 3"
-

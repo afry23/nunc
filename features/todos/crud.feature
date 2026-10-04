@@ -160,6 +160,3 @@ Feature: Todo management
     Then the todo 1 is:
       | field         | value |
       | pomodoroCount | 2     |
-
-  @e2e @REQ-4.3 @desktop @wip
-  Scenario: Create a todo and finish a pomodoro on it
