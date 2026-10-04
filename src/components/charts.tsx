@@ -104,6 +104,21 @@ export function LineChart({ days }: { days: DayPoint[] }) {
           <title>{`${days[index].date}: ${days[index].pomodoroCount} Pomodoros`}</title>
         </circle>
       ))}
+      {days.length <= 14 &&
+        points.map((p, index) => (
+          <text
+            key={`n-${days[index].date}`}
+            x={p.x}
+            y={Math.max(12, p.y - 10)}
+            textAnchor="middle"
+            fontSize="12"
+            fontWeight="600"
+            fill="var(--color-on-surface)"
+            data-testid="line-value"
+          >
+            {days[index].pomodoroCount}
+          </text>
+        ))}
       {days.map((day, index) =>
         dayLabel(days, index) ? (
           <text

@@ -231,3 +231,60 @@ Then("I do not see the charts {string}", (_world: UiWorld, list: string) => {
   for (const chart of names(list))
     expect(screen.queryByTestId(`chart-${chart}`)).toBeNull();
 });
+
+Given(
+  "the statistics count {int} pomodoros over all time",
+  (world: UiWorld, count: number) => {
+    world.fake.stats = { ...world.fake.stats, totalPomodoros: count };
+  },
+);
+
+Given(
+  "the statistics contain monthly data:",
+  (world: UiWorld, table: DataTable) => {
+    world.fake.stats = {
+      ...world.fake.stats,
+      monthly: table.hashes().map((row) => ({
+        year: Number(row.year),
+        month: Number(row.month),
+        pomodoroCount: Number(row.pomodoros),
+        workMinutes: Number(row.minutes),
+      })),
+    };
+  },
+);
+
+Then(
+  "the month {string} shows {int} pomodoros",
+  async (_world: UiWorld, month: string, count: number) => {
+    await waitFor(() => {
+      const row = within(
+        screen.getByRole("table", { name: "Pomodoros pro Monat" }),
+      ).getByRole("row", {
+        name: new RegExp(`^${month}`),
+      });
+      expect(within(row).getAllByRole("cell")[0].textContent).toBe(
+        String(count),
+      );
+    });
+  },
+);
+
+Then("I do not see the monthly table", () => {
+  expect(
+    screen.queryByRole("table", { name: "Pomodoros pro Monat" }),
+  ).toBeNull();
+});
+
+Then(
+  "the line chart labels the days with {string}",
+  async (_world: UiWorld, list: string) => {
+    await waitFor(() => {
+      const labels = within(screen.getByTestId("chart-line"))
+        .getAllByTestId("line-value")
+        .map((node) => node.textContent);
+      // die letzten Tage der Woche: Reihenfolge ab dem ältesten sichtbaren Tag
+      expect(labels.slice(-names(list).length)).toEqual(names(list));
+    });
+  },
+);

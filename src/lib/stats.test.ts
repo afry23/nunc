@@ -7,6 +7,7 @@ import {
   niceMax,
   pathThrough,
   periodRange,
+  periodTotals,
   pieSlices,
   slicePath,
 } from "./stats";
@@ -157,5 +158,30 @@ describe("pie", () => {
     );
     expect(slicePath(50, 50, 40, 0, (3 * Math.PI) / 2)).toContain(" 0 1 1 ");
     expect(slicePath(50, 50, 40, 0, 2 * Math.PI)).toContain("A40,40 0 1 1");
+  });
+});
+
+describe("periodTotals", () => {
+  const day = (pomodoroCount: number, workMinutes: number) => ({
+    date: "2026-10-01",
+    pomodoroCount,
+    workMinutes,
+    breakMinutes: 0,
+  });
+  it("sums the days and averages per day", () => {
+    expect(
+      periodTotals([day(4, 100), day(2, 50), day(0, 0), day(6, 150)]),
+    ).toEqual({
+      pomodoros: 12,
+      workMinutes: 300,
+      perDay: 3,
+    });
+  });
+  it("is zero without days", () => {
+    expect(periodTotals([])).toEqual({
+      pomodoros: 0,
+      workMinutes: 0,
+      perDay: 0,
+    });
   });
 });

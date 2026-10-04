@@ -11,8 +11,13 @@ import {
   type StatsRequest,
   type StatsResponse,
 } from "../lib/api";
-import { formatMinutes } from "../lib/format";
-import { fillDays, periodRange } from "../lib/stats";
+import { formatMinutes, monthLabel } from "../lib/format";
+import {
+  PERIOD_NAMES,
+  fillDays,
+  periodRange,
+  periodTotals,
+} from "../lib/stats";
 import { useUiStore } from "../stores/uiStore";
 
 const PERIODS: { value: StatsPeriod; label: string }[] = [
@@ -80,11 +85,10 @@ export function StatsView() {
   };
 
   const response = data?.response;
+  const totals = periodTotals(days);
   const empty =
     response !== undefined &&
-    response.totalPomodoros === 0 &&
-    response.totalWorkMin === 0 &&
-    days.every((d) => d.workMinutes === 0);
+    days.every((d) => d.workMinutes === 0 && d.pomodoroCount === 0);
 
   return (
     <section
@@ -152,17 +156,19 @@ export function StatsView() {
         <>
           <dl className="grid grid-cols-2 gap-4 lg:grid-cols-3">
             <Kpi
+              label="Pomodoros"
+              value={String(totals.pomodoros)}
+              hint={PERIOD_NAMES[period]}
+            />
+            <Kpi
               label="Fokuszeit"
-              value={formatMinutes(response.totalWorkMin)}
-            />
-            <Kpi label="Sitzungen" value={String(response.totalPomodoros)} />
-            <Kpi
-              label="Ø Pomodoros / Tag (7 Tage)"
-              value={(response.averagePomodoros7 ?? 0).toFixed(1)}
+              value={formatMinutes(totals.workMinutes)}
+              hint={PERIOD_NAMES[period]}
             />
             <Kpi
-              label="Ø Pomodoros / Tag (30 Tage)"
-              value={(response.averagePomodoros30 ?? 0).toFixed(1)}
+              label="Ø Pomodoros / Tag"
+              value={totals.perDay.toFixed(1)}
+              hint={PERIOD_NAMES[period]}
             />
             <Kpi
               label="Aktuelle Serie"
@@ -171,6 +177,11 @@ export function StatsView() {
             <Kpi
               label="Längste Serie"
               value={`${response.longestStreak} ${response.longestStreak === 1 ? "Tag" : "Tage"}`}
+            />
+            <Kpi
+              label="Gesamt"
+              value={`${response.totalPomodoros} Pomodoros`}
+              hint={`${formatMinutes(response.totalWorkMin)} · alle Zeit`}
             />
           </dl>
 
@@ -188,6 +199,43 @@ export function StatsView() {
               </Card>
             </>
           )}
+
+          {(period === "month" || period === "year") &&
+            response.monthly.length > 0 && (
+              <Card title="Pomodoros pro Monat">
+                <table
+                  aria-label="Pomodoros pro Monat"
+                  className="w-full text-left"
+                >
+                  <thead className="label-md text-on-surface-variant">
+                    <tr>
+                      <th className="pb-2 font-semibold">Monat</th>
+                      <th className="pb-2 text-right font-semibold">
+                        Pomodoros
+                      </th>
+                      <th className="pb-2 text-right font-semibold">
+                        Fokuszeit
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {response.monthly.map((m) => (
+                      <tr key={`${m.year}-${m.month}`}>
+                        <th scope="row" className="py-1 font-normal">
+                          {monthLabel(m.year, m.month)}
+                        </th>
+                        <td className="py-1 text-right tabular-nums">
+                          {m.pomodoroCount}
+                        </td>
+                        <td className="py-1 text-right text-on-surface-variant tabular-nums">
+                          {formatMinutes(m.workMinutes)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            )}
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card title="Projekte">
@@ -252,11 +300,20 @@ export function StatsView() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="rounded-2xl bg-surface-container-low p-5">
       <dt className="label-md text-on-surface-variant">{label}</dt>
       <dd className="font-display mt-2 text-3xl font-bold">{value}</dd>
+      {hint && <p className="mt-1 text-sm text-on-surface-variant">{hint}</p>}
     </div>
   );
 }
