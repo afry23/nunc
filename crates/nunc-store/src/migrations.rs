@@ -1,5 +1,5 @@
 //! Migrationsrunner, kompatibel zur Tabelle `schema_migrations` der Go-App
-//! (`nunc-go/internal/db/db.go`). Migrationen 001–005 sind unverändert übernommen; neue
+//! (`nunc-go/internal/db/db.go`). Migrationen 001–005 sind unverändert aus der Go-App übernommen (006 ist nunc-eigen); neue
 //! Migrationen sind ausschließlich additiv (ADR 0002).
 
 use rusqlite::{Connection, params};
@@ -31,6 +31,7 @@ pub const MIGRATIONS: &[Migration] = &[
     migration!(3, "003_flowtime_ratio.sql"),
     migration!(4, "004_session_sync_device.sql"),
     migration!(5, "005_todoist_mapping.sql"),
+    migration!(6, "006_active_timer.sql"),
 ];
 
 /// Wendet alle noch nicht in `schema_migrations` vermerkten Migrationen an.
@@ -124,7 +125,7 @@ mod tests {
         conn.execute("INSERT INTO schema_migrations (version) VALUES (42)", [])
             .unwrap();
         migrate(&mut conn).unwrap();
-        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 6);
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 7);
     }
 
     #[test]
