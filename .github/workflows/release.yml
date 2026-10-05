@@ -7,6 +7,9 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
   NUNC_GOOGLE_CLIENT_ID: ${{ secrets.NUNC_GOOGLE_CLIENT_ID }}
@@ -87,13 +90,28 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ci build.keychain
           rm certificate.p12
 
+      # Leere Secrets dürfen nicht als leere Variablen ankommen: Tauri würde sie als Identität bzw. Notarisierung
+      # werten. Ohne Zertifikat wird ad-hoc signiert ("-"), notarisiert nur, wenn alle drei Werte vorhanden sind.
+      - name: Apple-Signierung konfigurieren
+        if: runner.os == 'macOS'
+        env:
+          S_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          S_ID: ${{ secrets.APPLE_ID }}
+          S_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          S_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          echo "APPLE_SIGNING_IDENTITY=${S_IDENTITY:--}" >> "$GITHUB_ENV"
+          if [ -n "$S_ID" ] && [ -n "$S_PASSWORD" ] && [ -n "$S_TEAM" ]; then
+            {
+              echo "APPLE_ID=$S_ID"
+              echo "APPLE_PASSWORD=$S_PASSWORD"
+              echo "APPLE_TEAM_ID=$S_TEAM"
+            } >> "$GITHUB_ENV"
+          fi
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: nunc ${{ github.ref_name }}
@@ -208,15 +226,6 @@ jobs:
         env:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
         run: npm run tauri ios build -- --export-method app-store-connect
-
-      - name: Ohne Team nur prüfen, dass der Simulator-Build läuft
-        if: env.APPLE_DEVELOPMENT_TEAM == ''
-        env:
-          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
-        run: |
-          echo "::warning::Kein APPLE_DEVELOPMENT_TEAM, es entsteht keine IPA."
-          rustup target add aarch64-apple-ios-sim
-          npm run tauri ios build -- --debug --target aarch64-sim
 
       - name: Zu TestFlight hochladen
         if: env.APP_STORE_CONNECT_API_KEY != ''
