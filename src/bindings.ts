@@ -386,6 +386,11 @@ export type Settings = {
 	apiEnabled: boolean,
 	/**  Gewünschter Port der lokalen Schnittstelle (1024–65535); ist er belegt, nimmt der Server den nächsten freien. */
 	apiPort: number,
+	/**
+	 *  Abstand des automatischen Syncs am Desktop in Minuten; `0` = aus. Erlaubt: [`SYNC_INTERVALS_MIN`].
+	 *  Die Go-App kennt den Schlüssel nicht und ignoriert ihn.
+	 */
+	syncIntervalMin: number,
 };
 
 /**  Sortierrichtung. Fehlende Werte (keine Priorität, kein Datum) stehen in beiden Richtungen zuletzt. */

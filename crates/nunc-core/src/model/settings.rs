@@ -77,7 +77,13 @@ pub struct Settings {
     pub api_enabled: bool,
     /// Gewünschter Port der lokalen Schnittstelle (1024–65535); ist er belegt, nimmt der Server den nächsten freien.
     pub api_port: u32,
+    /// Abstand des automatischen Syncs am Desktop in Minuten; `0` = aus. Erlaubt: [`SYNC_INTERVALS_MIN`].
+    /// Die Go-App kennt den Schlüssel nicht und ignoriert ihn.
+    pub sync_interval_min: u32,
 }
+
+/// Erlaubte Werte für [`Settings::sync_interval_min`] (0 = aus).
+pub const SYNC_INTERVALS_MIN: [u32; 4] = [0, 5, 15, 30];
 
 /// Eine verletzte Einstellungsgrenze.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -90,6 +96,12 @@ pub struct SettingsIssue {
 }
 
 impl Settings {
+    /// Abstand des automatischen Syncs; `None` = aus.
+    pub fn sync_interval(&self) -> Option<std::time::Duration> {
+        (self.sync_interval_min > 0)
+            .then(|| std::time::Duration::from_secs(u64::from(self.sync_interval_min) * 60))
+    }
+
     /// Prüft die festgelegten Wertebereiche (REQUIREMENTS 5): Flowtime-Verhältnis 0,1–0,5, Mindest-Flow-Zeit
     /// 1–60 Minuten, Lautstärke 0–100, Pomodoro-Dauer mindestens eine Minute. Pausenlängen und
     /// `long_break_after` dürfen 0 sein (keine bzw. nie eine lange Pause). Liefert **alle** Verstöße.
@@ -119,6 +131,11 @@ impl Settings {
             (1024..=65535).contains(&self.api_port),
             "apiPort",
             "1024–65535",
+        );
+        check(
+            SYNC_INTERVALS_MIN.contains(&self.sync_interval_min),
+            "syncIntervalMin",
+            "0, 5, 15, 30",
         );
         if issues.is_empty() {
             Ok(())
@@ -153,6 +170,7 @@ impl Default for Settings {
             language: Language::System,
             api_enabled: false,
             api_port: 42820,
+            sync_interval_min: 15,
         }
     }
 }
@@ -271,15 +289,28 @@ mod tests {
             "language",
             "apiEnabled",
             "apiPort",
+            "syncIntervalMin",
         ] {
             assert!(value.get(key).is_some(), "Schlüssel {key} fehlt");
         }
-        assert_eq!(value.as_object().unwrap().len(), 22);
+        assert_eq!(value.as_object().unwrap().len(), 23);
         assert_eq!(value["activeMode"], "pomodoro");
         assert_eq!(value["syncProvider"], "none");
         assert_eq!(value["language"], "system");
         assert_eq!(value["apiEnabled"], false);
         assert_eq!(value["apiPort"], 42820);
+        assert_eq!(value["syncIntervalMin"], 15);
+    }
+
+    #[test]
+    fn the_sync_interval_is_off_at_zero_and_counted_in_minutes() {
+        let mut settings = Settings::default();
+        assert_eq!(
+            settings.sync_interval(),
+            Some(std::time::Duration::from_secs(15 * 60))
+        );
+        settings.sync_interval_min = 0;
+        assert_eq!(settings.sync_interval(), None);
     }
 
     #[test]

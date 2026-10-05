@@ -24,6 +24,15 @@ Then(
   },
 );
 
+Then(
+  "I do not see the radio group {string}",
+  async (_world: UiWorld, label: string) => {
+    // erst warten, bis die Ansicht steht, dann nach der Gruppe suchen
+    await screen.findByRole("heading", { name: "Synchronisierung" });
+    expect(screen.queryByRole("radiogroup", { name: label })).toBeNull();
+  },
+);
+
 const radio = async (name: string): Promise<HTMLElement> =>
   screen.findByRole("radio", { name });
 

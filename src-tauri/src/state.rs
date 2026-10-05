@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 
 use chrono::NaiveDate;
 use nunc_core::clock::Clock;
+use nunc_core::model::Settings;
 use nunc_platform::{EventSink, Notifier, SecretStore, UrlOpener, to_local_date};
 use nunc_store::{
     BackupResult, LegacyImport, backup_if_needed, device_id, import_legacy_db, open,
@@ -129,6 +130,11 @@ impl AppState {
     pub fn todos_changed(&self) {
         self.sync.trigger(Trigger::TodoChanged);
         self.todoist.trigger(Trigger::TodoChanged);
+    }
+
+    /// Stellt den automatischen Sync nach den Einstellungen ein (am Desktop; mobil wirkungslos).
+    pub fn apply_sync_interval(&self, settings: &Settings) {
+        self.sync.set_interval(settings.sync_interval());
     }
 
     /// Meldet `hook` für das Beenden der App an (z. B. der Sync, der beim Schließen noch einmal läuft, M6-07).

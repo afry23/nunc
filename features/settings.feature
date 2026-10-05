@@ -43,6 +43,22 @@ Feature: Settings
       | 65535 | the settings are valid                    |
       | 65536 | the settings are invalid because of "apiPort" |
 
+  @domain @REQ-Sync-Periodic
+  Scenario Outline: The automatic sync interval is one of the offered values
+    Given the setting "syncIntervalMin" is "<minutes>"
+    When I validate the settings
+    Then <result>
+
+    Examples:
+      | minutes | result                                              |
+      | 0       | the settings are valid                              |
+      | 5       | the settings are valid                              |
+      | 15      | the settings are valid                              |
+      | 30      | the settings are valid                              |
+      | 1       | the settings are invalid because of "syncIntervalMin" |
+      | 10      | the settings are invalid because of "syncIntervalMin" |
+      | 60      | the settings are invalid because of "syncIntervalMin" |
+
   @domain @REQ-5
   Scenario: Break lengths and the long break interval may be zero
     Given the setting "shortBreakMin" is "0"
@@ -81,6 +97,7 @@ Feature: Settings
       | language                | system   |
       | apiEnabled              | false    |
       | apiPort                 | 42820    |
+      | syncIntervalMin         | 15       |
 
   @integration @REQ-5.4
   Scenario: A language that is not offered falls back to the system language
@@ -115,6 +132,17 @@ Feature: Settings
       | key         | value |
       | api_enabled | true  |
       | api_port    | 43000 |
+
+  @integration @REQ-Sync-Periodic
+  Scenario: The automatic sync interval is persisted
+    Given no database exists yet
+    When nunc opens the database
+    And I load the settings
+    And I set "syncIntervalMin" to "30"
+    And I save the settings
+    Then the settings table contains:
+      | key               | value |
+      | sync_interval_min | 30    |
 
   @integration @REQ-5
   Scenario: Saved settings are returned again

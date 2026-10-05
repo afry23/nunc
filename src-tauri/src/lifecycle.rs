@@ -29,6 +29,10 @@ pub fn setup<R: Runtime>(app: &App<R>) -> Result<(), Box<dyn std::error::Error>>
     spawn_startup_backup(&handle);
     state.sync.trigger(Trigger::Start);
     state.todoist.trigger(Trigger::Start);
+    match state.db.with(|conn| nunc_store::load_settings(conn)) {
+        Ok(settings) => state.apply_sync_interval(&settings),
+        Err(error) => log::error!("Sync-Intervall nicht gesetzt: {error}"),
+    }
     // Beim Beenden noch einmal synchronisieren, höchstens wenige Sekunden lang (nur Desktop: Mobilgeräte
     // beenden die App ohne Vorwarnung, dort greift der Sync beim Wechsel in den Hintergrund)
     #[cfg(desktop)]

@@ -246,6 +246,8 @@ export const de = {
   "sync.title": "Synchronisierung",
   "sync.providerLabel": "Sync-Anbieter",
   "sync.syncing": "Synchronisiere …",
+  "sync.intervalLabel": "Automatisch synchronisieren",
+  "sync.intervalOff": "Aus",
   "sync.now": "Jetzt synchronisieren",
   "sync.upToDate": "Bereits auf dem neuesten Stand.",
   "sync.webdavNotSetUp":

@@ -73,6 +73,11 @@ pub fn restore_from_backup<R: Runtime>(
     source_path: String,
 ) -> Result<(), AppError> {
     state.restore(&PathBuf::from(source_path))?;
+    // Der Restore ist gelungen; ein Lesefehler hier darf ihn nicht als gescheitert melden
+    match state.db.with(|conn| nunc_store::load_settings(conn)) {
+        Ok(settings) => state.apply_sync_interval(&settings),
+        Err(error) => log::error!("Sync-Intervall nach dem Restore nicht gesetzt: {error}"),
+    }
     #[cfg(desktop)]
     if let Some(api) = app.try_state::<crate::api_service::ApiService>() {
         // Der Restore ist gelungen; ein Lesefehler hier darf ihn nicht als gescheitert melden
