@@ -360,6 +360,11 @@ export const en: Record<keyof typeof de, string> = {
   "webdav.success": "Connection successful: {message}",
   "settings.loading": "Loading settings …",
   "settings.eyebrow": "Configuration",
+  "settings.unsaved": "Unsaved changes",
+  "settings.jump": "Settings sections",
+  "settings.group.timer": "Timer",
+  "settings.group.app": "App",
+  "settings.group.data": "Data",
   "settings.title": "Settings",
   "settings.discard": "Discard",
   "settings.saved": "Settings saved.",
@@ -393,6 +398,9 @@ export const en: Record<keyof typeof de, string> = {
   "settings.tray.hint":
     "Closing the window sends the app to the tray instead of quitting",
   "settings.ratio": "Work-to-break ratio",
+  "settings.ratio.strict": "Strict",
+  "settings.ratio.balanced": "Balanced",
+  "settings.ratio.relaxed": "Relaxed",
   "language.section": "Interface",
   "api.title": "Local interface",
   "api.description":
