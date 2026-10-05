@@ -2,8 +2,7 @@
 
 **nunc** is a focus timer with **Pomodoro** and **Flowtime** modes, tasks in the **todo.txt** format, statistics derived
 from individual sessions, automatic backups, and sync. Built with Tauri 2 (Rust + React/TypeScript) for macOS, Windows,
-Linux, Android and iOS. It is the rewrite of the Go/Wails app `nunc-go`; data stays compatible
-([migrating from the Go app](./docs/migration-from-go.md)).
+Linux, Android and iOS.
 
 ## About the name
 
