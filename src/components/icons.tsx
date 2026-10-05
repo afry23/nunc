@@ -99,3 +99,9 @@ export const SidebarIcon = (p: Props) => (
     <path d="M9 4v16" />
   </Icon>
 );
+export const HelpIcon = (p: Props) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01" />
+  </Icon>
+);

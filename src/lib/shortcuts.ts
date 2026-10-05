@@ -1,3 +1,5 @@
+import type { MessageKey } from "../i18n";
+
 export type ShortcutAction =
   | "toggle-timer"
   | "stop"
@@ -5,7 +7,8 @@ export type ShortcutAction =
   | "go-timer"
   | "go-todos"
   | "go-stats"
-  | "go-settings";
+  | "go-settings"
+  | "go-help";
 
 export type ShortcutEvent = {
   key: string;
@@ -50,7 +53,21 @@ export function shortcutFor(
       return "go-stats";
     case ",":
       return "go-settings";
+    case "?":
+      return "go-help";
     default:
       return null;
   }
 }
+
+/** Anzeige der Kürzel in der Hilfe; `shortcutFor` bleibt die Quelle der Belegung. */
+export const SHORTCUTS: { keys: string; label: MessageKey }[] = [
+  { keys: "Space", label: "help.shortcuts.toggle" },
+  { keys: "Esc", label: "help.shortcuts.stop" },
+  { keys: "N", label: "help.shortcuts.newTodo" },
+  { keys: "1", label: "help.shortcuts.timer" },
+  { keys: "2", label: "help.shortcuts.todos" },
+  { keys: "3", label: "help.shortcuts.stats" },
+  { keys: ",", label: "help.shortcuts.settings" },
+  { keys: "?", label: "help.shortcuts.help" },
+];

@@ -5,7 +5,7 @@ import { shortcutFor, type ShortcutAction } from "../lib/shortcuts";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useTimerStore } from "../stores/timerStore";
 
-/** Tastenkürzel (nur Desktop). Space/Esc steuern den Timer, N/1/2/3/, navigieren. */
+/** Tastenkürzel (nur Desktop). Space/Esc steuern den Timer, N/1/2/3/,/? navigieren. */
 export function useShortcuts(): void {
   const navigate = useNavigate();
 
@@ -43,6 +43,9 @@ export function useShortcuts(): void {
           return;
         case "go-settings":
           void navigate({ to: "/settings" });
+          return;
+        case "go-help":
+          void navigate({ to: "/help" });
       }
     };
 

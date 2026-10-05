@@ -4,7 +4,7 @@ Feature: Frontend BDD runner smoke test
 
   Scenario: App shell renders
     When I open the app
-    Then I see a navigation with the entries "Timer, Aufgaben, Statistik, Einstellungen"
+    Then I see a navigation with the entries "Timer, Aufgaben, Statistik, Einstellungen, Hilfe"
 
   Scenario: Backend call goes through the typed API
     Given the backend reports version "9.9.9"

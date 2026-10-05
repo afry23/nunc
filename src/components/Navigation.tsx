@@ -3,10 +3,17 @@ import type { ReactNode } from "react";
 import { useT, type MessageKey } from "../i18n";
 import { useUiStore } from "../stores/uiStore";
 import { isMobile } from "../lib/platform";
-import { BarsIcon, CheckIcon, GearIcon, SidebarIcon, TimerIcon } from "./icons";
+import {
+  BarsIcon,
+  CheckIcon,
+  GearIcon,
+  HelpIcon,
+  SidebarIcon,
+  TimerIcon,
+} from "./icons";
 
 export const NAV_ITEMS: {
-  to: "/" | "/todos" | "/stats" | "/settings";
+  to: "/" | "/todos" | "/stats" | "/settings" | "/help";
   label: MessageKey;
   icon: ReactNode;
 }[] = [
@@ -14,6 +21,7 @@ export const NAV_ITEMS: {
   { to: "/todos", label: "nav.todos", icon: <CheckIcon /> },
   { to: "/stats", label: "nav.stats", icon: <BarsIcon /> },
   { to: "/settings", label: "nav.settings", icon: <GearIcon /> },
+  { to: "/help", label: "nav.help", icon: <HelpIcon /> },
 ];
 
 /** Seitenleiste ab 768 px Breite; einklappbar auf reine Icons (Beschriftung bleibt für Screenreader und Tooltip). */

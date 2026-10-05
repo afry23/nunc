@@ -23,6 +23,7 @@ describe("shortcutFor", () => {
     expect(shortcutFor(press("2"))).toBe("go-todos");
     expect(shortcutFor(press("3"))).toBe("go-stats");
     expect(shortcutFor(press(","))).toBe("go-settings");
+    expect(shortcutFor(press("?"))).toBe("go-help");
     expect(shortcutFor(press("x"))).toBeNull();
   });
 
