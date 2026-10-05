@@ -2,13 +2,14 @@
 //! davon erfährt (Go: `WebDAVSyncService.Sync`, `App.triggerWebDAVSyncAsync`, `ServiceShutdown`).
 //!
 //! Auslöser ([`Trigger`]): App-Start, Ende oder Abbruch einer Session, Todo-Änderung (entprellt), Beenden
-//! (Desktop, begrenzt) sowie Rückkehr aus dem und Wechsel in den Hintergrund (Mobil). Läufe sind serialisiert:
-//! ein zweiter Aufruf wartet, bis der erste fertig ist.
+//! (Desktop, begrenzt) sowie Rückkehr aus dem und Wechsel in den Hintergrund (Mobil). Am Desktop kommt ein
+//! einstellbarer Takt hinzu ([`SyncCoordinator::set_interval`]). Läufe sind serialisiert: ein zweiter Aufruf wartet,
+//! bis der erste fertig ist.
 
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use nunc_core::model::{SyncResult, SyncState, SyncStatus};
@@ -93,6 +94,8 @@ pub struct SyncCoordinator {
     gate: tokio::sync::Mutex<()>,
     /// Zählt Todo-Änderungen: nur die neueste wartende läuft nach der Ruhezeit los.
     debounce_generation: AtomicU64,
+    /// Zählt die Takt-Einstellungen: nur die neueste Schleife läuft weiter.
+    interval_generation: AtomicU64,
 }
 
 impl SyncCoordinator {
@@ -136,6 +139,7 @@ impl SyncCoordinator {
             status: Mutex::new(SyncStatus::idle(last_sync_at)),
             gate: tokio::sync::Mutex::new(()),
             debounce_generation: AtomicU64::new(0),
+            interval_generation: AtomicU64::new(0),
         })
     }
 
@@ -217,6 +221,29 @@ impl SyncCoordinator {
             }
             // der Fehler steht im Status
             let _ = this.sync_now().await;
+        });
+    }
+
+    /// Stellt den Takt für automatische Läufe ein (nur Desktop; mobil wirkungslos, dort gelten Resume/Background).
+    /// `None` schaltet ihn ab. Ein bereits laufender Takt wird ersetzt; der erste Lauf folgt nach einem vollen
+    /// Intervall (beim Start läuft ohnehin ein Sync). Ein laufender Sync wird nie abgebrochen, der nächste
+    /// Abstand beginnt erst nach seinem Ende. Die Schleife endet, sobald der Koordinator verworfen wird.
+    pub fn set_interval(self: &Arc<Self>, interval: Option<Duration>) {
+        let generation = self.interval_generation.fetch_add(1, Ordering::SeqCst) + 1;
+        let Some(interval) = interval.filter(|i| !i.is_zero() && !self.mobile) else {
+            return;
+        };
+        let this: Weak<Self> = Arc::downgrade(self);
+        self.runtime.spawn(async move {
+            loop {
+                tokio::time::sleep(interval).await;
+                let Some(this) = this.upgrade() else { return };
+                if this.interval_generation.load(Ordering::SeqCst) != generation {
+                    return;
+                }
+                // der Fehler steht im Status
+                let _ = this.sync_now().await;
+            }
         });
     }
 

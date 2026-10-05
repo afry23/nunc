@@ -259,6 +259,16 @@ async fn todos_change(world: &mut SyncWorld, count: u64, within: u64) {
     }
 }
 
+#[when(expr = "the sync interval is set to {int} ms")]
+fn set_interval(world: &mut SyncWorld, ms: u64) {
+    world.coord.coordinator().set_interval(Some(millis(ms)));
+}
+
+#[when("the sync interval is switched off")]
+fn interval_off(world: &mut SyncWorld) {
+    world.coord.coordinator().set_interval(None);
+}
+
 #[when(expr = "I wait {int} ms")]
 async fn wait(_world: &mut SyncWorld, ms: u64) {
     tokio::time::sleep(millis(ms)).await;
@@ -282,6 +292,21 @@ async fn runs_happened(world: &mut SyncWorld, within: u64, expected: usize) {
     // ein weiterer Lauf, der nicht hätte starten dürfen, hätte jetzt Zeit gehabt
     tokio::time::sleep(millis(150)).await;
     assert_eq!(runs(), expected);
+}
+
+#[then(expr = "within {int} ms at least {int} sync runs have happened")]
+async fn at_least_runs(world: &mut SyncWorld, within: u64, expected: usize) {
+    let runs = || world.coord.runner.c.runs.load(Ordering::SeqCst);
+    let deadline = Instant::now() + millis(within);
+    while runs() < expected && Instant::now() < deadline {
+        tokio::time::sleep(millis(10)).await;
+    }
+    assert!(runs() >= expected, "nur {} Läufe", runs());
+}
+
+#[then(expr = "at most {int} sync run was active at a time")]
+fn max_active(world: &mut SyncWorld, limit: usize) {
+    assert!(world.coord.runner.c.max_active.load(Ordering::SeqCst) <= limit);
 }
 
 #[then(expr = "no sync run has happened yet")]

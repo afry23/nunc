@@ -31,6 +31,7 @@ pub fn save_settings<R: Runtime>(
         }
         nunc_store::save_settings(conn, &settings)
     })?;
+    state.apply_sync_interval(&settings);
     #[cfg(desktop)]
     {
         use tauri::Manager;
