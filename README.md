@@ -124,6 +124,9 @@ stored in the database but in the system keychain (service `nunc`).
 - **Google Drive** (desktop): sign in via browser, file `nunc/nunc-sync.json` in the app's own Drive folder (scope
   `drive.file`).
 - **Todoist** (desktop, in addition to the provider): tasks, projects and labels.
+- **Automatic sync** (desktop): while the app stays open, the provider is synced every 5, 15 (default) or 30 minutes,
+  or never (*Settings → Sync*, "Sync automatically every"). Todoist is not part of it. Mobile devices sync when the
+  app returns from or goes to the background instead.
 
 Merging: tasks use "last change wins" (deletion is a tombstone); sessions are only added.
 

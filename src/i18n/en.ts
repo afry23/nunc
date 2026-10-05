@@ -246,6 +246,8 @@ export const en: Record<keyof typeof de, string> = {
   "sync.title": "Synchronization",
   "sync.providerLabel": "Sync provider",
   "sync.syncing": "Syncing …",
+  "sync.intervalLabel": "Sync automatically every",
+  "sync.intervalOff": "Off",
   "sync.now": "Sync now",
   "sync.upToDate": "Already up to date.",
   "sync.webdavNotSetUp":

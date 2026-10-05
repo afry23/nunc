@@ -13,11 +13,16 @@ import { DriveSection } from "./DriveSection";
 import { ImportDialog } from "./ImportDialog";
 import { WebDavForm } from "./WebDavForm";
 
+/** Erlaubte Abstände des automatischen Syncs in Minuten (0 = aus); Quelle: `SYNC_INTERVALS_MIN` in nunc-core. */
+const SYNC_INTERVALS_MIN = [0, 5, 15, 30] as const;
+
 /** Anbieter-Auswahl und Konfiguration der Synchronisierung. Die Wahl wirkt sofort (kein „Speichern“). */
 export function SyncSection() {
   const t = useT();
   const provider = useSettingsStore((s) => s.settings?.syncProvider ?? "none");
   const setProvider = useSettingsStore((s) => s.setSyncProvider);
+  const interval = useSettingsStore((s) => s.settings?.syncIntervalMin ?? 15);
+  const patchSettings = useSettingsStore((s) => s.patch);
   const [pending, setPending] = useState<SyncProvider | null>(null);
   const webdav = useSyncStore((s) => s.webdav);
   const syncing = useSyncStore((s) => s.status.state === "syncing");
@@ -73,6 +78,19 @@ export function SyncSection() {
           }))}
           onChange={choose}
         />
+        {provider !== "none" && !mobile && (
+          <Segmented
+            label={t("sync.intervalLabel")}
+            value={String(interval)}
+            options={SYNC_INTERVALS_MIN.map((minutes) => ({
+              value: String(minutes),
+              label: minutes === 0 ? t("sync.intervalOff") : `${minutes} min`,
+            }))}
+            onChange={(value) =>
+              void patchSettings({ syncIntervalMin: Number(value) })
+            }
+          />
+        )}
         {provider !== "none" && (
           <div>
             <Button
