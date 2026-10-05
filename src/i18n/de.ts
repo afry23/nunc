@@ -363,6 +363,11 @@ export const de = {
   "webdav.success": "Verbindung erfolgreich: {message}",
   "settings.loading": "Lade Einstellungen …",
   "settings.eyebrow": "Konfiguration",
+  "settings.unsaved": "Ungespeicherte Änderungen",
+  "settings.jump": "Bereiche der Einstellungen",
+  "settings.group.timer": "Timer",
+  "settings.group.app": "App",
+  "settings.group.data": "Daten",
   "settings.title": "Einstellungen",
   "settings.discard": "Verwerfen",
   "settings.saved": "Einstellungen gespeichert.",
@@ -396,6 +401,9 @@ export const de = {
   "settings.tray.hint":
     "Das Fenster schließt in den Tray statt die App zu beenden",
   "settings.ratio": "Arbeit-zu-Pause-Verhältnis",
+  "settings.ratio.strict": "Strikt",
+  "settings.ratio.balanced": "Ausgewogen",
+  "settings.ratio.relaxed": "Entspannt",
   "language.section": "Oberfläche",
   "api.title": "Lokale Schnittstelle",
   "api.description":

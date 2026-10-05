@@ -62,8 +62,9 @@ export function SyncSection() {
 
   return (
     <section
+      id="settings-sync"
       aria-labelledby="sync-heading"
-      className="flex min-w-0 flex-col gap-4"
+      className="flex min-w-0 scroll-mt-24 flex-col gap-4"
     >
       <h2 id="sync-heading" className="font-display text-xl font-bold">
         {t("sync.title")}

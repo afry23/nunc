@@ -9,9 +9,9 @@ Feature: Flowtime in the UI
   @ui @US-FT-02
   Scenario: Anchor labels STRICT, BALANCED and RELAXED are shown below the slider
     When I open the app at "/settings"
-    Then I see "STRICT (1 : 0.1)"
-    And I see "BALANCED"
-    And I see "RELAXED (1 : 0.5)"
+    Then I see "Strikt (1 : 0.1)"
+    And I see "Ausgewogen"
+    And I see "Entspannt (1 : 0.5)"
 
   @ui @US-FT-02
   Scenario: The selected ratio is shown as a badge

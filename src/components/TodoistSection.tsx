@@ -34,8 +34,9 @@ export function TodoistSection() {
 
   return (
     <section
+      id="settings-todoist"
       aria-labelledby="todoist-heading"
-      className="flex min-w-0 flex-col gap-4"
+      className="flex min-w-0 scroll-mt-24 flex-col gap-4"
     >
       <h2 id="todoist-heading" className="font-display text-xl font-bold">
         {t("todoist.title")}

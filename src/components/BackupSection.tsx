@@ -29,7 +29,11 @@ export function BackupSection() {
   const actions = useBackupStore.getState();
 
   return (
-    <section aria-labelledby="backup-heading" className="flex flex-col gap-4">
+    <section
+      id="settings-backup"
+      aria-labelledby="backup-heading"
+      className="flex scroll-mt-24 flex-col gap-4"
+    >
       <h2 id="backup-heading" className="font-display text-xl font-bold">
         {t("backup.title")}
       </h2>
