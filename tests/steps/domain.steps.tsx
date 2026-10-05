@@ -6,6 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { expect } from "vitest";
+import { emit } from "@tauri-apps/api/event";
 import { DataTable, Given, Then, When } from "quickpickle";
 import { addDays, toIsoDate } from "../../src/lib/format";
 import type { UiWorld } from "./world";
@@ -208,6 +209,20 @@ Given(
   "the local interface cannot start because {string}",
   (world: UiWorld, message: string) => {
     world.fake.apiError = message;
+  },
+);
+
+Given("the local interface is still starting", (world: UiWorld) => {
+  world.fake.apiStarting = true;
+});
+
+When(
+  "the local interface reports that it runs on port {int}",
+  async (world: UiWorld, port: number) => {
+    world.fake.apiStarting = false;
+    await act(async () => {
+      await emit("api:status", { running: true, port, error: null });
+    });
   },
 );
 

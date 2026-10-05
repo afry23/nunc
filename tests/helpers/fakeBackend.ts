@@ -110,6 +110,8 @@ export interface FakeBackend extends BackendMock {
   todotxtExportPath: string | null;
   /** Fehler, den `get_api_status` meldet, obwohl die Schnittstelle laufen soll (`null` = läuft). */
   apiError: string | null;
+  /** Der Server startet noch im Hintergrund: `get_api_status` meldet ihn als aus, ohne Fehler. */
+  apiStarting: boolean;
   /** Token der lokalen Schnittstelle; `regenerate_api_token` setzt `apiNextToken`. */
   apiToken: string;
   apiNextToken: string;
@@ -195,6 +197,7 @@ export function createFakeBackend(): FakeBackend {
     todotxtImport: null as { added: number; duplicates: number } | null,
     todotxtExportPath: null as string | null,
     apiError: null as string | null,
+    apiStarting: false,
     apiToken: "test-token",
     apiNextToken: "new-token",
     notificationPermission: "granted",
@@ -409,7 +412,8 @@ export function createFakeBackend(): FakeBackend {
     get_stats: () => fake.stats,
     save_export_to_file: () => fake.exportPath,
     get_api_status: () => ({
-      running: fake.settings.apiEnabled && fake.apiError === null,
+      running:
+        fake.settings.apiEnabled && fake.apiError === null && !fake.apiStarting,
       port: fake.settings.apiEnabled ? fake.settings.apiPort : null,
       error: fake.settings.apiEnabled ? fake.apiError : null,
     }),

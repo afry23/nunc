@@ -93,7 +93,10 @@ export const commands = {
 	triggerBackup: () => typedError<BackupInfo, AppError>(__TAURI_INVOKE("trigger_backup")),
 	/**  Vorhandene Backups, neueste zuerst. */
 	listBackups: () => typedError<BackupEntry[], AppError>(__TAURI_INVOKE("list_backups")),
-	/**  Stellt die Datenbank aus einer Backup-Datei wieder her und sendet danach `app:reload`. */
+	/**
+	 *  Stellt die Datenbank aus einer Backup-Datei wieder her und sendet danach `app:reload`. Die lokale Schnittstelle
+	 *  folgt sofort den Einstellungen aus dem Backup.
+	 */
 	restoreFromBackup: (sourcePath: string) => typedError<null, AppError>(__TAURI_INVOKE("restore_from_backup", { sourcePath })),
 	/**  Öffnet den Ordner-Dialog und speichert den gewählten Backup-Ordner (nur Desktop). `None` bei Abbruch. */
 	selectBackupDir: () => typedError<string | null, AppError>(__TAURI_INVOKE("select_backup_dir")),
@@ -180,6 +183,7 @@ export const commands = {
 
 /** Events */
 export const events = {
+	apiStatus: makeEvent<ApiStatusChanged>("api:status"),
 	appReload: makeEvent<AppReload>("app:reload"),
 	syncComplete: makeEvent<SyncComplete>("sync:complete"),
 	syncStart: makeEvent<SyncStart>("sync:start"),
@@ -201,6 +205,9 @@ export type ApiStatus = {
 	/**  Warum der Server nicht läuft, obwohl er laufen soll. */
 	error: string | null,
 };
+
+/**  Die lokale Schnittstelle hat ihren Zustand gewechselt (gestartet, beendet, Fehler; ADR 0013). */
+export type ApiStatusChanged = ApiStatus;
 
 export type AppError = {
 	code: string,

@@ -660,6 +660,44 @@ fn backup_and_restore_through_commands() {
 }
 
 #[test]
+fn restoring_a_backup_switches_the_local_interface_to_its_settings() {
+    let h = Harness::new();
+    h.app.manage(crate::api_service::ApiService::new(
+        h.state().secrets.clone(),
+        Arc::new(crate::api_service::AppBackend(h.app.handle().clone())),
+        h.events.clone(),
+    ));
+    // Backup ohne Schnittstelle, danach einschalten
+    let path = h.ok("trigger_backup", json!({}))["path"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let mut settings = h.ok("get_settings", json!({}));
+    settings["apiEnabled"] = json!(true);
+    settings["apiPort"] = json!(free_port());
+    h.ok("save_settings", json!({ "settings": settings }));
+    let api = h.app.state::<crate::api_service::ApiService>();
+    assert!(tauri::async_runtime::block_on(api.status()).running);
+
+    h.ok("restore_from_backup", json!({ "sourcePath": path }));
+
+    assert!(!tauri::async_runtime::block_on(api.status()).running);
+    let (_, last) = h
+        .events
+        .events()
+        .into_iter()
+        .rfind(|(name, _)| name == "api:status")
+        .unwrap();
+    assert_eq!(last["running"], false);
+}
+
+/// Freier Port, den niemand hält (kurz gebunden und wieder frei gegeben).
+fn free_port() -> u16 {
+    let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    listener.local_addr().unwrap().port()
+}
+
+#[test]
 fn restoring_a_bad_file_fails_with_a_typed_error_and_changes_nothing() {
     let h = Harness::new();
     h.ok("add_todo", json!({ "rawText": "bleibt" }));

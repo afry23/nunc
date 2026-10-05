@@ -7,14 +7,14 @@ use nunc_api::server::{ApiServer, start};
 use nunc_api::token::generate_token;
 use nunc_api::{ApiError, ImportOutcome, TodoBackend};
 use nunc_core::model::Todo;
-use nunc_platform::SecretStore;
+use nunc_platform::{EventSink, SecretStore};
 use nunc_store::StoreError;
 use tauri::{AppHandle, Manager, Runtime};
 use tokio::sync::Mutex;
 
 use crate::commands::api::ApiStatus;
 use crate::error::AppError;
-use crate::events::{self, AppReload};
+use crate::events::{self, ApiStatusChanged, AppReload};
 use crate::state::AppState;
 
 /// Eintrag im Tresor: Dienst `nunc`, Konto `local-api`.
@@ -36,14 +36,21 @@ struct Inner {
 pub struct ApiService {
     secrets: Arc<dyn SecretStore>,
     backend: Arc<dyn TodoBackend>,
+    /// Meldet jeden neuen Zustand als `api:status`, damit die Einstellungen nicht auf einem alten Stand bleiben.
+    events: Arc<dyn EventSink>,
     inner: Mutex<Inner>,
 }
 
 impl ApiService {
-    pub fn new(secrets: Arc<dyn SecretStore>, backend: Arc<dyn TodoBackend>) -> Self {
+    pub fn new(
+        secrets: Arc<dyn SecretStore>,
+        backend: Arc<dyn TodoBackend>,
+        events: Arc<dyn EventSink>,
+    ) -> Self {
         Self {
             secrets,
             backend,
+            events,
             inner: Mutex::new(Inner::default()),
         }
     }
@@ -81,7 +88,7 @@ impl ApiService {
         if enabled {
             self.launch(&mut inner, port).await;
         }
-        status(&inner)
+        self.announce(&inner)
     }
 
     /// Erzeugt ein neues Token (das alte gilt sofort nicht mehr) und startet einen laufenden Server damit neu.
@@ -91,12 +98,20 @@ impl ApiService {
         if let Some(wanted_port) = inner.running.as_ref().map(|running| running.wanted_port) {
             Self::stop(&mut inner).await;
             self.launch(&mut inner, wanted_port).await;
+            self.announce(&inner);
         }
         Ok(token)
     }
 
     pub async fn status(&self) -> ApiStatus {
         status(&*self.inner.lock().await)
+    }
+
+    /// Sendet den aktuellen Zustand als `api:status` und gibt ihn zurück.
+    fn announce(&self, inner: &Inner) -> ApiStatus {
+        let current = status(inner);
+        events::emit(&*self.events, &ApiStatusChanged(current.clone()));
+        current
     }
 
     async fn stop(inner: &mut Inner) {
@@ -211,7 +226,7 @@ impl<R: Runtime> TodoBackend for AppBackend<R> {
 
 #[cfg(test)]
 mod tests {
-    use nunc_platform::MemorySecretStore;
+    use nunc_platform::{MemorySecretStore, RecordingEventSink};
 
     use super::*;
 
@@ -230,7 +245,15 @@ mod tests {
     }
 
     fn service() -> ApiService {
-        ApiService::new(Arc::new(MemorySecretStore::default()), Arc::new(Empty))
+        service_with(Arc::new(RecordingEventSink::default()))
+    }
+
+    fn service_with(events: Arc<RecordingEventSink>) -> ApiService {
+        ApiService::new(
+            Arc::new(MemorySecretStore::default()),
+            Arc::new(Empty),
+            events,
+        )
     }
 
     /// Freier Port, den niemand hält (kurz gebunden und wieder frei gegeben).
@@ -298,5 +321,23 @@ mod tests {
         let status = service.status().await;
         assert!(status.running);
         assert_eq!(status.port, Some(port));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn every_change_is_announced_to_the_interface() {
+        let events = Arc::new(RecordingEventSink::default());
+        let service = service_with(events.clone());
+        let port = free_port();
+
+        let on = service.apply(true, port).await;
+        let off = service.apply(false, port).await;
+
+        let announced: Vec<_> = events
+            .events()
+            .into_iter()
+            .filter(|(name, _)| name == "api:status")
+            .map(|(_, payload)| serde_json::from_value::<ApiStatus>(payload).unwrap())
+            .collect();
+        assert_eq!(announced, [on, off]);
     }
 }
