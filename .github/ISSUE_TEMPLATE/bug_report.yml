@@ -1,0 +1,75 @@
+name: Bug report
+description: Something in nunc does not work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please search the existing issues first.
+        **Do not paste tokens, passwords or the local API token** into this issue.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: nunc version
+      description: Shown in Settings, e.g. 0.2.0.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS
+        - Windows
+        - Linux
+        - Android
+        - iOS
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version
+      placeholder: e.g. macOS 15.1, Windows 11 23H2, Android 14
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Timer
+        - Tasks (todo.txt)
+        - Statistics
+        - Backup / restore
+        - Sync (WebDAV, Google Drive, Todoist)
+        - Local API
+        - Notifications
+        - Other
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: Relevant lines from `nunc.log` and/or screenshots. Remove secrets first.
+      render: shell

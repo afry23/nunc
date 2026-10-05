@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest an idea or improvement for nunc
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What are you trying to do, and what is getting in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work? Sketches are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: platforms
+    attributes:
+      label: Platforms
+      description: Where should it be available?
+      multiple: true
+      options:
+        - macOS
+        - Windows
+        - Linux
+        - Android
+        - iOS
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
