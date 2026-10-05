@@ -14,8 +14,49 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
+  # Änderungen nur an *.md bauen nichts. Bewusst auf Job-Ebene statt `paths-ignore` am Workflow: `checks` ist ein
+  # Pflicht-Check der Branch Protection; ein übersprungener Job zählt als bestanden, ein gar nicht gestarteter
+  # Workflow ließe den PR auf „Expected“ hängen.
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            base="$BASE_SHA"
+          else
+            base="$BEFORE_SHA"
+          fi
+          # ohne Vergleichsbasis (neuer Branch, erzwungener Push) wird im Zweifel gebaut
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(git diff --name-only "$base" "$GITHUB_SHA")
+          echo "Geänderte Dateien:"; echo "$files"
+          # alles außer *.md? (grep -v | grep -q . statt grep -qv: eindeutig in allen grep-Varianten)
+          if [ -z "$files" ] || echo "$files" | grep -v '\.md$' | grep -q .; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "Nur Markdown geändert, Build übersprungen."
+          fi
+
   # Lint + Tests (Linux). Erzeugt den Cucumber-Report als Artefakt.
   checks:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
