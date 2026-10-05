@@ -7,6 +7,7 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { AppShell } from "./components/AppShell";
+import { HelpView } from "./views/HelpView";
 import { MiniTimerView } from "./views/MiniTimerView";
 import { SettingsView } from "./views/SettingsView";
 import { StatsView } from "./views/StatsView";
@@ -41,6 +42,11 @@ const routeTree = rootRoute.addChildren([
       getParentRoute: () => shellRoute,
       path: "/settings",
       component: SettingsView,
+    }),
+    createRoute({
+      getParentRoute: () => shellRoute,
+      path: "/help",
+      component: HelpView,
     }),
   ]),
   // eigenes Fenster ohne Navigation

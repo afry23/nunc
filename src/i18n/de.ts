@@ -89,6 +89,38 @@ export const de = {
   "nav.todos": "Aufgaben",
   "nav.stats": "Statistik",
   "nav.settings": "Einstellungen",
+  "nav.help": "Hilfe",
+  "help.eyebrow": "Anleitung",
+  "help.title": "Hilfe",
+  "help.timer.title": "Timer",
+  "help.timer.body":
+    "Pomodoro wechselt zwischen Arbeit und Pause mit festen Zeiten. Flowtime läuft offen, bis du aufhörst, und schlägt danach eine Pause passend zur Arbeitszeit vor. Das Ende meldet eine Benachrichtigung, auch wenn die App im Hintergrund ist.",
+  "help.todos.title": "Aufgaben",
+  "help.todos.body":
+    "Aufgaben liegen im todo.txt-Format: Priorität in Klammern am Anfang, +projekt, @kontext. Beispiel: (A) Dokumentation fertig +projekt @kontext. Ein Timer lässt sich einer Aufgabe zuordnen, die Statistik zeigt die Zeit pro Aufgabe.",
+  "help.stats.title": "Statistik",
+  "help.stats.body":
+    "Alle Auswertungen werden aus den einzelnen Sitzungen berechnet. Es gibt Tages-, Wochen- und Monatsansichten.",
+  "help.sync.title": "Synchronisierung",
+  "help.sync.body":
+    "In den Einstellungen verbindest du WebDAV oder Google Drive, um Daten zwischen Geräten abzugleichen. Todoist lässt sich auf dem Desktop verbinden. Zugangsdaten liegen im Schlüsselspeicher des Systems.",
+  "help.backup.title": "Backup",
+  "help.backup.body":
+    "In den Einstellungen sicherst und stellst du deine Daten wieder her. Sicherungen der Go-Version von nunc sind kompatibel.",
+  "help.api.title": "Lokale Schnittstelle",
+  "help.api.body":
+    "Auf dem Desktop kannst du in den Einstellungen eine lokale HTTP-Schnittstelle einschalten (nur 127.0.0.1, mit Token), um Aufgaben aus anderen Programmen zu lesen und abzuhaken.",
+  "help.shortcuts.title": "Tastenkürzel",
+  "help.shortcuts.hint":
+    "Gelten nicht beim Tippen in Eingabefeldern und bei offenem Dialog.",
+  "help.shortcuts.toggle": "Timer starten, pausieren, fortsetzen",
+  "help.shortcuts.stop": "Timer stoppen",
+  "help.shortcuts.newTodo": "Neue Aufgabe",
+  "help.shortcuts.timer": "Zum Timer",
+  "help.shortcuts.todos": "Zu den Aufgaben",
+  "help.shortcuts.stats": "Zur Statistik",
+  "help.shortcuts.settings": "Zu den Einstellungen",
+  "help.shortcuts.help": "Zur Hilfe",
   "nav.main": "Hauptnavigation",
   "nav.expand": "Seitenleiste ausklappen",
   "nav.collapse": "Seitenleiste einklappen",

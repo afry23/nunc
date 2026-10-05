@@ -4,7 +4,7 @@ Feature: Navigation
   @ui @REQ-9
   Scenario: The routes timer, todos, statistics and settings are available
     When I open the app
-    Then I see a navigation with the entries "Timer, Aufgaben, Statistik, Einstellungen"
+    Then I see a navigation with the entries "Timer, Aufgaben, Statistik, Einstellungen, Hilfe"
     When I click "Aufgaben"
     Then I see the heading "Aufgaben"
     When I click "Statistik"
@@ -81,7 +81,7 @@ Feature: Navigation
     Then the sidebar is expanded
     When I click "Seitenleiste einklappen"
     Then the sidebar is collapsed
-    And the navigation still offers "Timer, Aufgaben, Statistik, Einstellungen"
+    And the navigation still offers "Timer, Aufgaben, Statistik, Einstellungen, Hilfe"
     When I click "Aufgaben"
     Then I see the heading "Aufgaben"
     And the sidebar is collapsed

@@ -365,6 +365,8 @@ Play-Console- und TestFlight-Upload, Windows-/Mobil-Messung, Maestro. Entscheidu
 
 | Lokale HTTP-Schnittstelle (`@REQ-API`) | Desktop, aus, `127.0.0.1` + Token: todo.txt lesen/anlegen, Aufgabenstatus abfragen/abhaken (ADR 0013). Crate `nunc-api` (pures Routing + hyper-Server), `ApiService` in `src-tauri`, Abschnitt „Lokale Schnittstelle“ in den Einstellungen. **Manuell prüfen:** echter Schlüsselspeicher (Token), Verhalten bei belegtem Port. Später: Timer-Status, Statistik, Änderungs-Benachrichtigung. |
 
+| In-App-Hilfe (`@REQ-9`) | Route `/help` (fünfter Nav-Eintrag), Kurzanleitung je Bereich, Kürzel-Tabelle aus `SHORTCUTS` (nur Desktop), Kürzel `?`. Rein Frontend. **Manuell prüfen:** fünf Tabs bei ≈ 411 px ohne horizontalen Überlauf. |
+
 ## Nach 1.0 (Backlog)
 
 | Thema | Notiz |

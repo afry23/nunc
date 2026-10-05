@@ -91,6 +91,38 @@ export const en: Record<keyof typeof de, string> = {
   "nav.todos": "Tasks",
   "nav.stats": "Statistics",
   "nav.settings": "Settings",
+  "nav.help": "Help",
+  "help.eyebrow": "Guide",
+  "help.title": "Help",
+  "help.timer.title": "Timer",
+  "help.timer.body":
+    "Pomodoro alternates between work and breaks with fixed durations. Flowtime runs open-ended until you stop and then suggests a break matching your work time. A notification announces the end, even when the app is in the background.",
+  "help.todos.title": "Tasks",
+  "help.todos.body":
+    "Tasks use the todo.txt format: priority in parentheses first, +project, @context. Example: (A) Finish documentation +project @context. A timer can be linked to a task, and statistics show time per task.",
+  "help.stats.title": "Statistics",
+  "help.stats.body":
+    "All figures are computed from the individual sessions. Daily, weekly and monthly views are available.",
+  "help.sync.title": "Sync",
+  "help.sync.body":
+    "In Settings you connect WebDAV or Google Drive to keep data in step across devices. Todoist can be connected on the desktop. Credentials are kept in the system keychain.",
+  "help.backup.title": "Backup",
+  "help.backup.body":
+    "In Settings you back up and restore your data. Backups from the Go version of nunc are compatible.",
+  "help.api.title": "Local interface",
+  "help.api.body":
+    "On the desktop you can turn on a local HTTP interface in Settings (127.0.0.1 only, token protected) to read and tick off tasks from other programs.",
+  "help.shortcuts.title": "Keyboard shortcuts",
+  "help.shortcuts.hint":
+    "They do not apply while typing in a field or when a dialog is open.",
+  "help.shortcuts.toggle": "Start, pause, resume the timer",
+  "help.shortcuts.stop": "Stop the timer",
+  "help.shortcuts.newTodo": "New task",
+  "help.shortcuts.timer": "Go to timer",
+  "help.shortcuts.todos": "Go to tasks",
+  "help.shortcuts.stats": "Go to statistics",
+  "help.shortcuts.settings": "Go to settings",
+  "help.shortcuts.help": "Go to help",
   "nav.main": "Main navigation",
   "nav.expand": "Expand sidebar",
   "nav.collapse": "Collapse sidebar",
