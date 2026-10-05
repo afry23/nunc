@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri_specta::Event;
 
+use crate::commands::api::ApiStatus;
+
 /// Jede Sekunde, solange der Timer im Vordergrund läuft, und bei jeder Zustandsänderung.
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
 #[tauri_specta(event_name = "timer:tick")]
@@ -63,6 +65,11 @@ pub struct TodoistSyncStatus(pub SyncStatus);
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
 #[tauri_specta(event_name = "todoist:sync_complete")]
 pub struct TodoistSyncComplete(pub SyncResult);
+
+/// Die lokale Schnittstelle hat ihren Zustand gewechselt (gestartet, beendet, Fehler; ADR 0013).
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[tauri_specta(event_name = "api:status")]
+pub struct ApiStatusChanged(pub ApiStatus);
 
 /// Sendet ein typisiertes Ereignis über die Senke.
 pub fn emit<E: Event + Serialize>(sink: &dyn EventSink, event: &E) {

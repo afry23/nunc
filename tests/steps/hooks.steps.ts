@@ -41,6 +41,8 @@ Before(async (world: UiWorld) => {
 
 After(async () => {
   cleanup();
+  // Komponenten melden Ereignis-Listener asynchron ab; das muss vor dem Entfernen der Mocks fertig sein
+  await new Promise((resolve) => setTimeout(resolve, 0));
   resetBackend();
   resetStores();
   vi.restoreAllMocks();

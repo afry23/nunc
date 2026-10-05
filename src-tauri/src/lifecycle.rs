@@ -150,7 +150,11 @@ fn start_api<R: Runtime>(handle: &AppHandle<R>) {
     use crate::api_service::{ApiService, AppBackend};
 
     let state = handle.state::<AppState>();
-    let service = ApiService::new(state.secrets.clone(), Arc::new(AppBackend(handle.clone())));
+    let service = ApiService::new(
+        state.secrets.clone(),
+        Arc::new(AppBackend(handle.clone())),
+        state.events.clone(),
+    );
     handle.manage(service);
     let settings = state.db.with(|conn| nunc_store::load_settings(conn));
     let Ok(settings) = settings else { return };

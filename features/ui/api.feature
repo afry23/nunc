@@ -78,6 +78,17 @@ Feature: Local interface settings
     Then I see "Die Schnittstelle läuft nicht: Port 42820 nicht nutzbar"
     And I do not see "Token anzeigen"
 
+  @ui @REQ-API @desktop
+  Scenario: A server that starts in the background appears without reopening the settings
+    Given the platform is "desktop"
+    And the setting "apiEnabled" is "true"
+    And the local interface is still starting
+    When I open the app at "/settings"
+    Then I see "Die Schnittstelle ist aus."
+    When the local interface reports that it runs on port 42820
+    Then I see "Läuft auf http://127.0.0.1:42820"
+    And I see "Token anzeigen"
+
   @ui @REQ-API @mobile
   Scenario: The interface does not exist on mobile
     Given the platform is "mobile"

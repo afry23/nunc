@@ -63,14 +63,30 @@ pub fn list_backups(state: State<'_, AppState>) -> Result<Vec<BackupEntry>, AppE
     Ok(nunc_store::list_backup_entries(&dir, state.today())?)
 }
 
-/// Stellt die Datenbank aus einer Backup-Datei wieder her und sendet danach `app:reload`.
+/// Stellt die Datenbank aus einer Backup-Datei wieder her und sendet danach `app:reload`. Die lokale Schnittstelle
+/// folgt sofort den Einstellungen aus dem Backup.
 #[tauri::command]
 #[specta::specta]
-pub fn restore_from_backup(
+pub fn restore_from_backup<R: Runtime>(
+    app: AppHandle<R>,
     state: State<'_, AppState>,
     source_path: String,
 ) -> Result<(), AppError> {
-    state.restore(&PathBuf::from(source_path))
+    state.restore(&PathBuf::from(source_path))?;
+    #[cfg(desktop)]
+    if let Some(api) = app.try_state::<crate::api_service::ApiService>() {
+        // Der Restore ist gelungen; ein Lesefehler hier darf ihn nicht als gescheitert melden
+        match state.db.with(|conn| nunc_store::load_settings(conn)) {
+            // Befehle ohne Laufzeitkontext (Hauptthread): hier darf blockiert werden, wie in `save_settings`
+            Ok(settings) => {
+                tauri::async_runtime::block_on(api.apply(settings.api_enabled, settings.api_port));
+            }
+            Err(error) => log::error!("Schnittstelle nach dem Restore nicht umgestellt: {error}"),
+        }
+    }
+    #[cfg(mobile)]
+    let _ = app;
+    Ok(())
 }
 
 /// Öffnet den Ordner-Dialog und speichert den gewählten Backup-Ordner (nur Desktop). `None` bei Abbruch.

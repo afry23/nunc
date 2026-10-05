@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { useT } from "../i18n";
-import { commands, unwrap, type ApiStatus } from "../lib/api";
+import { commands, events, unwrap, type ApiStatus } from "../lib/api";
 import { useUiStore } from "../stores/uiStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Button, Toggle } from "./ui";
@@ -38,6 +38,14 @@ export function ApiSection({
       .then(setStatus)
       .catch((error: unknown) => useUiStore.getState().fail(error));
   }, [storedEnabled, storedPort]);
+
+  // Der Server startet beim App-Start im Hintergrund und folgt einem Restore: das Backend meldet jeden Wechsel
+  useEffect(() => {
+    const unlisten = events.apiStatus.listen((event) =>
+      setStatus(event.payload),
+    );
+    return () => void unlisten.then((fn) => fn());
+  }, []);
 
   const toggleToken = async (): Promise<void> => {
     if (token !== null) return setToken(null);
