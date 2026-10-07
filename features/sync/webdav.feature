@@ -246,7 +246,7 @@ Feature: WebDAV sync
     When I sync with the remote path "/files/nunc/"
     Then the sync succeeds
     And the server created the folders "/files/ /files/nunc/" in this order
-    And the server holds the sync file "/files/nunc/nunc-sync.json"
+    And the server holds the sync file "/files/nunc/nunc-sync.v2.json"
   @integration @sync @US-Sync-02-WebDAV
   Scenario: A folder that another device creates at the same moment is accepted
     Given a WebDAV server with the folder "/nunc/"
@@ -285,7 +285,6 @@ Feature: WebDAV sync
     And the local todo "t-0005" is deleted
     And the local todo "t-0100" says "2026-09-29 Water the plants @home"
     And the sync file on the server has 7 todos and 11 sessions
-    And the sync file on the server keeps the device "fixture-device-a"
     And the upload carried the ETag of the downloaded file
 
   @integration @sync @US-Sync-02-WebDAV
@@ -322,6 +321,40 @@ Feature: WebDAV sync
     Then the sync fails with a message starting "Sync-Datei nicht lesbar"
     And the sync file on the server is unchanged
     And the local todos are "Task"
+  @integration @sync @REQ-SYNC
+  Scenario: A legacy sync file is imported once
+    Given a WebDAV server with the folder "/nunc/" holding the legacy sync file "webdav/nunc-sync.json"
+    And no database exists yet
+    When I sync
+    Then the sync succeeds with 3 imported todos, 3 imported sessions and 0 conflicts
+    And the server holds the sync file "/nunc/nunc-sync.v2.json"
+    And the upload required that the file does not exist yet
+    When I sync
+    Then the sync succeeds with 0 imported todos, 0 imported sessions and 0 conflicts
+    And the legacy file was requested 1 time
+
+  @integration @sync @REQ-SYNC
+  Scenario: A sync file of an unknown format is reported and left alone
+    Given a WebDAV server with the folder "/nunc/" holding a sync file of format 3
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    Then the sync fails with a message starting "Sync-Datei nicht lesbar: Die Sync-Datei hat das Format 3"
+    And the sync file on the server is unchanged
+    And the local todos are "Task"
+
+  @integration @sync @REQ-SYNC
+  Scenario: Changes to different fields on two devices are both kept
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the local todos "Buy milk"
+    And another device has completed the todo "Buy milk" on the server
+    When I rename the local todo "Buy milk" to "Buy oat milk"
+    And I sync
+    Then the sync succeeds with 0 imported todos, 0 imported sessions and 1 conflicts
+    And the local todos are "x 2026-10-04 Buy oat milk"
+    And the sync file on the server has the todos "x 2026-10-04 Buy oat milk"
+
   @integration @sync @US-Sync-02-WebDAV
   Scenario: A concurrent change on the server is detected with the ETag
     Given a WebDAV server with the folder "/nunc/" holding the sync file "webdav/nunc-sync.json"

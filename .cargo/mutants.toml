@@ -17,6 +17,18 @@ exclude_re = [
   # Der Server prüft die angekündigte Länge vorab nur, um früh abzulehnen; `Limited` beim Lesen erzwingt dieselbe
   # Grenze, `> -> ==` ändert das Ergebnis nicht (äquivalent)
   "replace > with == in handle",
+  # CRDT (ADR 0016): Bei gleichem Stempel und gleichem Wert sind beide Register identisch, `>` und `>=` liefern
+  # dasselbe (äquivalent). `common <= upper.len()` wird nur erreicht, wenn `lower` nicht kleiner als `upper` ist,
+  # was `position_between` voraussetzt (Eingabe außerhalb des Vertrags).
+  "replace > with >= in Register<T>::merge",
+  "replace < with <= in midpoint",
+  # `common += 1` zu `*= 1` ergibt eine Endlosschleife: der Mutant wird per Zeitüberschreitung erkannt, was
+  # cargo-mutants als Fehler (Exit 3) meldet
+  "replace \\+= with \\*= in midpoint",
+  # `observe` schreibt bei gleichem Stempel denselben Wert erneut (kein Unterschied). In `rekey_positions` ist der
+  # Eintrag an `index` nie „behalten“, `index * 1` liefert dieselbe nächste behaltene Stelle (äquivalent).
+  "replace > with >= in observe",
+  "replace \\+ with \\* in rekey_positions",
   "impl (Debug|Display) for",
   "<impl Debug",
   "<impl Display",

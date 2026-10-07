@@ -9,6 +9,7 @@ use nunc_core::todotxt::{ParsedTodo, build_raw_text};
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::StoreError;
+use crate::crdt_repo::{fields_of, register_new_todo, stamp_changes};
 use crate::time::{day_text, parse_day, parse_instant, to_text};
 use crate::todo_repo::set_todo_completed;
 
@@ -164,11 +165,14 @@ pub fn apply_todoist_writes(
                         sync_id,
                     ],
                 )?;
-                let id = i32::try_from(tx.last_insert_rowid()).unwrap_or(i32::MAX);
+                let row_id = tx.last_insert_rowid();
+                register_new_todo(&tx, row_id, now)?;
+                let id = i32::try_from(row_id).unwrap_or(i32::MAX);
                 add_todoist_mapping(&tx, id, task_id, now)?;
                 applied.inserted += 1;
             }
             TodoistWrite::Update { todo_id, todo, at } => {
+                let before = fields_of(&tx, i64::from(*todo_id))?;
                 let changed = tx.execute(
                     "UPDATE todos SET raw_text = ?1, priority = ?2, completed = ?3, completed_at = ?4,
                             description = ?5, project_tags = ?6, context_tags = ?7, updated_at = ?8, deleted = 0
@@ -185,6 +189,7 @@ pub fn apply_todoist_writes(
                         todo_id,
                     ],
                 )?;
+                stamp_changes(&tx, i64::from(*todo_id), before.as_ref(), now)?;
                 applied.updated += u32::try_from(changed).unwrap_or(0);
             }
             TodoistWrite::Touch { todo_id, at } => {

@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, TimeZone, Utc};
 use cucumber::World;
-use nunc_core::model::{ConnectionTestResult, SyncFile, SyncProvider, SyncResult, WebDavConfig};
+use nunc_core::model::{ConnectionTestResult, SyncProvider, SyncResult, WebDavConfig};
 use nunc_platform::{ManualClock, MemorySecretStore};
 use nunc_store::{Connection, StoreError};
 use nunc_sync::{SyncError, SyncStore};
@@ -89,9 +89,9 @@ impl nunc_sync::TodoistStore for TestStore {
 }
 
 impl SyncStore for TestStore {
-    fn local_file(&self, now: DateTime<Utc>) -> Result<SyncFile, StoreError> {
+    fn local_state(&self) -> Result<nunc_core::crdt::SyncState, StoreError> {
         let conn = self.conn.lock().unwrap();
-        nunc_store::build_sync_file(&conn, &self.device_id, now, || self.next_id("gen"))
+        nunc_store::local_state(&conn, || self.next_id("gen"))
     }
 
     fn setup(&self) -> Result<nunc_sync::SyncSetup, StoreError> {
@@ -112,12 +112,11 @@ impl SyncStore for TestStore {
         nunc_store::set_drive_folder_id(&self.conn.lock().unwrap(), id)
     }
 
-    fn apply_remote(
+    fn apply_state(
         &self,
-        todos: &[nunc_core::model::SyncTodo],
-        sessions: &[nunc_core::model::SyncSession],
+        merged: &nunc_core::crdt::SyncState,
     ) -> Result<nunc_store::Applied, StoreError> {
-        nunc_store::apply_remote(&mut self.conn.lock().unwrap(), todos, sessions)
+        nunc_store::apply_state(&mut self.conn.lock().unwrap(), merged)
     }
 }
 

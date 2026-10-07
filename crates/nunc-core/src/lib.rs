@@ -5,11 +5,14 @@
 
 pub mod backup_policy;
 pub mod clock;
+pub mod crdt;
 pub mod export;
 pub mod flowtime;
+pub mod hlc;
 pub mod model;
+pub mod position;
 pub mod stats;
-pub mod sync_merge;
+pub mod sync_document;
 pub mod timer;
 pub mod todo_query;
 pub mod todoist_mapping;

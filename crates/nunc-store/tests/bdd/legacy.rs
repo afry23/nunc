@@ -1,4 +1,4 @@
-//! Steps für die Übernahme der Go-Datenbank (`features/compat_go.feature`, M2-07).
+//! Steps für die Übernahme der Go-Datenbank (`features/existing_database.feature`, M2-07).
 
 use std::collections::BTreeMap;
 use std::fs;

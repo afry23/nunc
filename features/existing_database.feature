@@ -1,4 +1,6 @@
-Feature: Compatibility with the database of the Go app
+Feature: Existing databases
+  A database created by the Go app (schema version 5) is opened, migrated and taken over once. After that nunc
+  owns it: there is no parallel operation with the Go app.
   Fixtures: tests/fixtures/go-v5.db (schema version 5, created by nunc-go)
 
   @integration @REQ-compat @desktop
@@ -11,10 +13,10 @@ Feature: Compatibility with the database of the Go app
     And the table "sessions" contains 11 rows
 
   @integration @REQ-compat @desktop
-  Scenario: Only the additive migration 006 is applied on top
+  Scenario: Only the additive migrations 006 and 007 are applied on top
     Given the Go fixture database
     When nunc opens the database
-    Then exactly the migrations 1 to 6 are recorded as applied
+    Then exactly the migrations 1 to 7 are recorded as applied
     And the migration timestamps did not change
 
   @integration @REQ-compat @desktop
@@ -90,7 +92,7 @@ Feature: Compatibility with the database of the Go app
       | 3  | 2026-09-22 Buy groceries +home @errands           |
       | 4  | x 2026-09-25 2026-09-18 Plan sprint +work         |
       | 5  | (C) Read Rust book +learning +rust @evening       |
-    And exactly the migrations 1 to 6 are recorded as applied
+    And exactly the migrations 1 to 7 are recorded as applied
     And there are 11 sessions
 
   @integration @REQ-compat @desktop
@@ -112,7 +114,7 @@ Feature: Compatibility with the database of the Go app
     Given the Go app left its database in the user config folder "config"
     When nunc starts with the data folder "data"
     Then the legacy import result is "imported"
-    And exactly the migrations 1 to 6 are recorded as applied
+    And exactly the migrations 1 to 7 are recorded as applied
     And there are 11 sessions
     When I list the todos
     Then the todo list has 5 entries
@@ -151,11 +153,3 @@ Feature: Compatibility with the database of the Go app
     Then the loaded settings are:
       | setting   | value              |
       | backupDir | /data/backups/nunc |
-
-  @e2e @REQ-compat @manual
-  Scenario: A database written by nunc can be opened by the Go app
-    Given the repository checkout contains ../nunc-go and Go is installed
-    When I run "tests/interop/go-reads-nunc-db.sh"
-    Then the Go app logic reads the todos, the settings and the statistics without an error
-    And the integrity check of the database is "ok"
-    And the backup written by nunc passes the Go restore validation

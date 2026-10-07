@@ -24,9 +24,9 @@ Schicht-Trennung).
 
 ## Konsequenzen
 
-- Kompatibilität wird durch `compat_go.feature` mit echten Go-Fixtures abgesichert (M0-13, M2-08).
-- Schemaänderungen sind in der Praxis append-only; Umbauten bestehender Spalten sind ausgeschlossen, solange
-  die Go-App parallel genutzt wird.
+- Bestehende Datenbanken (Schema 001–005, Go-Fixtures) werden durch `existing_database.feature` abgesichert (M0-13, M2-08). Seit ADR 0016 gibt es keinen Parallelbetrieb mit der Go-App mehr; das Schema bleibt für Bestandsdaten erhalten.
+- Schemaänderungen sind append-only (neue, additive Migrationen); Umbauten bestehender Spalten sind ausgeschlossen,
+  damit Bestandsdaten und Backups älterer Versionen weiter funktionieren.
 - `bundled` verlängert die Erstkompilierung (C-Compiler nötig); in CI mit Rust-Cache abgefangen.
 
 ## Umsetzung (M2)
@@ -42,5 +42,5 @@ Schicht-Trennung).
   Die Originaldatenbank bleibt bis zum Austausch unberührt; die gewählte Datei wird nie geöffnet (schon ein
   Read-only-Öffnen einer WAL-Datenbank legt `-shm` daneben an).
 - **Legacy-Übernahme:** gleiches Vorgehen für `…/nunc/nunc.db` der Go-App inklusive noch nicht eingespieltem `-wal`.
-- **Interop:** `tests/interop/go-reads-nunc-db.sh` lässt die Go-Logik eine von nunc geschriebene Datenbank (und
-  ihr Backup) lesen.
+- **Interop** (entfallen mit ADR 0016): Das Skript `tests/interop/go-reads-nunc-db.sh` ließ die Go-Logik eine von nunc
+  geschriebene Datenbank lesen. Die Go-App wird nicht mehr berücksichtigt.

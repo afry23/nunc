@@ -74,5 +74,5 @@ wenn Versionen auseinanderlaufen (`bump-version.mjs --check`) oder `npm run docs
 
 - [ ] `npm run docs:report` und alle Pflicht-Checks grün (CLAUDE.md)
 - [ ] `tests/nfr/measure-desktop.sh` ([docs/nfr.md](./nfr.md)) auf dem Release-Build
-- [ ] manuell: Anmeldung Google/Todoist mit echten Konten, WebDAV-Interop mit der Go-App (`tests/interop/`)
+- [ ] manuell: Anmeldung Google/Todoist mit echten Konten; Sync zwischen zwei Geräten (CRDT, ADR 0016)
 - [ ] manuell: Android- und iOS-Gerät (Timer im Hintergrund, App-Kill, Notification, Restore)

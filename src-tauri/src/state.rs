@@ -87,7 +87,6 @@ impl AppState {
         let device_id = db.with(|conn| device_id(conn, || uuid::Uuid::new_v4().to_string()))?;
         let services = sync_service::coordinator(
             db.clone(),
-            device_id.clone(),
             platform.secrets.clone(),
             platform.clock.clone(),
             platform.events.clone(),

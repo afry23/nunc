@@ -1,4 +1,4 @@
-//! Steps für `features/settings.feature` (Persistenz) und die Settings-Szenarien aus `compat_go.feature`.
+//! Steps für `features/settings.feature` (Persistenz) und die Settings-Szenarien aus `existing_database.feature`.
 
 use cucumber::{gherkin::Step, then, when};
 use serde_json::Value;

@@ -162,7 +162,7 @@ Feature: Google Drive sync
     Then the local todo "t-0005" is deleted
 
   @integration @sync @US-S05 @desktop
-  Scenario: The sync file is stored as nunc/nunc-sync.json
+  Scenario: The sync file is stored as nunc/nunc-sync.v2.json
     Given a Google server for the account "me@example.org"
     And Google Drive is connected as "me@example.org"
     And no database exists yet
@@ -236,6 +236,19 @@ Feature: Google Drive sync
     When I sync with Google Drive
     Then the sync succeeds with 3 imported todos, 3 imported sessions and 0 conflicts
     And the local database has 3 sessions
+
+  @integration @sync @REQ-SYNC @desktop
+  Scenario: A legacy sync file on Drive is imported once
+    Given a Google server for the account "me@example.org"
+    And the Drive folder "nunc" holds the legacy sync file "webdav/nunc-sync.json"
+    And Google Drive is connected as "me@example.org"
+    And no database exists yet
+    When I sync with Google Drive
+    Then the sync succeeds with 3 imported todos, 3 imported sessions and 0 conflicts
+    And Drive holds 2 sync files
+    When I sync with Google Drive
+    Then the sync succeeds with 0 imported todos, 0 imported sessions and 0 conflicts
+    And Drive holds 2 sync files
 
   @ui @US-S06 @desktop
   Scenario: A progress bar and a summary are shown while importing

@@ -7,7 +7,8 @@ use std::sync::{Arc, Mutex};
 use md5::{Digest, Md5};
 use wiremock::{MockServer, Request, Respond, ResponseTemplate};
 
-pub const FILE_NAME: &str = "nunc-sync.json";
+pub const FILE_NAME: &str = "nunc-sync.v2.json";
+pub const LEGACY_FILE_NAME: &str = "nunc-sync.json";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Auth {

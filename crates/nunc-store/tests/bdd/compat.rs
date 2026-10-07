@@ -1,4 +1,5 @@
-//! Steps für „eine von nunc geschriebene Datenbank bleibt für die Go-App lesbar“ (`features/compat_go.feature`).
+//! Steps für Bestandsdatenbanken: Schema, Einstellungen und Migrationszeitpunkte bleiben erhalten
+//! (`features/existing_database.feature`).
 
 use std::collections::BTreeSet;
 
