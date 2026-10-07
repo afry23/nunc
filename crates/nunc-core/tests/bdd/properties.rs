@@ -828,14 +828,9 @@ fn small_option() -> impl Strategy<Value = Option<String>> {
     prop::option::of(small_text())
 }
 
-fn small_tags() -> impl Strategy<Value = Vec<String>> {
-    prop::collection::vec(small_text(), 0..3)
-}
-
 fn todo_crdt(id: &'static str) -> impl Strategy<Value = TodoCrdt> {
     (
         (
-            register(small_text()),
             register(small_option()),
             register(prop::bool::ANY),
             register(small_option()),
@@ -843,8 +838,6 @@ fn todo_crdt(id: &'static str) -> impl Strategy<Value = TodoCrdt> {
             register(small_text()),
         ),
         (
-            register(small_tags()),
-            register(small_tags()),
             register(small_text()),
             register(prop::bool::ANY),
             prop::collection::btree_map(
@@ -856,18 +849,15 @@ fn todo_crdt(id: &'static str) -> impl Strategy<Value = TodoCrdt> {
     )
         .prop_map(
             move |(
-                (raw_text, priority, completed, completed_at, created_at, description),
-                (project_tags, context_tags, position, deleted, pomodoros),
+                (priority, completed, completed_at, created_at, description),
+                (position, deleted, pomodoros),
             )| TodoCrdt {
                 sync_id: id.to_owned(),
-                raw_text,
                 priority,
                 completed,
                 completed_at,
                 created_at,
                 description,
-                project_tags,
-                context_tags,
                 position,
                 deleted,
                 pomodoros,

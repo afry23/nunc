@@ -86,7 +86,10 @@ pub fn set_todo_completed(
 #[tauri::command]
 #[specta::specta]
 pub fn reorder_todos(state: State<'_, AppState>, ids: Vec<i32>) -> Result<(), AppError> {
-    state.db.with(|conn| nunc_store::reorder_todos(conn, &ids))
+    let now = state.clock.now();
+    state
+        .db
+        .with(|conn| nunc_store::reorder_todos(conn, &ids, now))
 }
 
 fn non_empty(raw_text: &str) -> Result<&str, AppError> {

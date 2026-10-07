@@ -15,6 +15,7 @@ use tempfile::TempDir;
 
 mod backup;
 mod compat;
+mod crdt;
 mod legacy;
 mod settings;
 mod todos;
@@ -36,6 +37,7 @@ pub struct StoreWorld {
     stats: Option<StatsResponse>,
     sync_counter: u32,
     backup: backup::State,
+    crdt: crdt::State,
     legacy: legacy::State,
     todotxt: todotxt_file::State,
 }

@@ -2,6 +2,7 @@
 
 mod backup;
 mod connection;
+mod crdt_repo;
 mod error;
 mod legacy;
 mod migrations;
@@ -20,6 +21,7 @@ pub use backup::{
     set_backup_dir,
 };
 pub use connection::{open, open_in_memory};
+pub use crdt_repo::{apply_state, local_state};
 pub use error::StoreError;
 pub use legacy::{LegacyImport, import_legacy_db, legacy_db_path};
 pub use migrations::{MIGRATIONS, Migration, migrate};

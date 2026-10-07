@@ -3,6 +3,7 @@
 //! - Todo-Felder sind LWW-Register `(Wert, Hlc)`; der höhere Stempel gewinnt, bei völlig gleichem Stempel der
 //!   größere Wert (damit der Merge nie von der Reihenfolge abhängt).
 //! - `pomodoro_count` ist ein G-Counter pro Gerät, der Wert die Summe.
+//! - Zeile (`raw_text`) und Tags sind abgeleitet, keine Register.
 //! - Löschen ist ein Register; ein Todo gilt nur als gelöscht, solange keine spätere Bearbeitung vorliegt.
 //! - Sessions sind ein G-Set über `(device_id, started_at)`.
 //!
@@ -11,10 +12,12 @@
 
 use std::collections::BTreeMap;
 
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
 use crate::hlc::Hlc;
 use crate::model::SyncSession;
+use crate::todotxt::{ParsedTodo, build_raw_text};
 
 /// Ein Wert mit dem Stempel seines letzten Schreibvorgangs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,14 +59,11 @@ impl<T: Ord + Clone> Register<T> {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TodoCrdt {
     pub sync_id: String,
-    pub raw_text: Register<String>,
     pub priority: Register<Option<String>>,
     pub completed: Register<bool>,
     pub completed_at: Register<Option<String>>,
     pub created_at: Register<Option<String>>,
     pub description: Register<String>,
-    pub project_tags: Register<Vec<String>>,
-    pub context_tags: Register<Vec<String>>,
     /// Fractional-Index, siehe [`crate::position`].
     pub position: Register<String>,
     pub deleted: Register<bool>,
@@ -79,18 +79,47 @@ impl TodoCrdt {
         }
         Self {
             sync_id: sync_id.into(),
-            raw_text: reg(String::new(), clock),
             priority: reg(None, clock),
             completed: reg(false, clock),
             completed_at: reg(None, clock),
             created_at: reg(None, clock),
             description: reg(String::new(), clock),
-            project_tags: reg(Vec::new(), clock),
-            context_tags: reg(Vec::new(), clock),
             position: reg(String::new(), clock),
             deleted: reg(false, clock),
             pomodoros: BTreeMap::new(),
         }
+    }
+
+    /// Die todo.txt-Zeile, aus den Feldern aufgebaut. Sie ist kein eigenes Register: Zeile und Tags folgen immer
+    /// aus den zusammengeführten Feldern, sonst könnten sie nach einem Merge von ihnen abweichen
+    /// (Gerät A hakt ab, Gerät B ändert den Text).
+    pub fn raw_text(&self) -> String {
+        let day = |text: &Option<String>| {
+            text.as_deref()
+                .and_then(|text| NaiveDate::parse_from_str(text, "%Y-%m-%d").ok())
+        };
+        build_raw_text(&ParsedTodo {
+            priority: self
+                .priority
+                .value
+                .as_deref()
+                .and_then(|text| text.chars().next()),
+            completed: self.completed.value,
+            completed_at: day(&self.completed_at.value),
+            created_at: day(&self.created_at.value),
+            description: self.description.value.clone(),
+            ..ParsedTodo::default()
+        })
+    }
+
+    /// `+projekt`-Tags der Beschreibung.
+    pub fn project_tags(&self) -> Vec<String> {
+        tags(&self.description.value, '+')
+    }
+
+    /// `@kontext`-Tags der Beschreibung.
+    pub fn context_tags(&self) -> Vec<String> {
+        tags(&self.description.value, '@')
     }
 
     /// Summe der Pomodoros aller Geräte.
@@ -109,14 +138,11 @@ impl TodoCrdt {
     /// Jüngster Stempel aller Felder außer dem Löschkennzeichen.
     fn latest_edit(&self) -> &Hlc {
         [
-            &self.raw_text.clock,
             &self.priority.clock,
             &self.completed.clock,
             &self.completed_at.clock,
             &self.created_at.clock,
             &self.description.clock,
-            &self.project_tags.clock,
-            &self.context_tags.clock,
             &self.position.clock,
         ]
         .into_iter()
@@ -138,14 +164,11 @@ impl TodoCrdt {
         }
         Self {
             sync_id: self.sync_id.clone(),
-            raw_text: self.raw_text.merge(&other.raw_text),
             priority: self.priority.merge(&other.priority),
             completed: self.completed.merge(&other.completed),
             completed_at: self.completed_at.merge(&other.completed_at),
             created_at: self.created_at.merge(&other.created_at),
             description: self.description.merge(&other.description),
-            project_tags: self.project_tags.merge(&other.project_tags),
-            context_tags: self.context_tags.merge(&other.context_tags),
             position: self.position.merge(&other.position),
             deleted: self.deleted.merge(&other.deleted),
             pomodoros,
@@ -155,19 +178,24 @@ impl TodoCrdt {
     fn sanitized(&self, now_ms: i64) -> Self {
         Self {
             sync_id: self.sync_id.clone(),
-            raw_text: self.raw_text.capped(now_ms),
             priority: self.priority.capped(now_ms),
             completed: self.completed.capped(now_ms),
             completed_at: self.completed_at.capped(now_ms),
             created_at: self.created_at.capped(now_ms),
             description: self.description.capped(now_ms),
-            project_tags: self.project_tags.capped(now_ms),
-            context_tags: self.context_tags.capped(now_ms),
             position: self.position.capped(now_ms),
             deleted: self.deleted.capped(now_ms),
             pomodoros: self.pomodoros.clone(),
         }
     }
+}
+
+fn tags(description: &str, prefix: char) -> Vec<String> {
+    description
+        .split_whitespace()
+        .filter(|word| word.len() > 1 && word.starts_with(prefix))
+        .map(str::to_owned)
+        .collect()
 }
 
 /// Identität einer Session: Ursprungsgerät und Beginn.
@@ -231,6 +259,25 @@ mod tests {
     }
 
     #[test]
+    fn the_line_and_tags_follow_from_the_fields() {
+        let mut todo = TodoCrdt::new("a", &clock(1));
+        todo.priority.set(Some("B".to_owned()), clock(2));
+        todo.created_at.set(Some("2026-09-20".to_owned()), clock(2));
+        todo.description
+            .set("Report +work @desk + @".to_owned(), clock(2));
+        assert_eq!(todo.raw_text(), "(B) 2026-09-20 Report +work @desk + @");
+        assert_eq!(todo.project_tags(), ["+work"]);
+        assert_eq!(todo.context_tags(), ["@desk"]);
+        todo.completed.set(true, clock(3));
+        todo.completed_at
+            .set(Some("2026-10-01".to_owned()), clock(3));
+        assert_eq!(
+            todo.raw_text(),
+            "x 2026-10-01 2026-09-20 Report +work @desk + @"
+        );
+    }
+
+    #[test]
     fn an_identical_stamp_keeps_the_larger_value_in_either_order() {
         let small = Register::new("a".to_owned(), clock(5));
         let large = Register::new("b".to_owned(), clock(5));
@@ -241,7 +288,7 @@ mod tests {
     #[test]
     fn a_deletion_with_the_same_stamp_as_an_edit_does_not_delete() {
         let mut todo = TodoCrdt::new("a", &clock(1));
-        todo.raw_text.set("edited".to_owned(), clock(9));
+        todo.description.set("edited".to_owned(), clock(9));
         todo.deleted.set(true, clock(9));
         assert!(!todo.is_deleted());
         todo.deleted.set(true, clock(10));

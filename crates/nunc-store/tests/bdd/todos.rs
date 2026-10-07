@@ -90,7 +90,7 @@ fn delete(world: &mut StoreWorld, id: i32) {
 #[when(expr = "I reorder the todos to {string}")]
 fn reorder(world: &mut StoreWorld, ids: String) {
     let ids: Vec<i32> = ids.split(',').map(|i| i.trim().parse().unwrap()).collect();
-    nunc_store::reorder_todos(world.conn_mut(), &ids).expect("reorder");
+    nunc_store::reorder_todos(world.conn_mut(), &ids, at(NOW)).expect("reorder");
 }
 
 #[when(expr = "todo {int} gets a pomodoro")]

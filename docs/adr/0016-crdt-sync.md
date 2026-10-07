@@ -18,17 +18,28 @@ Dependency, Mobile-Build, Overkill für flache Records; ein Op-Log bräuchte Kom
 
 - **HLC** `(wall_ms, counter, device_id)`, total geordnet, Zeit über die injizierte `Clock`. Remote-Werte, die mehr
   als 24 h in der Zukunft liegen, werden gekappt.
-- **Todo** = Map Feld → LWW-Register `(Wert, HLC)`: `raw_text`, `priority`, `completed`, `completed_at`,
-  `description`, Tags, `position` (Fractional-Index als String), `deleted` (Tombstone; Wiederbeleben = neuer Write).
+- **Todo** = Map Feld → LWW-Register `(Wert, HLC)`: `priority`, `completed`, `completed_at`, `created_at`,
+  `description`, `position` (Fractional-Index als String), `deleted` (Tombstone). **Zeile (`raw_text`) und Tags sind
+  abgeleitet**, keine Register: Sie werden nach jedem Merge aus den Feldern neu aufgebaut, sonst könnten sie von
+  ihnen abweichen (A hakt ab, B ändert den Text). Ein Todo gilt nur als gelöscht, wenn das Löschen jünger ist als
+  jede Bearbeitung; wer ein gleichzeitig gelöschtes Todo bearbeitet, behält es.
 - **`pomodoro_count`** = G-Counter pro Gerät, Wert = Summe.
 - **Sessions** bleiben ein G-Set (`(device_id, started_at)`).
 - Der Merge ist kommutativ, assoziativ und idempotent. Gleichstand entscheidet `device_id`, nicht „lokal gewinnt“.
 - **Format:** `nunc-sync.v2.json`, eine Datei, Upload wie bisher mit ETag/If-Match. `nunc-sync.json` wird nicht mehr
   geschrieben. Existiert beim ersten Lauf nur die alte Datei, wird sie einmalig als LWW-Write importiert (HLC aus
   `updated_at`) und danach ignoriert.
-- **Store:** additive Migration `007_todo_crdt.sql` (`todo_field_clock`, `todo_pomodoro_counter`, `device_clock`).
-  Bestehende Spalten bleiben, Statistik liest weiter `todos`/`sessions`. Jede lokale Mutation stempelt **nur die
-  geänderten Felder**, in einer Transaktion. Bestandsdaten bekommen HLCs aus `updated_at`.
+- **Store:** additive Migration `007_todo_crdt.sql` (`todo_field_clock`, `todo_pomodoro_counter`,
+  `todo_position_key`, `device_clock`); die Tabellen von 001–005 bleiben unverändert. Die Spalten von `todos` sind
+  der aufgelöste Stand, Statistik liest weiter `todos`/`sessions`. Jede lokale Mutation läuft wie bisher als SQL; danach
+  vergleicht `crdt_repo::stamp_changes` den Stand vor und nach der Änderung und stempelt **nur die geänderten Felder**
+  (in einem Sicherungspunkt). Bestandsdaten bekommen Stempel aus `updated_at` mit dem Pseudo-Gerät `legacy`, damit
+  zwei Geräte mit demselben Stand identische Register haben. `todos.position` ist der abgeleitete, eindeutige Rang
+  nach `todo_position_key`; beim Umordnen behält die längste schon passende Folge ihre Schlüssel, nur verschobene
+  Todos werden gestempelt.
+- **Einspielen:** `local_state` liest den Stand als `SyncState`, `apply_state` schreibt den zusammengeführten Stand
+  in einer Transaktion zurück (neue Todos anlegen, gelöschte nicht, `raw_text`/Tags neu aufbauen, Sessions anfügen,
+  `device_clock` auf den größten gesehenen Stempel setzen).
 - **Tombstone-GC** nach 90 Tagen bzw. Wasserstand aller Geräte (spätere Phase).
 - Drive nutzt dieselbe Merge-Funktion. Das Todoist-Mapping liest nur aufgelöste Werte.
 

@@ -37,7 +37,7 @@ fn main() {
     )
     .unwrap();
     nunc_store::delete_todo(&conn, old.id, t0).unwrap();
-    nunc_store::reorder_todos(&mut conn, &[call.id, report.id]).unwrap();
+    nunc_store::reorder_todos(&mut conn, &[call.id, report.id], t0).unwrap();
 
     let settings = Settings {
         pomodoro_min: 30,

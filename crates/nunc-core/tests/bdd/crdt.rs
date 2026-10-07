@@ -118,16 +118,17 @@ fn todo_with_pomodoros(world: &mut DomainWorld, id: String, pomodoros: u32) {
 
 #[given(expr = "device {word} completes the todo")]
 fn completes(world: &mut DomainWorld, device: String) {
-    world
-        .crdt
-        .edit(&device, None, |todo, clock| todo.completed.set(true, clock));
+    world.crdt.edit(&device, None, |todo, clock| {
+        todo.completed.set(true, clock.clone());
+        todo.completed_at.set(Some("2026-03-01".to_owned()), clock);
+    });
 }
 
 #[given(expr = "device {word} changes its text to {string}")]
 fn changes_text(world: &mut DomainWorld, device: String, text: String) {
-    world
-        .crdt
-        .edit(&device, None, |todo, clock| todo.raw_text.set(text, clock));
+    world.crdt.edit(&device, None, |todo, clock| {
+        todo.description.set(text, clock)
+    });
 }
 
 #[given(expr = "device {word} changes its text at {word}")]
@@ -135,7 +136,7 @@ fn changes_text_at(world: &mut DomainWorld, device: String, time: String) {
     world
         .crdt
         .edit(&device, Some(time_of_day(&time)), |todo, clock| {
-            todo.raw_text.set("edited".to_owned(), clock);
+            todo.description.set("edited".to_owned(), clock);
         });
 }
 
@@ -144,7 +145,7 @@ fn changes_text_far_ahead(world: &mut DomainWorld, device: String) {
     world
         .crdt
         .edit(&device, Some(NOW_MS + DAY_30), |todo, clock| {
-            todo.raw_text.set("from the future".to_owned(), clock);
+            todo.description.set("from the future".to_owned(), clock);
         });
 }
 
@@ -246,7 +247,12 @@ fn todo_completed(world: &mut DomainWorld) {
 
 #[then(expr = "its text is {string}")]
 fn text_is(world: &mut DomainWorld, text: String) {
-    assert_eq!(world.crdt.merged_todo().raw_text.value, text);
+    assert_eq!(world.crdt.merged_todo().description.value, text);
+}
+
+#[then(expr = "the merged line is {string}")]
+fn line_is(world: &mut DomainWorld, line: String) {
+    assert_eq!(world.crdt.merged_todo().raw_text(), line);
 }
 
 #[then(expr = "the merged priority is {string}")]
@@ -296,7 +302,7 @@ fn session_count(world: &mut DomainWorld, count: usize) {
 fn clock_is_capped(world: &mut DomainWorld) {
     let todo = world.crdt.merged_todo();
     let latest = [
-        &todo.raw_text.clock,
+        &todo.description.clock,
         &todo.completed.clock,
         &todo.deleted.clock,
     ]

@@ -136,7 +136,7 @@ Feature: Todo management
       | completed | 1      | 25        |
 
   @integration @REQ-4.2
-  Scenario: Reorder todos
+  Scenario: Reorder todos and number the positions uniquely
     Given no database exists yet
     When nunc opens the database
     And I add the todo "first"
@@ -147,7 +147,7 @@ Feature: Todo management
     Then the listed todos are:
       | rawText | position |
       | first   | 0        |
-      | second  | 0        |
+      | second  | 1        |
       | third   | 2        |
 
   @integration @REQ-4.3

@@ -10,6 +10,7 @@ Feature: CRDT sync
     When the states are merged in either order
     Then the merged todo is completed
     And its text is "Buy oat milk"
+    And the merged line is "x 2026-03-01 Buy oat milk"
 
   @domain @REQ-SYNC
   Scenario: The higher clock wins when both devices change the same field

@@ -12,7 +12,7 @@ use crate::settings_repo::set_setting;
 const SCHEMA_VERSION: u32 = 1;
 
 /// Hat jedes Todo eine `sync_id`? Wie in Go bekommen ältere Todos erst beim Sync eine.
-fn assign_missing_sync_ids(
+pub(crate) fn assign_missing_sync_ids(
     conn: &Connection,
     mut new_id: impl FnMut() -> String,
 ) -> Result<(), StoreError> {
@@ -56,7 +56,7 @@ fn sync_todo(row: &Row<'_>, device_id: &str) -> rusqlite::Result<SyncTodo> {
     })
 }
 
-fn sync_session(row: &Row<'_>, device_id: &str) -> rusqlite::Result<SyncSession> {
+pub(crate) fn sync_session(row: &Row<'_>, device_id: &str) -> rusqlite::Result<SyncSession> {
     let minutes = |index: usize| -> rusqlite::Result<u32> {
         Ok(row.get::<_, i64>(index)?.try_into().unwrap_or(0))
     };
