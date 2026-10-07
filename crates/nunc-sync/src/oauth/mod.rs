@@ -75,20 +75,23 @@ pub struct Pkce {
 /// HTTP-Client für Anmeldung, Dienst-APIs und WebDAV.
 ///
 /// Vertraut neben den eingebauten Wurzeln auch dem Zertifikatsspeicher des Systems (Firmen-Proxys wie
-/// Zscaler signieren mit einer CA, die nur dort liegt). Die TLS-Konfiguration wird einmal gebaut, weil
-/// das Laden des Speichers ~100 ms dauert und `reqwest` den Speicher sonst pro Verbindung kopiert.
+/// Zscaler signieren mit einer CA, die nur dort liegt). Der Client wird einmal gebaut und danach
+/// geklont, weil das Laden des Speichers ~100 ms dauert.
 pub fn http_client() -> Result<reqwest::Client, SyncError> {
-    static TLS: OnceLock<Result<Arc<rustls::ClientConfig>, String>> = OnceLock::new();
-    let tls = TLS
-        .get_or_init(tls_config)
+    static CLIENT: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
+    CLIENT
+        .get_or_init(build_client)
         .clone()
-        .map_err(SyncError::Transport)?;
+        .map_err(SyncError::Transport)
+}
+
+fn build_client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
-        .use_preconfigured_tls((*tls).clone())
+        .use_preconfigured_tls(Arc::unwrap_or_clone(tls_config()?))
         .connect_timeout(Duration::from_secs(10))
         .timeout(Duration::from_secs(30))
         .build()
-        .map_err(|error| SyncError::Transport(error.to_string()))
+        .map_err(|error| error.to_string())
 }
 
 fn tls_config() -> Result<Arc<rustls::ClientConfig>, String> {
