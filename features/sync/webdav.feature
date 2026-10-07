@@ -344,6 +344,20 @@ Feature: WebDAV sync
     And the local todos are "Task"
 
   @integration @sync @REQ-SYNC
+  Scenario Outline: A tombstone is removed from the sync file after 90 days
+    Given a WebDAV server with the folder "/nunc/" holding the todos "x-1" deleted on "<day>"
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    Then the sync succeeds
+    And the sync file on the server has <count> todos and 0 sessions
+
+    Examples:
+      | day        | count |
+      | 2026-09-20 | 2     |
+      | 2026-05-01 | 1     |
+
+  @integration @sync @REQ-SYNC
   Scenario: Changes to different fields on two devices are both kept
     Given a WebDAV server with the folder "/nunc/"
     And no database exists yet

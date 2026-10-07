@@ -142,3 +142,36 @@ Feature: CRDT sync
     When the states are merged in either order
     Then there are 1 sessions
 
+  @domain @REQ-SYNC
+  Scenario Outline: Tombstones are dropped after 90 days
+    Given an old todo "a" on both devices
+    And device A deleted the todo <days> days ago
+    When the garbage is collected
+    Then the todo is <outcome> in the state
+
+    Examples:
+      | days | outcome |
+      | 10   | kept    |
+      | 89   | kept    |
+      | 90   | kept    |
+      | 91   | dropped |
+      | 400  | dropped |
+
+  @domain @REQ-SYNC
+  Scenario: A live todo is never dropped, however old
+    Given an old todo "a" on both devices
+    When the garbage is collected 400 days later
+    Then the todo is kept in the state
+
+  @domain @REQ-SYNC
+  Scenario: A deletion that an edit overruled is no tombstone
+    Given an old todo "a" on both devices
+    And device A deleted the todo 200 days ago
+    And device B changed the todo 150 days ago
+    When the garbage is collected
+    Then the todo is kept in the state
+
+  @domain @property @REQ-SYNC
+  Scenario: Collecting garbage twice changes nothing more
+    Then the property "garbage collection is idempotent and only drops deleted todos" holds for 300 random cases
+

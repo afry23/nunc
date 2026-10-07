@@ -141,6 +141,35 @@ async fn server_holding_other_format(world: &mut SyncWorld, folder: String, form
         .with(|state| state.put(&format!("{folder}{FILE_NAME}"), body));
 }
 
+#[given(
+    expr = "a WebDAV server with the folder {string} holding the todos {string} deleted on {string}"
+)]
+async fn server_holding_deleted(world: &mut SyncWorld, folder: String, ids: String, day: String) {
+    server_with_folder(world, folder.clone()).await;
+    let todos = ids
+        .split(',')
+        .map(|id| {
+            let mut todo = todo_json(id.trim(), &format!("Deleted {}", id.trim()));
+            todo.deleted = true;
+            todo.updated_at = format!("{day}T12:00:00Z");
+            todo
+        })
+        .collect();
+    let file = SyncFile {
+        schema_version: 1,
+        synced_at: "2026-10-01T12:00:00Z".parse().unwrap(),
+        device_id: "fixture-device-c".to_owned(),
+        todos,
+        sessions: vec![],
+    };
+    let state = SyncState::from_legacy(&file);
+    let body =
+        serde_json::to_vec_pretty(&SyncDocument::from_state(&state, file.synced_at)).unwrap();
+    world
+        .dav()
+        .with(|state| state.put(&format!("{folder}{FILE_NAME}"), body));
+}
+
 #[given(expr = "a WebDAV server with the folder {string} holding a broken sync file")]
 async fn server_holding_broken_file(world: &mut SyncWorld, folder: String) {
     server_with_folder(world, folder.clone()).await;

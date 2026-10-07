@@ -25,7 +25,7 @@ pub struct WebDavConfig {
     pub url: String,
     pub auth_method: WebDavAuth,
     pub username: String,
-    /// Ordner auf dem Server, in dem `nunc-sync.json` liegt (Standard `/nunc/`).
+    /// Ordner auf dem Server, in dem `nunc-sync.v2.json` liegt (Standard `/nunc/`).
     pub remote_path: String,
 }
 

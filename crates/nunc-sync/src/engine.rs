@@ -72,10 +72,13 @@ pub(crate) fn merge_remote(
 ) -> Result<SyncDocument, SyncError> {
     let local = store.local_state()?;
     let now = clock.now();
+    let now_ms = now.timestamp_millis();
     let merged = match remote {
-        Some(remote) => local.merge_remote(remote, now.timestamp_millis()),
+        Some(remote) => local.merge_remote(remote, now_ms),
         None => local,
-    };
+    }
+    // alte Tombstones verschwinden aus Datei und Abgleich; die Zeilen in der Datenbank bleiben (Statistik)
+    .collect_garbage(now_ms);
     let applied = store.apply_state(&merged)?;
     result.imported_todos += applied.todos_added;
     result.conflicted_todos += applied.todos_replaced;

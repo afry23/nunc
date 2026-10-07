@@ -201,7 +201,7 @@ Feature: Google Drive sync
     And Google Drive is connected as "me@example.org"
     And the Drive folder link is "https://drive.google.com/drive/folders/folder-1"
     When I open the app at "/settings"
-    Then I see "nunc/nunc-sync.json"
+    Then I see "nunc/nunc-sync.v2.json"
     When I click "In Drive öffnen"
     Then the browser opened "https://drive.google.com/drive/folders/folder-1"
 

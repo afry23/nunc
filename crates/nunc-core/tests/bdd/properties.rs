@@ -52,6 +52,7 @@ fn property_holds(_world: &mut DomainWorld, name: String, cases: u32) {
         "merging sync states is associative" => crdt_associative(cases),
         "merging sync states is idempotent" => crdt_idempotent(cases),
         "a position between two others sorts between them" => position_sorts_between(cases),
+        "garbage collection is idempotent and only drops deleted todos" => gc_properties(cases),
         "streaks follow from the set of days" => streak_invariants(cases),
         "rotation keeps exactly the newest backups" => rotation_keeps_newest(cases),
         "random commands keep the timer consistent" => timer_consistent(cases),
@@ -711,6 +712,21 @@ fn position_sorts_between(cases: u32) -> Result<(), String> {
         prop_assert!(before < low);
         let after = position_between(Some(&high), None);
         prop_assert!(high < after);
+        Ok(())
+    })
+}
+
+fn gc_properties(cases: u32) -> Result<(), String> {
+    run(cases, (sync_state(), 0i64..200), |(state, days)| {
+        let now = days * 24 * 3_600_000;
+        let once = state.collect_garbage(now);
+        prop_assert_eq!(once.collect_garbage(now), once.clone());
+        for (id, todo) in &state.todos {
+            if !once.todos.contains_key(id) {
+                prop_assert!(todo.is_deleted());
+            }
+        }
+        prop_assert_eq!(&once.sessions, &state.sessions);
         Ok(())
     })
 }

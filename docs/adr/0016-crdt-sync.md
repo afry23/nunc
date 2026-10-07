@@ -40,7 +40,12 @@ Dependency, Mobile-Build, Overkill für flache Records; ein Op-Log bräuchte Kom
 - **Einspielen:** `local_state` liest den Stand als `SyncState`, `apply_state` schreibt den zusammengeführten Stand
   in einer Transaktion zurück (neue Todos anlegen, gelöschte nicht, `raw_text`/Tags neu aufbauen, Sessions anfügen,
   `device_clock` auf den größten gesehenen Stempel setzen).
-- **Tombstone-GC** nach 90 Tagen bzw. Wasserstand aller Geräte (spätere Phase).
+- **Tombstone-GC:** Ein gelöschtes Todo, dessen Löschen älter als 90 Tage ist (`TOMBSTONE_TTL_MS`), verschwindet nach dem
+  Zusammenführen aus der Sync-Datei (`SyncState::collect_garbage`, im Lauf nach `merge_remote`). Die Zeilen in der
+  Datenbank bleiben als weich gelöschte Todos, weil Statistik und Export sie für die Sessions brauchen. **Risiko:** Ein
+  Gerät, das länger als 90 Tage offline war und das Todo noch lebend hat, legt es beim nächsten Sync wieder an. Ein
+  Wasserstand aller Geräte wäre genauer, bräuchte aber eine Geräteliste in der Datei; bei einer privaten Handvoll
+  Geräte steht der Aufwand nicht dafür.
 - Drive nutzt dieselbe Merge-Funktion. Das Todoist-Mapping liest nur aufgelöste Werte.
 
 ## Verworfene Alternativen
@@ -53,7 +58,7 @@ Dependency, Mobile-Build, Overkill für flache Records; ein Op-Log bräuchte Kom
 
 - Breaking im Mischbetrieb: ältere nunc-Versionen sehen die v2-Datei nicht. Hinweis in den Release-Notes; die Alt-Datei
   bleibt unangetastet liegen.
-- Dateigröße wächst durch Register und Tombstones (GC).
+- Dateigröße wächst durch Register; Tombstones räumt die GC nach 90 Tagen ab.
 - Tests: `@domain @property` (proptest: Kommutativität, Assoziativität, Idempotenz), `@integration @sync` für
   Zwei-Geräte-Läufe und Alt-Import. Die Go-Interop-Skripte (`tests/interop/`), die Sync-Szenarien von `compat_go.feature` und der LWW-Merge (`sync_merge`)
   sind entfernt; `compat_go.feature` heißt `existing_database.feature` und prüft nur noch Bestandsdatenbanken.

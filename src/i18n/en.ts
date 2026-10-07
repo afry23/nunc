@@ -297,7 +297,7 @@ export const en: Record<keyof typeof de, string> = {
   "drive.connect": "Connect to Google Drive",
   "drive.connectedAs": "Connected as {email}",
   "drive.connected": "Connected",
-  "drive.location": "Stored in Google Drive: nunc/nunc-sync.json",
+  "drive.location": "Stored in Google Drive: nunc/nunc-sync.v2.json",
   "drive.syncEnabled": "Sync enabled",
   "drive.paused":
     "Paused: local data is kept. The sync file on Google Drive is not deleted.",

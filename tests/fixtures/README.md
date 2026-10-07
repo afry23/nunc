@@ -6,8 +6,8 @@ Schema und die Datenformate laufen, die `nunc-go` schreibt. Die Daten sind frei 
 | Datei | Inhalt |
 |---|---|
 | `go-v5.db` | SQLite nach den Migrationen 001–005 (`schema_migrations` = 1…5, WAL): 6 Todos (davon 1 erledigt, 1 soft-deleted), 11 Sessions (Pomodoro, Flowtime, Pausen, abgebrochen, übersprungen), veränderte Settings, `device_id = fixture-device-a`, `sync_provider = webdav` |
-| `nunc-sync.json` | Sync-Datei von Gerät A zum Stand der DB (`schema_version` 1, Format `models.SyncFile`) |
-| `webdav/nunc-sync.json` | Remote-Datei von Gerät B für Merge-Tests: `t-0002` neuer, `t-0003` älter, `t-0005` gelöscht, neues Todo `t-0100`, zwei neue Sessions, eine Session-Dublette |
+| `nunc-sync.json` | Sync-Datei im alten Format (vor ADR 0016) von Gerät A zum Stand der DB (`schema_version` 1, Format `models.SyncFile`) |
+| `webdav/nunc-sync.json` | Remote-Datei im alten Format von Gerät B für Merge-Tests: `t-0002` neuer, `t-0003` älter, `t-0005` gelöscht, neues Todo `t-0100`, zwei neue Sessions, eine Session-Dublette |
 
 Hinweise aus dem Erzeugen:
 
