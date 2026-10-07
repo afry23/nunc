@@ -1,5 +1,5 @@
 //! Steps für Todos, Sessions und Statistik-Rohdaten (`features/todos/crud.feature`, `features/store/stats_input.feature`,
-//! Lese-Szenarien in `features/compat_go.feature`).
+//! Lese-Szenarien in `features/existing_database.feature`).
 
 use chrono::NaiveDate;
 use cucumber::{gherkin::Step, then, when};

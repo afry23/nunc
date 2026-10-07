@@ -12,7 +12,6 @@ mod export;
 mod properties;
 mod settings;
 mod stats;
-mod sync_merge;
 mod timer;
 mod todo_query;
 mod todoist;
@@ -29,7 +28,6 @@ pub struct DomainWorld {
     export: export::State,
     settings: settings::State,
     stats: stats::State,
-    sync: sync_merge::State,
     timer: timer::State,
     todo_query: todo_query::State,
     todoist: todoist::State,

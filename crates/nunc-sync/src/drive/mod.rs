@@ -1,9 +1,9 @@
-//! Synchronisierung über Google Drive (Go: `services/sync.go`, `sync_drive.go`): Anmeldung, Sync-Lauf und
+//! Synchronisierung über Google Drive (ADR 0009): Anmeldung, Sync-Lauf und
 //! Steuerung der Verbindung. Das Zusammenführen ist dasselbe wie bei WebDAV (`engine::merge_remote`).
 //!
 //! Ablage: `nunc/nunc-sync.v2.json` im Drive-Stamm, Scope `drive.file`. Drive kennt kein bedingtes Schreiben
 //! (WebDAV: ETag); vor dem Überschreiben prüft der Lauf deshalb die Änderungszeit der Datei und setzt neu an,
-//! wenn ein anderes Gerät dazwischen war. Ein Rest-Risiko bleibt (zwischen Prüfung und Schreiben), wie in Go.
+//! wenn ein anderes Gerät dazwischen war. Ein Rest-Risiko bleibt (zwischen Prüfung und Schreiben).
 
 mod client;
 
@@ -25,7 +25,7 @@ use crate::oauth::{
     AuthorizeOptions, Connection, OAuthApp, Page, TokenSource, Vault, authorize, http_client,
 };
 
-/// Ordner und Datei im Drive (wie in der Go-App).
+/// Ordner und Datei im Drive.
 pub const FOLDER_NAME: &str = "nunc";
 pub const FILE_NAME: &str = "nunc-sync.v2.json";
 /// Alte Datei (Format vor ADR 0016), nur für den einmaligen Import.
@@ -234,7 +234,7 @@ async fn fetch_remote(
     Ok(remote_state(document.as_ref(), legacy.as_ref())?.map(|state| (state, current)))
 }
 
-/// Führt einen Sync-Lauf gegen Drive aus (Go: `performSync`).
+/// Führt einen Sync-Lauf gegen Drive aus.
 pub async fn sync_drive(
     client: &DriveClient,
     store: &dyn SyncStore,

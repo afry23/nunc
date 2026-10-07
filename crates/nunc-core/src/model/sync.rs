@@ -1,10 +1,11 @@
-//! Austauschformat `nunc-sync.json` (Go: `models.SyncFile`). Feldnamen snake_case wie in der Go-App; Zeitangaben
-//! bleiben als Text erhalten, damit Lesen und Schreiben verlustfrei ist (die Vergleiche parsen sie).
+//! Die alte Sync-Datei `nunc-sync.json` der Go-App. nunc liest sie nur noch einmal beim ersten Sync, wenn es noch
+//! keine `nunc-sync.v2.json` gibt (`SyncState::from_legacy`, ADR 0016); geschrieben wird sie nie. Feldnamen
+//! snake_case wie in der Go-App, Zeitangaben bleiben als Text.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize};
 
-/// Die Sync-Datei auf dem Server.
+/// Die alte Sync-Datei `nunc-sync.json` (nur zum Einlesen).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SyncFile {
     pub schema_version: u32,

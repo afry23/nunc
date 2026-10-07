@@ -55,5 +55,6 @@ Dependency, Mobile-Build, Overkill für flache Records; ein Op-Log bräuchte Kom
   bleibt unangetastet liegen.
 - Dateigröße wächst durch Register und Tombstones (GC).
 - Tests: `@domain @property` (proptest: Kommutativität, Assoziativität, Idempotenz), `@integration @sync` für
-  Zwei-Geräte-Läufe und Alt-Import. Go-Interop-Skripte und `compat_go.feature` entfallen.
+  Zwei-Geräte-Läufe und Alt-Import. Die Go-Interop-Skripte (`tests/interop/`), die Sync-Szenarien von `compat_go.feature` und der LWW-Merge (`sync_merge`)
+  sind entfernt; `compat_go.feature` heißt `existing_database.feature` und prüft nur noch Bestandsdatenbanken.
 - `conflictedTodos` zählt künftig Todos, bei denen Felder beider Seiten zusammengeführt wurden.

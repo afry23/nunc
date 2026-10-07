@@ -1,5 +1,5 @@
 //! Ein Sync-Lauf gegen WebDAV: Server-Stand laden, mit dem lokalen zusammenführen, Änderungen einspielen,
-//! Ergebnis hochladen (Go: `WebDAVSyncService.doSync`).
+//! Ergebnis hochladen (ADR 0008, 0016).
 
 use nunc_core::clock::Clock;
 use nunc_core::crdt::SyncState;
