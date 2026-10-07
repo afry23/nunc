@@ -70,9 +70,23 @@ wenn Versionen auseinanderlaufen (`bump-version.mjs --check`) oder `npm run docs
 5. Bekannt: `tauri-plugin-notification` plant auf iOS über einen Zeitzonen-Offset-Workaround (ADR 0004); vor dem Release
    auf einem echten Gerät prüfen, dass die Benachrichtigung pünktlich kommt.
 
+## Release-Notes: Sync-Format (0.3.0, ADR 0016)
+
+In die Notes des ersten Release mit CRDT-Sync aufnehmen:
+
+- Der Sync verwendet die neue Datei `nunc-sync.v2.json`; Todos werden feldweise zusammengeführt (gleichzeitige
+  Änderungen verschiedener Felder gehen nicht mehr verloren).
+- **Alle Geräte auf dieselbe Version bringen.** Ältere Versionen kennen die v2-Datei nicht und würden die alte
+  `nunc-sync.json` weiter beschreiben, ohne dass der Stand ankommt. Die alte Datei bleibt unangetastet liegen und
+  wird beim ersten Sync einmal importiert.
+- Die Go-App versteht das neue Format nicht (siehe [migration-from-go.md](./migration-from-go.md)).
+- Gelöschte Aufgaben verschwinden nach 90 Tagen aus der Sync-Datei; ein Gerät, das länger offline war, legt sie beim
+  nächsten Sync ggf. wieder an.
+
 ## Checkliste vor dem Tag
 
 - [ ] `npm run docs:report` und alle Pflicht-Checks grün (CLAUDE.md)
 - [ ] `tests/nfr/measure-desktop.sh` ([docs/nfr.md](./nfr.md)) auf dem Release-Build
 - [ ] manuell: Anmeldung Google/Todoist mit echten Konten; Sync zwischen zwei Geräten (CRDT, ADR 0016)
+- [ ] Release-Notes enthalten den Abschnitt zum Sync-Format (oben), solange es der erste Release mit ADR 0016 ist
 - [ ] manuell: Android- und iOS-Gerät (Timer im Hintergrund, App-Kill, Notification, Restore)

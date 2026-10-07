@@ -299,7 +299,7 @@ export const de = {
   "drive.connect": "Mit Google Drive verbinden",
   "drive.connectedAs": "Verbunden als {email}",
   "drive.connected": "Verbunden",
-  "drive.location": "Ablage in Google Drive: nunc/nunc-sync.json",
+  "drive.location": "Ablage in Google Drive: nunc/nunc-sync.v2.json",
   "drive.syncEnabled": "Synchronisierung aktiv",
   "drive.paused":
     "Pausiert: Lokale Daten bleiben erhalten. Die Sync-Datei auf Google Drive wird nicht gelöscht.",

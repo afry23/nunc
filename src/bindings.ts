@@ -592,7 +592,7 @@ export type WebDavConfig = {
 	url: string,
 	authMethod: WebDavAuth,
 	username: string,
-	/**  Ordner auf dem Server, in dem `nunc-sync.json` liegt (Standard `/nunc/`). */
+	/**  Ordner auf dem Server, in dem `nunc-sync.v2.json` liegt (Standard `/nunc/`). */
 	remotePath: string,
 };
 

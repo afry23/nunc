@@ -32,6 +32,7 @@ pub struct State {
     converted: Option<SyncState>,
     document_state: Option<SyncState>,
     read_error: Option<String>,
+    collected: Option<SyncState>,
 }
 
 fn device_id(device: &str) -> String {
@@ -101,8 +102,12 @@ impl State {
 }
 
 fn start_todo(world: &mut DomainWorld, id: String, pomodoros: u32) {
+    start_todo_at(world, id, pomodoros, DAY_MS + 9 * 3_600_000);
+}
+
+fn start_todo_at(world: &mut DomainWorld, id: String, pomodoros: u32, created_ms: i64) {
     let state = &mut world.crdt;
-    let mut todo = TodoCrdt::new(id.clone(), &Hlc::new(DAY_MS + 9 * 3_600_000, 0, "base"));
+    let mut todo = TodoCrdt::new(id.clone(), &Hlc::new(created_ms, 0, "base"));
     if pomodoros > 0 {
         todo.pomodoros.insert("base".to_owned(), pomodoros);
     }
@@ -536,4 +541,48 @@ fn legacy_counter(world: &mut DomainWorld, id: String, count: u32) {
 #[then(expr = "the todo {string} has no pomodoro counters")]
 fn no_counters(world: &mut DomainWorld, id: String) {
     assert!(converted_todo(world, &id).pomodoros.is_empty());
+}
+
+const DAY_MS_LEN: i64 = 24 * 3_600_000;
+
+#[given(expr = "device {word} deleted the todo {int} days ago")]
+fn deleted_days_ago(world: &mut DomainWorld, device: String, days: i64) {
+    world
+        .crdt
+        .edit(&device, Some(NOW_MS - days * DAY_MS_LEN), |todo, clock| {
+            todo.deleted.set(true, clock);
+        });
+}
+
+#[given(expr = "device {word} changed the todo {int} days ago")]
+fn changed_days_ago(world: &mut DomainWorld, device: String, days: i64) {
+    world
+        .crdt
+        .edit(&device, Some(NOW_MS - days * DAY_MS_LEN), |todo, clock| {
+            todo.description.set("edited".to_owned(), clock);
+        });
+}
+
+#[when("the garbage is collected")]
+fn collect(world: &mut DomainWorld) {
+    let merged = world.crdt.a.merge(&world.crdt.b);
+    world.crdt.collected = Some(merged.collect_garbage(NOW_MS));
+}
+
+#[when(expr = "the garbage is collected {int} days later")]
+fn collect_later(world: &mut DomainWorld, days: i64) {
+    let merged = world.crdt.a.merge(&world.crdt.b);
+    world.crdt.collected = Some(merged.collect_garbage(NOW_MS + days * DAY_MS_LEN));
+}
+
+#[then(expr = "the todo is {word} in the state")]
+fn todo_in_state(world: &mut DomainWorld, outcome: String) {
+    let state = world.crdt.collected.as_ref().expect("nichts eingesammelt");
+    let present = state.todos.contains_key(&world.crdt.todo_id);
+    assert_eq!(present, outcome == "kept", "{outcome}");
+}
+
+#[given(expr = "an old todo {string} on both devices")]
+fn old_todo_on_both(world: &mut DomainWorld, id: String) {
+    start_todo_at(world, id, 0, NOW_MS - 1000 * DAY_MS_LEN);
 }

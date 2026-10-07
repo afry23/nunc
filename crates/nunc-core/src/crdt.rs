@@ -55,6 +55,10 @@ impl<T: Ord + Clone> Register<T> {
     }
 }
 
+/// So lange bleibt ein gelöschtes Todo als Tombstone in der Sync-Datei (90 Tage). Danach darf es verschwinden: Ein
+/// Gerät, das länger als das offline war und das Todo noch hat, würde es beim nächsten Sync wieder anlegen.
+pub const TOMBSTONE_TTL_MS: i64 = 90 * 24 * 60 * 60 * 1000;
+
 /// Ein Todo als CRDT. `sync_id` ist die geräteübergreifende Identität.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TodoCrdt {
@@ -157,6 +161,11 @@ impl TodoCrdt {
         self.deleted.value && self.deleted.clock >= *self.latest_edit()
     }
 
+    /// Ist das Todo seit mehr als [`TOMBSTONE_TTL_MS`] gelöscht und damit nur noch ein Tombstone ohne Nutzen?
+    pub fn is_collectable(&self, now_ms: i64) -> bool {
+        self.is_deleted() && self.deleted.clock.wall_ms < now_ms.saturating_sub(TOMBSTONE_TTL_MS)
+    }
+
     pub fn merge(&self, other: &Self) -> Self {
         let mut pomodoros = self.pomodoros.clone();
         for (device, count) in &other.pomodoros {
@@ -238,6 +247,21 @@ impl SyncState {
             sessions.insert(key.clone(), kept);
         }
         Self { todos, sessions }
+    }
+
+    /// Lässt Tombstones weg, die älter als [`TOMBSTONE_TTL_MS`] sind (siehe [`TodoCrdt::is_collectable`]). Erst
+    /// **nach** dem Zusammenführen anwenden: Vorher würde ein altes Löschen verschwinden, bevor es ein lebendes
+    /// Todo der Gegenseite überstimmt hat.
+    pub fn collect_garbage(&self, now_ms: i64) -> Self {
+        Self {
+            todos: self
+                .todos
+                .iter()
+                .filter(|(_, todo)| !todo.is_collectable(now_ms))
+                .map(|(id, todo)| (id.clone(), todo.clone()))
+                .collect(),
+            sessions: self.sessions.clone(),
+        }
     }
 
     /// Kappt alle Stempel, die der Uhr `now_ms` zu weit vorauseilen (siehe [`Hlc::capped`]). Auf den Zustand
