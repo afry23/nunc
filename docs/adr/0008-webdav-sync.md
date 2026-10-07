@@ -1,6 +1,6 @@
 # ADR 0008 – WebDAV-Sync (M6)
 
-- Status: akzeptiert
+- Status: akzeptiert; Merge-Regeln und Dateiformat teilweise abgelöst durch [ADR 0016](./0016-crdt-sync.md)
 - Datum: 2026-10-04
 - Referenz: `nunc-go/internal/services/sync_webdav*.go`, `sync.go`, `sync_merge.go`
 
