@@ -448,6 +448,14 @@ pub fn local_state(
     })
 }
 
+/// Das Löschkennzeichen als aufgelöster Wert: In der Datenbank steht nur dieser, nicht der rohe Registerwert. Ohne
+/// den Abgleich würde ein Todo, das ein anderes Gerät gleichzeitig gelöscht und bearbeitet hat, bei jedem Sync als
+/// geändert gelten.
+fn resolved(mut todo: TodoCrdt) -> TodoCrdt {
+    todo.deleted.value = todo.is_deleted();
+    todo
+}
+
 /// Jüngster Stempel eines Todos als Zeitpunkt (Spalte `updated_at`).
 fn updated_at(todo: &TodoCrdt) -> String {
     let wall = [
@@ -540,7 +548,7 @@ pub fn apply_state(conn: &mut Connection, merged: &SyncState) -> Result<Applied,
                 applied.todos_added += 1;
             }
             Some(id) => {
-                if read_todo(&tx, id, sync_id)? != *todo {
+                if resolved(read_todo(&tx, id, sync_id)?) != resolved(todo.clone()) {
                     write_todo_row(&tx, id, todo)?;
                     applied.todos_replaced += 1;
                 }
@@ -597,6 +605,24 @@ mod tests {
         assert!(kept[2]);
         assert_eq!(keep_flags(&["b", "a"]), [false, true]);
         assert_eq!(keep_flags(&["", "a", ""]), [false, true, false]);
+    }
+
+    #[test]
+    fn a_stale_deletion_older_than_an_edit_is_not_applied_again() {
+        let mut conn = open_in_memory().unwrap();
+        let clock = |wall| Hlc::new(wall, 0, "other");
+        let mut todo = TodoCrdt::new("t-1", &clock(1));
+        todo.position.set("i".to_owned(), clock(1));
+        todo.description.set("edited".to_owned(), clock(9));
+        // ein anderes Gerät hat gelöscht, bevor die Bearbeitung kam: der rohe Wert bleibt `true`
+        todo.deleted.set(true, clock(5));
+        let state = SyncState {
+            todos: BTreeMap::from([("t-1".to_owned(), todo)]),
+            sessions: BTreeMap::new(),
+        };
+        assert_eq!(apply_state(&mut conn, &state).unwrap().todos_added, 1);
+        let again = apply_state(&mut conn, &state).unwrap();
+        assert_eq!(again, Applied::default());
     }
 
     #[test]
