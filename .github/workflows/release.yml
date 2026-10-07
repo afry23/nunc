@@ -183,6 +183,30 @@ jobs:
           track: internal
           status: draft
 
+  # APK an den Release-Entwurf hängen (zum Herunterladen und manuellen Installieren). Läuft erst nach `desktop`,
+  # damit der Entwurf sicher existiert und nicht doppelt angelegt wird.
+  android-asset:
+    needs: [desktop, android]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-release
+          path: android-release
+
+      - name: APK an den Release anhängen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          apk=$(find android-release -name '*.apk' | head -n 1)
+          [ -n "$apk" ] || { echo "::error::Keine APK gefunden"; exit 1; }
+          name="nunc_${TAG#v}_android.apk"
+          cp "$apk" "$name"
+          gh release upload "$TAG" "$name" --clobber
+
   ios:
     needs: verify
     runs-on: macos-latest
