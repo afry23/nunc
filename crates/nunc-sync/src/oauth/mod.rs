@@ -4,6 +4,7 @@
 mod loopback;
 mod vault;
 
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use base64::Engine;
@@ -71,13 +72,42 @@ pub struct Pkce {
     pub challenge: String,
 }
 
-/// HTTP-Client für Anmeldung und Dienst-APIs.
+/// HTTP-Client für Anmeldung, Dienst-APIs und WebDAV.
+///
+/// Vertraut neben den eingebauten Wurzeln auch dem Zertifikatsspeicher des Systems (Firmen-Proxys wie
+/// Zscaler signieren mit einer CA, die nur dort liegt). Die TLS-Konfiguration wird einmal gebaut, weil
+/// das Laden des Speichers ~100 ms dauert und `reqwest` den Speicher sonst pro Verbindung kopiert.
 pub fn http_client() -> Result<reqwest::Client, SyncError> {
+    static TLS: OnceLock<Result<Arc<rustls::ClientConfig>, String>> = OnceLock::new();
+    let tls = TLS
+        .get_or_init(tls_config)
+        .clone()
+        .map_err(SyncError::Transport)?;
     reqwest::Client::builder()
+        .use_preconfigured_tls((*tls).clone())
         .connect_timeout(Duration::from_secs(10))
         .timeout(Duration::from_secs(30))
         .build()
         .map_err(|error| SyncError::Transport(error.to_string()))
+}
+
+fn tls_config() -> Result<Arc<rustls::ClientConfig>, String> {
+    let mut roots = rustls::RootCertStore::empty();
+    roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+    let native = rustls_native_certs::load_native_certs();
+    for error in &native.errors {
+        log::warn!("Systemzertifikate: {error}");
+    }
+    // Einzelne ungültige Systemzertifikate werden übersprungen (bei Firmen-Stores nicht selten).
+    let (added, ignored) = roots.add_parsable_certificates(native.certs);
+    log::debug!("Systemzertifikate: {added} geladen, {ignored} übersprungen");
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let config = rustls::ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .map_err(|error| error.to_string())?
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+    Ok(Arc::new(config))
 }
 
 /// Zufällige Bytes als hexadezimaler Text (`state`).

@@ -192,6 +192,9 @@ fn selected(
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
+    // Der gemeinsame HTTP-Client lädt beim ersten Aufruf den Zertifikatsspeicher (~100 ms); das soll
+    // nicht in die engen Zeitfenster einzelner Szenarien fallen.
+    nunc_sync::oauth::http_client().expect("HTTP-Client");
     SyncWorld::cucumber()
         .fail_on_skipped()
         .filter_run_and_exit(FEATURES, selected)
