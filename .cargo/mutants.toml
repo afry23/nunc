@@ -22,6 +22,9 @@ exclude_re = [
   # was `position_between` voraussetzt (Eingabe außerhalb des Vertrags).
   "replace > with >= in Register<T>::merge",
   "replace < with <= in midpoint",
+  # `common += 1` zu `*= 1` ergibt eine Endlosschleife: der Mutant wird per Zeitüberschreitung erkannt, was
+  # cargo-mutants als Fehler (Exit 3) meldet
+  "replace \\+= with \\*= in midpoint",
   # `observe` schreibt bei gleichem Stempel denselben Wert erneut (kein Unterschied). In `rekey_positions` ist der
   # Eintrag an `index` nie „behalten“, `index * 1` liefert dieselbe nächste behaltene Stelle (äquivalent).
   "replace > with >= in observe",

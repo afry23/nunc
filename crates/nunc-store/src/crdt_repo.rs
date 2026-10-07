@@ -607,6 +607,79 @@ mod tests {
         assert_eq!(keep_flags(&["", "a", ""]), [false, true, false]);
     }
 
+    fn base_fields() -> Fields {
+        Fields {
+            priority: None,
+            completed: false,
+            completed_at: None,
+            created_at: None,
+            description: "task".to_owned(),
+            position: "i".to_owned(),
+            deleted: false,
+        }
+    }
+
+    #[test]
+    fn each_field_alone_is_reported_as_changed() {
+        let base = base_fields();
+        assert_eq!(base.changed(Some(&base)), Vec::<&str>::new());
+        assert_eq!(base.changed(None), FIELDS.to_vec());
+        let variants = [
+            (
+                "priority",
+                Fields {
+                    priority: Some("A".into()),
+                    ..base_fields()
+                },
+            ),
+            (
+                "completed",
+                Fields {
+                    completed: true,
+                    ..base_fields()
+                },
+            ),
+            (
+                "completed_at",
+                Fields {
+                    completed_at: Some("2026-10-04".into()),
+                    ..base_fields()
+                },
+            ),
+            (
+                "created_at",
+                Fields {
+                    created_at: Some("2026-10-04".into()),
+                    ..base_fields()
+                },
+            ),
+            (
+                "description",
+                Fields {
+                    description: "other".into(),
+                    ..base_fields()
+                },
+            ),
+            (
+                "position",
+                Fields {
+                    position: "r".into(),
+                    ..base_fields()
+                },
+            ),
+            (
+                "deleted",
+                Fields {
+                    deleted: true,
+                    ..base_fields()
+                },
+            ),
+        ];
+        for (field, changed) in variants {
+            assert_eq!(changed.changed(Some(&base)), [field], "{field}");
+        }
+    }
+
     #[test]
     fn a_stale_deletion_older_than_an_edit_is_not_applied_again() {
         let mut conn = open_in_memory().unwrap();
