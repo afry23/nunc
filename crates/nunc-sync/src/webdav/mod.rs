@@ -9,7 +9,6 @@ mod digest;
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hasher};
 use std::sync::Mutex;
-use std::time::Duration;
 
 use nunc_core::model::{ConnectionTestResult, SyncFile, WebDavAuth, WebDavConfig};
 use nunc_core::sync_document::SyncDocument;
@@ -58,11 +57,7 @@ impl WebDavClient {
             .ok()
             .filter(|url| matches!(url.scheme(), "http" | "https") && url.host_str().is_some())
             .ok_or_else(|| SyncError::InvalidUrl(config.url.clone()))?;
-        let http = reqwest::Client::builder()
-            .connect_timeout(Duration::from_secs(10))
-            .timeout(Duration::from_secs(30))
-            .build()
-            .map_err(|error| SyncError::Transport(error.to_string()))?;
+        let http = crate::oauth::http_client()?;
         Ok(Self {
             http,
             config,
@@ -386,6 +381,13 @@ fn classify_transport_error(timeout: bool, connect: bool, chain: &str) -> String
         "nodename nor servname",
     ]) {
         "Host nicht gefunden – URL prüfen".to_owned()
+    } else if any(&["unknownissuer", "unknown issuer"]) {
+        "SSL-Zertifikatsfehler – Aussteller unbekannt (Zwischenzertifikat fehlt oder Firmen-Proxy)"
+            .to_owned()
+    } else if any(&["notvalidforname", "not valid for name"]) {
+        "SSL-Zertifikatsfehler – Zertifikat passt nicht zum Hostnamen".to_owned()
+    } else if any(&["expired"]) {
+        "SSL-Zertifikatsfehler – Zertifikat abgelaufen".to_owned()
     } else if any(&["certificate", "tls", "ssl", "handshake"]) {
         "SSL-Zertifikatsfehler".to_owned()
     } else if any(&["connection refused", "actively refused"]) {
@@ -474,8 +476,21 @@ mod tests {
                 false,
                 true,
                 "invalid peer certificate: UnknownIssuer",
-                "SSL-Zertifikatsfehler",
+                "SSL-Zertifikatsfehler – Aussteller unbekannt (Zwischenzertifikat fehlt oder Firmen-Proxy)",
             ),
+            (
+                false,
+                true,
+                "invalid peer certificate: NotValidForName",
+                "SSL-Zertifikatsfehler – Zertifikat passt nicht zum Hostnamen",
+            ),
+            (
+                false,
+                true,
+                "invalid peer certificate: Expired",
+                "SSL-Zertifikatsfehler – Zertifikat abgelaufen",
+            ),
+            (false, true, "tls handshake eof", "SSL-Zertifikatsfehler"),
             (
                 false,
                 true,

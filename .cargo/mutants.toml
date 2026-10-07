@@ -10,9 +10,10 @@ exclude_globs = [
 
 # Reine Darstellungs-/Diagnosecode erzeugt Rauschen ohne Aussagekraft.
 exclude_re = [
-  # Zeitgrenzen des HTTP-Clients und die Obergrenze einer Anfragezeile des Loopback-Servers lassen sich nicht sinnvoll
-  # prüfen (ADR 0007: äquivalent bzw. nicht beobachtbar)
+  # Zeitgrenzen und Zertifikatsspeicher des HTTP-Clients (`build_client`) sowie die Obergrenze einer Anfragezeile
+  # des Loopback-Servers lassen sich nicht sinnvoll prüfen (ADR 0007: äquivalent bzw. nicht beobachtbar)
   "replace http_client",
+  "replace build_client",
   "replace < with <= in read_target",
   # Der Server prüft die angekündigte Länge vorab nur, um früh abzulehnen; `Limited` beim Lesen erzwingt dieselbe
   # Grenze, `> -> ==` ändert das Ergebnis nicht (äquivalent)
