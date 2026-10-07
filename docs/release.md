@@ -55,7 +55,10 @@ wenn Versionen auseinanderlaufen (`bump-version.mjs --check`) oder `npm run docs
 3. `npm run tauri android build -- --aab --apk` → `app/build/outputs/bundle/universalRelease/*.aab`.
 4. Play Console: App `com.afry.nunc` anlegen, internen Test-Track mit Testern, erstes Bundle von Hand hochladen
    (danach kann der Workflow hochladen). `versionCode` leitet Tauri aus der Version ab und muss pro Upload steigen.
-5. Berechtigungen: `USE_EXACT_ALARM` (ab Android 13, für den Timer-Wecker) und `POST_NOTIFICATIONS` (kommt aus dem Notification-Plugin) – die Play Console
+5. Test ohne Play Store: Der Job `android-asset` hängt die APK als `nunc_<version>_android.apk` an den Release-Entwurf
+   (nur bei Tag-Läufen). Installieren per `adb install` oder Download auf dem Gerät. Ohne Signierschlüssel ist die APK
+   unsigniert und lässt sich nicht installieren.
+6. Berechtigungen: `USE_EXACT_ALARM` (ab Android 13, für den Timer-Wecker) und `POST_NOTIFICATIONS` (kommt aus dem Notification-Plugin) – die Play Console
    verlangt dafür eine Begründung (Zweck: Timer-Ende als Wecker-Benachrichtigung).
 
 ## iOS (M8-06)
