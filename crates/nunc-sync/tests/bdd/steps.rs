@@ -1,10 +1,12 @@
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when};
+use nunc_core::crdt::SyncState;
 use nunc_core::model::{SyncFile, SyncTodo, WebDavAuth, WebDavConfig};
+use nunc_core::sync_document::SyncDocument;
 use nunc_sync::{WebDavClient, load_credentials, save_webdav, sync_webdav};
 
 use crate::SyncWorld;
-use crate::dav::{Auth, Dav, FILE_NAME};
+use crate::dav::{Auth, Dav, FILE_NAME, LEGACY_FILE_NAME};
 
 fn rows(step: &Step) -> Vec<Vec<String>> {
     step.table.as_ref().expect("Tabelle fehlt").rows.clone()
@@ -98,13 +100,45 @@ fn fixture_bytes(name: &str) -> Vec<u8> {
     std::fs::read(SyncWorld::fixture(name)).expect("Fixture lesen")
 }
 
+/// Die Fixture (Format `nunc-sync.json`) als Datei im aktuellen Format.
+pub fn current_bytes(legacy: &[u8]) -> Vec<u8> {
+    let file: SyncFile = serde_json::from_slice(legacy).expect("Fixture ist eine Sync-Datei");
+    let state = SyncState::from_legacy(&file);
+    serde_json::to_vec_pretty(&SyncDocument::from_state(&state, file.synced_at)).unwrap()
+}
+
 #[given(expr = "a WebDAV server with the folder {string} holding the sync file {string}")]
 async fn server_holding_file(world: &mut SyncWorld, folder: String, fixture: String) {
+    server_with_folder(world, folder.clone()).await;
+    let bytes = current_bytes(&fixture_bytes(&fixture));
+    world
+        .dav()
+        .with(|state| state.put(&format!("{folder}{FILE_NAME}"), bytes));
+}
+
+#[given(expr = "a WebDAV server with the folder {string} holding the legacy sync file {string}")]
+async fn server_holding_legacy_file(world: &mut SyncWorld, folder: String, fixture: String) {
     server_with_folder(world, folder.clone()).await;
     let bytes = fixture_bytes(&fixture);
     world
         .dav()
-        .with(|state| state.put(&format!("{folder}{FILE_NAME}"), bytes));
+        .with(|state| state.put(&format!("{folder}{LEGACY_FILE_NAME}"), bytes));
+}
+
+#[given(expr = "a WebDAV server with the folder {string} holding a sync file of format {int}")]
+async fn server_holding_other_format(world: &mut SyncWorld, folder: String, format: u32) {
+    server_with_folder(world, folder.clone()).await;
+    let body = serde_json::json!({
+        "schema_version": format,
+        "synced_at": "2026-10-01T12:00:00Z",
+        "todos": [],
+        "sessions": [],
+    })
+    .to_string()
+    .into_bytes();
+    world
+        .dav()
+        .with(|state| state.put(&format!("{folder}{FILE_NAME}"), body));
 }
 
 #[given(expr = "a WebDAV server with the folder {string} holding a broken sync file")]
@@ -144,10 +178,23 @@ fn file_with_extra_todo(world: &SyncWorld, text: &str) -> Vec<u8> {
         .dav()
         .with(|state| state.files.get(&path).map(|(body, _)| body.clone()))
         .expect("keine Sync-Datei auf dem Server");
-    let mut file: SyncFile = serde_json::from_slice(&current).unwrap();
-    let id = format!("c-{}", file.todos.len() + 1);
-    file.todos.push(todo_json(&id, text));
-    serde_json::to_vec_pretty(&file).unwrap()
+    with_extra_todo(&current, text)
+}
+
+/// Die Datei (Format v2) plus ein Todo eines weiteren Geräts.
+pub fn with_extra_todo(current: &[u8], text: &str) -> Vec<u8> {
+    let document: SyncDocument = serde_json::from_slice(current).unwrap();
+    let synced_at = document.synced_at;
+    let state = document.into_state().unwrap();
+    let id = format!("c-{}", state.todos.len() + 1);
+    let extra = SyncState::from_legacy(&SyncFile {
+        schema_version: 1,
+        synced_at,
+        device_id: "fixture-device-c".to_owned(),
+        todos: vec![todo_json(&id, text)],
+        sessions: vec![],
+    });
+    serde_json::to_vec_pretty(&SyncDocument::from_state(&state.merge(&extra), synced_at)).unwrap()
 }
 
 #[given(expr = "another device adds the todo {string} to the server during the first upload")]
@@ -200,6 +247,59 @@ fn local_texts(world: &SyncWorld) -> Vec<String> {
         .into_iter()
         .map(|todo| todo.raw_text)
         .collect()
+}
+
+#[when(expr = "I rename the local todo {string} to {string}")]
+fn rename_local_todo(world: &mut SyncWorld, text: String, new_text: String) {
+    let conn = world.store.conn.lock().unwrap();
+    let id = nunc_store::list_todos(&conn)
+        .unwrap()
+        .into_iter()
+        .find(|todo| todo.raw_text == text)
+        .unwrap_or_else(|| panic!("kein lokales Todo {text:?}"))
+        .id;
+    nunc_store::update_todo(
+        &conn,
+        id,
+        &new_text,
+        nunc_core::clock::Clock::now(&*world.clock),
+    )
+    .unwrap();
+}
+
+/// Der lokale Stand als Datei auf dem Server, in der das Todo `text` ein anderes Gerät eine Stunde später
+/// abgehakt hat.
+#[given(expr = "another device has completed the todo {string} on the server")]
+fn other_device_completed(world: &mut SyncWorld, text: String) {
+    let now = nunc_core::clock::Clock::now(&*world.clock);
+    let mut state = {
+        let conn = world.store.conn.lock().unwrap();
+        nunc_store::local_state(&conn, || "unused".to_owned()).unwrap()
+    };
+    let later = nunc_core::hlc::Hlc::new(now.timestamp_millis() + 3_600_000, 0, "other-device");
+    let todo = state
+        .todos
+        .values_mut()
+        .find(|todo| todo.raw_text() == text)
+        .unwrap_or_else(|| panic!("kein lokales Todo {text:?}"));
+    todo.completed.set(true, later.clone());
+    todo.completed_at.set(Some("2026-10-04".to_owned()), later);
+    let body = serde_json::to_vec_pretty(&SyncDocument::from_state(&state, now)).unwrap();
+    let path = format!("{}{FILE_NAME}", world.remote_path);
+    world.dav().with(|server| server.put(&path, body));
+}
+
+#[then(expr = "the legacy file was requested {int} time(s)")]
+fn legacy_requests(world: &mut SyncWorld, count: usize) {
+    let path = format!("{}{LEGACY_FILE_NAME}", world.remote_path);
+    let actual = world.dav().with(|state| {
+        state
+            .log
+            .iter()
+            .filter(|entry| entry.method == "GET" && entry.path == path)
+            .count()
+    });
+    assert_eq!(actual, count);
 }
 
 #[then(expr = "the local todos are {string}")]
@@ -558,7 +658,7 @@ fn server_holds(world: &mut SyncWorld, path: String) {
     assert!(world.dav().with(|state| state.files.contains_key(&path)));
 }
 
-fn server_file(world: &SyncWorld) -> SyncFile {
+fn server_file(world: &SyncWorld) -> SyncDocument {
     let path = format!("{}{FILE_NAME}", world.remote_path);
     let bytes = world
         .dav()
@@ -572,7 +672,7 @@ fn server_todos(world: &mut SyncWorld, texts: String) {
     let mut actual: Vec<String> = server_file(world)
         .todos
         .into_iter()
-        .map(|todo| todo.raw_text)
+        .map(|todo| todo.raw_text())
         .collect();
     let mut expected: Vec<String> = texts.split(',').map(|t| t.trim().to_owned()).collect();
     actual.sort();
@@ -586,7 +686,7 @@ fn server_has_todo(world: &mut SyncWorld, text: String) {
         server_file(world)
             .todos
             .iter()
-            .any(|todo| todo.raw_text == text)
+            .any(|todo| todo.raw_text() == text)
     );
 }
 
@@ -594,11 +694,6 @@ fn server_has_todo(world: &mut SyncWorld, text: String) {
 fn server_counts(world: &mut SyncWorld, todos: usize, sessions: usize) {
     let file = server_file(world);
     assert_eq!((file.todos.len(), file.sessions.len()), (todos, sessions));
-}
-
-#[then(expr = "the sync file on the server keeps the device {string}")]
-fn server_device(world: &mut SyncWorld, device: String) {
-    assert_eq!(server_file(world).device_id, device);
 }
 
 #[then("the sync file on the server is unchanged")]

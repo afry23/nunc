@@ -3,8 +3,9 @@
 use cucumber::{given, then, when};
 use nunc_core::crdt::{SyncState, TodoCrdt};
 use nunc_core::hlc::{Hlc, MAX_DRIFT_MS};
-use nunc_core::model::SyncSession;
+use nunc_core::model::{SyncFile, SyncSession, SyncTodo};
 use nunc_core::position::position_between;
+use nunc_core::sync_document::{LEGACY_DEVICE, SyncDocument, legacy_position_key};
 
 use crate::DomainWorld;
 
@@ -27,6 +28,10 @@ pub struct State {
     last_stamp: Option<Hlc>,
     stamp: Option<Hlc>,
     new_position: Option<String>,
+    legacy: Vec<SyncTodo>,
+    converted: Option<SyncState>,
+    document_state: Option<SyncState>,
+    read_error: Option<String>,
 }
 
 fn device_id(device: &str) -> String {
@@ -355,4 +360,180 @@ fn position_is_between(world: &mut DomainWorld) {
         !position.ends_with('0'),
         "Schlüssel endet auf 0: {position}"
     );
+}
+
+fn legacy_todo(
+    sync_id: &str,
+    line: &str,
+    description: &str,
+    position: u32,
+    updated: &str,
+) -> SyncTodo {
+    SyncTodo {
+        sync_id: sync_id.to_owned(),
+        device_id: "fixture".to_owned(),
+        raw_text: line.to_owned(),
+        priority: None,
+        completed: false,
+        completed_at: None,
+        created_at: None,
+        description: description.to_owned(),
+        project_tags: vec![],
+        context_tags: vec![],
+        pomodoro_count: 0,
+        position,
+        updated_at: updated.to_owned(),
+        deleted: false,
+    }
+}
+
+#[given(
+    expr = "a legacy todo {string} with the line {string} and the description {string} at position {int} updated at {string}"
+)]
+fn legacy_todo_step(
+    world: &mut DomainWorld,
+    sync_id: String,
+    line: String,
+    description: String,
+    position: u32,
+    updated: String,
+) {
+    let mut todo = legacy_todo(&sync_id, &line, &description, position, &updated);
+    // Priorität und Erstellungsdatum stehen in der Go-Datei auch in eigenen Feldern.
+    if line.starts_with("(A) ") {
+        todo.priority = Some("A".to_owned());
+        todo.created_at = Some("2026-09-20T00:00:00Z".to_owned());
+    }
+    world.crdt.legacy.push(todo);
+}
+
+#[given(expr = "a deleted legacy todo {string} updated at {string}")]
+fn deleted_legacy_todo(world: &mut DomainWorld, sync_id: String, updated: String) {
+    let mut todo = legacy_todo(&sync_id, "Gone", "Gone", 1, &updated);
+    todo.deleted = true;
+    world.crdt.legacy.push(todo);
+}
+
+#[when("the legacy file is converted")]
+fn convert_legacy(world: &mut DomainWorld) {
+    let file = SyncFile {
+        schema_version: 1,
+        synced_at: chrono::DateTime::from_timestamp_millis(NOW_MS).unwrap(),
+        device_id: "fixture".to_owned(),
+        todos: world.crdt.legacy.clone(),
+        sessions: vec![],
+    };
+    world.crdt.converted = Some(SyncState::from_legacy(&file));
+}
+
+fn converted_todo<'a>(world: &'a DomainWorld, id: &str) -> &'a TodoCrdt {
+    world
+        .crdt
+        .converted
+        .as_ref()
+        .expect("nicht konvertiert")
+        .todos
+        .get(id)
+        .unwrap_or_else(|| panic!("Todo {id} fehlt"))
+}
+
+#[then(expr = "the todo {string} has the line {string}")]
+fn converted_line(world: &mut DomainWorld, id: String, line: String) {
+    assert_eq!(converted_todo(world, &id).raw_text(), line);
+}
+
+#[then(expr = "every field of the todo {string} is stamped by the legacy device at {string}")]
+fn converted_stamps(world: &mut DomainWorld, id: String, updated: String) {
+    let todo = converted_todo(world, &id);
+    let expected = Hlc::new(
+        chrono::DateTime::parse_from_rfc3339(&updated)
+            .unwrap()
+            .timestamp_millis(),
+        0,
+        LEGACY_DEVICE,
+    );
+    let clocks = [
+        &todo.priority.clock,
+        &todo.completed.clock,
+        &todo.completed_at.clock,
+        &todo.created_at.clock,
+        &todo.description.clock,
+        &todo.position.clock,
+        &todo.deleted.clock,
+    ];
+    assert!(clocks.iter().all(|clock| **clock == expected), "{clocks:?}");
+}
+
+#[then(expr = "the todo {string} sorts before the todo {string}")]
+fn converted_order(world: &mut DomainWorld, first: String, second: String) {
+    let first = converted_todo(world, &first).position.value.clone();
+    let second = converted_todo(world, &second).position.value.clone();
+    assert!(first < second, "{first} nicht vor {second}");
+}
+
+#[then(expr = "the position key of the todo {string} is {string}")]
+fn converted_key(world: &mut DomainWorld, id: String, key: String) {
+    assert_eq!(converted_todo(world, &id).position.value, key);
+    assert_eq!(legacy_position_key(1), key);
+}
+
+#[then(expr = "the todo {string} is deleted")]
+fn converted_deleted(world: &mut DomainWorld, id: String) {
+    assert!(converted_todo(world, &id).is_deleted());
+}
+
+#[when("the state of device A is written to a sync file and read back")]
+fn document_roundtrip(world: &mut DomainWorld) {
+    let state = &mut world.crdt;
+    let document = SyncDocument::from_state(
+        &state.a,
+        chrono::DateTime::from_timestamp_millis(NOW_MS).unwrap(),
+    );
+    let json = serde_json::to_string_pretty(&document).unwrap();
+    let read: SyncDocument = serde_json::from_str(&json).unwrap();
+    state.document_state = Some(read.into_state().unwrap());
+}
+
+#[then("the state is unchanged")]
+fn state_unchanged(world: &mut DomainWorld) {
+    assert_eq!(world.crdt.document_state.as_ref(), Some(&world.crdt.a));
+}
+
+#[when(expr = "a sync file of format {int} is read")]
+fn read_other_format(world: &mut DomainWorld, format: u32) {
+    let json = serde_json::json!({
+        "schema_version": format,
+        "synced_at": "2026-03-01T12:00:00Z",
+    });
+    let document: SyncDocument = serde_json::from_value(json).unwrap();
+    world.crdt.read_error = document.into_state().err().map(|error| error.to_string());
+}
+
+#[then(expr = "reading fails with {string}")]
+fn reading_fails(world: &mut DomainWorld, message: String) {
+    assert_eq!(world.crdt.read_error.as_deref(), Some(message.as_str()));
+}
+
+#[given(expr = "the legacy todo {string} has {int} pomodoros")]
+fn legacy_pomodoros(world: &mut DomainWorld, id: String, count: u32) {
+    world
+        .crdt
+        .legacy
+        .iter_mut()
+        .find(|todo| todo.sync_id == id)
+        .expect("Todo")
+        .pomodoro_count = count;
+}
+
+#[then(expr = "the todo {string} counts {int} pomodoros for the legacy device")]
+fn legacy_counter(world: &mut DomainWorld, id: String, count: u32) {
+    assert_eq!(
+        converted_todo(world, &id).pomodoros.get(LEGACY_DEVICE),
+        Some(&count)
+    );
+}
+
+#[then(expr = "the todo {string} has no pomodoro counters")]
+fn no_counters(world: &mut DomainWorld, id: String) {
+    assert!(converted_todo(world, &id).pomodoros.is_empty());
 }

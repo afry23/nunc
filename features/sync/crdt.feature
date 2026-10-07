@@ -103,10 +103,42 @@ Feature: CRDT sync
   Scenario: Positions stay ordered under repeated insertion
     Then the property "a position between two others sorts between them" holds for 300 random cases
 
-  @wip @integration @sync @REQ-SYNC
-  Scenario: A legacy sync file is imported once
-    Given the server holds only a legacy "nunc-sync.json"
-    When I sync
-    Then the todos from the legacy file are present
-    And the server holds "nunc-sync.v2.json"
-    And a second sync imports nothing from the legacy file
+  @domain @REQ-SYNC
+  Scenario: A legacy todo becomes registers stamped by its update time
+    Given a legacy todo "t-1" with the line "(A) 2026-09-20 Report +work @desk" and the description "Report" at position 3 updated at "2026-09-28T09:00:00Z"
+    And a legacy todo "t-2" with the line "Water plants" and the description "Water plants" at position 1 updated at "2026-09-29T08:00:00Z"
+    And the legacy todo "t-1" has 5 pomodoros
+    When the legacy file is converted
+    Then the todo "t-1" has the line "(A) 2026-09-20 Report +work @desk"
+    And the todo "t-1" counts 5 pomodoros for the legacy device
+    And the todo "t-2" has no pomodoro counters
+    And every field of the todo "t-1" is stamped by the legacy device at "2026-09-28T09:00:00Z"
+    And the todo "t-2" sorts before the todo "t-1"
+    And the position key of the todo "t-2" is "0000015"
+
+  @domain @REQ-SYNC
+  Scenario: A deleted legacy todo stays deleted
+    Given a deleted legacy todo "t-9" updated at "2026-09-28T09:00:00Z"
+    When the legacy file is converted
+    Then the todo "t-9" is deleted
+
+  @domain @REQ-SYNC
+  Scenario: The sync file survives writing and reading
+    Given a todo "a" on both devices
+    And device A completes the todo
+    When the state of device A is written to a sync file and read back
+    Then the state is unchanged
+
+  @domain @REQ-SYNC
+  Scenario: A sync file of another format is refused
+    When a sync file of format 3 is read
+    Then reading fails with "Die Sync-Datei hat das Format 3, diese Version versteht 2. Bitte nunc aktualisieren."
+
+  @domain @REQ-SYNC
+  Scenario: A session is the same however its start is written
+    Given a session started at "2026-03-01T10:00:00Z" on device A
+    And a session started at "2026-03-01T11:00:00+01:00" on device A
+    And the same session of device A is also known to device B
+    When the states are merged in either order
+    Then there are 1 sessions
+

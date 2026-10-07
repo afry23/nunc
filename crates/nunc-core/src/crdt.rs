@@ -12,7 +12,7 @@
 
 use std::collections::BTreeMap;
 
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::hlc::Hlc;
@@ -150,10 +150,11 @@ impl TodoCrdt {
         .unwrap_or(&self.deleted.clock)
     }
 
-    /// Gelöscht gilt nur, wenn das Löschen jünger ist als jede Bearbeitung: Wer ein Todo bearbeitet, das ein
-    /// anderes Gerät gleichzeitig gelöscht hat, behält es.
+    /// Gelöscht gilt nur, wenn das Löschen nicht älter ist als jede Bearbeitung: Wer ein Todo bearbeitet, das ein
+    /// anderes Gerät gleichzeitig gelöscht hat, behält es. Bei genau demselben Stempel (Bestandsdaten und der Import
+    /// der alten Datei stempeln alle Felder gleich) gilt das Todo als gelöscht.
     pub fn is_deleted(&self) -> bool {
-        self.deleted.value && self.deleted.clock > *self.latest_edit()
+        self.deleted.value && self.deleted.clock >= *self.latest_edit()
     }
 
     pub fn merge(&self, other: &Self) -> Self {
@@ -198,9 +199,17 @@ fn tags(description: &str, prefix: char) -> Vec<String> {
         .collect()
 }
 
-/// Identität einer Session: Ursprungsgerät und Beginn.
+/// Identität einer Session: Ursprungsgerät und Beginn. Der Beginn zählt als Zeitpunkt, nicht als Text
+/// (`…:00.5Z` und `…:00Z`, andere Zeitzonen); Unlesbares bleibt unverändert.
 pub fn session_key(session: &SyncSession) -> String {
-    format!("{}|{}", session.device_id, session.started_at)
+    let started = DateTime::parse_from_rfc3339(&session.started_at).map_or_else(
+        |_| session.started_at.clone(),
+        |time| {
+            time.with_timezone(&Utc)
+                .to_rfc3339_opts(SecondsFormat::Nanos, true)
+        },
+    );
+    format!("{}|{started}", session.device_id)
 }
 
 /// Der gesamte Sync-Zustand eines Geräts.
@@ -286,11 +295,13 @@ mod tests {
     }
 
     #[test]
-    fn a_deletion_with_the_same_stamp_as_an_edit_does_not_delete() {
+    fn a_deletion_is_not_older_than_the_last_edit() {
         let mut todo = TodoCrdt::new("a", &clock(1));
         todo.description.set("edited".to_owned(), clock(9));
-        todo.deleted.set(true, clock(9));
+        todo.deleted.set(true, clock(8));
         assert!(!todo.is_deleted());
+        todo.deleted.set(true, clock(9));
+        assert!(todo.is_deleted());
         todo.deleted.set(true, clock(10));
         assert!(todo.is_deleted());
     }

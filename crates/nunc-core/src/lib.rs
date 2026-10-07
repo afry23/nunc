@@ -12,6 +12,7 @@ pub mod hlc;
 pub mod model;
 pub mod position;
 pub mod stats;
+pub mod sync_document;
 pub mod sync_merge;
 pub mod timer;
 pub mod todo_query;

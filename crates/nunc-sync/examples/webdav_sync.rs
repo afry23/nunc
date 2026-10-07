@@ -10,13 +10,12 @@ use std::sync::Mutex;
 
 use chrono::{DateTime, Utc};
 use nunc_core::clock::Clock;
-use nunc_core::model::{SyncFile, SyncProvider, SyncSession, SyncTodo, WebDavAuth, WebDavConfig};
+use nunc_core::model::{SyncProvider, WebDavAuth, WebDavConfig};
 use nunc_store::{Applied, Connection, StoreError};
 use nunc_sync::{SyncSetup, SyncStore, WebDavClient, sync_webdav};
 
 struct Store {
     conn: Mutex<Connection>,
-    device_id: String,
 }
 
 fn random_id() -> String {
@@ -24,9 +23,9 @@ fn random_id() -> String {
 }
 
 impl SyncStore for Store {
-    fn local_file(&self, now: DateTime<Utc>) -> Result<SyncFile, StoreError> {
+    fn local_state(&self) -> Result<nunc_core::crdt::SyncState, StoreError> {
         let conn = self.conn.lock().unwrap();
-        nunc_store::build_sync_file(&conn, &self.device_id, now, random_id)
+        nunc_store::local_state(&conn, random_id)
     }
 
     fn setup(&self) -> Result<SyncSetup, StoreError> {
@@ -45,12 +44,8 @@ impl SyncStore for Store {
         Ok(())
     }
 
-    fn apply_remote(
-        &self,
-        todos: &[SyncTodo],
-        sessions: &[SyncSession],
-    ) -> Result<Applied, StoreError> {
-        nunc_store::apply_remote(&mut self.conn.lock().unwrap(), todos, sessions)
+    fn apply_state(&self, merged: &nunc_core::crdt::SyncState) -> Result<Applied, StoreError> {
+        nunc_store::apply_state(&mut self.conn.lock().unwrap(), merged)
     }
 }
 
@@ -72,13 +67,12 @@ async fn main() {
         std::process::exit(2);
     };
     let conn = nunc_store::open(std::path::Path::new(db)).expect("Datenbank öffnen");
-    let device_id = nunc_store::device_id(&conn, random_id).expect("Geräte-ID");
+    nunc_store::device_id(&conn, random_id).expect("Geräte-ID");
     if let Some(text) = rest.first() {
         nunc_store::add_todo(&conn, text, &random_id(), Utc::now()).expect("Todo anlegen");
     }
     let store = Store {
         conn: Mutex::new(conn),
-        device_id,
     };
     let client = WebDavClient::new(
         WebDavConfig {

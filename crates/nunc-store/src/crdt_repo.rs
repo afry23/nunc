@@ -5,13 +5,14 @@
 //! und nach der Änderung und stempelt **nur die Felder, die sich geändert haben**; das ist die Grundlage dafür,
 //! dass gleichzeitige Änderungen verschiedener Felder beim Sync beide erhalten bleiben.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::{DateTime, TimeZone, Utc};
 use nunc_core::crdt::{Register, SyncState, TodoCrdt, session_key};
 use nunc_core::hlc::Hlc;
 use nunc_core::model::SyncSession;
 use nunc_core::position::position_between;
+use nunc_core::todotxt::parse_line;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::StoreError;
@@ -82,7 +83,7 @@ fn day(text: Option<String>) -> Option<String> {
 pub(crate) fn fields_of(conn: &Connection, id: i64) -> Result<Option<Fields>, StoreError> {
     Ok(conn
         .query_row(
-            "SELECT t.priority, t.completed, t.completed_at, t.created_at, t.description,
+            "SELECT t.priority, t.completed, t.completed_at, t.created_at, t.raw_text,
                     COALESCE(k.key, ''), t.deleted
              FROM todos t LEFT JOIN todo_position_key k ON k.todo_id = t.id
              WHERE t.id = ?1",
@@ -93,7 +94,8 @@ pub(crate) fn fields_of(conn: &Connection, id: i64) -> Result<Option<Fields>, St
                     completed: row.get(1)?,
                     completed_at: day(row.get(2)?),
                     created_at: day(row.get(3)?),
-                    description: row.get(4)?,
+                    // Die Go-App speichert die Beschreibung ohne Tags; die Zeile ist maßgeblich.
+                    description: parse_line(&row.get::<_, String>(4)?).description,
                     position: row.get(5)?,
                     deleted: row.get(6)?,
                 })
@@ -545,14 +547,19 @@ pub fn apply_state(conn: &mut Connection, merged: &SyncState) -> Result<Applied,
             }
         }
     }
-    for session in merged.sessions.values() {
-        let known: bool = tx.query_row(
-            "SELECT EXISTS(SELECT 1 FROM sessions
-                           WHERE started_at = ?1 AND COALESCE(sync_device_id, '') = ?2)",
-            params![session.started_at, session.device_id],
-            |row| row.get(0),
-        )?;
-        if known {
+    let device = local_device(&tx)?;
+    let known: HashSet<String> = tx
+        .prepare(
+            "SELECT COALESCE(sync_device_id, ''), mode, session_type, status, started_at,
+                    COALESCE(ended_at, ''), COALESCE(planned_min, 0), COALESCE(actual_min, 0),
+                    COALESCE(break_min, 0)
+             FROM sessions",
+        )?
+        .query_map([], |row| sync_session(row, &device))?
+        .map(|session| session.map(|session| session_key(&session)))
+        .collect::<Result<_, _>>()?;
+    for (key, session) in &merged.sessions {
+        if known.contains(key) {
             continue;
         }
         applied.sessions_added += 1;
