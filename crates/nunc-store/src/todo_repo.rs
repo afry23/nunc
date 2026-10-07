@@ -11,6 +11,9 @@ use nunc_core::todotxt_file::{export_todotxt as export_todotxt_text, plan_import
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::StoreError;
+use crate::crdt_repo::{
+    add_pomodoro, atomic, fields_of, register_new_todo, rekey_positions, stamp_changes,
+};
 use crate::time::{day_text, parse_day, to_text};
 
 const COLUMNS: &str = "id, raw_text, priority, completed, completed_at, created_at, description, \
@@ -83,25 +86,29 @@ pub fn add_todo(
     now: DateTime<Utc>,
 ) -> Result<Todo, StoreError> {
     let parsed = parse_line(raw_text);
-    conn.execute(
-        "INSERT INTO todos (raw_text, priority, completed, completed_at, created_at, description,
-                            project_tags, context_tags, pomodoro_count, position, updated_at, sync_id)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0,
-                 (SELECT COALESCE(MAX(position), -1) + 1 FROM todos), ?9, ?10)",
-        params![
-            raw_text,
-            parsed.priority.map(String::from),
-            parsed.completed,
-            parsed.completed_at.map(day_text),
-            parsed.created_at.map(day_text),
-            parsed.description,
-            tags_json(&parsed.project_tags)?,
-            tags_json(&parsed.context_tags)?,
-            to_text(now),
-            sync_id,
-        ],
-    )?;
-    let id = i32::try_from(conn.last_insert_rowid()).unwrap_or(i32::MAX);
+    let id = atomic(conn, || {
+        conn.execute(
+            "INSERT INTO todos (raw_text, priority, completed, completed_at, created_at, description,
+                                project_tags, context_tags, pomodoro_count, position, updated_at, sync_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0,
+                     (SELECT COALESCE(MAX(position), -1) + 1 FROM todos), ?9, ?10)",
+            params![
+                raw_text,
+                parsed.priority.map(String::from),
+                parsed.completed,
+                parsed.completed_at.map(day_text),
+                parsed.created_at.map(day_text),
+                parsed.description,
+                tags_json(&parsed.project_tags)?,
+                tags_json(&parsed.context_tags)?,
+                to_text(now),
+                sync_id,
+            ],
+        )?;
+        let id = conn.last_insert_rowid();
+        register_new_todo(conn, id, now)?;
+        Ok(i32::try_from(id).unwrap_or(i32::MAX))
+    })?;
     get(conn, id)
 }
 
@@ -114,36 +121,43 @@ pub fn update_todo(
 ) -> Result<Todo, StoreError> {
     get(conn, id)?;
     let parsed = parse_line(raw_text);
-    conn.execute(
-        "UPDATE todos SET raw_text = ?1, priority = ?2, completed = ?3, completed_at = ?4,
-                created_at = ?5, description = ?6, project_tags = ?7, context_tags = ?8, updated_at = ?9
-         WHERE id = ?10",
-        params![
-            raw_text,
-            parsed.priority.map(String::from),
-            parsed.completed,
-            parsed.completed_at.map(day_text),
-            parsed.created_at.map(day_text),
-            parsed.description,
-            tags_json(&parsed.project_tags)?,
-            tags_json(&parsed.context_tags)?,
-            to_text(now),
-            id,
-        ],
-    )?;
+    atomic(conn, || {
+        let before = fields_of(conn, id.into())?;
+        conn.execute(
+            "UPDATE todos SET raw_text = ?1, priority = ?2, completed = ?3, completed_at = ?4,
+                    created_at = ?5, description = ?6, project_tags = ?7, context_tags = ?8, updated_at = ?9
+             WHERE id = ?10",
+            params![
+                raw_text,
+                parsed.priority.map(String::from),
+                parsed.completed,
+                parsed.completed_at.map(day_text),
+                parsed.created_at.map(day_text),
+                parsed.description,
+                tags_json(&parsed.project_tags)?,
+                tags_json(&parsed.context_tags)?,
+                to_text(now),
+                id,
+            ],
+        )?;
+        stamp_changes(conn, id.into(), before.as_ref(), now)
+    })?;
     get(conn, id)
 }
 
 /// Löscht weich. Sessions behalten ihre Verknüpfung zum Todo.
 pub fn delete_todo(conn: &Connection, id: i32, now: DateTime<Utc>) -> Result<(), StoreError> {
-    let changed = conn.execute(
-        "UPDATE todos SET deleted = 1, updated_at = ?1 WHERE id = ?2",
-        params![to_text(now), id],
-    )?;
-    if changed == 0 {
-        return Err(StoreError::NotFound { entity: "Todo", id });
-    }
-    Ok(())
+    atomic(conn, || {
+        let before = fields_of(conn, id.into())?;
+        let changed = conn.execute(
+            "UPDATE todos SET deleted = 1, updated_at = ?1 WHERE id = ?2",
+            params![to_text(now), id],
+        )?;
+        if changed == 0 {
+            return Err(StoreError::NotFound { entity: "Todo", id });
+        }
+        stamp_changes(conn, id.into(), before.as_ref(), now)
+    })
 }
 
 /// Hakt ab (`today` wird Erledigungsdatum) oder nimmt den Haken zurück; `raw_text` wird neu aufgebaut.
@@ -165,16 +179,25 @@ pub fn set_todo_completed(
         description: todo.description,
         ..ParsedTodo::default()
     });
-    conn.execute(
-        "UPDATE todos SET raw_text = ?1, completed = ?2, completed_at = ?3, updated_at = ?4 WHERE id = ?5",
-        params![raw_text, completed, completed_at.map(day_text), to_text(now), id],
-    )?;
+    atomic(conn, || {
+        let before = fields_of(conn, id.into())?;
+        conn.execute(
+            "UPDATE todos SET raw_text = ?1, completed = ?2, completed_at = ?3, updated_at = ?4 WHERE id = ?5",
+            params![raw_text, completed, completed_at.map(day_text), to_text(now), id],
+        )?;
+        stamp_changes(conn, id.into(), before.as_ref(), now)
+    })?;
     get(conn, id)
 }
 
 /// Setzt die Position jedes Todos auf seinen Index in `ids` (atomar). Unbekannte IDs werden übergangen,
-/// nicht genannte Todos behalten ihre Position.
-pub fn reorder_todos(conn: &mut Connection, ids: &[i32]) -> Result<(), StoreError> {
+/// nicht genannte Todos behalten ihre Position. Danach passen die Fractional-Index-Schlüssel zur neuen Reihenfolge;
+/// gestempelt werden nur Todos, deren Schlüssel sich ändert (ADR 0016).
+pub fn reorder_todos(
+    conn: &mut Connection,
+    ids: &[i32],
+    now: DateTime<Utc>,
+) -> Result<(), StoreError> {
     let tx = conn.transaction()?;
     for (position, id) in (0_i64..).zip(ids) {
         tx.execute(
@@ -182,6 +205,7 @@ pub fn reorder_todos(conn: &mut Connection, ids: &[i32]) -> Result<(), StoreErro
             params![position, id],
         )?;
     }
+    rekey_positions(&tx, now)?;
     tx.commit()?;
     Ok(())
 }
@@ -224,14 +248,15 @@ pub fn export_todotxt(conn: &Connection, include_completed: bool) -> Result<Stri
 
 /// Zählt einen abgeschlossenen Pomodoro für das Todo.
 pub fn increment_pomodoro_count(conn: &Connection, id: i32) -> Result<(), StoreError> {
-    let changed = conn.execute(
-        "UPDATE todos SET pomodoro_count = pomodoro_count + 1 WHERE id = ?1",
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM todos WHERE id = ?1)",
         [id],
+        |row| row.get(0),
     )?;
-    if changed == 0 {
+    if !exists {
         return Err(StoreError::NotFound { entity: "Todo", id });
     }
-    Ok(())
+    atomic(conn, || add_pomodoro(conn, id.into()))
 }
 
 #[cfg(test)]
@@ -273,7 +298,7 @@ mod tests {
             set_todo_completed(&conn, todo.id, true, today(), now()),
             todo.id,
         );
-        reorder_todos(&mut conn, &[todo.id]).unwrap();
+        reorder_todos(&mut conn, &[todo.id], now()).unwrap();
     }
 
     #[test]
@@ -313,7 +338,7 @@ mod tests {
         let mut conn = open_in_memory().unwrap();
         let a = add_todo(&conn, "a", "s1", now()).unwrap();
         let b = add_todo(&conn, "b", "s2", now()).unwrap();
-        reorder_todos(&mut conn, &[b.id, a.id]).unwrap();
+        reorder_todos(&mut conn, &[b.id, a.id], now()).unwrap();
         increment_pomodoro_count(&conn, a.id).unwrap();
         let stamps: i64 = conn
             .query_row(
@@ -370,7 +395,7 @@ mod tests {
             .iter()
             .map(|t| add_todo(&conn, t, t, now()).unwrap().id)
             .collect();
-        reorder_todos(&mut conn, &[ids[2], ids[1]]).unwrap();
+        reorder_todos(&mut conn, &[ids[2], ids[1]], now()).unwrap();
         let order: Vec<i32> = list_todos(&conn).unwrap().iter().map(|t| t.id).collect();
         // c=0, b=1, a bleibt 0 -> a (id 1) vor c (id 3)
         assert_eq!(order, [ids[0], ids[2], ids[1]]);

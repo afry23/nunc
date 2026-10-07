@@ -8,10 +8,10 @@ Ziel: Neuschreiben als **Tauri 2** (Rust-Backend, React + TypeScript-Frontend), 
 Entscheidungen (User):
 - Gherkin **englisch**
 - Mobile v1: **WebDAV-Sync + Backup/Restore**. Google Drive + Todoist v1 nur Desktop (Mobile später, Deep-Link-OAuth).
-- **Voll kompatibel** mit Go-App: gleiches SQLite-Schema (Migrationen 001–005), gleiches `nunc-sync.json`-Format (schema_version), Go-Backups restorebar, Parallelbetrieb via Sync möglich.
+- **Kein Go-Parallelbetrieb mehr** (Entscheidung 2026-10-07, ADR 0016): Schema 001–005 bleibt für Bestandsdaten, das Sync-Format ist ein eigenes CRDT-Format (`nunc-sync.v2.json`).
 - Projektort: **`/Users/afry/code/tauri/nunc-app/nunc`** (eigenes Git-Repo). `nunc-go/` bleibt Referenz, unverändert.
 
-Quellen der Wahrheit für Fachlogik: `nunc-go/REQUIREMENTS.md`, `STORIES.md`, `nunc-userstories/*.md`, `DESIGN.md`, `screens/*` (Stitch-Mockups), Go-Tests in `nunc-go/internal/**/_test.go` (Table-Driven → Scenario Outlines). Achtung: `nunc-go/CLAUDE.md` teils veraltet (sagt Wails v2, kennt Sync nicht) — Code gewinnt.
+Quellen der Wahrheit für Fachlogik: `nunc-go/REQUIREMENTS.md`, `STORIES.md`, `nunc-userstories/*.md`, `DESIGN.md`, `screens/*` (Stitch-Mockups), Go-Tests in `nunc-go/internal/**/_test.go` (Table-Driven → Scenario Outlines). Achtung: `nunc-go/CLAUDE.md` teils veraltet (sagt Wails v2, kennt Sync nicht). Die Go-Quellen sind Referenz, nicht mehr bindend.
 
 ---
 
@@ -95,7 +95,7 @@ features/
 ├── todos/todotxt_parsing.feature, crud.feature, filter_sort.feature
 ├── stats/aggregation.feature, streaks.feature, export.feature
 ├── backup/daily_backup.feature, rotation.feature, restore.feature
-├── sync/provider.feature, webdav.feature, google_drive.feature, merge.feature, compat_go.feature
+├── sync/provider.feature, webdav.feature, google_drive.feature, crdt.feature, crdt_store.feature, existing_database.feature
 ├── todoist/auth.feature, mapping.feature, sync.feature
 └── ui/navigation.feature, shortcuts.feature, responsive.feature
 ```
@@ -142,7 +142,7 @@ Feature: Flowtime break recommendation
 
 Quellen für Szenarien: `timer_test.go`, `timer_pure_test.go`, `todos_parse_test.go`, `todos_test.go`, `stats_test.go`, `stats_streaks_test.go`, `backup_*_test.go`, `sync_merge_test.go`, `sync_webdav_merge_test.go`, `settings_test.go`, `todoist/mapping_test.go`, `db_test.go`.
 
-**Kompatibilitäts-Szenarien** (`compat_go.feature`): Fixtures = echte DB/Sync-Datei aus Go-App (`tests/fixtures/go-v1.db`, `nunc-sync.json`) → „Given a backup created by nunc-go, When I restore it, Then all todos and sessions are present“; Roundtrip Sync-Datei Go → Rust → Go-Format byte-semantisch gleich.
+**Bestandsdaten-Szenarien** (`existing_database.feature`): Fixtures = echte DB aus der Go-App (`tests/fixtures/go-v5.db`) → „Given a backup created by nunc-go, When I restore it, Then all todos and sessions are present“. Die alte Sync-Datei `nunc-sync.json` wird nur einmal importiert (ADR 0016); der Roundtrip Go → Rust → Go entfällt.
 
 ---
 
@@ -172,7 +172,7 @@ Jede Phase endet mit grünen Checks (s. 5) und lauffähigem Build.
 - Repos: settings (Key-Value mit typisierten Defaults = `models.DefaultSettings()`), todos, sessions, todoist_mappings, sync-Metadaten.
 - Backup: `VACUUM INTO`, tägliches Auto-Backup (max. 1/Tag, Hintergrund), Rotation 7, `before-restore-YYYY-MM-DD.db`, Restore mit Schema-Validierung + atomarem Swap + Service-Reinit + `app:reload`-Event.
 - Erstes Starten: alte Go-DB am Go-Pfad erkennen → übernehmen.
-- `@integration`-Szenarien inkl. `compat_go.feature` grün.
+- `@integration`-Szenarien inkl. `existing_database.feature` grün.
 
 ### Phase 4 – Tauri-Commands & Timer-Runtime (≈ 1,5 Wochen)
 - Commands 1:1 zu `nunc-go/app.go` (GetSettings, SaveSettings, GetTodos, AddTodo, UpdateTodo, DeleteTodo, SetTodoCompleted, ReorderTodos, StartTimer, StartBreak, PauseTimer, ResumeTimer, StopTimer, GetTimerTick, GetStats, ExportStats, SaveExportToFile, Backup*/Restore*, Sync*, Todoist*), snake_case in Rust, specta exportiert camelCase-Typen identisch zu Go-JSON-Tags.
@@ -217,7 +217,7 @@ Google Drive + Todoist auf Mobile (Deep-Link-OAuth, Plattform-Client-IDs), Home-
 | Timer im Hintergrund (Mobile) | Zeitstempel-Modell + geplante Notifications; Spike in Phase 1 |
 | Secure Storage Android | `android-native-keyring-store` (Spike M0-10 bestätigt, kein eigenes Plugin nötig) |
 | `tauri-driver` ohne macOS-Support | E2E-Desktop in CI auf Linux/Windows; macOS manuell + `@ui`-Ebene deckt Logik ab |
-| Schema-Kompatibilität bricht | Nur additive Migrationen; `compat_go.feature` mit echten Go-Fixtures in CI |
+| Schema-Kompatibilität bricht | Nur additive Migrationen; `existing_database.feature` mit echten Go-Fixtures in CI |
 | `.ogg` auf iOS | `.mp3`-Assets |
 | OAuth-Loopback-Port belegt | Port-Fallback-Liste; Redirect-URIs bei Google/Todoist registrieren |
 

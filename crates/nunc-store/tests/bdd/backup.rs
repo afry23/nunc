@@ -1,4 +1,4 @@
-//! Steps für Backup und Restore (`features/backup/*.feature`, Restore-Szenario in `compat_go.feature`).
+//! Steps für Backup und Restore (`features/backup/*.feature`, Restore-Szenario in `existing_database.feature`).
 //! Ordnernamen in den Szenarien sind relativ zum Temp-Ordner des Szenarios.
 
 use std::fs;

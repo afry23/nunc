@@ -1,9 +1,9 @@
-//! Synchronisierung über Google Drive (Go: `services/sync.go`, `sync_drive.go`): Anmeldung, Sync-Lauf und
+//! Synchronisierung über Google Drive (ADR 0009): Anmeldung, Sync-Lauf und
 //! Steuerung der Verbindung. Das Zusammenführen ist dasselbe wie bei WebDAV (`engine::merge_remote`).
 //!
-//! Ablage: `nunc/nunc-sync.json` im Drive-Stamm, Scope `drive.file`. Drive kennt kein bedingtes Schreiben
+//! Ablage: `nunc/nunc-sync.v2.json` im Drive-Stamm, Scope `drive.file`. Drive kennt kein bedingtes Schreiben
 //! (WebDAV: ETag); vor dem Überschreiben prüft der Lauf deshalb die Änderungszeit der Datei und setzt neu an,
-//! wenn ein anderes Gerät dazwischen war. Ein Rest-Risiko bleibt (zwischen Prüfung und Schreiben), wie in Go.
+//! wenn ein anderes Gerät dazwischen war. Ein Rest-Risiko bleibt (zwischen Prüfung und Schreiben).
 
 mod client;
 
@@ -11,21 +11,25 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use nunc_core::clock::Clock;
+use nunc_core::crdt::SyncState;
 use nunc_core::model::{DriveStatus, SyncFile, SyncImportInfo, SyncProvider, SyncResult};
+use nunc_core::sync_document::SyncDocument;
 use nunc_platform::{SecretStore, UrlOpener};
 
 pub use client::{DriveClient, DriveFile};
 
 use crate::SyncError;
 use crate::coordinator::{RunFuture, SyncRunner};
-use crate::engine::{MAX_ATTEMPTS, SyncStore, merge_remote};
+use crate::engine::{MAX_ATTEMPTS, SyncStore, merge_remote, remote_state};
 use crate::oauth::{
     AuthorizeOptions, Connection, OAuthApp, Page, TokenSource, Vault, authorize, http_client,
 };
 
-/// Ordner und Datei im Drive (wie in der Go-App).
+/// Ordner und Datei im Drive.
 pub const FOLDER_NAME: &str = "nunc";
-pub const FILE_NAME: &str = "nunc-sync.json";
+pub const FILE_NAME: &str = "nunc-sync.v2.json";
+/// Alte Datei (Format vor ADR 0016), nur für den einmaligen Import.
+pub const LEGACY_FILE_NAME: &str = "nunc-sync.json";
 /// Eintrag im Tresor.
 pub const SECRET_ACCOUNT: &str = "google-drive";
 const SERVICE: &str = "Google Drive";
@@ -169,22 +173,27 @@ impl DriveService {
 
     /// Gibt es auf Drive Stand, den ein Gerät ohne eigene Daten übernehmen kann?
     pub async fn check_import(&self, store: &dyn SyncStore) -> Result<SyncImportInfo, SyncError> {
-        let local = store.local_file(self.clock.now())?;
+        let local = store.local_state()?;
         let has_local_data =
-            local.todos.iter().any(|todo| !todo.deleted) || !local.sessions.is_empty();
+            local.todos.values().any(|todo| !todo.is_deleted()) || !local.sessions.is_empty();
         if has_local_data {
             return Ok(SyncImportInfo::default());
         }
         let client = self.client()?;
         let folder = client.find_or_create_folder(FOLDER_NAME).await?;
-        let Some(file) = client.find_file(FILE_NAME, &folder).await? else {
+        let Some((remote, _)) = fetch_remote(&client, &folder).await? else {
             return Ok(SyncImportInfo::default());
         };
-        let remote = parse(&client.download(&file.id).await?)?;
         Ok(SyncImportInfo {
             available: true,
-            todo_count: u32::try_from(remote.todos.iter().filter(|todo| !todo.deleted).count())
-                .unwrap_or(u32::MAX),
+            todo_count: u32::try_from(
+                remote
+                    .todos
+                    .values()
+                    .filter(|todo| !todo.is_deleted())
+                    .count(),
+            )
+            .unwrap_or(u32::MAX),
             session_count: u32::try_from(remote.sessions.len()).unwrap_or(u32::MAX),
         })
     }
@@ -198,15 +207,34 @@ impl DriveService {
     }
 }
 
-fn parse(bytes: &[u8]) -> Result<SyncFile, SyncError> {
+fn parse<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, SyncError> {
     serde_json::from_slice(bytes).map_err(|error| SyncError::InvalidFile(error.to_string()))
 }
 
-fn encode(file: &SyncFile) -> Result<Vec<u8>, SyncError> {
+fn encode(file: &SyncDocument) -> Result<Vec<u8>, SyncError> {
     serde_json::to_vec_pretty(file).map_err(|error| SyncError::InvalidFile(error.to_string()))
 }
 
-/// Führt einen Sync-Lauf gegen Drive aus (Go: `performSync`).
+/// Der Stand auf Drive: die v2-Datei samt Eintrag oder, wenn es nur die alte `nunc-sync.json` gibt, deren
+/// Inhalt (einmaliger Import; ohne Eintrag, denn geschrieben wird immer die v2-Datei).
+async fn fetch_remote(
+    client: &DriveClient,
+    folder: &str,
+) -> Result<Option<(SyncState, Option<DriveFile>)>, SyncError> {
+    let current = client.find_file(FILE_NAME, folder).await?;
+    let document: Option<SyncDocument> = match &current {
+        Some(file) => Some(parse(&client.download(&file.id).await?)?),
+        None => None,
+    };
+    let legacy: Option<SyncFile> =
+        match (&current, client.find_file(LEGACY_FILE_NAME, folder).await?) {
+            (None, Some(file)) => Some(parse(&client.download(&file.id).await?)?),
+            _ => None,
+        };
+    Ok(remote_state(document.as_ref(), legacy.as_ref())?.map(|state| (state, current)))
+}
+
+/// Führt einen Sync-Lauf gegen Drive aus.
 pub async fn sync_drive(
     client: &DriveClient,
     store: &dyn SyncStore,
@@ -215,12 +243,12 @@ pub async fn sync_drive(
     let folder = client.find_or_create_folder(FOLDER_NAME).await?;
     let mut result = SyncResult::default();
     for _ in 0..MAX_ATTEMPTS {
-        let file = client.find_file(FILE_NAME, &folder).await?;
-        let remote = match &file {
-            Some(file) => Some(parse(&client.download(&file.id).await?)?),
-            None => None,
+        let remote = fetch_remote(client, &folder).await?;
+        let (state, file) = match remote {
+            Some((state, file)) => (Some(state), file),
+            None => (None, None),
         };
-        let merged = merge_remote(store, clock, remote.as_ref(), &mut result)?;
+        let merged = merge_remote(store, clock, state.as_ref(), &mut result)?;
         let data = encode(&merged)?;
         match file {
             Some(file) => {

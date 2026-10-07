@@ -38,8 +38,8 @@ bei beiden Diensten nicht als vertraulich, gehören aber nicht ins Repository.
 - **Scope nur `drive.file`.** Die Go-App fragte zusätzlich `userinfo.email` an, um das Konto anzuzeigen. Die Adresse
   liefert auch `about.get?fields=user(emailAddress)` mit `drive.file`; ein zweiter Scope entfällt, die Anzeige „Verbunden
   als …“ bleibt (schlägt der Aufruf fehl, ist die Verbindung trotzdem hergestellt).
-- **Format und Merge wie WebDAV:** `nunc/nunc-sync.json` im Drive-Stamm, derselbe `SyncFile`, dieselbe Merge-Funktion
-  (`engine::merge_remote`). Der Ordner wird bei Bedarf angelegt, eine gelöschte Datei führt zum Hochladen des lokalen
+- **Format und Merge wie WebDAV:** `nunc/nunc-sync.v2.json` im Drive-Stamm (CRDT-Format, ADR 0016), dieselbe
+  Merge-Funktion (`engine::merge_remote`); gibt es nur die alte `nunc-sync.json`, wird sie einmal importiert. Der Ordner wird bei Bedarf angelegt, eine gelöschte Datei führt zum Hochladen des lokalen
   Stands.
 - **Gleichzeitige Änderungen:** Drive kennt kein bedingtes Schreiben (WebDAV: `If-Match`). Vor dem Überschreiben liest der
   Lauf die Änderungszeit der Datei erneut und setzt (höchstens dreimal) neu an, wenn sie von der beim Laden abweicht.

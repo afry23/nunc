@@ -11,11 +11,11 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 
 - Plan und Architektur: [`PLAN.md`](./PLAN.md) · Tickets und Reihenfolge: [`roadmap.md`](./roadmap.md)
 - Entscheidungen: [`docs/adr/`](./docs/adr/) (vor größeren Änderungen lesen)
-- Fachliche Quelle: `../nunc-go/` (REQUIREMENTS.md, STORIES.md, DESIGN.md, `internal/**/_test.go`).
-  Der Go-Code gewinnt gegenüber veralteter Doku (`nunc-go/CLAUDE.md` nennt Wails v2 und kennt Sync nicht).
-- **Datenkompatibilität zur Go-App ist Pflicht:** gleiches SQLite-Schema (Migrationen 001–005), gleiches
-  `nunc-sync.json`, Go-Backups müssen restorebar sein. **Ausnahme Secrets:** Tokens/Passwörter der Go-App
-  (Keychain) werden nicht übernommen, Konten werden neu verbunden.
+- Fachliche Referenz (nicht bindend): `../nunc-go/` (REQUIREMENTS.md, STORIES.md, DESIGN.md, `internal/**/_test.go`).
+  Auf die Go-App wird **keine Rücksicht** mehr genommen (kein Parallelbetrieb, kein gemeinsames Sync-Format).
+- **Bestandsdaten:** SQLite-Schema und Migrationen 001–005 bleiben unantastbar (bestehende nunc-Installationen,
+  Backups älterer nunc-Versionen müssen restorebar bleiben). Das Sync-Format ist ein eigenes CRDT-Format
+  (`nunc-sync.v2.json`, [ADR 0016](./docs/adr/0016-crdt-sync.md)). Secrets der Go-App werden nicht übernommen.
 
 ## Stack und Layout
 
@@ -31,7 +31,7 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 ```
 crates/nunc-core      pure Fachlogik, kein I/O, kein tokio
 crates/nunc-store     rusqlite, Migrationen, Repos, Backup/Restore
-crates/nunc-sync      WebDAV-, Google-Drive- und Todoist-Client (reqwest), OAuth (PKCE, Loopback), Sync-Läufe, Steuerung (Koordinator)
+crates/nunc-sync      WebDAV-, Google-Drive- und Todoist-Client (reqwest), OAuth (PKCE, Loopback), Sync-Läufe (CRDT-Merge liegt pur in nunc-core), Steuerung (Koordinator)
 crates/nunc-api       lokale HTTP-Schnittstelle (127.0.0.1, Token): pures Routing + hyper-Server, Desktop (ADR 0013)
 crates/nunc-platform  Traits + Fakes: Clock, EventSink, Notifier, SecretStore (Keyring), UrlOpener
 src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)])
@@ -100,9 +100,6 @@ npm run test:bdd                        # @ui (features/ui/*.feature, features/s
 npm run test:e2e                        # @e2e @desktop, braucht tauri-driver (Linux/Windows)
 npm run test:mobile                     # @e2e @mobile, Maestro-Flows gegen Emulator/Gerät (e2e/mobile/README.md)
 ```
-
-Go-Interop (manuell, braucht `../nunc-go` und Go): `tests/interop/go-reads-nunc-db.sh` (Go liest die nunc-DB),
-`tests/interop/webdav-go-nunc.sh` (Go-App und nunc synchronisieren abwechselnd gegen einen WebDAV-Server, kein Docker nötig).
 
 Step-Definitions: Rust in `crates/*/tests/bdd/` (`main.rs` mit gemeinsamer `DomainWorld`, ein Modul pro Themenbereich), TypeScript in `tests/steps/` (`tests/helpers/ipc.ts` →
 `mockBackend({ app_info: () => … })`). Details: ADR 0006.

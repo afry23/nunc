@@ -8,7 +8,8 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Duration as ChronoDuration;
 use cucumber::{given, then, when};
 use nunc_core::clock::Clock;
-use nunc_core::model::{DriveStatus, SyncFile, SyncImportInfo};
+use nunc_core::model::{DriveStatus, SyncImportInfo};
+use nunc_core::sync_document::SyncDocument;
 use nunc_platform::{MemorySecretStore, SecretStore};
 use nunc_sync::oauth::{Connection, Tokens, Vault};
 use nunc_sync::{DriveConfig, DriveRunner, DriveService, SyncRunner};
@@ -18,6 +19,8 @@ use crate::SyncWorld;
 use crate::google::{AutoBrowser, Behavior, Google};
 
 const ACCOUNT: &str = "google-drive";
+const CURRENT: &str = "nunc-sync.v2.json";
+const LEGACY: &str = "nunc-sync.json";
 
 pub struct State {
     pub server: Option<Google>,
@@ -158,10 +161,20 @@ fn google_fails(world: &mut SyncWorld, status: u16) {
 
 #[given(expr = "the Drive folder {string} holds the sync file {string}")]
 fn folder_holding(world: &mut SyncWorld, folder: String, fixture: String) {
+    let bytes =
+        crate::steps::current_bytes(&std::fs::read(SyncWorld::fixture(&fixture)).expect("Fixture"));
+    google(world).with(|state| {
+        let id = state.add_folder(&folder);
+        state.add_file(CURRENT, &id, bytes);
+    });
+}
+
+#[given(expr = "the Drive folder {string} holds the legacy sync file {string}")]
+fn folder_holding_legacy(world: &mut SyncWorld, folder: String, fixture: String) {
     let bytes = std::fs::read(SyncWorld::fixture(&fixture)).expect("Fixture");
     google(world).with(|state| {
         let id = state.add_folder(&folder);
-        state.add_file("nunc-sync.json", &id, bytes);
+        state.add_file(LEGACY, &id, bytes);
     });
 }
 
@@ -169,7 +182,7 @@ fn folder_holding(world: &mut SyncWorld, folder: String, fixture: String) {
 fn folder_broken(world: &mut SyncWorld, folder: String) {
     google(world).with(|state| {
         let id = state.add_folder(&folder);
-        state.add_file("nunc-sync.json", &id, b"{ kein JSON".to_vec());
+        state.add_file(CURRENT, &id, b"{ kein JSON".to_vec());
     });
 }
 
@@ -181,13 +194,8 @@ fn folder_empty(world: &mut SyncWorld, folder: String) {
 #[given(expr = "another device adds the todo {string} to the Drive file during the first upload")]
 fn another_device(world: &mut SyncWorld, text: String) {
     google(world).with(|state| {
-        let item = state
-            .file_in("nunc", "nunc-sync.json")
-            .expect("keine Sync-Datei");
-        let mut file: SyncFile = serde_json::from_slice(&item.content).unwrap();
-        let id = format!("c-{}", file.todos.len() + 1);
-        file.todos.push(crate::steps::todo_json(&id, &text));
-        state.interfere = Some(serde_json::to_vec_pretty(&file).unwrap());
+        let item = state.file_in("nunc", CURRENT).expect("keine Sync-Datei");
+        state.interfere = Some(crate::steps::with_extra_todo(&item.content, &text));
     });
 }
 
@@ -354,13 +362,17 @@ fn not_contacted(world: &mut SyncWorld) {
 
 #[then(expr = "the sync file on Drive has the todos {string}")]
 fn drive_todos(world: &mut SyncWorld, texts: String) {
-    let expected: Vec<&str> = texts.split(',').map(str::trim).collect();
-    let file = drive_file(world);
-    let actual: Vec<&str> = file
+    let mut expected: Vec<String> = texts
+        .split(',')
+        .map(|text| text.trim().to_owned())
+        .collect();
+    let mut actual: Vec<String> = drive_file(world)
         .todos
         .iter()
-        .map(|todo| todo.raw_text.as_str())
+        .map(|todo| todo.raw_text())
         .collect();
+    expected.sort();
+    actual.sort();
     assert_eq!(actual, expected);
 }
 
@@ -370,10 +382,10 @@ fn drive_counts(world: &mut SyncWorld, todos: usize, sessions: usize) {
     assert_eq!((file.todos.len(), file.sessions.len()), (todos, sessions));
 }
 
-fn drive_file(world: &SyncWorld) -> SyncFile {
+fn drive_file(world: &SyncWorld) -> SyncDocument {
     let content = google(world).with(|state| {
         state
-            .file_in("nunc", "nunc-sync.json")
+            .file_in("nunc", CURRENT)
             .map(|item| item.content.clone())
     });
     serde_json::from_slice(&content.expect("keine Sync-Datei im Ordner nunc")).unwrap()
@@ -441,7 +453,7 @@ fn lookup_failed(world: &mut SyncWorld, message: String) {
 async fn appears(world: &mut SyncWorld, within: u64) {
     let deadline = std::time::Instant::now() + Duration::from_millis(within);
     loop {
-        if google(world).with(|state| state.file_in("nunc", "nunc-sync.json").is_some()) {
+        if google(world).with(|state| state.file_in("nunc", CURRENT).is_some()) {
             return;
         }
         assert!(
@@ -461,7 +473,7 @@ fn browser_not_opened(world: &mut SyncWorld) {
 fn drive_unchanged(world: &mut SyncWorld) {
     let content = google(world).with(|state| {
         state
-            .file_in("nunc", "nunc-sync.json")
+            .file_in("nunc", CURRENT)
             .map(|item| (item.content.clone(), item.version))
     });
     assert_eq!(content, Some((b"{ kein JSON".to_vec(), 1)));

@@ -2,6 +2,7 @@
 
 mod backup;
 mod connection;
+mod crdt_repo;
 mod error;
 mod legacy;
 mod migrations;
@@ -20,6 +21,7 @@ pub use backup::{
     set_backup_dir,
 };
 pub use connection::{open, open_in_memory};
+pub use crdt_repo::{apply_state, local_state};
 pub use error::StoreError;
 pub use legacy::{LegacyImport, import_legacy_db, legacy_db_path};
 pub use migrations::{MIGRATIONS, Migration, migrate};
@@ -28,9 +30,9 @@ pub use rusqlite::Connection;
 pub use session_repo::{commit_finish, list_sessions};
 pub use settings_repo::{device_id, load_settings, save_settings, set_sync_provider};
 pub use sync_repo::{
-    Applied, apply_remote, build_sync_file, drive_folder_id, last_sync_at, last_sync_of,
-    load_webdav_config, save_webdav_config, set_drive_folder_id, set_last_sync_at,
-    set_last_sync_of, set_todoist_last_sync_at, todoist_last_sync_at,
+    Applied, drive_folder_id, last_sync_at, last_sync_of, load_webdav_config, save_webdav_config,
+    set_drive_folder_id, set_last_sync_at, set_last_sync_of, set_todoist_last_sync_at,
+    todoist_last_sync_at,
 };
 pub use timer_state::{load_timer, save_timer};
 pub use todo_repo::{

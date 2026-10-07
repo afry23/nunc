@@ -13,8 +13,9 @@ Konten müssen neu verbunden werden.
   (`…/nunc/backups`) werden **nicht** verschoben; sie lassen sich über *Einstellungen → Datensicherung → Aus Datei
   wiederherstellen* einspielen.
 - **Sicherungen der Go-App** (`.db`) sind in nunc wiederherstellbar.
-- **Sync-Datei** `nunc-sync.json` (Google Drive, WebDAV) hat dasselbe Format: nunc und die Go-App können abwechselnd
-  über dasselbe Konto synchronisieren (Interop-Test: `tests/interop/webdav-go-nunc.sh`).
+- **Sync-Datei:** nunc schreibt `nunc-sync.v2.json` (CRDT-Format, ADR 0016) und liest die alte `nunc-sync.json` der
+  Go-App einmal beim ersten Sync als Startstand ein. Danach ignoriert nunc sie. **Die Go-App versteht das neue Format
+  nicht**: ein Parallelbetrieb mit der Go-App ist nicht mehr möglich.
 
 ## Was neu eingerichtet werden muss
 

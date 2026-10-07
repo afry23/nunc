@@ -7,11 +7,11 @@
 use cucumber::{World, WriterExt as _, given, then, when, writer};
 
 mod backup;
+mod crdt;
 mod export;
 mod properties;
 mod settings;
 mod stats;
-mod sync_merge;
 mod timer;
 mod todo_query;
 mod todoist;
@@ -24,10 +24,10 @@ mod todotxt_file;
 pub struct DomainWorld {
     value: i64,
     backup: backup::State,
+    crdt: crdt::State,
     export: export::State,
     settings: settings::State,
     stats: stats::State,
-    sync: sync_merge::State,
     timer: timer::State,
     todo_query: todo_query::State,
     todoist: todoist::State,

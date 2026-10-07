@@ -357,6 +357,21 @@ Play-Console- und TestFlight-Upload, Windows-/Mobil-Messung, Maestro. Entscheidu
 
 ---
 
+## M10 – CRDT-Sync (ADR 0016)
+
+Go-Kompatibilität entfällt. Todos werden feldweise per HLC-LWW zusammengeführt, `pomodoro_count` als G-Counter, Sessions bleiben G-Set.
+
+| ID | Ticket |
+|---|---|
+| M10-01 | ADR 0016, Doku/CLAUDE.md ohne Go-Pflicht, `@wip`-Szenarien `features/sync/crdt.feature` |
+| M10-02 | `nunc-core`: HLC und Register-Merge (`@domain`, `@property`) |
+| M10-03 | Migration 007, Feldstempelung in `todo_repo`, Bestandsmigration, `local_state`/`apply_state` (`@integration`) |
+| M10-04 | Sync-Engine: `nunc-sync.v2.json` (`SyncDocument`), Alt-Import, WebDAV und Drive |
+| M10-05 | Go-Altlasten entfernen: Interop-Skripte und Beispiele, LWW-Merge (`sync_merge`), `build_sync_file`/`apply_remote`, `compat_go.feature` → `existing_database.feature` |
+| M10-06 | Tombstone-GC, Release-Hinweis (Breaking im Mischbetrieb) |
+
+---
+
 ## Erweiterungen nach M8
 
 | Thema | Notiz |

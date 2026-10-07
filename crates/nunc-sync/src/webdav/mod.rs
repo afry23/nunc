@@ -1,4 +1,4 @@
-//! WebDAV-Client für `nunc-sync.json` (Go: `services/sync_webdav.go`, `sync_webdav_config.go`).
+//! WebDAV-Client für `nunc-sync.v2.json` (ADR 0016; die alte `nunc-sync.json` wird nur einmal gelesen).
 //!
 //! Anfragen: `PROPFIND` (Ordner prüfen, Verbindungstest), `MKCOL` (Ordner anlegen), `GET`/`PUT` (Datei).
 //! Beim Hochladen schützen `If-Match` (Datei vom Server geladen) bzw. `If-None-Match: *` (Datei gab es noch
@@ -12,13 +12,16 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use nunc_core::model::{ConnectionTestResult, SyncFile, WebDavAuth, WebDavConfig};
+use nunc_core::sync_document::SyncDocument;
 use reqwest::{Method, Response, StatusCode, Url, header};
 
 use crate::SyncError;
 use digest::Challenge;
 
-/// Name der Datei auf dem Server (wie in der Go-App).
-pub const SYNC_FILE_NAME: &str = "nunc-sync.json";
+/// Name der Datei auf dem Server.
+pub const SYNC_FILE_NAME: &str = "nunc-sync.v2.json";
+/// Name der alten Datei (Format vor ADR 0016), nur für den einmaligen Import.
+pub const LEGACY_FILE_NAME: &str = "nunc-sync.json";
 
 const PROPFIND_BODY: &str = r#"<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/></d:prop></d:propfind>"#;
 
@@ -36,7 +39,7 @@ pub enum Precondition {
 /// Die Datei vom Server samt ETag.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Remote {
-    pub file: SyncFile,
+    pub file: SyncDocument,
     pub etag: Option<String>,
 }
 
@@ -91,6 +94,10 @@ impl WebDavClient {
 
     fn file_url(&self) -> String {
         format!("{}{SYNC_FILE_NAME}", self.folder_url(usize::MAX))
+    }
+
+    fn legacy_file_url(&self) -> String {
+        format!("{}{LEGACY_FILE_NAME}", self.folder_url(usize::MAX))
     }
 
     async fn send(
@@ -260,9 +267,9 @@ impl WebDavClient {
         Ok(())
     }
 
-    /// Lädt die Sync-Datei; `None`, wenn es sie noch nicht gibt (erster Sync).
-    pub async fn download(&self) -> Result<Option<Remote>, SyncError> {
-        let response = self.send("GET", &self.file_url(), &[], None).await?;
+    /// Lädt eine Datei samt ETag; `None`, wenn es sie nicht gibt.
+    async fn fetch(&self, url: &str) -> Result<Option<(Vec<u8>, Option<String>)>, SyncError> {
+        let response = self.send("GET", url, &[], None).await?;
         let status = response.status();
         if status == StatusCode::NOT_FOUND {
             return Ok(None);
@@ -281,15 +288,33 @@ impl WebDavClient {
             .bytes()
             .await
             .map_err(|error| SyncError::Transport(describe_transport_error(&error)))?;
+        Ok(Some((bytes.to_vec(), etag)))
+    }
+
+    /// Lädt die Sync-Datei; `None`, wenn es sie noch nicht gibt (erster Sync).
+    pub async fn download(&self) -> Result<Option<Remote>, SyncError> {
+        let Some((bytes, etag)) = self.fetch(&self.file_url()).await? else {
+            return Ok(None);
+        };
         let file = serde_json::from_slice(&bytes)
             .map_err(|error| SyncError::InvalidFile(error.to_string()))?;
         Ok(Some(Remote { file, etag }))
     }
 
-    /// Schreibt die Sync-Datei (formatiert mit zwei Leerzeichen wie `json.MarshalIndent` in Go).
+    /// Lädt die alte Sync-Datei `nunc-sync.json` (Format vor ADR 0016) für den einmaligen Import.
+    pub async fn download_legacy(&self) -> Result<Option<SyncFile>, SyncError> {
+        let Some((bytes, _)) = self.fetch(&self.legacy_file_url()).await? else {
+            return Ok(None);
+        };
+        serde_json::from_slice(&bytes)
+            .map(Some)
+            .map_err(|error| SyncError::InvalidFile(error.to_string()))
+    }
+
+    /// Schreibt die Sync-Datei (eingerückt, damit sie sich lesen und vergleichen lässt).
     pub async fn upload(
         &self,
-        file: &SyncFile,
+        file: &SyncDocument,
         precondition: &Precondition,
     ) -> Result<(), SyncError> {
         let body = serde_json::to_vec_pretty(file)
@@ -398,11 +423,11 @@ mod tests {
         ] {
             let c = client(url, path);
             assert_eq!(c.folder_url(usize::MAX), "https://h.org/dav/nunc/");
-            assert_eq!(c.file_url(), "https://h.org/dav/nunc/nunc-sync.json");
+            assert_eq!(c.file_url(), "https://h.org/dav/nunc/nunc-sync.v2.json");
         }
         assert_eq!(
             client("https://h.org", "/").file_url(),
-            "https://h.org/nunc-sync.json"
+            "https://h.org/nunc-sync.v2.json"
         );
         let nested = client("https://h.org/dav", "/a b/c/");
         assert_eq!(nested.folder_url(1), "https://h.org/dav/a%20b/");

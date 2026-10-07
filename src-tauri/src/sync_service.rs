@@ -7,7 +7,8 @@ use chrono::NaiveDate;
 
 use chrono::{DateTime, Utc};
 use nunc_core::clock::Clock;
-use nunc_core::model::{SyncFile, SyncProvider, SyncResult, SyncSession, SyncStatus, SyncTodo};
+use nunc_core::crdt::SyncState;
+use nunc_core::model::{SyncProvider, SyncResult, SyncStatus};
 use nunc_core::todoist_mapping::{LocalTodo, TodoistMapping};
 use nunc_platform::{EventSink, SecretStore};
 use nunc_store::{Applied, StoreError};
@@ -29,12 +30,11 @@ use crate::events::{
 /// Netzwerkzugriffen eines Laufs bleibt sie frei.
 pub struct DbSyncStore {
     db: Arc<Db>,
-    device_id: String,
 }
 
 impl DbSyncStore {
-    pub fn new(db: Arc<Db>, device_id: String) -> Self {
-        Self { db, device_id }
+    pub fn new(db: Arc<Db>) -> Self {
+        Self { db }
     }
 
     fn with<T>(
@@ -46,12 +46,8 @@ impl DbSyncStore {
 }
 
 impl SyncStore for DbSyncStore {
-    fn local_file(&self, now: DateTime<Utc>) -> Result<SyncFile, StoreError> {
-        self.with(|conn| {
-            nunc_store::build_sync_file(conn, &self.device_id, now, || {
-                uuid::Uuid::new_v4().to_string()
-            })
-        })
+    fn local_state(&self) -> Result<SyncState, StoreError> {
+        self.with(|conn| nunc_store::local_state(conn, || uuid::Uuid::new_v4().to_string()))
     }
 
     fn setup(&self) -> Result<SyncSetup, StoreError> {
@@ -73,12 +69,8 @@ impl SyncStore for DbSyncStore {
         self.with(|conn| nunc_store::set_drive_folder_id(conn, id))
     }
 
-    fn apply_remote(
-        &self,
-        todos: &[SyncTodo],
-        sessions: &[SyncSession],
-    ) -> Result<Applied, StoreError> {
-        self.with(|conn| nunc_store::apply_remote(conn, todos, sessions))
+    fn apply_state(&self, merged: &SyncState) -> Result<Applied, StoreError> {
+        self.with(|conn| nunc_store::apply_state(conn, merged))
     }
 }
 
@@ -215,7 +207,6 @@ fn todoist_accepts(trigger: Trigger) -> bool {
 /// Statusanzeige auch vor dem ersten Lauf dieser Sitzung stimmt.
 pub fn coordinator(
     db: Arc<Db>,
-    device_id: String,
     secrets: Arc<dyn SecretStore>,
     clock: Arc<dyn Clock>,
     events: Arc<dyn EventSink>,
@@ -227,7 +218,7 @@ pub fn coordinator(
     })?;
     let todoist_last_sync = db.with(|conn| nunc_store::todoist_last_sync_at(conn))?;
     let todoist_store = Arc::new(DbTodoistStore::new(db.clone()));
-    let store = Arc::new(DbSyncStore::new(db, device_id));
+    let store = Arc::new(DbSyncStore::new(db));
     let google = credentials::google();
     let drive = Arc::new(DriveService::new(
         DriveConfig::google(&google.client_id, &google.client_secret),
