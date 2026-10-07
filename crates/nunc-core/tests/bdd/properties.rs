@@ -10,11 +10,14 @@ use std::collections::{BTreeSet, HashSet};
 use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
 use cucumber::then;
 use nunc_core::backup_policy::{BackupFile, backup_file_name, files_to_delete};
+use nunc_core::crdt::{Register, SyncState, TodoCrdt, session_key};
 use nunc_core::export::{ExportRow, to_csv};
+use nunc_core::hlc::Hlc;
 use nunc_core::model::{
     Session, SessionStatus, SessionType, Settings, StatsPeriod, StatsRequest, SyncSession,
     SyncTodo, TimerMode,
 };
+use nunc_core::position::position_between;
 use nunc_core::stats::{calculate_streaks, compute_stats, utc_date};
 use nunc_core::sync_merge::{merge_sessions, merge_todos};
 use nunc_core::timer::{FinishKind, Timer, TimerError};
@@ -47,6 +50,10 @@ fn property_holds(_world: &mut DomainWorld, name: String, cases: u32) {
         "any well-formed todo survives serializing and parsing" => todo_roundtrip(cases),
         "parsing and serializing is stable for any text" => parse_is_stable(cases),
         "merging todos is idempotent" => merge_todos_idempotent(cases),
+        "merging sync states is commutative" => crdt_commutative(cases),
+        "merging sync states is associative" => crdt_associative(cases),
+        "merging sync states is idempotent" => crdt_idempotent(cases),
+        "a position between two others sorts between them" => position_sorts_between(cases),
         "merging sessions is idempotent" => merge_sessions_idempotent(cases),
         "merging todos is commutative for distinct timestamps" => merge_todos_commutative(cases),
         "merging sessions is commutative for unique sessions" => merge_sessions_commutative(cases),
@@ -794,4 +801,173 @@ fn stats_order_independent(cases: u32) -> Result<(), String> {
             Ok(())
         },
     )
+}
+
+// ---- CRDT ------------------------------------------------------------------
+
+fn hlc_strategy() -> impl Strategy<Value = Hlc> {
+    (
+        0i64..4,
+        0u32..3,
+        prop::sample::select(vec!["d1", "d2", "d3"]),
+    )
+        .prop_map(|(wall, counter, device)| Hlc::new(wall, counter, device))
+}
+
+fn register<T: Ord + Clone + std::fmt::Debug>(
+    value: impl Strategy<Value = T>,
+) -> impl Strategy<Value = Register<T>> {
+    (value, hlc_strategy()).prop_map(|(value, clock)| Register::new(value, clock))
+}
+
+fn small_text() -> impl Strategy<Value = String> {
+    prop::sample::select(vec!["", "x", "y"]).prop_map(str::to_owned)
+}
+
+fn small_option() -> impl Strategy<Value = Option<String>> {
+    prop::option::of(small_text())
+}
+
+fn small_tags() -> impl Strategy<Value = Vec<String>> {
+    prop::collection::vec(small_text(), 0..3)
+}
+
+fn todo_crdt(id: &'static str) -> impl Strategy<Value = TodoCrdt> {
+    (
+        (
+            register(small_text()),
+            register(small_option()),
+            register(prop::bool::ANY),
+            register(small_option()),
+            register(small_option()),
+            register(small_text()),
+        ),
+        (
+            register(small_tags()),
+            register(small_tags()),
+            register(small_text()),
+            register(prop::bool::ANY),
+            prop::collection::btree_map(
+                prop::sample::select(vec!["d1".to_owned(), "d2".to_owned(), "d3".to_owned()]),
+                0u32..4,
+                0..3,
+            ),
+        ),
+    )
+        .prop_map(
+            move |(
+                (raw_text, priority, completed, completed_at, created_at, description),
+                (project_tags, context_tags, position, deleted, pomodoros),
+            )| TodoCrdt {
+                sync_id: id.to_owned(),
+                raw_text,
+                priority,
+                completed,
+                completed_at,
+                created_at,
+                description,
+                project_tags,
+                context_tags,
+                position,
+                deleted,
+                pomodoros,
+            },
+        )
+}
+
+fn crdt_session() -> impl Strategy<Value = SyncSession> {
+    (
+        prop::sample::select(vec!["d1", "d2"]),
+        prop::sample::select(vec!["2026-03-01T10:00:00Z", "2026-03-01T11:00:00Z"]),
+        0u32..3,
+    )
+        .prop_map(|(device, started_at, minutes)| SyncSession {
+            device_id: device.to_owned(),
+            mode: "pomodoro".to_owned(),
+            session_type: "work".to_owned(),
+            status: "completed".to_owned(),
+            started_at: started_at.to_owned(),
+            ended_at: None,
+            planned_min: 25,
+            actual_min: minutes,
+            break_min: 5,
+        })
+}
+
+fn sync_state() -> impl Strategy<Value = SyncState> {
+    (
+        prop::option::of(todo_crdt("a")),
+        prop::option::of(todo_crdt("b")),
+        prop::collection::vec(crdt_session(), 0..4),
+    )
+        .prop_map(|(a, b, sessions)| SyncState {
+            todos: a
+                .into_iter()
+                .chain(b)
+                .map(|todo| (todo.sync_id.clone(), todo))
+                .collect(),
+            sessions: sessions
+                .into_iter()
+                .map(|session| (session_key(&session), session))
+                .collect(),
+        })
+}
+
+fn crdt_commutative(cases: u32) -> Result<(), String> {
+    run(cases, (sync_state(), sync_state()), |(a, b)| {
+        prop_assert_eq!(a.merge(&b), b.merge(&a));
+        Ok(())
+    })
+}
+
+fn crdt_associative(cases: u32) -> Result<(), String> {
+    run(
+        cases,
+        (sync_state(), sync_state(), sync_state()),
+        |(a, b, c)| {
+            prop_assert_eq!(a.merge(&b.merge(&c)), a.merge(&b).merge(&c));
+            Ok(())
+        },
+    )
+}
+
+fn crdt_idempotent(cases: u32) -> Result<(), String> {
+    run(cases, (sync_state(), sync_state()), |(a, b)| {
+        prop_assert_eq!(a.merge(&a), a.clone());
+        let merged = a.merge(&b);
+        prop_assert_eq!(merged.merge(&b), merged.clone());
+        prop_assert_eq!(merged.merge(&a), merged);
+        Ok(())
+    })
+}
+
+fn position_sorts_between(cases: u32) -> Result<(), String> {
+    let key = prop::collection::vec(
+        prop::sample::select(b"0123456789abcdefghijklmnopqrstuvwxyz".to_vec()),
+        1..5,
+    )
+    .prop_map(|digits| {
+        let mut text = String::from_utf8(digits).unwrap_or_default();
+        while text.ends_with('0') {
+            text.pop();
+        }
+        text
+    })
+    .prop_filter("Schlüssel endet nie auf 0", |text| !text.is_empty());
+    run(cases, (key.clone(), key), |(first, second)| {
+        prop_assume!(first != second);
+        let (low, high) = if first < second {
+            (first, second)
+        } else {
+            (second, first)
+        };
+        let between = position_between(Some(&low), Some(&high));
+        prop_assert!(low < between && between < high);
+        prop_assert!(!between.ends_with('0'));
+        let before = position_between(None, Some(&low));
+        prop_assert!(before < low);
+        let after = position_between(Some(&high), None);
+        prop_assert!(high < after);
+        Ok(())
+    })
 }

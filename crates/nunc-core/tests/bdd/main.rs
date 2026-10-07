@@ -7,6 +7,7 @@
 use cucumber::{World, WriterExt as _, given, then, when, writer};
 
 mod backup;
+mod crdt;
 mod export;
 mod properties;
 mod settings;
@@ -24,6 +25,7 @@ mod todotxt_file;
 pub struct DomainWorld {
     value: i64,
     backup: backup::State,
+    crdt: crdt::State,
     export: export::State,
     settings: settings::State,
     stats: stats::State,

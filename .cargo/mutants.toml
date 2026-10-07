@@ -17,6 +17,11 @@ exclude_re = [
   # Der Server prüft die angekündigte Länge vorab nur, um früh abzulehnen; `Limited` beim Lesen erzwingt dieselbe
   # Grenze, `> -> ==` ändert das Ergebnis nicht (äquivalent)
   "replace > with == in handle",
+  # CRDT (ADR 0016): Bei gleichem Stempel und gleichem Wert sind beide Register identisch, `>` und `>=` liefern
+  # dasselbe (äquivalent). `common <= upper.len()` wird nur erreicht, wenn `lower` nicht kleiner als `upper` ist,
+  # was `position_between` voraussetzt (Eingabe außerhalb des Vertrags).
+  "replace > with >= in Register<T>::merge",
+  "replace < with <= in midpoint",
   "impl (Debug|Display) for",
   "<impl Debug",
   "<impl Display",

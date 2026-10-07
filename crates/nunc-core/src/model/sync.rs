@@ -44,7 +44,7 @@ pub struct SyncTodo {
 
 /// Eine Session in der Sync-Datei; Sessions sind append-only und werden über `(device_id, started_at)`
 /// identifiziert.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct SyncSession {
     pub device_id: String,
     pub mode: String,
