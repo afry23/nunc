@@ -73,23 +73,84 @@ Feature: Edit and delete sessions
   Scenario: Merging session states is commutative, associative and idempotent
     Then the property "merging session states is commutative, associative and idempotent" holds for 300 random cases
 
-  @integration @US-TT02 @wip
+  @integration @US-TT02
   Scenario: Editing a session stamps only the changed fields
+    Given device A adds a manual session from 09:00:00 to 10:00:00
+    When device A changes the session note to "review" at 11:00:00
+    Then on device A the field "note" of the session was last written at 11:00:00
+    And on device A the field "actual_min" of the session was last written at 10:00:00
+    And on device A the field "todo" of the session was last written at 10:00:00
 
-  @integration @US-TT02 @wip
+  @integration @US-TT02
   Scenario: Deleting a session hides it from statistics and export
+    Given device A and device B share the todo "Write report +work"
+    And device A adds a manual session from 09:00:00 to 10:00:00 for the todo
+    When device A deletes the session at 11:00:00
+    Then on device A 0 sessions are listed
+    And on device A the project "+work" has 0 minutes
+    And on device A the database holds 1 sessions
 
-  @integration @US-TT02 @wip
+  @integration @US-TT02
   Scenario: Migration 008 keeps the sessions of an existing database
+    Given the Go fixture database
+    When nunc opens the database
+    Then there are 11 sessions
+    And the sync state of the database holds 9 sessions with stable ids
 
-  @integration @US-TT02 @wip
+  @integration @US-TT02
   Scenario: A backup from an older version can be restored
+    Given no database exists yet
+    When nunc opens the database
+    And the Go fixture is copied to "src/go-backup.db"
+    And I restore "src/go-backup.db" on 2026-10-04
+    Then there are 11 sessions
+    And the sync state of the database holds 9 sessions with stable ids
 
-  @integration @sync @US-TT02 @wip
-  Scenario: One device edits a session while another deletes it and both converge
+  @integration @US-TT02
+  Scenario: An edited session reaches the other device
+    Given device A adds a manual session from 09:00:00 to 10:00:00
+    And the devices exchange their state
+    When device A changes the session note to "review" at 11:00:00
+    And the devices exchange their state
+    Then on device B the session note is "review"
+    And the exchange added 0 todos, replaced 0 and added 0 sessions
 
-  @integration @sync @US-TT02 @wip
-  Scenario: A v2 sync file is read and written back as v3
+  @integration @US-TT02
+  Scenario: Changes to different fields of one session on two devices are both kept
+    Given device A adds a manual session from 09:00:00 to 10:00:00
+    And the devices exchange their state
+    When device A changes the session minutes to 45 at 11:00:00
+    And device B changes the session note to "review" at 11:00:05
+    And the devices exchange their state
+    Then on device A the session has 45 minutes
+    And on device A the session note is "review"
+    And on device B the session has 45 minutes
+    And on device B the session note is "review"
 
-  @integration @sync @US-TT02 @wip
-  Scenario: A client of an older version rejects the v3 file
+  @integration @US-TT02
+  Scenario: A deleted session disappears on the other device
+    Given device A adds a manual session from 09:00:00 to 10:00:00
+    And the devices exchange their state
+    When device A deletes the session at 11:00:00
+    And the devices exchange their state
+    Then on device B 0 sessions are listed
+    And on device B the database holds 1 sessions
+
+  @integration @US-TT02
+  Scenario: A later edit wins over a concurrent deletion of a session
+    Given device A adds a manual session from 09:00:00 to 10:00:00
+    And the devices exchange their state
+    When device A deletes the session at 11:00:00
+    And device B changes the session note to "still needed" at 11:00:05
+    And the devices exchange their state
+    Then on device A 1 sessions are listed
+    And on device B 1 sessions are listed
+
+  @integration @sync @US-TT02
+  Scenario: A version 2 sync file is read and written back as version 3
+    Given a WebDAV server with the folder "/nunc/" holding a sync file of format 2
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    Then the sync succeeds
+    And the sync file on the server has format 3

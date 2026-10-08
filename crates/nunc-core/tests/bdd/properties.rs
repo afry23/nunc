@@ -653,6 +653,7 @@ fn session_crdt() -> impl Strategy<Value = SessionCrdt> {
                 status: "completed".to_owned(),
                 planned_min: planned,
                 break_min: 5,
+                origin: "timer".to_owned(),
                 started_at,
                 ended_at,
                 actual_min,

@@ -233,6 +233,9 @@ pub struct SessionCrdt {
     pub status: String,
     pub planned_min: u32,
     pub break_min: u32,
+    /// `timer` oder `manual` (nachgetragen); gilt ab der Anlage.
+    #[serde(default = "timer_origin")]
+    pub origin: String,
     pub started_at: Register<String>,
     pub ended_at: Register<Option<String>>,
     pub actual_min: Register<u32>,
@@ -240,6 +243,15 @@ pub struct SessionCrdt {
     pub todo: Register<Option<String>>,
     pub note: Register<String>,
     pub deleted: Register<bool>,
+}
+
+/// Herkunft einer vom Timer aufgezeichneten Session (auch für Dateien ohne dieses Feld).
+pub const ORIGIN_TIMER: &str = "timer";
+/// Herkunft eines von Hand nachgetragenen Eintrags.
+pub const ORIGIN_MANUAL: &str = "manual";
+
+fn timer_origin() -> String {
+    ORIGIN_TIMER.to_owned()
 }
 
 impl SessionCrdt {
@@ -256,6 +268,7 @@ impl SessionCrdt {
             status: session.status.clone(),
             planned_min: session.planned_min,
             break_min: session.break_min,
+            origin: timer_origin(),
             started_at: reg(session.started_at.clone(), clock),
             ended_at: reg(session.ended_at.clone(), clock),
             actual_min: reg(session.actual_min, clock),
@@ -314,6 +327,7 @@ impl SessionCrdt {
             status: self.status.clone().max(other.status.clone()),
             planned_min: self.planned_min.max(other.planned_min),
             break_min: self.break_min.max(other.break_min),
+            origin: self.origin.clone().max(other.origin.clone()),
             started_at: self.started_at.merge(&other.started_at),
             ended_at: self.ended_at.merge(&other.ended_at),
             actual_min: self.actual_min.merge(&other.actual_min),

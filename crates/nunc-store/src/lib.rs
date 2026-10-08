@@ -8,6 +8,7 @@ mod legacy;
 mod migrations;
 mod restore;
 mod session_repo;
+mod session_sync;
 mod settings_repo;
 mod sync_repo;
 mod time;
@@ -27,7 +28,10 @@ pub use legacy::{LegacyImport, import_legacy_db, legacy_db_path};
 pub use migrations::{MIGRATIONS, Migration, migrate};
 pub use restore::{restore_backup, validate_backup_file};
 pub use rusqlite::Connection;
-pub use session_repo::{commit_finish, list_sessions};
+pub use session_repo::{
+    ManualSession, SessionEdit, commit_finish, delete_session, insert_manual, list_sessions,
+    update_session,
+};
 pub use settings_repo::{device_id, load_settings, save_settings, set_sync_provider};
 pub use sync_repo::{
     Applied, drive_folder_id, last_sync_at, last_sync_of, load_webdav_config, save_webdav_config,

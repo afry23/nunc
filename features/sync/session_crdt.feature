@@ -13,5 +13,10 @@ Feature: Session CRDT sync
     When a version 2 sync file is read and written again
     Then the written file has format 3
 
-  @integration @sync @US-TT02 @wip
+  @integration @US-TT02
   Scenario: Two devices that both know an old session do not create a duplicate
+    Given both devices know a completed session of device A started at 09:00:00
+    When the devices exchange their state
+    Then on device A the database holds 1 sessions
+    And on device B the database holds 1 sessions
+    And the exchange added 0 todos, replaced 0 and added 0 sessions

@@ -380,7 +380,7 @@ Projektzeit aus den Roh-Sessions, Korrektur und Nachtrag von Sessions, Tages-Tim
 |---|---|
 | M11-01 | ADR 0017, `@wip`-Szenarien `features/timetracking/*.feature`, `features/ui/timetracking.feature`, `features/sync/session_crdt.feature` |
 | M11-02 | `nunc-core`: `SessionCrdt` (Merge, GC), `SCHEMA_VERSION` 3 mit v2-Lesen, `timesheet.rs`, `timeline.rs`, `manual_entry.rs` (`@domain`, `@property`) – erledigt |
-| M11-03 | Migration 008 (`session_meta`, `session_field_clock`), `session_repo` (anlegen, ändern, löschen), `local_state`/`apply_state` für Sessions (`@integration`, `@sync`) |
+| M11-03 | Migration 008 (`session_meta`, `session_field_clock`), `session_repo` (anlegen, ändern, löschen), `local_state`/`apply_state` für Sessions (`@integration`, `@sync`) – erledigt |
 | M11-04 | Commands `get_timesheet`, `get_day_timeline`, `create_manual_session`, `update_session`, `delete_session`, `AppError`-Codes, Bindings |
 | M11-05 | UI: Reiter „Zeiten“ in der Statistik, `Timeline`-Komponente, Bearbeiten-Dialog, CSV-Export um `note`/`origin` erweitern (`@ui`) |
 

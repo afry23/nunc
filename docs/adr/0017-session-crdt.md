@@ -21,12 +21,14 @@ und Projektzeit muss über alle Geräte hinweg stimmen. ADR 0016 lässt das nich
 
 **Sessions werden ein Todo-ähnlicher, zustandsbasierter CRDT** (`SessionCrdt`, pur in `nunc-core`, analog `TodoCrdt`).
 
-- **Identität:** Jede Session bekommt eine stabile `sync_id` (UUID, bei Anlage vergeben). Bestehende Sessions ohne
-  `sync_id` bekommen eine **deterministische** ID, abgeleitet aus `session_key`; zwei Geräte vergeben so für dieselbe
-  Alt-Session dieselbe ID, es entstehen keine Dubletten.
+- **Identität:** Jede Session hat eine stabile `sync_id`. Von Hand nachgetragene Einträge bekommen eine UUID. Vom Timer
+  aufgezeichnete und bestehende Sessions bekommen eine **deterministische** ID, abgeleitet aus `session_key` (Gerät und
+  Beginn, `crdt.rs`): `commit_finish` bleibt unverändert, und zwei Geräte, die dieselbe Session kennen, bilden dieselbe
+  ID, es entstehen keine Dubletten. Die ID wird beim ersten Sync-Zugriff in `session_meta` festgeschrieben und ändert
+  sich danach auch bei einer Bearbeitung von `started_at` nicht mehr.
 - **Felder** sind LWW-Register `(Wert, HLC)` (`hlc.rs`, wie bei Todos): `started_at`, `ended_at`, `actual_min`, `todo`
   (`sync_id` des Todos, nicht die lokale Zeilen-ID), `note`, `deleted` (Tombstone). Unveränderlich bleiben
-  `device_id`, `mode`, `session_type`, `status`, `planned_min`, `break_min`; sie werden beim Anlegen gesetzt.
+  `device_id`, `mode`, `session_type`, `status`, `planned_min`, `break_min`, `origin` (`timer`|`manual`); sie werden beim Anlegen gesetzt.
 - Der Merge ist kommutativ, assoziativ und idempotent; Gleichstand entscheidet `device_id`. `sanitized` kappt Remote-
   Stempel wie bei Todos (24 h Drift). Ein Tombstone gewinnt nur, wenn er jünger ist als jede Bearbeitung.
 - **Tombstone-GC:** wie Todos nach 90 Tagen (`TOMBSTONE_TTL_MS`, `is_collectable`). Dasselbe Risiko wie in ADR 0016:

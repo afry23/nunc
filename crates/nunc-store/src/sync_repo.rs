@@ -59,8 +59,10 @@ pub struct Applied {
     pub todos_added: u32,
     /// Vorhandene Todos, die durch die Server-Version ersetzt oder gelöscht wurden.
     pub todos_replaced: u32,
-    /// Neu angefügte Sessions (bekannte werden übersprungen).
+    /// Neu angefügte Sessions.
     pub sessions_added: u32,
+    /// Vorhandene Sessions, deren Felder durch den zusammengeführten Stand ersetzt wurden (Bearbeitung, Löschen).
+    pub sessions_replaced: u32,
 }
 
 const URL_KEY: &str = "sync.webdav.url";
