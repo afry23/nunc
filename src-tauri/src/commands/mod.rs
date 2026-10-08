@@ -5,6 +5,7 @@ pub mod api;
 pub mod app;
 pub mod backup;
 pub mod notifications;
+pub mod sessions;
 pub mod settings;
 pub mod stats;
 pub mod sync;

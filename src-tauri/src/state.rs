@@ -131,6 +131,12 @@ impl AppState {
         self.todoist.trigger(Trigger::TodoChanged);
     }
 
+    /// Eine Session wurde nachgetragen, bearbeitet oder gelöscht: der Sync-Anbieter gleicht ab (Todoist kennt
+    /// keine Sessions).
+    pub fn sessions_changed(&self) {
+        self.sync.trigger(Trigger::TodoChanged);
+    }
+
     /// Stellt den automatischen Sync nach den Einstellungen ein (am Desktop; mobil wirkungslos).
     pub fn apply_sync_interval(&self, settings: &Settings) {
         self.sync.set_interval(settings.sync_interval());

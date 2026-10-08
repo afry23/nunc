@@ -118,6 +118,33 @@ fn get(conn: &Connection, id: i64) -> Result<Session, StoreError> {
     })
 }
 
+/// Notiz und Herkunft einer Session (`timer` oder `manual`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionDetails {
+    pub note: String,
+    pub origin: String,
+}
+
+/// Notiz und Herkunft der nicht gelöschten Sessions nach Id. Sessions ohne Metadaten (noch nie gesynct oder
+/// bearbeitet) sind vom Timer aufgezeichnet und haben keine Notiz, sie fehlen in der Antwort.
+pub fn list_session_details(
+    conn: &Connection,
+) -> Result<std::collections::HashMap<i32, SessionDetails>, StoreError> {
+    let details = conn
+        .prepare("SELECT session_id, note, origin FROM session_meta WHERE deleted = 0")?
+        .query_map([], |row| {
+            Ok((
+                row.get(0)?,
+                SessionDetails {
+                    note: row.get(1)?,
+                    origin: row.get(2)?,
+                },
+            ))
+        })?
+        .collect::<Result<_, _>>()?;
+    Ok(details)
+}
+
 /// Eine nachgetragene Arbeitssession.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ManualSession {
@@ -367,6 +394,26 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM session_field_clock", [], |r| r.get(0))
             .unwrap();
         assert_eq!(stamped, 6);
+    }
+
+    #[test]
+    fn details_list_note_and_origin_without_deleted_sessions() {
+        let conn = open_in_memory().unwrap();
+        let now = at("2026-10-04T11:00:00Z");
+        let kept = manual("m-1", "2026-10-04T09:00:00Z", "2026-10-04T10:00:00Z");
+        let gone = manual("m-2", "2026-10-04T10:00:00Z", "2026-10-04T10:30:00Z");
+        let kept = insert_manual(&conn, &kept, "d", now).unwrap();
+        let gone = insert_manual(&conn, &gone, "d", now).unwrap();
+        delete_session(&conn, gone.id, now).unwrap();
+        let details = list_session_details(&conn).unwrap();
+        assert_eq!(details.len(), 1);
+        assert_eq!(
+            details[&kept.id],
+            SessionDetails {
+                note: "n".to_owned(),
+                origin: "manual".to_owned()
+            }
+        );
     }
 
     #[test]

@@ -82,6 +82,16 @@ export const commands = {
 	sessionType: SessionType,
 	minutes: number,
 } | null, AppError>(__TAURI_INVOKE("get_suggested_break")),
+	/**  Arbeitszeit je Projekt, Kontext oder Aufgabe und Tag für die lokalen Tage `start_date` bis `end_date`. */
+	getTimesheet: (startDate: string, endDate: string, groupBy: GroupBy) => typedError<Timesheet, AppError>(__TAURI_INVOKE("get_timesheet", { startDate, endDate, groupBy })),
+	/**  Die Sessions eines lokalen Tages als Blöcke, mit Notiz und Herkunft. */
+	getDayTimeline: (date: string) => typedError<DayTimeline, AppError>(__TAURI_INVOKE("get_day_timeline", { date })),
+	/**  Trägt eine Arbeitssession nach. */
+	createManualSession: (input: SessionInput) => typedError<SessionSaved, AppError>(__TAURI_INVOKE("create_manual_session", { input })),
+	/**  Ersetzt Beginn, Ende, Todo und Notiz einer Session; die Dauer folgt aus Beginn und Ende. */
+	updateSession: (id: number, input: SessionInput) => typedError<SessionSaved, AppError>(__TAURI_INVOKE("update_session", { id, input })),
+	/**  Löscht eine Session (Löschmarke, damit der Sync sie weiterträgt). */
+	deleteSession: (id: number) => typedError<null, AppError>(__TAURI_INVOKE("delete_session", { id })),
 	/**  Kennzahlen aus den rohen Sessions (nichts davon ist gespeichert). */
 	getStats: (request: StatsRequest) => typedError<StatsResponse, AppError>(__TAURI_INVOKE("get_stats", { request })),
 	/**  Export der Sessions im Zeitraum als CSV- oder JSON-Text. */
@@ -283,6 +293,12 @@ export type DailyStats = {
 	breakMinutes: number,
 };
 
+export type DayTimeline = {
+	date: string,
+	blocks: TimelineBlock[],
+	gaps: TimelineGap[],
+};
+
 /**  Zustand der Google-Drive-Verbindung (`get_drive_status`). */
 export type DriveStatus = {
 	/**  Ob dieser Build Zugangsdaten für Google hat (Client-ID und -Secret). */
@@ -301,6 +317,9 @@ export type FinishPayload = {
 	/**  Empfohlene Pause nach abgeschlossener Arbeit. */
 	suggestedBreak: BreakSuggestion | null,
 };
+
+/**  Wonach die Zeilen des Timesheets gruppiert werden. */
+export type GroupBy = "project" | "context" | "todo";
 
 /**  Sprache der Oberfläche (`system` folgt dem Betriebssystem). */
 export type Language = "system" | "de" | "en";
@@ -342,6 +361,20 @@ export type Session = {
 	todoId: number | null,
 	/**  Empfohlene bzw. genutzte Pausendauer in Minuten. */
 	breakMin: number | null,
+};
+
+/**  Beginn, Ende, Todo und Notiz einer Session. */
+export type SessionInput = {
+	startedAt: string,
+	endedAt: string,
+	todoId: number | null,
+	note: string,
+};
+
+/**  Die gespeicherte Session und die Sessions, die sie überlappt (Warnung, kein Fehler). */
+export type SessionSaved = {
+	session: Session,
+	overlaps: number[],
 };
 
 /**  Ergebnis einer Session. */
@@ -475,6 +508,29 @@ export type SyncStatus = {
 /**  Der Sync-Zustand hat sich geändert (`idle` · `syncing` · `error`). */
 export type SyncStatusChanged = SyncStatus;
 
+/**  Ein Block der Timeline. */
+export type TimelineBlock = {
+	sessionId: number,
+	start: string,
+	end: string,
+	sessionType: SessionType,
+	status: SessionStatus,
+	todoId: number | null,
+	/**  Notiz der Session; [`day_timeline`] kennt sie nicht und lässt sie leer, der Aufrufer füllt sie nach. */
+	note: string,
+	/**  `timer` oder `manual`, siehe `note`. */
+	origin: string,
+	/**  Der Block überlappt mit mindestens einem anderen Block des Tages. */
+	overlaps: boolean,
+};
+
+/**  Zeit ohne Session zwischen zwei Blöcken. */
+export type TimelineGap = {
+	start: string,
+	end: string,
+	minutes: number,
+};
+
 /**  Session natürlich abgelaufen (oder Flowtime-Arbeit beendet). */
 export type TimerComplete = FinishPayload;
 
@@ -501,6 +557,24 @@ export type TimerStopped = FinishPayload;
 
 /**  Jede Sekunde, solange der Timer im Vordergrund läuft, und bei jeder Zustandsänderung. */
 export type TimerTick = TimerSnapshot;
+
+/**  Wochen- oder Zeitraumbericht: Zeilen × Tage mit Summen. */
+export type Timesheet = {
+	days: string[],
+	rows: TimesheetRow[],
+	dayTotals: number[],
+	total: number,
+};
+
+/**  Eine Zeile: eine Gruppe mit ihren Minuten je Tag (gleiche Reihenfolge wie [`Timesheet::days`]). */
+export type TimesheetRow = {
+	/**  Tag (`+projekt` bzw. `@kontext`) oder Beschreibung des Todos; `None` für Sessions ohne Tag bzw. Todo. */
+	group: string | null,
+	/**  Nur bei Gruppierung nach Todo. */
+	todoId: number | null,
+	minutes: number[],
+	total: number,
+};
 
 /**
  *  Ein todo.txt-Eintrag.

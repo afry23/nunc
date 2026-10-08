@@ -5,6 +5,7 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
+use crate::crdt::ORIGIN_TIMER;
 use crate::model::{Session, SessionStatus, SessionType};
 
 /// Ein Block der Timeline.
@@ -17,6 +18,10 @@ pub struct TimelineBlock {
     pub session_type: SessionType,
     pub status: SessionStatus,
     pub todo_id: Option<i32>,
+    /// Notiz der Session; [`day_timeline`] kennt sie nicht und lässt sie leer, der Aufrufer füllt sie nach.
+    pub note: String,
+    /// `timer` oder `manual`, siehe `note`.
+    pub origin: String,
     /// Der Block überlappt mit mindestens einem anderen Block des Tages.
     pub overlaps: bool,
 }
@@ -70,6 +75,8 @@ pub fn day_timeline(
                 session_type: session.session_type,
                 status: session.status,
                 todo_id: session.todo_id,
+                note: String::new(),
+                origin: ORIGIN_TIMER.to_owned(),
                 overlaps: false,
             }
         })

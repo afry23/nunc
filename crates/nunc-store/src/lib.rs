@@ -29,8 +29,8 @@ pub use migrations::{MIGRATIONS, Migration, migrate};
 pub use restore::{restore_backup, validate_backup_file};
 pub use rusqlite::Connection;
 pub use session_repo::{
-    ManualSession, SessionEdit, commit_finish, delete_session, insert_manual, list_sessions,
-    update_session,
+    ManualSession, SessionDetails, SessionEdit, commit_finish, delete_session, insert_manual,
+    list_session_details, list_sessions, update_session,
 };
 pub use settings_repo::{device_id, load_settings, save_settings, set_sync_provider};
 pub use sync_repo::{
