@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use chrono::{DateTime, TimeZone, Utc};
-use nunc_core::crdt::{Register, SyncState, TodoCrdt, session_key};
+use nunc_core::crdt::{Register, SessionCrdt, SyncState, TodoCrdt};
 use nunc_core::hlc::Hlc;
 use nunc_core::model::SyncSession;
 use nunc_core::position::position_between;
@@ -443,7 +443,8 @@ pub fn local_state(
         todos,
         sessions: sessions
             .into_iter()
-            .map(|session| (session_key(&session), session))
+            .map(|session| SessionCrdt::from_legacy(&session))
+            .map(|session| (session.sync_id.clone(), session))
             .collect(),
     })
 }
@@ -564,12 +565,14 @@ pub fn apply_state(conn: &mut Connection, merged: &SyncState) -> Result<Applied,
              FROM sessions",
         )?
         .query_map([], |row| sync_session(row, &device))?
-        .map(|session| session.map(|session| session_key(&session)))
+        .map(|session| session.map(|session| SessionCrdt::from_legacy(&session).sync_id))
         .collect::<Result<_, _>>()?;
-    for (key, session) in &merged.sessions {
-        if known.contains(key) {
+    for (sync_id, session) in &merged.sessions {
+        // Bearbeiten, Löschen und der Todo-Bezug von Sessions folgen mit Migration 008 (M11-03).
+        if known.contains(sync_id) || session.is_deleted() {
             continue;
         }
+        let session = session.to_session();
         applied.sessions_added += 1;
         tx.execute(
             "INSERT INTO sessions (sync_device_id, mode, session_type, status, started_at, ended_at,

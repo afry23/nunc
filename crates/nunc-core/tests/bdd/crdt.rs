@@ -1,7 +1,7 @@
 //! Steps für `features/sync/crdt.feature` (CRDT-Zustand, HLC, Fractional-Index; ADR 0016).
 
 use cucumber::{given, then, when};
-use nunc_core::crdt::{SyncState, TodoCrdt};
+use nunc_core::crdt::{SessionCrdt, SyncState, TodoCrdt};
 use nunc_core::hlc::{Hlc, MAX_DRIFT_MS};
 use nunc_core::model::{SyncFile, SyncSession, SyncTodo};
 use nunc_core::position::position_between;
@@ -33,6 +33,9 @@ pub struct State {
     document_state: Option<SyncState>,
     read_error: Option<String>,
     collected: Option<SyncState>,
+    session_id: String,
+    read_states: Vec<SyncState>,
+    written_version: Option<u32>,
 }
 
 fn device_id(device: &str) -> String {
@@ -89,6 +92,32 @@ impl State {
             .get_mut(&id)
             .expect("Todo fehlt auf dem Gerät");
         change(todo, clock);
+    }
+
+    /// Ändert die Session auf einem Gerät mit einem Stempel (Uhrzeit des Szenario-Tags oder Millisekunden).
+    fn edit_session(
+        &mut self,
+        device: &str,
+        at_ms: i64,
+        change: impl FnOnce(&mut SessionCrdt, Hlc),
+    ) {
+        let id = self.session_id.clone();
+        let clock = Hlc::new(at_ms, 0, device_id(device));
+        let session = self
+            .side(device)
+            .sessions
+            .get_mut(&id)
+            .expect("Session fehlt auf dem Gerät");
+        change(session, clock);
+    }
+
+    fn merged_session(&self) -> &SessionCrdt {
+        self.merged
+            .as_ref()
+            .expect("noch nicht zusammengeführt")
+            .sessions
+            .get(&self.session_id)
+            .expect("Session fehlt im Ergebnis")
     }
 
     fn merged_todo(&self) -> &TodoCrdt {
@@ -213,12 +242,12 @@ fn session(device: &str, started_at: &str) -> SyncSession {
 
 #[given(expr = "a session started at {string} on device {word}")]
 fn session_on_device(world: &mut DomainWorld, started_at: String, device: String) {
-    let session = session(&device, &started_at);
+    let session = SessionCrdt::from_legacy(&session(&device, &started_at));
     world
         .crdt
         .side(&device)
         .sessions
-        .insert(nunc_core::crdt::session_key(&session), session);
+        .insert(session.sync_id.clone(), session);
 }
 
 #[given("the same session of device A is also known to device B")]
@@ -585,4 +614,164 @@ fn todo_in_state(world: &mut DomainWorld, outcome: String) {
 #[given(expr = "an old todo {string} on both devices")]
 fn old_todo_on_both(world: &mut DomainWorld, id: String) {
     start_todo_at(world, id, 0, NOW_MS - 1000 * DAY_MS_LEN);
+}
+
+fn start_session_at(world: &mut DomainWorld, id: String, created_ms: i64) {
+    let state = &mut world.crdt;
+    let raw = session("base", "2026-03-01T09:00:00Z");
+    let session = SessionCrdt::from_session(id.clone(), &raw, &Hlc::new(created_ms, 0, "base"));
+    state.a.sessions.insert(id.clone(), session.clone());
+    state.b.sessions.insert(id.clone(), session);
+    state.session_id = id;
+}
+
+#[given(expr = "a session {string} on both devices")]
+fn session_on_both(world: &mut DomainWorld, id: String) {
+    start_session_at(world, id, DAY_MS + 9 * 3_600_000);
+}
+
+#[given(expr = "an old session {string} on both devices")]
+fn old_session_on_both(world: &mut DomainWorld, id: String) {
+    start_session_at(world, id, NOW_MS - 1000 * DAY_MS_LEN);
+}
+
+#[given(expr = "device {word} sets the session minutes to {int} at {word}")]
+fn session_minutes(world: &mut DomainWorld, device: String, minutes: u32, time: String) {
+    let at = time_of_day(&time);
+    world.crdt.edit_session(&device, at, |session, clock| {
+        session.actual_min.set(minutes, clock)
+    });
+}
+
+#[given(expr = "device {word} sets the session note to {string} at {word}")]
+fn session_note(world: &mut DomainWorld, device: String, note: String, time: String) {
+    let at = time_of_day(&time);
+    world
+        .crdt
+        .edit_session(&device, at, |session, clock| session.note.set(note, clock));
+}
+
+#[given(expr = "device {word} assigns the session to todo {string} at {word}")]
+fn session_todo(world: &mut DomainWorld, device: String, todo: String, time: String) {
+    let at = time_of_day(&time);
+    world.crdt.edit_session(&device, at, |session, clock| {
+        session.todo.set(Some(todo), clock)
+    });
+}
+
+#[given(expr = "device {word} deletes the session at {word}")]
+fn session_delete(world: &mut DomainWorld, device: String, time: String) {
+    let at = time_of_day(&time);
+    world.crdt.edit_session(&device, at, |session, clock| {
+        session.deleted.set(true, clock)
+    });
+}
+
+#[given(expr = "device {word} deleted the session {int} days ago")]
+fn session_deleted_days_ago(world: &mut DomainWorld, device: String, days: i64) {
+    world
+        .crdt
+        .edit_session(&device, NOW_MS - days * DAY_MS_LEN, |session, clock| {
+            session.deleted.set(true, clock);
+        });
+}
+
+#[given(expr = "device {word} changed the session {int} days ago")]
+fn session_changed_days_ago(world: &mut DomainWorld, device: String, days: i64) {
+    world
+        .crdt
+        .edit_session(&device, NOW_MS - days * DAY_MS_LEN, |session, clock| {
+            session.note.set("edited".to_owned(), clock);
+        });
+}
+
+#[then(expr = "the merged session has {int} minutes")]
+fn merged_session_minutes(world: &mut DomainWorld, minutes: u32) {
+    assert_eq!(world.crdt.merged_session().actual_min.value, minutes);
+}
+
+#[then(expr = "the session note is {string}")]
+fn merged_session_note(world: &mut DomainWorld, note: String) {
+    assert_eq!(world.crdt.merged_session().note.value, note);
+}
+
+#[then(expr = "the session belongs to todo {string}")]
+fn merged_session_todo(world: &mut DomainWorld, todo: String) {
+    assert_eq!(
+        world.crdt.merged_session().todo.value.as_deref(),
+        Some(todo.as_str())
+    );
+}
+
+#[then("the session exists")]
+fn session_exists(world: &mut DomainWorld) {
+    assert!(!world.crdt.merged_session().is_deleted());
+}
+
+#[then("the session is deleted")]
+fn session_is_deleted(world: &mut DomainWorld) {
+    assert!(world.crdt.merged_session().is_deleted());
+}
+
+#[then(expr = "the session is {word} in the state")]
+fn session_in_state(world: &mut DomainWorld, outcome: String) {
+    let state = world.crdt.collected.as_ref().expect("nichts eingesammelt");
+    let present = state.sessions.contains_key(&world.crdt.session_id);
+    assert_eq!(present, outcome == "kept", "{outcome}");
+}
+
+fn version_2_file(started_at: &str, device: &str) -> SyncDocument {
+    let json = serde_json::json!({
+        "schema_version": 2,
+        "synced_at": "2026-03-01T12:00:00Z",
+        "sessions": [session(device, started_at)],
+    });
+    serde_json::from_value(json).expect("Version-2-Datei")
+}
+
+#[when(
+    expr = "a version 2 sync file with a session started at {string} on device {word} is read twice"
+)]
+fn read_version_2_twice(world: &mut DomainWorld, started_at: String, device: String) {
+    world.crdt.read_states = (0..2)
+        .map(|_| {
+            version_2_file(&started_at, &device)
+                .into_state()
+                .expect("lesbar")
+        })
+        .collect();
+}
+
+#[then(expr = "the state has {int} session")]
+fn read_state_sessions(world: &mut DomainWorld, count: usize) {
+    assert_eq!(world.crdt.read_states[0].sessions.len(), count);
+}
+
+#[then("both readings give the same session id")]
+fn same_ids(world: &mut DomainWorld) {
+    let ids: Vec<Vec<&String>> = world
+        .crdt
+        .read_states
+        .iter()
+        .map(|state| state.sessions.keys().collect())
+        .collect();
+    assert_eq!(ids[0], ids[1]);
+    assert!(ids[0][0].starts_with("legacy:"));
+}
+
+#[when("a version 2 sync file is read and written again")]
+fn read_and_write(world: &mut DomainWorld) {
+    let state = version_2_file("2026-03-01T10:00:00Z", "dev-a")
+        .into_state()
+        .expect("lesbar");
+    let written = SyncDocument::from_state(
+        &state,
+        chrono::DateTime::from_timestamp_millis(NOW_MS).unwrap(),
+    );
+    world.crdt.written_version = Some(written.schema_version);
+}
+
+#[then(expr = "the written file has format {int}")]
+fn written_format(world: &mut DomainWorld, version: u32) {
+    assert_eq!(world.crdt.written_version, Some(version));
 }

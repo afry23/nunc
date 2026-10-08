@@ -5,7 +5,7 @@
 //! - `pomodoro_count` ist ein G-Counter pro Gerät, der Wert die Summe.
 //! - Zeile (`raw_text`) und Tags sind abgeleitet, keine Register.
 //! - Löschen ist ein Register; ein Todo gilt nur als gelöscht, solange keine spätere Bearbeitung vorliegt.
-//! - Sessions sind ein G-Set über `(device_id, started_at)`.
+//! - Sessions sind ab ADR 0017 wie Todos Register-Records mit stabiler `sync_id` ([`SessionCrdt`]).
 //!
 //! [`SyncState::merge`] ist kommutativ, assoziativ und idempotent. Das Kappen fremder Uhren
 //! ([`SyncState::sanitized`]) geschieht vor dem Merge, nicht darin.
@@ -221,11 +221,127 @@ pub fn session_key(session: &SyncSession) -> String {
     format!("{}|{started}", session.device_id)
 }
 
+/// Eine Session als CRDT (ADR 0017). `sync_id` ist die geräteübergreifende Identität; Gerät, Modus, Typ, Status und
+/// geplante Dauer gelten ab der Anlage und ändern sich nicht (bei Gleichstand gewinnt der größere Wert, damit der
+/// Merge nie von der Reihenfolge abhängt). Alles Übrige sind LWW-Register.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SessionCrdt {
+    pub sync_id: String,
+    pub device_id: String,
+    pub mode: String,
+    pub session_type: String,
+    pub status: String,
+    pub planned_min: u32,
+    pub break_min: u32,
+    pub started_at: Register<String>,
+    pub ended_at: Register<Option<String>>,
+    pub actual_min: Register<u32>,
+    /// `sync_id` des Todos, nicht die lokale Zeilen-ID.
+    pub todo: Register<Option<String>>,
+    pub note: Register<String>,
+    pub deleted: Register<bool>,
+}
+
+impl SessionCrdt {
+    /// Eine Session aus ihren Rohdaten; alle Felder tragen `clock`.
+    pub fn from_session(sync_id: impl Into<String>, session: &SyncSession, clock: &Hlc) -> Self {
+        fn reg<T: Ord + Clone>(value: T, clock: &Hlc) -> Register<T> {
+            Register::new(value, clock.clone())
+        }
+        Self {
+            sync_id: sync_id.into(),
+            device_id: session.device_id.clone(),
+            mode: session.mode.clone(),
+            session_type: session.session_type.clone(),
+            status: session.status.clone(),
+            planned_min: session.planned_min,
+            break_min: session.break_min,
+            started_at: reg(session.started_at.clone(), clock),
+            ended_at: reg(session.ended_at.clone(), clock),
+            actual_min: reg(session.actual_min, clock),
+            todo: reg(None, clock),
+            note: reg(String::new(), clock),
+            deleted: reg(false, clock),
+        }
+    }
+
+    /// Die Rohdaten mit den aufgelösten Registerwerten.
+    pub fn to_session(&self) -> SyncSession {
+        SyncSession {
+            device_id: self.device_id.clone(),
+            mode: self.mode.clone(),
+            session_type: self.session_type.clone(),
+            status: self.status.clone(),
+            started_at: self.started_at.value.clone(),
+            ended_at: self.ended_at.value.clone(),
+            planned_min: self.planned_min,
+            actual_min: self.actual_min.value,
+            break_min: self.break_min,
+        }
+    }
+
+    /// Jüngster Stempel aller Felder außer dem Löschkennzeichen.
+    fn latest_edit(&self) -> &Hlc {
+        [
+            &self.started_at.clock,
+            &self.ended_at.clock,
+            &self.actual_min.clock,
+            &self.todo.clock,
+            &self.note.clock,
+        ]
+        .into_iter()
+        .max()
+        .unwrap_or(&self.deleted.clock)
+    }
+
+    /// Wie [`TodoCrdt::is_deleted`]: Wer eine Session bearbeitet, die ein anderes Gerät gleichzeitig gelöscht hat,
+    /// behält sie; bei genau demselben Stempel gilt sie als gelöscht.
+    pub fn is_deleted(&self) -> bool {
+        self.deleted.value && self.deleted.clock >= *self.latest_edit()
+    }
+
+    /// Ist die Session seit mehr als [`TOMBSTONE_TTL_MS`] gelöscht?
+    pub fn is_collectable(&self, now_ms: i64) -> bool {
+        self.is_deleted() && self.deleted.clock.wall_ms < now_ms.saturating_sub(TOMBSTONE_TTL_MS)
+    }
+
+    pub fn merge(&self, other: &Self) -> Self {
+        Self {
+            sync_id: self.sync_id.clone(),
+            device_id: self.device_id.clone().max(other.device_id.clone()),
+            mode: self.mode.clone().max(other.mode.clone()),
+            session_type: self.session_type.clone().max(other.session_type.clone()),
+            status: self.status.clone().max(other.status.clone()),
+            planned_min: self.planned_min.max(other.planned_min),
+            break_min: self.break_min.max(other.break_min),
+            started_at: self.started_at.merge(&other.started_at),
+            ended_at: self.ended_at.merge(&other.ended_at),
+            actual_min: self.actual_min.merge(&other.actual_min),
+            todo: self.todo.merge(&other.todo),
+            note: self.note.merge(&other.note),
+            deleted: self.deleted.merge(&other.deleted),
+        }
+    }
+
+    fn sanitized(&self, now_ms: i64) -> Self {
+        Self {
+            started_at: self.started_at.capped(now_ms),
+            ended_at: self.ended_at.capped(now_ms),
+            actual_min: self.actual_min.capped(now_ms),
+            todo: self.todo.capped(now_ms),
+            note: self.note.capped(now_ms),
+            deleted: self.deleted.capped(now_ms),
+            ..self.clone()
+        }
+    }
+}
+
 /// Der gesamte Sync-Zustand eines Geräts.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SyncState {
     pub todos: BTreeMap<String, TodoCrdt>,
-    pub sessions: BTreeMap<String, SyncSession>,
+    /// Schlüssel ist die `sync_id`.
+    pub sessions: BTreeMap<String, SessionCrdt>,
 }
 
 impl SyncState {
@@ -239,17 +355,18 @@ impl SyncState {
             todos.insert(id.clone(), merged);
         }
         let mut sessions = self.sessions.clone();
-        for (key, session) in &other.sessions {
-            let kept = match sessions.get(key) {
-                Some(mine) if mine >= session => mine.clone(),
-                _ => session.clone(),
+        for (id, session) in &other.sessions {
+            let merged = match sessions.get(id) {
+                Some(mine) => mine.merge(session),
+                None => session.clone(),
             };
-            sessions.insert(key.clone(), kept);
+            sessions.insert(id.clone(), merged);
         }
         Self { todos, sessions }
     }
 
-    /// Lässt Tombstones weg, die älter als [`TOMBSTONE_TTL_MS`] sind (siehe [`TodoCrdt::is_collectable`]). Erst
+    /// Lässt Tombstones weg, die älter als [`TOMBSTONE_TTL_MS`] sind (siehe [`TodoCrdt::is_collectable`] und
+    /// [`SessionCrdt::is_collectable`]). Erst
     /// **nach** dem Zusammenführen anwenden: Vorher würde ein altes Löschen verschwinden, bevor es ein lebendes
     /// Todo der Gegenseite überstimmt hat.
     pub fn collect_garbage(&self, now_ms: i64) -> Self {
@@ -260,7 +377,12 @@ impl SyncState {
                 .filter(|(_, todo)| !todo.is_collectable(now_ms))
                 .map(|(id, todo)| (id.clone(), todo.clone()))
                 .collect(),
-            sessions: self.sessions.clone(),
+            sessions: self
+                .sessions
+                .iter()
+                .filter(|(_, session)| !session.is_collectable(now_ms))
+                .map(|(id, session)| (id.clone(), session.clone()))
+                .collect(),
         }
     }
 
@@ -273,7 +395,11 @@ impl SyncState {
                 .iter()
                 .map(|(id, todo)| (id.clone(), todo.sanitized(now_ms)))
                 .collect(),
-            sessions: self.sessions.clone(),
+            sessions: self
+                .sessions
+                .iter()
+                .map(|(id, session)| (id.clone(), session.sanitized(now_ms)))
+                .collect(),
         }
     }
 
@@ -286,6 +412,7 @@ impl SyncState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hlc::MAX_DRIFT_MS;
 
     fn clock(wall: i64) -> Hlc {
         Hlc::new(wall, 0, "d")
@@ -330,9 +457,8 @@ mod tests {
         assert!(todo.is_deleted());
     }
 
-    #[test]
-    fn a_session_known_under_one_key_keeps_the_larger_version() {
-        let session = |minutes| SyncSession {
+    fn raw_session(minutes: u32) -> SyncSession {
+        SyncSession {
             device_id: "d".to_owned(),
             mode: "pomodoro".to_owned(),
             session_type: "work".to_owned(),
@@ -342,17 +468,59 @@ mod tests {
             planned_min: 25,
             actual_min: minutes,
             break_min: 5,
+        }
+    }
+
+    #[test]
+    fn registers_of_a_session_merge_field_by_field() {
+        let mut a = SessionCrdt::from_session("s", &raw_session(25), &clock(1));
+        let mut b = a.clone();
+        a.actual_min.set(30, clock(5));
+        b.note.set("review".to_owned(), clock(6));
+        b.todo.set(Some("t".to_owned()), clock(6));
+        let merged = a.merge(&b);
+        assert_eq!(merged.actual_min.value, 30);
+        assert_eq!(merged.note.value, "review");
+        assert_eq!(merged.todo.value.as_deref(), Some("t"));
+        assert_eq!(b.merge(&a), merged);
+        assert_eq!(merged.to_session().actual_min, 30);
+    }
+
+    #[test]
+    fn a_session_deletion_is_not_older_than_the_last_edit() {
+        let mut session = SessionCrdt::from_session("s", &raw_session(25), &clock(1));
+        session.note.set("edited".to_owned(), clock(9));
+        session.deleted.set(true, clock(8));
+        assert!(!session.is_deleted());
+        session.deleted.set(true, clock(9));
+        assert!(session.is_deleted());
+        session.deleted.set(true, clock(10));
+        assert!(session.is_deleted());
+    }
+
+    #[test]
+    fn a_session_tombstone_is_collectable_after_90_days() {
+        let mut session = SessionCrdt::from_session("s", &raw_session(25), &clock(1));
+        session.deleted.set(true, clock(1000));
+        assert!(!session.is_collectable(1000 + TOMBSTONE_TTL_MS));
+        assert!(session.is_collectable(1001 + TOMBSTONE_TTL_MS));
+        session.deleted.set(false, clock(2000));
+        assert!(!session.is_collectable(i64::MAX));
+    }
+
+    #[test]
+    fn the_state_collects_and_caps_sessions() {
+        let mut gone = SessionCrdt::from_session("gone", &raw_session(25), &clock(1));
+        gone.deleted.set(true, clock(2));
+        let mut ahead = SessionCrdt::from_session("ahead", &raw_session(25), &clock(1));
+        ahead.note.set("x".to_owned(), clock(MAX_DRIFT_MS + 5_000));
+        let state = SyncState {
+            todos: BTreeMap::new(),
+            sessions: BTreeMap::from([("gone".to_owned(), gone), ("ahead".to_owned(), ahead)]),
         };
-        let state = |minutes| {
-            let session = session(minutes);
-            SyncState {
-                todos: BTreeMap::new(),
-                sessions: BTreeMap::from([(session_key(&session), session)]),
-            }
-        };
-        let merged = state(25).merge(&state(20));
-        assert_eq!(merged.sessions.len(), 1);
-        assert_eq!(merged.sessions.values().next().unwrap().actual_min, 25);
-        assert_eq!(state(20).merge(&state(25)), merged);
+        let collected = state.collect_garbage(TOMBSTONE_TTL_MS + 10);
+        assert_eq!(collected.sessions.keys().collect::<Vec<_>>(), ["ahead"]);
+        let capped = state.sanitized(0);
+        assert_eq!(capped.sessions["ahead"].note.clock.wall_ms, MAX_DRIFT_MS);
     }
 }

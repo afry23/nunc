@@ -24,17 +24,20 @@ und Projektzeit muss über alle Geräte hinweg stimmen. ADR 0016 lässt das nich
 - **Identität:** Jede Session bekommt eine stabile `sync_id` (UUID, bei Anlage vergeben). Bestehende Sessions ohne
   `sync_id` bekommen eine **deterministische** ID, abgeleitet aus `session_key`; zwei Geräte vergeben so für dieselbe
   Alt-Session dieselbe ID, es entstehen keine Dubletten.
-- **Felder** sind LWW-Register `(Wert, HLC)` (`hlc.rs`, wie bei Todos): `started_at`, `actual_min`, `todo`
+- **Felder** sind LWW-Register `(Wert, HLC)` (`hlc.rs`, wie bei Todos): `started_at`, `ended_at`, `actual_min`, `todo`
   (`sync_id` des Todos, nicht die lokale Zeilen-ID), `note`, `deleted` (Tombstone). Unveränderlich bleiben
   `device_id`, `mode`, `session_type`, `status`, `planned_min`, `break_min`; sie werden beim Anlegen gesetzt.
 - Der Merge ist kommutativ, assoziativ und idempotent; Gleichstand entscheidet `device_id`. `sanitized` kappt Remote-
   Stempel wie bei Todos (24 h Drift). Ein Tombstone gewinnt nur, wenn er jünger ist als jede Bearbeitung.
 - **Tombstone-GC:** wie Todos nach 90 Tagen (`TOMBSTONE_TTL_MS`, `is_collectable`). Dasselbe Risiko wie in ADR 0016:
   ein länger als 90 Tage offline gewesenes Gerät legt die Session wieder an.
-- **Format:** `nunc-sync.v3.json`, `SCHEMA_VERSION = 3`. Gelesen werden v3 und v2; v2-Sessions werden beim Einlesen
-  zu `SessionCrdt` mit Stempeln aus dem Pseudo-Gerät `legacy` gehoben. Geschrieben wird nur v3. Der Versionscheck
-  (`sync_document.rs`) vergleicht strikt auf Gleichheit: Ältere Clients lehnen v3 mit `UnsupportedVersion` ab, statt
-  neue Felder still zu verwerfen und beim Zurückschreiben zu löschen. Die v2-Datei bleibt unangetastet liegen.
+- **Format:** `schema_version` wird 3, die Datei heißt weiter `nunc-sync.v2.json`. Gelesen werden Version 2 und 3
+  (`MIN_SCHEMA_VERSION`..=`SCHEMA_VERSION`); Sessions der Version 2 (Rohdaten ohne `sync_id`) werden beim Einlesen zu
+  `SessionCrdt::from_legacy`: ID `legacy:<session_key>`, alle Felder mit dem Stempel `0` des Pseudo-Geräts `legacy`, damit
+  jede echte Bearbeitung gewinnt. Geschrieben wird nur Version 3. Der Versionscheck vergleicht strikt: Ältere Clients
+  lehnen die Datei mit `UnsupportedVersion` ab („Bitte nunc aktualisieren“), statt neue Felder still zu verwerfen und
+  beim Zurückschreiben zu löschen. Der Dateiname bleibt bewusst gleich: Mit einem neuen Namen würde ein älterer Client
+  die Datei gar nicht sehen, eine frische Version-2-Datei anlegen und die Geräte würden still auseinanderlaufen.
 - **Store:** additive Migration `008_session_crdt.sql`:
   `session_meta(session_id PK→sessions, sync_id UNIQUE, origin 'timer'|'manual', note, deleted)` und
   `session_field_clock(session_id, field, hlc…)` nach dem Muster von `todo_field_clock`. Bestandssessions erhalten

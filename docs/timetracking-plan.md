@@ -21,7 +21,7 @@ Bestand (Analyse):
 ### M11-01 ADR 0017 „Sessions als CRDT“ + `@wip`-Features
 - Session bekommt stabile `sync_id` (UUID), Felder als LWW-Register (HLC aus `hlc.rs`, wie `TodoCrdt`):
   `started_at`, `actual_min`, `todo` (Todo-`sync_id`), `note`, `deleted`. Tombstone-GC 90 Tage wie Todos.
-- Sync-Format wird `nunc-sync.v3.json` (`SCHEMA_VERSION = 3`, v2 wird weiter gelesen): ältere Clients lehnen v3 ab, statt neue
+- Sync-Format: `schema_version` 3 in `nunc-sync.v2.json` (Dateiname bleibt, v2 wird weiter gelesen): ältere Clients lehnen v3 ab, statt neue
   Felder still zu verwerfen. Alt-Sessions ohne `sync_id` bekommen deterministische ID aus `session_key` → keine Dubletten.
 - Features: `features/timetracking/{report,edit,manual,timeline}.feature`, Tags `@domain`/`@integration`/`@ui`,
   Story-Tags `@US-TT01…04`.
