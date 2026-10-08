@@ -689,4 +689,62 @@ mod tests {
         assert_eq!(column, 3);
         assert_eq!(pomodoros_of(&conn, 1).unwrap().get(LEGACY_DEVICE), Some(&2));
     }
+
+    fn remote_session(sync_id: &str, minutes: u32, wall: i64) -> nunc_core::crdt::SessionCrdt {
+        let raw = nunc_core::model::SyncSession {
+            device_id: "dev-x".to_owned(),
+            mode: "pomodoro".to_owned(),
+            session_type: "work".to_owned(),
+            status: "completed".to_owned(),
+            started_at: "2026-10-04T09:00:00Z".to_owned(),
+            ended_at: None,
+            planned_min: 25,
+            actual_min: minutes,
+            break_min: 5,
+        };
+        nunc_core::crdt::SessionCrdt::from_session(sync_id, &raw, &Hlc::new(wall, 0, "dev-x"))
+    }
+
+    fn state_with(session: nunc_core::crdt::SessionCrdt) -> SyncState {
+        SyncState {
+            todos: BTreeMap::new(),
+            sessions: BTreeMap::from([(session.sync_id.clone(), session)]),
+        }
+    }
+
+    #[test]
+    fn a_deleted_session_unknown_here_is_not_created() {
+        let mut conn = open_in_memory().unwrap();
+        let mut gone = remote_session("s-1", 25, 5);
+        gone.deleted.set(true, Hlc::new(6, 0, "dev-x"));
+        let applied = apply_state(&mut conn, &state_with(gone)).unwrap();
+        assert_eq!(applied, Applied::default());
+        let rows: i64 = conn
+            .query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rows, 0);
+    }
+
+    #[test]
+    fn sessions_are_added_once_and_replaced_when_the_remote_changed() {
+        let mut conn = open_in_memory().unwrap();
+        let first = apply_state(&mut conn, &state_with(remote_session("s-1", 25, 5))).unwrap();
+        assert_eq!((first.sessions_added, first.sessions_replaced), (1, 0));
+        let again = apply_state(&mut conn, &state_with(remote_session("s-1", 25, 5))).unwrap();
+        assert_eq!(again, Applied::default());
+        let mut edited = remote_session("s-1", 25, 5);
+        edited.actual_min.set(40, Hlc::new(9, 0, "dev-x"));
+        let changed = apply_state(&mut conn, &state_with(edited)).unwrap();
+        assert_eq!((changed.sessions_added, changed.sessions_replaced), (0, 1));
+        let minutes: i64 = conn
+            .query_row("SELECT actual_min FROM sessions", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(minutes, 40);
+        // zwei verschiedene Sessions: beide werden gezählt (kein Produkt statt Summe)
+        let mut both = state_with(remote_session("s-2", 10, 5));
+        both.sessions
+            .insert("s-3".to_owned(), remote_session("s-3", 10, 5));
+        let added = apply_state(&mut conn, &both).unwrap();
+        assert_eq!(added.sessions_added, 2);
+    }
 }

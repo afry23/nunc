@@ -486,6 +486,17 @@ mod tests {
     }
 
     #[test]
+    fn the_origin_defaults_to_timer_also_for_files_without_it() {
+        let session = SessionCrdt::from_session("s", &raw_session(25), &clock(1));
+        assert_eq!(session.origin, "timer");
+        let mut json = serde_json::to_value(&session).unwrap();
+        json.as_object_mut().unwrap().remove("origin");
+        let read: SessionCrdt = serde_json::from_value(json).unwrap();
+        assert_eq!(read.origin, ORIGIN_TIMER);
+        assert_eq!(read, session);
+    }
+
+    #[test]
     fn registers_of_a_session_merge_field_by_field() {
         let mut a = SessionCrdt::from_session("s", &raw_session(25), &clock(1));
         let mut b = a.clone();

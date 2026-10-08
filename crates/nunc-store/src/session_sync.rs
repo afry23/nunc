@@ -378,6 +378,27 @@ mod tests {
     }
 
     #[test]
+    fn an_empty_end_is_none_and_a_set_end_is_kept() {
+        let conn = open_in_memory().unwrap();
+        for ended in ["NULL", "'2026-10-04T09:25:00Z'"] {
+            conn.execute(
+                &format!(
+                    "INSERT INTO sessions (mode, session_type, status, started_at, ended_at)
+                     VALUES ('pomodoro','work','completed','2026-10-04T09:00:00Z', {ended})"
+                ),
+                [],
+            )
+            .unwrap();
+        }
+        assert_eq!(fields_of(&conn, 1).unwrap().unwrap().ended_at, None);
+        assert_eq!(
+            fields_of(&conn, 2).unwrap().unwrap().ended_at.as_deref(),
+            Some("2026-10-04T09:25:00Z")
+        );
+        assert!(fields_of(&conn, 3).unwrap().is_none());
+    }
+
+    #[test]
     fn two_rows_with_the_same_key_both_get_an_id() {
         let conn = open_in_memory().unwrap();
         for _ in 0..2 {
