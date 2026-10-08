@@ -521,6 +521,20 @@ mod tests {
         let collected = state.collect_garbage(TOMBSTONE_TTL_MS + 10);
         assert_eq!(collected.sessions.keys().collect::<Vec<_>>(), ["ahead"]);
         let capped = state.sanitized(0);
-        assert_eq!(capped.sessions["ahead"].note.clock.wall_ms, MAX_DRIFT_MS);
+        let ahead = &capped.sessions["ahead"];
+        assert_eq!(ahead.note.clock.wall_ms, MAX_DRIFT_MS);
+        // jedes Register wird gekappt, nicht nur die Notiz
+        let mut all = SessionCrdt::from_session("all", &raw_session(25), &clock(MAX_DRIFT_MS + 5));
+        all.note.set(String::new(), clock(MAX_DRIFT_MS + 5));
+        let all = all.sanitized(0);
+        let stamps = [
+            all.started_at.clock.wall_ms,
+            all.ended_at.clock.wall_ms,
+            all.actual_min.clock.wall_ms,
+            all.todo.clock.wall_ms,
+            all.note.clock.wall_ms,
+            all.deleted.clock.wall_ms,
+        ];
+        assert_eq!(stamps, [MAX_DRIFT_MS; 6]);
     }
 }
