@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart, Heatmap, LineChart, PieChart } from "../components/charts";
 import { DownloadIcon } from "../components/icons";
+import { TimesheetPanel } from "../components/TimesheetPanel";
 import { Button, Segmented, SectionLabel } from "../components/ui";
 import {
   commands,
@@ -18,12 +19,16 @@ import { useUiStore } from "../stores/uiStore";
 
 const PERIODS: StatsPeriod[] = ["day", "week", "month", "year"];
 
+type Tab = "overview" | "times";
+const TABS: Tab[] = ["overview", "times"];
+
 type Loaded =
   | { period: StatsPeriod; request: StatsRequest; response: StatsResponse }
   | { period: StatsPeriod; error: string };
 
 export function StatsView() {
   const t = useT();
+  const [tab, setTab] = useState<Tab>("overview");
   const [period, setPeriod] = useState<StatsPeriod>("week");
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
@@ -31,6 +36,7 @@ export function StatsView() {
   const fail = useUiStore((s) => s.fail);
 
   useEffect(() => {
+    if (tab !== "overview") return;
     let cancelled = false;
     const request: StatsRequest = {
       period,
@@ -47,7 +53,7 @@ export function StatsView() {
     return () => {
       cancelled = true;
     };
-  }, [period]);
+  }, [period, tab]);
 
   const current = loaded?.period === period ? loaded : null;
   const data = current && "response" in current ? current : null;
@@ -96,42 +102,63 @@ export function StatsView() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Segmented
-            label={t("stats.period")}
-            value={period}
-            options={PERIODS.map((value) => ({
+            label={t("stats.tabs")}
+            value={tab}
+            options={TABS.map((value) => ({
               value,
-              label: t(`stats.range.${value}`),
+              label: t(`stats.tab.${value}`),
             }))}
-            onChange={setPeriod}
+            onChange={setTab}
           />
-          <div className="relative">
-            <Button
-              aria-haspopup="true"
-              aria-expanded={exportOpen}
-              disabled={!data}
-              onClick={() => setExportOpen(!exportOpen)}
-            >
-              <DownloadIcon /> {t("stats.export")}
-            </Button>
-            {exportOpen && (
-              <div
-                role="group"
-                aria-label={t("stats.exportFormat")}
-                className="glass shadow-ambient absolute right-0 z-10 mt-2 flex flex-col gap-1 rounded-xl p-2"
-              >
-                <Button variant="ghost" onClick={() => void exportAs("csv")}>
-                  CSV
+          {tab === "overview" && (
+            <>
+              <Segmented
+                label={t("stats.period")}
+                value={period}
+                options={PERIODS.map((value) => ({
+                  value,
+                  label: t(`stats.range.${value}`),
+                }))}
+                onChange={setPeriod}
+              />
+              <div className="relative">
+                <Button
+                  aria-haspopup="true"
+                  aria-expanded={exportOpen}
+                  disabled={!data}
+                  onClick={() => setExportOpen(!exportOpen)}
+                >
+                  <DownloadIcon /> {t("stats.export")}
                 </Button>
-                <Button variant="ghost" onClick={() => void exportAs("json")}>
-                  JSON
-                </Button>
+                {exportOpen && (
+                  <div
+                    role="group"
+                    aria-label={t("stats.exportFormat")}
+                    className="glass shadow-ambient absolute right-0 z-10 mt-2 flex flex-col gap-1 rounded-xl p-2"
+                  >
+                    <Button
+                      variant="ghost"
+                      onClick={() => void exportAs("csv")}
+                    >
+                      CSV
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => void exportAs("json")}
+                    >
+                      JSON
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
       </header>
 
-      {current && "error" in current && (
+      {tab === "times" && <TimesheetPanel />}
+
+      {tab === "overview" && current && "error" in current && (
         <p
           role="alert"
           className="rounded-xl bg-surface-container-low p-4 text-red-300"
@@ -139,17 +166,17 @@ export function StatsView() {
           {current.error}
         </p>
       )}
-      {!current && (
+      {tab === "overview" && !current && (
         <p className="text-on-surface-variant">{t("stats.loading")}</p>
       )}
 
-      {response && empty && (
+      {tab === "overview" && response && empty && (
         <p className="rounded-xl bg-surface-container-low p-8 text-center text-on-surface-variant">
           {t("stats.none")}
         </p>
       )}
 
-      {response && !empty && (
+      {tab === "overview" && response && !empty && (
         <>
           <dl className="grid grid-cols-2 gap-4 lg:grid-cols-3">
             <Kpi

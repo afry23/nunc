@@ -2,7 +2,7 @@
 //!
 //! Spalten wie in der Go-App (`date, start_time, end_time, duration_min, mode, status, todo_text, project_tags,
 //! context_tags`), zusätzlich am Ende `session_type`, weil sich Arbeit und Pausen sonst nicht unterscheiden
-//! lassen (Go exportierte nur den Modus). Datum und Uhrzeiten sind **Ortszeit**; der Aufrufer liefert die
+//! lassen (Go exportierte nur den Modus), sowie `note` und `origin` (`timer` oder `manual`, ADR 0017). Datum und Uhrzeiten sind **Ortszeit**; der Aufrufer liefert die
 //! Umrechnung. JSON verwendet dieselben Schlüssel mit echten Typen (Zahlen, Arrays) statt lauter Strings.
 
 use std::collections::HashMap;
@@ -26,9 +26,22 @@ pub struct ExportRow {
     pub project_tags: Vec<String>,
     pub context_tags: Vec<String>,
     pub session_type: SessionType,
+    /// Notiz der Session, leer ohne Notiz.
+    pub note: String,
+    /// `timer` (aufgezeichnet) oder `manual` (nachgetragen).
+    pub origin: String,
 }
 
-const CSV_HEADER: [&str; 10] = [
+/// Notiz und Herkunft einer Session; Sessions ohne Eintrag gelten als aufgezeichnet und ohne Notiz.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExportDetails {
+    pub note: String,
+    pub origin: String,
+}
+
+const ORIGIN_TIMER: &str = "timer";
+
+const CSV_HEADER: [&str; 12] = [
     "date",
     "start_time",
     "end_time",
@@ -39,6 +52,8 @@ const CSV_HEADER: [&str; 10] = [
     "project_tags",
     "context_tags",
     "session_type",
+    "note",
+    "origin",
 ];
 
 /// Wählt die Sessions im Zeitraum (inklusive, nach lokalem Startdatum) und sortiert sie nach Startzeit.
@@ -46,6 +61,7 @@ pub fn export_rows(
     sessions: &[Session],
     todos: &[Todo],
     request: &StatsRequest,
+    details: &HashMap<i32, ExportDetails>,
     to_local: &dyn Fn(DateTime<Utc>) -> NaiveDateTime,
 ) -> Vec<ExportRow> {
     let todo_by_id: HashMap<i32, &Todo> = todos.iter().map(|todo| (todo.id, todo)).collect();
@@ -63,6 +79,7 @@ pub fn export_rows(
         .map(|session| {
             let start = to_local(session.started_at);
             let todo = session.todo_id.and_then(|id| todo_by_id.get(&id));
+            let detail = details.get(&session.id);
             ExportRow {
                 date: start.date(),
                 start_time: start.time(),
@@ -74,6 +91,8 @@ pub fn export_rows(
                 project_tags: todo.map(|t| t.project_tags.clone()).unwrap_or_default(),
                 context_tags: todo.map(|t| t.context_tags.clone()).unwrap_or_default(),
                 session_type: session.session_type,
+                note: detail.map(|d| d.note.clone()).unwrap_or_default(),
+                origin: detail.map_or_else(|| ORIGIN_TIMER.to_owned(), |d| d.origin.clone()),
             }
         })
         .collect()
@@ -82,7 +101,7 @@ pub fn export_rows(
 /// CSV nach RFC 4180 (Zeilenende `\n`): Kopfzeile plus eine Zeile je Session.
 ///
 /// Felder mit Komma, Anführungszeichen oder Zeilenumbruch werden in Anführungszeichen gesetzt. Die freien
-/// Textspalten (`todo_text`, `project_tags`, `context_tags`) bekommen ein `'` vorangestellt, wenn sie mit
+/// Textspalten (`todo_text`, `project_tags`, `context_tags`, `note`) bekommen ein `'` vorangestellt, wenn sie mit
 /// `=`, `+`, `-`, `@`, Tab oder Zeilenumbruch beginnen, damit Tabellenprogramme sie nicht als Formel auswerten
 /// (CSV-Injection). Tags stehen mit Präfix und durch Leerzeichen getrennt in einer Zelle.
 pub fn to_csv(rows: &[ExportRow]) -> String {
@@ -102,6 +121,8 @@ pub fn to_csv(rows: &[ExportRow]) -> String {
             guard_formula(&row.project_tags.join(" ")),
             guard_formula(&row.context_tags.join(" ")),
             row.session_type.as_str().to_owned(),
+            guard_formula(&row.note),
+            row.origin.clone(),
         ];
         let line: Vec<String> = fields.iter().map(|field| csv_escape(field)).collect();
         out.push_str(&line.join(","));

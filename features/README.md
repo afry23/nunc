@@ -14,7 +14,7 @@ Eine Quelle für alle Runner (siehe ADR 0006). Szenarien sind englisch, Dateien 
 | `@wip` | Szenario ist nur ein Titel, Steps fehlen noch; Runner überspringen es |
 | `@property` · `@manual` | Eigenschaftstest (proptest, `Then the property "…" holds for N random cases`) · nicht automatisierbar, manueller Check |
 
-**Stand:** Die Szenarien von M11 (`timetracking/`, `ui/timetracking.feature`, `sync/session_crdt.feature`) tragen `@wip`, bis ihr Ticket abgeschlossen ist; sonst kein Szenario. `npm run docs:report` prüft das. Neue Szenarien beginnen als `@wip` (nur Titel), Steps
+**Stand (M11):** kein Szenario trägt `@wip`. `npm run docs:report` prüft das. Neue Szenarien beginnen als `@wip` (nur Titel), Steps
 ergänzen, rot → grün, dann `@wip` entfernen. `smoke*.feature` sind Runner-Selbsttests.
 
 Fixtures für Kompatibilitätsszenarien: [`tests/fixtures/`](../tests/fixtures/README.md).

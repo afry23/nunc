@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use nunc_core::export::{export_rows, to_csv, to_json};
+use nunc_core::export::{ExportDetails, export_rows, to_csv, to_json};
 use nunc_core::model::{StatsRequest, StatsResponse};
 use nunc_core::stats::compute_stats;
 use nunc_platform::{to_local, to_local_date};
@@ -104,7 +104,21 @@ fn build_export(
     format: ExportFormat,
 ) -> Result<String, AppError> {
     let (sessions, todos) = load_sessions_and_todos(state)?;
-    let rows = export_rows(&sessions, &todos, request, &to_local);
+    let details = state
+        .db
+        .with(|conn| nunc_store::list_session_details(conn))?
+        .into_iter()
+        .map(|(id, d)| {
+            (
+                id,
+                ExportDetails {
+                    note: d.note,
+                    origin: d.origin,
+                },
+            )
+        })
+        .collect();
+    let rows = export_rows(&sessions, &todos, request, &details, &to_local);
     match format {
         ExportFormat::Csv => Ok(to_csv(&rows)),
         ExportFormat::Json => to_json(&rows)

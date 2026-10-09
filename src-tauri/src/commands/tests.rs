@@ -608,7 +608,9 @@ fn export_contains_the_sessions_of_the_range() {
     let lines: Vec<&str> = csv.as_str().unwrap().lines().collect();
     assert_eq!(lines.len(), 2);
     assert!(lines[0].starts_with("date,start_time,end_time,duration_min,mode,status"));
+    assert!(lines[0].ends_with(",session_type,note,origin"));
     assert!(lines[1].contains("pomodoro,completed"));
+    assert!(lines[1].ends_with(",work,,timer"));
 
     let json_export = h.ok(
         "export_stats",
@@ -672,6 +674,24 @@ fn a_manual_entry_shows_up_in_the_timeline_and_the_timesheet() {
         json!({ "startDate": day, "endDate": day, "groupBy": "todo" }),
     );
     assert_eq!(by_todo["rows"][0]["todoId"], todo["id"]);
+}
+
+#[test]
+fn the_export_carries_note_and_origin_of_a_manual_entry() {
+    let h = Harness::new();
+    h.ok(
+        "create_manual_session",
+        entry(at(7, 0), at(8, 30), None, "Workshop"),
+    );
+    let day = local_day(at(7, 0));
+    let request = json!({ "period": "day", "startDate": day, "endDate": day });
+    let csv = h.ok(
+        "export_stats",
+        json!({ "request": request, "format": "csv" }),
+    );
+    let lines: Vec<&str> = csv.as_str().unwrap().lines().collect();
+    assert_eq!(lines.len(), 2);
+    assert!(lines[1].ends_with(",work,Workshop,manual"), "{}", lines[1]);
 }
 
 #[test]

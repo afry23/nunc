@@ -68,6 +68,7 @@ und Projektzeit muss über alle Geräte hinweg stimmen. ADR 0016 lässt das nich
   Hinweis in den Release-Notes (`docs/release.md`).
 - Dateigröße wächst durch Register und Tombstones; die GC räumt nach 90 Tagen ab.
 - Projektzeit anderer Geräte erscheint nach dem Sync, weil der Todo-Bezug jetzt mitgeführt wird.
+- Der Export (CSV/JSON) hat zwei Spalten mehr am Ende: `note` und `origin`.
 - Tests: `@domain @property` (Session-Merge kommutativ/assoziativ/idempotent), `@integration` (Migration 008 auf
   Bestands-DB, Backup alter Version restorebar), `@integration @sync` (zwei Geräte, eines bearbeitet, eines löscht;
   v2-Datei wird gelesen), `@ui` für Timesheet, Timeline und Dialoge.

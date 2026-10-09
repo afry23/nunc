@@ -455,12 +455,14 @@ fn csv_roundtrip(cases: u32) -> Result<(), String> {
                 project_tags: projects.clone(),
                 context_tags: contexts.clone(),
                 session_type: SessionType::Work,
+                note: String::new(),
+                origin: "timer".to_owned(),
             })
             .collect();
         let parsed = parse_csv(&to_csv(&export));
         prop_assert_eq!(parsed.len(), export.len() + 1);
         for (row, (text, projects, contexts)) in parsed[1..].iter().zip(&rows) {
-            prop_assert_eq!(row.len(), 10);
+            prop_assert_eq!(row.len(), 12);
             for (cell, expected) in [
                 (&row[6], text.clone()),
                 (&row[7], projects.join(" ")),

@@ -2,9 +2,10 @@
 //! die Todos aus `todo_query`.
 
 use chrono::{DateTime, FixedOffset, NaiveDateTime, Utc};
-use cucumber::{gherkin::Step, then, when};
-use nunc_core::export::{export_rows, to_csv, to_json};
+use cucumber::{gherkin::Step, given, then, when};
+use nunc_core::export::{ExportDetails, export_rows, to_csv, to_json};
 use nunc_core::model::{StatsPeriod, StatsRequest};
+use std::collections::HashMap;
 
 use crate::DomainWorld;
 
@@ -12,6 +13,8 @@ use crate::DomainWorld;
 pub struct State {
     csv: String,
     json: String,
+    /// Notiz und Herkunft je Beginn (`YYYY-MM-DD HH:MM`, UTC).
+    details: Vec<(String, ExportDetails)>,
 }
 
 fn docstring(step: &Step) -> String {
@@ -20,6 +23,23 @@ fn docstring(step: &Step) -> String {
         .expect("Docstring fehlt")
         .trim_matches('\n')
         .to_owned()
+}
+
+#[given("the session details:")]
+fn details(world: &mut DomainWorld, step: &Step) {
+    let table = step.table.as_ref().expect("Tabelle fehlt");
+    world.export.details = table.rows[1..]
+        .iter()
+        .map(|row| {
+            (
+                row[0].clone(),
+                ExportDetails {
+                    note: row[1].clone(),
+                    origin: row[2].clone(),
+                },
+            )
+        })
+        .collect();
 }
 
 #[when("I export the sessions")]
@@ -33,10 +53,21 @@ fn export(world: &mut DomainWorld) {
     };
     let to_local =
         |time: DateTime<Utc>| -> NaiveDateTime { time.with_timezone(&offset).naive_local() };
+    // Die Sessions der Tabelle tragen Id 0; für die Details bekommt jede eine eigene.
+    let mut sessions = stats.sessions.clone();
+    let mut details = HashMap::new();
+    for (index, session) in sessions.iter_mut().enumerate() {
+        session.id = i32::try_from(index).expect("wenige Sessions") + 1;
+        let start = session.started_at.format("%Y-%m-%d %H:%M").to_string();
+        if let Some((_, detail)) = world.export.details.iter().find(|(key, _)| *key == start) {
+            details.insert(session.id, detail.clone());
+        }
+    }
     let rows = export_rows(
-        &stats.sessions,
+        &sessions,
         &world.todo_query.todos,
         &request,
+        &details,
         &to_local,
     );
     world.export.csv = to_csv(&rows);
