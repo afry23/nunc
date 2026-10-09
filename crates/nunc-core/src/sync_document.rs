@@ -1,4 +1,4 @@
-//! Austauschformat `nunc-sync.v2.json` (ADR 0016) und der einmalige Import der alten Datei `nunc-sync.json`.
+//! Austauschformat `nunc-sync.v2.json` (ADR 0016, Format 3 nach ADR 0017) und der einmalige Import der alten Datei `nunc-sync.json`.
 //!
 //! Die Datei ist der [`SyncState`] als Listen (Todos mit Feldregistern, Sessions) plus Kopfdaten. Die alte Datei
 //! kennt keine Stempel: Beim Import trägt jedes Feld den Zeitpunkt `updated_at` und das Pseudo-Gerät `legacy`
@@ -9,13 +9,16 @@ use std::collections::BTreeMap;
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::crdt::{Register, SyncState, TodoCrdt, session_key};
+use crate::crdt::{Register, SessionCrdt, SyncState, TodoCrdt, session_key};
 use crate::hlc::Hlc;
 use crate::model::{SyncFile, SyncSession, SyncTodo};
 use crate::todotxt::parse_line;
 
-/// Version des Formats in `schema_version`.
-pub const SCHEMA_VERSION: u32 = 2;
+/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT).
+pub const SCHEMA_VERSION: u32 = 3;
+
+/// Älteste Version, die noch gelesen wird: Version 2 kennt Sessions nur als Rohdaten ([`SyncSession`]).
+pub const MIN_SCHEMA_VERSION: u32 = 2;
 
 /// Pseudo-Gerät für Stände ohne Stempel.
 pub const LEGACY_DEVICE: &str = "legacy";
@@ -23,9 +26,17 @@ pub const LEGACY_DEVICE: &str = "legacy";
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum DocumentError {
     #[error(
-        "Die Sync-Datei hat das Format {found}, diese Version versteht {SCHEMA_VERSION}. Bitte nunc aktualisieren."
+        "Die Sync-Datei hat das Format {found}, diese Version versteht {MIN_SCHEMA_VERSION} bis {SCHEMA_VERSION}. Bitte nunc aktualisieren."
     )]
     UnsupportedVersion { found: u32 },
+}
+
+/// Eine Session in der Datei: Version 3 schreibt [`SessionCrdt`], Version 2 die Rohdaten.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SessionEntry {
+    Crdt(Box<SessionCrdt>),
+    Legacy(SyncSession),
 }
 
 /// Die Sync-Datei auf dem Server.
@@ -36,7 +47,7 @@ pub struct SyncDocument {
     #[serde(default)]
     pub todos: Vec<TodoCrdt>,
     #[serde(default)]
-    pub sessions: Vec<SyncSession>,
+    pub sessions: Vec<SessionEntry>,
 }
 
 impl SyncDocument {
@@ -45,13 +56,19 @@ impl SyncDocument {
             schema_version: SCHEMA_VERSION,
             synced_at,
             todos: state.todos.values().cloned().collect(),
-            sessions: state.sessions.values().cloned().collect(),
+            sessions: state
+                .sessions
+                .values()
+                .cloned()
+                .map(|session| SessionEntry::Crdt(Box::new(session)))
+                .collect(),
         }
     }
 
-    /// Der Zustand aus der Datei; eine andere Version ist ein Fehler (neuere Dateien nicht raten).
+    /// Der Zustand aus der Datei (Version 2 und 3); eine andere Version ist ein Fehler (neuere Dateien nicht raten).
+    /// Sessions der Version 2 werden zu [`SessionCrdt::from_legacy`].
     pub fn into_state(self) -> Result<SyncState, DocumentError> {
-        if self.schema_version != SCHEMA_VERSION {
+        if !(MIN_SCHEMA_VERSION..=SCHEMA_VERSION).contains(&self.schema_version) {
             return Err(DocumentError::UnsupportedVersion {
                 found: self.schema_version,
             });
@@ -66,7 +83,11 @@ impl SyncDocument {
             sessions: self
                 .sessions
                 .into_iter()
-                .map(|session| (session_key(&session), session))
+                .map(|entry| match entry {
+                    SessionEntry::Crdt(session) => *session,
+                    SessionEntry::Legacy(session) => SessionCrdt::from_legacy(&session),
+                })
+                .map(|session| (session.sync_id.clone(), session))
                 .collect(),
         })
     }
@@ -114,6 +135,20 @@ fn legacy_todo(todo: &SyncTodo, rank: usize) -> TodoCrdt {
     }
 }
 
+impl SessionCrdt {
+    /// Eine Session ohne `sync_id` und ohne Stempel (Version-2-Datei, alte Datei, Bestandsdaten): Die ID folgt
+    /// deterministisch aus [`session_key`], damit zwei Geräte für dieselbe Session dieselbe ID bilden und nichts
+    /// doppelt entsteht. Alle Felder tragen den Stempel `0` des Pseudo-Geräts `legacy`; jede echte Bearbeitung
+    /// gewinnt dagegen.
+    pub fn from_legacy(session: &SyncSession) -> Self {
+        Self::from_session(
+            format!("legacy:{}", session_key(session)),
+            session,
+            &Hlc::new(0, 0, LEGACY_DEVICE),
+        )
+    }
+}
+
 impl SyncState {
     /// Der Stand aus der alten Datei `nunc-sync.json` (einmaliger Import beim ersten Lauf). Todos ohne `sync_id`
     /// werden übersprungen.
@@ -134,7 +169,8 @@ impl SyncState {
             sessions: file
                 .sessions
                 .iter()
-                .map(|session| (session_key(session), session.clone()))
+                .map(SessionCrdt::from_legacy)
+                .map(|session| (session.sync_id.clone(), session))
                 .collect(),
         }
     }

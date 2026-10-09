@@ -21,11 +21,11 @@ Feature: Session export
     When I export the sessions
     Then the CSV export is:
       """
-      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type
-      2025-06-01,09:00:00,09:25:00,25,pomodoro,completed,(A) Write report +work +q4 @desk,'+work +q4,'@desk,work
-      2025-06-01,09:30:00,09:35:00,5,pomodoro,completed,,,,short_break
-      2025-06-02,14:00:00,14:12:00,12,pomodoro,aborted,"Say ""hello"", then call @phone",,'@phone,work
-      2025-06-03,08:00:00,,,flowtime,completed,'-rm everything +danger,'+danger,,work
+      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type,note,origin
+      2025-06-01,09:00:00,09:25:00,25,pomodoro,completed,(A) Write report +work +q4 @desk,'+work +q4,'@desk,work,,timer
+      2025-06-01,09:30:00,09:35:00,5,pomodoro,completed,,,,short_break,,timer
+      2025-06-02,14:00:00,14:12:00,12,pomodoro,aborted,"Say ""hello"", then call @phone",,'@phone,work,,timer
+      2025-06-03,08:00:00,,,flowtime,completed,'-rm everything +danger,'+danger,,work,,timer
       """
 
   @domain @REQ-11
@@ -45,7 +45,9 @@ Feature: Session export
           "todo_text": "(A) Write report +work +q4 @desk",
           "project_tags": ["+work", "+q4"],
           "context_tags": ["@desk"],
-          "session_type": "work"
+          "session_type": "work",
+          "note": "",
+          "origin": "timer"
         },
         {
           "date": "2025-06-01",
@@ -57,7 +59,9 @@ Feature: Session export
           "todo_text": "",
           "project_tags": [],
           "context_tags": [],
-          "session_type": "short_break"
+          "session_type": "short_break",
+          "note": "",
+          "origin": "timer"
         }
       ]
       """
@@ -80,7 +84,9 @@ Feature: Session export
           "todo_text": "-rm everything +danger",
           "project_tags": ["+danger"],
           "context_tags": [],
-          "session_type": "work"
+          "session_type": "work",
+          "note": "",
+          "origin": "timer"
         }
       ]
       """
@@ -92,7 +98,7 @@ Feature: Session export
     Then the CSV export has 1 lines
     And the CSV export is:
       """
-      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type
+      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type,note,origin
       """
 
   @domain @REQ-11
@@ -119,8 +125,8 @@ Feature: Session export
     When I export the sessions
     Then the CSV export is:
       """
-      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type
-      2025-06-02,14:00:00,14:12:00,12,pomodoro,aborted,"Say ""hello"", then call @phone",,'@phone,work
+      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type,note,origin
+      2025-06-02,14:00:00,14:12:00,12,pomodoro,aborted,"Say ""hello"", then call @phone",,'@phone,work,,timer
       """
 
   @domain @REQ-11
@@ -129,8 +135,8 @@ Feature: Session export
     When I export the sessions
     Then the CSV export is:
       """
-      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type
-      2025-06-03,08:00:00,,,flowtime,completed,'-rm everything +danger,'+danger,,work
+      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type,note,origin
+      2025-06-03,08:00:00,,,flowtime,completed,'-rm everything +danger,'+danger,,work,,timer
       """
 
   @domain @REQ-11
@@ -143,8 +149,40 @@ Feature: Session export
     When I export the sessions
     Then the CSV export is:
       """
-      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type
-      2025-06-02,01:30:00,01:55:00,25,pomodoro,completed,,,,work
+      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type,note,origin
+      2025-06-02,01:30:00,01:55:00,25,pomodoro,completed,,,,work,,timer
+      """
+
+  @domain @US-TT03
+  Scenario: Note and origin of a manual entry are exported
+    Given the sessions:
+      | start            | end              | mode     | type | status    | minutes | todo |
+      | 2025-06-04 10:00 | 2025-06-04 11:30 | flowtime | work | completed | 90      | 1    |
+    And the session details:
+      | start            | note              | origin |
+      | 2025-06-04 10:00 | Workshop, onsite  | manual |
+    And the statistics range is 2025-06-04 to 2025-06-04
+    When I export the sessions
+    Then the CSV export is:
+      """
+      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type,note,origin
+      2025-06-04,10:00:00,11:30:00,90,flowtime,completed,(A) Write report +work +q4 @desk,'+work +q4,'@desk,work,"Workshop, onsite",manual
+      """
+
+  @domain @US-TT03
+  Scenario: A note that looks like a formula is neutralized
+    Given the sessions:
+      | start            | end              | mode     | type | status    | minutes | todo |
+      | 2025-06-04 10:00 | 2025-06-04 11:30 | flowtime | work | completed | 90      |      |
+    And the session details:
+      | start            | note      | origin |
+      | 2025-06-04 10:00 | =SUM(A1)  | manual |
+    And the statistics range is 2025-06-04 to 2025-06-04
+    When I export the sessions
+    Then the CSV export is:
+      """
+      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type,note,origin
+      2025-06-04,10:00:00,11:30:00,90,flowtime,completed,,,,work,'=SUM(A1),manual
       """
 
   @domain @property @REQ-11

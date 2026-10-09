@@ -1,6 +1,6 @@
 Feature: CRDT sync
   Source: ADR 0016
-  Todos merge field by field with a hybrid logical clock. Pomodoro counts add up per device. Sessions stay append-only.
+  Todos merge field by field with a hybrid logical clock. Pomodoro counts add up per device. Sessions are covered by ADR 0017 (`session_crdt.feature`).
 
   @domain @REQ-SYNC
   Scenario: Changes to different fields of one todo are both kept
@@ -130,9 +130,14 @@ Feature: CRDT sync
     Then the state is unchanged
 
   @domain @REQ-SYNC
-  Scenario: A sync file of another format is refused
-    When a sync file of format 3 is read
-    Then reading fails with "Die Sync-Datei hat das Format 3, diese Version versteht 2. Bitte nunc aktualisieren."
+  Scenario Outline: A sync file of another format is refused
+    When a sync file of format <format> is read
+    Then reading fails with "Die Sync-Datei hat das Format <format>, diese Version versteht 2 bis 3. Bitte nunc aktualisieren."
+
+    Examples:
+      | format |
+      | 1      |
+      | 4      |
 
   @domain @REQ-SYNC
   Scenario: A session is the same however its start is written

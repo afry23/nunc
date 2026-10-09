@@ -13,6 +13,7 @@ mod properties;
 mod settings;
 mod stats;
 mod timer;
+mod timetracking;
 mod todo_query;
 mod todoist;
 mod todotxt;
@@ -29,6 +30,7 @@ pub struct DomainWorld {
     settings: settings::State,
     stats: stats::State,
     timer: timer::State,
+    timetracking: timetracking::State,
     todo_query: todo_query::State,
     todoist: todoist::State,
     todotxt: todotxt::State,

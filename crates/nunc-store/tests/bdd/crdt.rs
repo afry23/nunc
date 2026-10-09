@@ -20,7 +20,7 @@ fn today() -> NaiveDate {
 }
 
 impl State {
-    fn conn(&mut self, device: &str) -> &mut Connection {
+    pub(crate) fn conn(&mut self, device: &str) -> &mut Connection {
         let slot = match device {
             "A" => &mut self.a,
             "B" => &mut self.b,
@@ -63,6 +63,7 @@ impl State {
             todos_added: on_a.todos_added + on_b.todos_added,
             todos_replaced: on_a.todos_replaced + on_b.todos_replaced,
             sessions_added: on_a.sessions_added + on_b.sessions_added,
+            sessions_replaced: on_a.sessions_replaced + on_b.sessions_replaced,
         }
     }
 }
@@ -136,6 +137,7 @@ fn reorders(world: &mut StoreWorld, device: String, ids: String, time: String) {
     nunc_store::reorder_todos(world.crdt.conn(&device), &ids, at(&time)).expect("reorder");
 }
 
+#[given("the devices exchange their state")]
 #[when("the devices exchange their state")]
 fn exchange(world: &mut StoreWorld) {
     world.crdt.last_exchange = world.crdt.exchange();

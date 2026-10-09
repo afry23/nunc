@@ -372,6 +372,20 @@ Go-Kompatibilität entfällt. Todos werden feldweise per HLC-LWW zusammengeführ
 
 ---
 
+## M11 – Zeiterfassung (ADR 0017)
+
+Projektzeit aus den Roh-Sessions, Korrektur und Nachtrag von Sessions, Tages-Timeline. Sessions werden dafür ein CRDT (Sync-Format v3). Kalender-Integration bleibt im Backlog. Plan: [`docs/timetracking-plan.md`](./docs/timetracking-plan.md).
+
+| ID | Ticket |
+|---|---|
+| M11-01 | ADR 0017, `@wip`-Szenarien `features/timetracking/*.feature`, `features/ui/timetracking.feature`, `features/sync/session_crdt.feature` |
+| M11-02 | `nunc-core`: `SessionCrdt` (Merge, GC), `SCHEMA_VERSION` 3 mit v2-Lesen, `timesheet.rs`, `timeline.rs`, `manual_entry.rs` (`@domain`, `@property`) – erledigt |
+| M11-03 | Migration 008 (`session_meta`, `session_field_clock`), `session_repo` (anlegen, ändern, löschen), `local_state`/`apply_state` für Sessions (`@integration`, `@sync`) – erledigt |
+| M11-04 | Commands `get_timesheet`, `get_day_timeline`, `create_manual_session`, `update_session`, `delete_session`, `AppError`-Codes (`session_invalid_range`, `session_too_long`, `session_in_future`), Bindings – erledigt |
+| M11-05 | UI: eigene Ansicht „Zeiten“ (`/times`, Menüpunkt vor der Statistik), `Timeline`-Komponente, Bearbeiten-Dialog, CSV-Export um `note`/`origin` erweitern (`@ui`) – erledigt. **Manuell prüfen:** Ansicht „Zeiten“ und sechs Tabs bei ≈ 411 px ohne horizontalen Überlauf, Nachtragen auf Android (datetime-local), Sync auf zweitem Gerät. |
+
+---
+
 ## Erweiterungen nach M8
 
 | Thema | Notiz |

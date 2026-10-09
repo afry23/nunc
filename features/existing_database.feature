@@ -13,10 +13,10 @@ Feature: Existing databases
     And the table "sessions" contains 11 rows
 
   @integration @REQ-compat @desktop
-  Scenario: Only the additive migrations 006 and 007 are applied on top
+  Scenario: Only the additive migrations 006 to 008 are applied on top
     Given the Go fixture database
     When nunc opens the database
-    Then exactly the migrations 1 to 7 are recorded as applied
+    Then exactly the migrations 1 to 8 are recorded as applied
     And the migration timestamps did not change
 
   @integration @REQ-compat @desktop
@@ -92,7 +92,7 @@ Feature: Existing databases
       | 3  | 2026-09-22 Buy groceries +home @errands           |
       | 4  | x 2026-09-25 2026-09-18 Plan sprint +work         |
       | 5  | (C) Read Rust book +learning +rust @evening       |
-    And exactly the migrations 1 to 7 are recorded as applied
+    And exactly the migrations 1 to 8 are recorded as applied
     And there are 11 sessions
 
   @integration @REQ-compat @desktop
@@ -114,7 +114,7 @@ Feature: Existing databases
     Given the Go app left its database in the user config folder "config"
     When nunc starts with the data folder "data"
     Then the legacy import result is "imported"
-    And exactly the migrations 1 to 7 are recorded as applied
+    And exactly the migrations 1 to 8 are recorded as applied
     And there are 11 sessions
     When I list the todos
     Then the todo list has 5 entries

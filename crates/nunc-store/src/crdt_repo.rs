@@ -5,18 +5,18 @@
 //! und nach der Änderung und stempelt **nur die Felder, die sich geändert haben**; das ist die Grundlage dafür,
 //! dass gleichzeitige Änderungen verschiedener Felder beim Sync beide erhalten bleiben.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 
 use chrono::{DateTime, TimeZone, Utc};
-use nunc_core::crdt::{Register, SyncState, TodoCrdt, session_key};
+use nunc_core::crdt::{Register, SyncState, TodoCrdt};
 use nunc_core::hlc::Hlc;
-use nunc_core::model::SyncSession;
 use nunc_core::position::position_between;
 use nunc_core::todotxt::parse_line;
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::StoreError;
-use crate::sync_repo::{Applied, sync_session};
+use crate::session_sync;
+use crate::sync_repo::Applied;
 use crate::time::{day_text, parse_day, to_text};
 
 /// Felder mit eigenem Stempel. Zeile (`raw_text`) und Tags folgen aus ihnen und haben keinen.
@@ -122,7 +122,7 @@ pub(crate) fn atomic<T>(
     }
 }
 
-fn local_device(conn: &Connection) -> Result<String, StoreError> {
+pub(crate) fn local_device(conn: &Connection) -> Result<String, StoreError> {
     let stored: Option<String> = conn
         .query_row(
             "SELECT value FROM settings WHERE key = 'device_id'",
@@ -164,7 +164,7 @@ pub(crate) fn next_hlc(conn: &Connection, at: DateTime<Utc>) -> Result<Hlc, Stor
 }
 
 /// Merkt sich einen fremden Stempel, damit lokale Schreibvorgänge danach immer jünger sind.
-fn observe(conn: &Connection, clock: &Hlc) -> Result<(), StoreError> {
+pub(crate) fn observe(conn: &Connection, clock: &Hlc) -> Result<(), StoreError> {
     let current = stored_clock(conn)?.unwrap_or((i64::MIN, 0));
     if (clock.wall_ms, clock.counter) > current {
         store_clock(conn, clock.wall_ms, clock.counter)?;
@@ -429,23 +429,13 @@ pub fn local_state(
     for (id, sync_id) in rows {
         todos.insert(sync_id.clone(), read_todo(conn, id, &sync_id)?);
     }
-    let device = local_device(conn)?;
-    let sessions: Vec<SyncSession> = conn
-        .prepare(
-            "SELECT COALESCE(sync_device_id, ''), mode, session_type, status, started_at,
-                    COALESCE(ended_at, ''), COALESCE(planned_min, 0), COALESCE(actual_min, 0),
-                    COALESCE(break_min, 0)
-             FROM sessions WHERE status = 'completed' ORDER BY started_at, id",
-        )?
-        .query_map([], |row| sync_session(row, &device))?
-        .collect::<Result<_, _>>()?;
-    Ok(SyncState {
-        todos,
-        sessions: sessions
-            .into_iter()
-            .map(|session| (session_key(&session), session))
-            .collect(),
-    })
+    session_sync::ensure_meta(conn)?;
+    let mut sessions = BTreeMap::new();
+    for id in session_sync::exportable_ids(conn)? {
+        let session = session_sync::read_session(conn, id)?;
+        sessions.insert(session.sync_id.clone(), session);
+    }
+    Ok(SyncState { todos, sessions })
 }
 
 /// Das Löschkennzeichen als aufgelöster Wert: In der Datenbank steht nur dieser, nicht der rohe Registerwert. Ohne
@@ -524,7 +514,7 @@ fn write_todo_row(conn: &Connection, id: i64, todo: &TodoCrdt) -> Result<(), Sto
 
 /// Schreibt den zusammengeführten Stand in die Datenbank (**eine Transaktion**): neue Todos werden angelegt
 /// (bereits gelöschte nicht), geänderte in allen Feldern, Stempeln und Zählern nachgezogen, `raw_text` und
-/// Tags aus den Feldern neu aufgebaut, neue Sessions angefügt und die Reihenfolge neu nummeriert.
+/// Tags aus den Feldern neu aufgebaut, Sessions angelegt oder nachgezogen und die Reihenfolge neu nummeriert.
 pub fn apply_state(conn: &mut Connection, merged: &SyncState) -> Result<Applied, StoreError> {
     let tx = conn.transaction()?;
     let mut applied = Applied::default();
@@ -555,38 +545,22 @@ pub fn apply_state(conn: &mut Connection, merged: &SyncState) -> Result<Applied,
             }
         }
     }
-    let device = local_device(&tx)?;
-    let known: HashSet<String> = tx
-        .prepare(
-            "SELECT COALESCE(sync_device_id, ''), mode, session_type, status, started_at,
-                    COALESCE(ended_at, ''), COALESCE(planned_min, 0), COALESCE(actual_min, 0),
-                    COALESCE(break_min, 0)
-             FROM sessions",
-        )?
-        .query_map([], |row| sync_session(row, &device))?
-        .map(|session| session.map(|session| session_key(&session)))
-        .collect::<Result<_, _>>()?;
-    for (key, session) in &merged.sessions {
-        if known.contains(key) {
-            continue;
+    session_sync::ensure_meta(&tx)?;
+    for (sync_id, session) in &merged.sessions {
+        match session_sync::row_of(&tx, sync_id)? {
+            None if session.is_deleted() => {}
+            None => {
+                session_sync::insert_session(&tx, session)?;
+                applied.sessions_added += 1;
+            }
+            Some(id) => {
+                let local = session_sync::read_session(&tx, id)?;
+                if session_sync::resolved(local) != session_sync::resolved(session.clone()) {
+                    session_sync::write_session_row(&tx, id, session)?;
+                    applied.sessions_replaced += 1;
+                }
+            }
         }
-        applied.sessions_added += 1;
-        tx.execute(
-            "INSERT INTO sessions (sync_device_id, mode, session_type, status, started_at, ended_at,
-                                   planned_min, actual_min, break_min)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![
-                session.device_id,
-                session.mode,
-                session.session_type,
-                session.status,
-                session.started_at,
-                session.ended_at,
-                (session.planned_min > 0).then_some(session.planned_min),
-                session.actual_min,
-                session.break_min,
-            ],
-        )?;
     }
     renumber_positions(&tx)?;
     tx.commit()?;
@@ -714,5 +688,63 @@ mod tests {
             .unwrap();
         assert_eq!(column, 3);
         assert_eq!(pomodoros_of(&conn, 1).unwrap().get(LEGACY_DEVICE), Some(&2));
+    }
+
+    fn remote_session(sync_id: &str, minutes: u32, wall: i64) -> nunc_core::crdt::SessionCrdt {
+        let raw = nunc_core::model::SyncSession {
+            device_id: "dev-x".to_owned(),
+            mode: "pomodoro".to_owned(),
+            session_type: "work".to_owned(),
+            status: "completed".to_owned(),
+            started_at: "2026-10-04T09:00:00Z".to_owned(),
+            ended_at: None,
+            planned_min: 25,
+            actual_min: minutes,
+            break_min: 5,
+        };
+        nunc_core::crdt::SessionCrdt::from_session(sync_id, &raw, &Hlc::new(wall, 0, "dev-x"))
+    }
+
+    fn state_with(session: nunc_core::crdt::SessionCrdt) -> SyncState {
+        SyncState {
+            todos: BTreeMap::new(),
+            sessions: BTreeMap::from([(session.sync_id.clone(), session)]),
+        }
+    }
+
+    #[test]
+    fn a_deleted_session_unknown_here_is_not_created() {
+        let mut conn = open_in_memory().unwrap();
+        let mut gone = remote_session("s-1", 25, 5);
+        gone.deleted.set(true, Hlc::new(6, 0, "dev-x"));
+        let applied = apply_state(&mut conn, &state_with(gone)).unwrap();
+        assert_eq!(applied, Applied::default());
+        let rows: i64 = conn
+            .query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rows, 0);
+    }
+
+    #[test]
+    fn sessions_are_added_once_and_replaced_when_the_remote_changed() {
+        let mut conn = open_in_memory().unwrap();
+        let first = apply_state(&mut conn, &state_with(remote_session("s-1", 25, 5))).unwrap();
+        assert_eq!((first.sessions_added, first.sessions_replaced), (1, 0));
+        let again = apply_state(&mut conn, &state_with(remote_session("s-1", 25, 5))).unwrap();
+        assert_eq!(again, Applied::default());
+        let mut edited = remote_session("s-1", 25, 5);
+        edited.actual_min.set(40, Hlc::new(9, 0, "dev-x"));
+        let changed = apply_state(&mut conn, &state_with(edited)).unwrap();
+        assert_eq!((changed.sessions_added, changed.sessions_replaced), (0, 1));
+        let minutes: i64 = conn
+            .query_row("SELECT actual_min FROM sessions", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(minutes, 40);
+        // zwei verschiedene Sessions: beide werden gezählt (kein Produkt statt Summe)
+        let mut both = state_with(remote_session("s-2", 10, 5));
+        both.sessions
+            .insert("s-3".to_owned(), remote_session("s-3", 10, 5));
+        let added = apply_state(&mut conn, &both).unwrap();
+        assert_eq!(added.sessions_added, 2);
     }
 }

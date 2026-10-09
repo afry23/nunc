@@ -39,6 +39,7 @@ Feature: Responsive layout
       | route     |
       | /         |
       | /todos    |
+      | /times    |
       | /stats    |
       | /settings |
 

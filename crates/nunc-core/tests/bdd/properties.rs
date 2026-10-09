@@ -10,12 +10,11 @@ use std::collections::BTreeSet;
 use chrono::{Duration, NaiveDate, TimeZone, Utc};
 use cucumber::then;
 use nunc_core::backup_policy::{BackupFile, backup_file_name, files_to_delete};
-use nunc_core::crdt::{Register, SyncState, TodoCrdt, session_key};
+use nunc_core::crdt::{Register, SessionCrdt, SyncState, TodoCrdt};
 use nunc_core::export::{ExportRow, to_csv};
 use nunc_core::hlc::Hlc;
 use nunc_core::model::{
-    Session, SessionStatus, SessionType, Settings, StatsPeriod, StatsRequest, SyncSession,
-    TimerMode,
+    Session, SessionStatus, SessionType, Settings, StatsPeriod, StatsRequest, TimerMode,
 };
 use nunc_core::position::position_between;
 use nunc_core::stats::{calculate_streaks, compute_stats, utc_date};
@@ -53,6 +52,9 @@ fn property_holds(_world: &mut DomainWorld, name: String, cases: u32) {
         "merging sync states is idempotent" => crdt_idempotent(cases),
         "a position between two others sorts between them" => position_sorts_between(cases),
         "garbage collection is idempotent and only drops deleted todos" => gc_properties(cases),
+        "merging session states is commutative, associative and idempotent" => {
+            session_merge_laws(cases)
+        }
         "streaks follow from the set of days" => streak_invariants(cases),
         "rotation keeps exactly the newest backups" => rotation_keeps_newest(cases),
         "random commands keep the timer consistent" => timer_consistent(cases),
@@ -453,12 +455,14 @@ fn csv_roundtrip(cases: u32) -> Result<(), String> {
                 project_tags: projects.clone(),
                 context_tags: contexts.clone(),
                 session_type: SessionType::Work,
+                note: String::new(),
+                origin: "timer".to_owned(),
             })
             .collect();
         let parsed = parse_csv(&to_csv(&export));
         prop_assert_eq!(parsed.len(), export.len() + 1);
         for (row, (text, projects, contexts)) in parsed[1..].iter().zip(&rows) {
-            prop_assert_eq!(row.len(), 10);
+            prop_assert_eq!(row.len(), 12);
             for (cell, expected) in [
                 (&row[6], text.clone()),
                 (&row[7], projects.join(" ")),
@@ -619,30 +623,54 @@ fn todo_crdt(id: &'static str) -> impl Strategy<Value = TodoCrdt> {
         )
 }
 
-fn crdt_session() -> impl Strategy<Value = SyncSession> {
+fn session_crdt() -> impl Strategy<Value = SessionCrdt> {
     (
-        prop::sample::select(vec!["d1", "d2"]),
-        prop::sample::select(vec!["2026-03-01T10:00:00Z", "2026-03-01T11:00:00Z"]),
-        0u32..3,
+        (
+            prop::sample::select(vec!["s1", "s2"]),
+            prop::sample::select(vec!["d1", "d2"]),
+            prop::sample::select(vec!["pomodoro", "flowtime"]),
+            0u32..3,
+        ),
+        (
+            register(prop::sample::select(vec![
+                "2026-03-01T10:00:00Z".to_owned(),
+                "2026-03-01T11:00:00Z".to_owned(),
+            ])),
+            register(prop::option::of(small_text())),
+            register(0u32..3),
+            register(prop::option::of(small_text())),
+            register(small_text()),
+            register(prop::bool::ANY),
+        ),
     )
-        .prop_map(|(device, started_at, minutes)| SyncSession {
-            device_id: device.to_owned(),
-            mode: "pomodoro".to_owned(),
-            session_type: "work".to_owned(),
-            status: "completed".to_owned(),
-            started_at: started_at.to_owned(),
-            ended_at: None,
-            planned_min: 25,
-            actual_min: minutes,
-            break_min: 5,
-        })
+        .prop_map(
+            |(
+                (sync_id, device, mode, planned),
+                (started_at, ended_at, actual_min, todo, note, deleted),
+            )| SessionCrdt {
+                sync_id: sync_id.to_owned(),
+                device_id: device.to_owned(),
+                mode: mode.to_owned(),
+                session_type: "work".to_owned(),
+                status: "completed".to_owned(),
+                planned_min: planned,
+                break_min: 5,
+                origin: "timer".to_owned(),
+                started_at,
+                ended_at,
+                actual_min,
+                todo,
+                note,
+                deleted,
+            },
+        )
 }
 
 fn sync_state() -> impl Strategy<Value = SyncState> {
     (
         prop::option::of(todo_crdt("a")),
         prop::option::of(todo_crdt("b")),
-        prop::collection::vec(crdt_session(), 0..4),
+        prop::collection::vec(session_crdt(), 0..4),
     )
         .prop_map(|(a, b, sessions)| SyncState {
             todos: a
@@ -652,9 +680,38 @@ fn sync_state() -> impl Strategy<Value = SyncState> {
                 .collect(),
             sessions: sessions
                 .into_iter()
-                .map(|session| (session_key(&session), session))
+                .map(|session| (session.sync_id.clone(), session))
                 .collect(),
         })
+}
+
+fn session_merge_laws(cases: u32) -> Result<(), String> {
+    run(
+        cases,
+        (session_crdt(), session_crdt(), session_crdt()),
+        |(a, b, c)| {
+            let (a, b, c) = (
+                SessionCrdt {
+                    sync_id: "s".to_owned(),
+                    ..a
+                },
+                SessionCrdt {
+                    sync_id: "s".to_owned(),
+                    ..b
+                },
+                SessionCrdt {
+                    sync_id: "s".to_owned(),
+                    ..c
+                },
+            );
+            prop_assert_eq!(a.merge(&b), b.merge(&a));
+            prop_assert_eq!(a.merge(&b.merge(&c)), a.merge(&b).merge(&c));
+            prop_assert_eq!(a.merge(&a), a.clone());
+            let merged = a.merge(&b);
+            prop_assert_eq!(merged.merge(&b), merged.clone());
+            Ok(())
+        },
+    )
 }
 
 fn crdt_commutative(cases: u32) -> Result<(), String> {
@@ -726,7 +783,11 @@ fn gc_properties(cases: u32) -> Result<(), String> {
                 prop_assert!(todo.is_deleted());
             }
         }
-        prop_assert_eq!(&once.sessions, &state.sessions);
+        for (id, session) in &state.sessions {
+            if !once.sessions.contains_key(id) {
+                prop_assert!(session.is_deleted());
+            }
+        }
         Ok(())
     })
 }

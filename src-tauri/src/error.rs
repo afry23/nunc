@@ -3,6 +3,7 @@
 
 use std::sync::PoisonError;
 
+use nunc_core::manual_entry::EntryError;
 use nunc_core::model::SettingsIssue;
 use nunc_core::timer::TimerError;
 use nunc_platform::{NotifyError, SecretError};
@@ -99,6 +100,17 @@ impl From<SyncError> for AppError {
 impl From<TimerError> for AppError {
     fn from(error: TimerError) -> Self {
         Self::new(error.code(), error.to_string())
+    }
+}
+
+impl From<EntryError> for AppError {
+    fn from(error: EntryError) -> Self {
+        let code = match error {
+            EntryError::EndNotAfterStart => "session_invalid_range",
+            EntryError::TooLong => "session_too_long",
+            EntryError::InFuture => "session_in_future",
+        };
+        Self::new(code, error.to_string())
     }
 }
 
@@ -205,6 +217,14 @@ mod tests {
             error.message,
             "401 Unauthorized – Benutzername oder Passwort falsch"
         );
+    }
+
+    #[test]
+    fn entry_errors_get_stable_codes() {
+        let code = |error: EntryError| AppError::from(error).code;
+        assert_eq!(code(EntryError::EndNotAfterStart), "session_invalid_range");
+        assert_eq!(code(EntryError::TooLong), "session_too_long");
+        assert_eq!(code(EntryError::InFuture), "session_in_future");
     }
 
     #[test]

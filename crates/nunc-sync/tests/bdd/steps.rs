@@ -725,6 +725,11 @@ fn server_counts(world: &mut SyncWorld, todos: usize, sessions: usize) {
     assert_eq!((file.todos.len(), file.sessions.len()), (todos, sessions));
 }
 
+#[then(expr = "the sync file on the server has format {int}")]
+fn server_format(world: &mut SyncWorld, format: u32) {
+    assert_eq!(server_file(world).schema_version, format);
+}
+
 #[then("the sync file on the server is unchanged")]
 fn server_unchanged(world: &mut SyncWorld) {
     let path = format!("{}{FILE_NAME}", world.remote_path);

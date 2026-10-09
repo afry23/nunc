@@ -15,7 +15,7 @@ use tempfile::TempDir;
 
 use crate::state::{AppPaths, AppState, Platform};
 
-use super::{app, backup, notifications, settings, stats, sync, timer, todos, todotxt};
+use super::{app, backup, notifications, sessions, settings, stats, sync, timer, todos, todotxt};
 
 struct Harness {
     _dir: TempDir,
@@ -70,6 +70,11 @@ impl Harness {
                 timer::stop_timer,
                 timer::get_timer_tick,
                 timer::get_suggested_break,
+                sessions::get_timesheet,
+                sessions::get_day_timeline,
+                sessions::create_manual_session,
+                sessions::update_session,
+                sessions::delete_session,
                 stats::get_stats,
                 stats::export_stats,
                 backup::get_backup_status,
@@ -603,7 +608,9 @@ fn export_contains_the_sessions_of_the_range() {
     let lines: Vec<&str> = csv.as_str().unwrap().lines().collect();
     assert_eq!(lines.len(), 2);
     assert!(lines[0].starts_with("date,start_time,end_time,duration_min,mode,status"));
+    assert!(lines[0].ends_with(",session_type,note,origin"));
     assert!(lines[1].contains("pomodoro,completed"));
+    assert!(lines[1].ends_with(",work,,timer"));
 
     let json_export = h.ok(
         "export_stats",
@@ -621,6 +628,152 @@ fn export_contains_the_sessions_of_the_range() {
         }),
     );
     assert_eq!(empty.as_str().unwrap(), "[]");
+}
+
+fn local_day(time: DateTime<Utc>) -> String {
+    nunc_platform::to_local_date(time).to_string()
+}
+
+fn entry(start: DateTime<Utc>, end: DateTime<Utc>, todo_id: Option<i64>, note: &str) -> Value {
+    json!({ "input": { "startedAt": start, "endedAt": end, "todoId": todo_id, "note": note } })
+}
+
+#[test]
+fn a_manual_entry_shows_up_in_the_timeline_and_the_timesheet() {
+    let h = Harness::new();
+    let todo = h.ok("add_todo", json!({ "rawText": "Write report +work" }));
+    let start = at(7, 0);
+    let saved = h.ok(
+        "create_manual_session",
+        entry(start, at(8, 30), todo["id"].as_i64(), "nachgetragen"),
+    );
+    assert_eq!(saved["overlaps"], json!([]));
+    assert_eq!(saved["session"]["mode"], "flowtime");
+    assert_eq!(saved["session"]["status"], "completed");
+    assert_eq!(saved["session"]["actualMin"], 90);
+    assert_eq!(saved["session"]["todoId"], todo["id"]);
+
+    let day = local_day(start);
+    let timeline = h.ok("get_day_timeline", json!({ "date": day }));
+    let block = &timeline["blocks"][0];
+    assert_eq!(timeline["blocks"].as_array().unwrap().len(), 1);
+    assert_eq!(block["sessionId"], saved["session"]["id"]);
+    assert_eq!(block["note"], "nachgetragen");
+    assert_eq!(block["origin"], "manual");
+    assert_eq!(block["overlaps"], false);
+
+    let sheet = h.ok(
+        "get_timesheet",
+        json!({ "startDate": day, "endDate": day, "groupBy": "project" }),
+    );
+    assert_eq!(sheet["total"], 90);
+    assert_eq!(sheet["rows"][0]["group"], "+work");
+    assert_eq!(sheet["rows"][0]["minutes"], json!([90]));
+    let by_todo = h.ok(
+        "get_timesheet",
+        json!({ "startDate": day, "endDate": day, "groupBy": "todo" }),
+    );
+    assert_eq!(by_todo["rows"][0]["todoId"], todo["id"]);
+}
+
+#[test]
+fn the_export_carries_note_and_origin_of_a_manual_entry() {
+    let h = Harness::new();
+    h.ok(
+        "create_manual_session",
+        entry(at(7, 0), at(8, 30), None, "Workshop"),
+    );
+    let day = local_day(at(7, 0));
+    let request = json!({ "period": "day", "startDate": day, "endDate": day });
+    let csv = h.ok(
+        "export_stats",
+        json!({ "request": request, "format": "csv" }),
+    );
+    let lines: Vec<&str> = csv.as_str().unwrap().lines().collect();
+    assert_eq!(lines.len(), 2);
+    assert!(lines[1].ends_with(",work,Workshop,manual"), "{}", lines[1]);
+}
+
+#[test]
+fn invalid_manual_entries_are_rejected_with_stable_codes() {
+    let h = Harness::new();
+    let code = |start, end| h.err_code("create_manual_session", entry(start, end, None, ""));
+    assert_eq!(code(at(7, 0), at(7, 0)), "session_invalid_range");
+    assert_eq!(code(at(8, 0), at(7, 0)), "session_invalid_range");
+    assert_eq!(
+        code(at(8, 0) - Duration::minutes(24 * 60 + 1), at(8, 0)),
+        "session_too_long"
+    );
+    assert_eq!(code(at(8, 0), at(9, 1)), "session_in_future");
+    let sessions = h
+        .state()
+        .db
+        .with(|conn| nunc_store::list_sessions(conn))
+        .unwrap();
+    assert!(sessions.is_empty());
+}
+
+#[test]
+fn an_overlapping_entry_is_saved_with_a_warning() {
+    let h = Harness::new();
+    let first = h.ok("create_manual_session", entry(at(6, 0), at(7, 0), None, ""));
+    let second = h.ok(
+        "create_manual_session",
+        entry(at(6, 30), at(7, 30), None, ""),
+    );
+    assert_eq!(second["overlaps"], json!([first["session"]["id"]]));
+    let timeline = h.ok("get_day_timeline", json!({ "date": local_day(at(6, 30)) }));
+    assert_eq!(timeline["blocks"][0]["overlaps"], true);
+}
+
+#[test]
+fn a_session_can_be_edited_and_deleted() {
+    let h = Harness::new();
+    let first = h.ok("create_manual_session", entry(at(6, 0), at(7, 0), None, ""));
+    let id = first["session"]["id"].as_i64().unwrap();
+    let other = h.ok(
+        "create_manual_session",
+        entry(at(7, 0), at(7, 30), None, ""),
+    );
+
+    // der Eintrag überlappt sich nicht mit sich selbst
+    let mut args = entry(at(6, 0), at(7, 15), None, "länger");
+    args["id"] = json!(id);
+    let edited = h.ok("update_session", args);
+    assert_eq!(edited["session"]["actualMin"], 75);
+    assert_eq!(edited["overlaps"], json!([other["session"]["id"]]));
+    let timeline = h.ok("get_day_timeline", json!({ "date": local_day(at(6, 0)) }));
+    assert_eq!(timeline["blocks"][0]["note"], "länger");
+
+    let mut bad = entry(at(8, 0), at(7, 0), None, "");
+    bad["id"] = json!(id);
+    assert_eq!(h.err_code("update_session", bad), "session_invalid_range");
+    let mut missing = entry(at(6, 0), at(7, 0), None, "");
+    missing["id"] = json!(999);
+    assert_eq!(h.err_code("update_session", missing), "not_found");
+
+    h.ok("delete_session", json!({ "id": id }));
+    let timeline = h.ok("get_day_timeline", json!({ "date": local_day(at(6, 0)) }));
+    assert_eq!(timeline["blocks"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        h.err_code("delete_session", json!({ "id": id })),
+        "not_found"
+    );
+}
+
+#[test]
+fn a_timesheet_range_is_limited_to_a_year() {
+    let h = Harness::new();
+    let ok = h.call(
+        "get_timesheet",
+        json!({ "startDate": "2025-10-04", "endDate": "2026-10-04", "groupBy": "project" }),
+    );
+    assert!(ok.is_ok());
+    let code = h.err_code(
+        "get_timesheet",
+        json!({ "startDate": "2025-10-03", "endDate": "2026-10-04", "groupBy": "project" }),
+    );
+    assert_eq!(code, "invalid_input");
 }
 
 #[test]

@@ -17,6 +17,7 @@ mod backup;
 mod compat;
 mod crdt;
 mod legacy;
+mod sessions;
 mod settings;
 mod todos;
 mod todotxt_file;

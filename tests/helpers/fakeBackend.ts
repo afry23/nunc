@@ -5,6 +5,8 @@ import type {
   BackupStatus,
   ConnectionTestResult,
   DriveStatus,
+  GroupBy,
+  TimelineBlock,
   SyncImportInfo,
   SyncResult,
   SyncStatus,
@@ -16,6 +18,7 @@ import type {
   TimerSnapshot,
   Todo,
 } from "../../src/bindings";
+import { addDays, parseIsoDate, toIsoDate } from "../../src/lib/format";
 import { mockBackend, type BackendMock } from "./ipc";
 
 /** Fehler eines Commands, wie ihn das Backend liefert (`{ code, message }`, kein `Error`). */
@@ -92,6 +95,8 @@ type TodoFilterArg = {
   completed?: boolean | null;
 } | null;
 
+export type TimesheetSeed = { group: string | null; minutes: number[] };
+
 export interface FakeBackend extends BackendMock {
   settings: Settings;
   todos: Todo[];
@@ -158,11 +163,42 @@ export interface FakeBackend extends BackendMock {
   providerError: { code: string; message: string } | null;
   /** Fehler, den `restore_from_backup` meldet (`null` = Erfolg). */
   restoreError: { code: string; message: string } | null;
+  /** Zeilen von `get_timesheet` je Gruppierung: Minuten für Montag bis Sonntag. */
+  timesheet: Partial<Record<GroupBy, TimesheetSeed[]>>;
+  /** Blöcke von `get_day_timeline` je lokalem Tag. */
+  timeline: Record<string, TimelineBlock[]>;
+  /** Fehler, den `create_manual_session` und `update_session` melden (`null` = Erfolg). */
+  sessionError: { code: string; message: string } | null;
   /** Letzte Argumente je Command. */
   last: (cmd: string) => Record<string, unknown> | undefined;
   /** Anzahl der Aufrufe eines Commands. */
   count: (cmd: string) => number;
   addTodo: (rawText: string, over?: Partial<Todo>) => Todo;
+}
+
+type SessionInputArg = {
+  startedAt: string;
+  endedAt: string;
+  todoId: number | null;
+  note: string;
+};
+
+function sessionOf(block: TimelineBlock) {
+  const minutes = Math.round(
+    (new Date(block.end).getTime() - new Date(block.start).getTime()) / 60_000,
+  );
+  return {
+    id: block.sessionId,
+    mode: "flowtime" as const,
+    sessionType: block.sessionType,
+    status: block.status,
+    startedAt: block.start,
+    endedAt: block.end,
+    plannedMin: null,
+    actualMin: minutes,
+    todoId: block.todoId,
+    breakMin: null,
+  };
 }
 
 function backupStatus(
@@ -217,6 +253,9 @@ export function createFakeBackend(): FakeBackend {
     restoreFile: null,
     backupDirChoice: null,
     restoreError: null,
+    timesheet: {},
+    timeline: {},
+    sessionError: null,
     providerError: null,
     drive: {
       configured: true,
@@ -411,6 +450,84 @@ export function createFakeBackend(): FakeBackend {
     get_timer_tick: () => fake.timer,
     get_suggested_break: () => fake.suggestedBreak,
     get_stats: () => fake.stats,
+    get_timesheet: ({
+      startDate,
+      endDate,
+      groupBy,
+    }: {
+      startDate: string;
+      endDate: string;
+      groupBy: GroupBy;
+    }) => {
+      const days: string[] = [];
+      for (
+        let day = parseIsoDate(startDate);
+        toIsoDate(day) <= endDate;
+        day = addDays(day, 1)
+      )
+        days.push(toIsoDate(day));
+      const rows = (fake.timesheet[groupBy] ?? []).map((seed) => {
+        const minutes = days.map((_, index) => seed.minutes[index] ?? 0);
+        return {
+          group: seed.group,
+          todoId: null,
+          minutes,
+          total: minutes.reduce((sum, m) => sum + m, 0),
+        };
+      });
+      const dayTotals = days.map((_, index) =>
+        rows.reduce((sum, row) => sum + row.minutes[index], 0),
+      );
+      return {
+        days,
+        rows,
+        dayTotals,
+        total: dayTotals.reduce((sum, m) => sum + m, 0),
+      };
+    },
+    get_day_timeline: ({ date }: { date: string }) => ({
+      date,
+      blocks: fake.timeline[date] ?? [],
+      gaps: [],
+    }),
+    create_manual_session: ({ input }: { input: SessionInputArg }) => {
+      if (fake.sessionError) throw fake.sessionError;
+      const date = toIsoDate(new Date(input.startedAt));
+      const block: TimelineBlock = {
+        sessionId: 1000 + nextId++,
+        start: input.startedAt,
+        end: input.endedAt,
+        sessionType: "work",
+        status: "completed",
+        todoId: input.todoId,
+        note: input.note,
+        origin: "manual",
+        overlaps: false,
+      };
+      fake.timeline[date] = [...(fake.timeline[date] ?? []), block];
+      return { session: sessionOf(block), overlaps: [] };
+    },
+    update_session: ({ id, input }: { id: number; input: SessionInputArg }) => {
+      if (fake.sessionError) throw fake.sessionError;
+      for (const blocks of Object.values(fake.timeline)) {
+        const block = blocks.find((b) => b.sessionId === id);
+        if (block) {
+          Object.assign(block, {
+            start: input.startedAt,
+            end: input.endedAt,
+            todoId: input.todoId,
+            note: input.note,
+          });
+          return { session: sessionOf(block), overlaps: [] };
+        }
+      }
+      return fail("not_found", `Session ${id} nicht gefunden`);
+    },
+    delete_session: ({ id }: { id: number }) => {
+      for (const [date, blocks] of Object.entries(fake.timeline))
+        fake.timeline[date] = blocks.filter((b) => b.sessionId !== id);
+      return null;
+    },
     save_export_to_file: () => fake.exportPath,
     get_api_status: () => ({
       running:

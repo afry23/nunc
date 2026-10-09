@@ -335,11 +335,11 @@ Feature: WebDAV sync
 
   @integration @sync @REQ-SYNC
   Scenario: A sync file of an unknown format is reported and left alone
-    Given a WebDAV server with the folder "/nunc/" holding a sync file of format 3
+    Given a WebDAV server with the folder "/nunc/" holding a sync file of format 4
     And no database exists yet
     And the local todos "Task"
     When I sync
-    Then the sync fails with a message starting "Sync-Datei nicht lesbar: Die Sync-Datei hat das Format 3"
+    Then the sync fails with a message starting "Sync-Datei nicht lesbar: Die Sync-Datei hat das Format 4"
     And the sync file on the server is unchanged
     And the local todos are "Task"
 
