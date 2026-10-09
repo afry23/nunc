@@ -11,6 +11,7 @@ import { HelpView } from "./views/HelpView";
 import { MiniTimerView } from "./views/MiniTimerView";
 import { SettingsView } from "./views/SettingsView";
 import { StatsView } from "./views/StatsView";
+import { TimesView } from "./views/TimesView";
 import { TimerView } from "./views/TimerView";
 import { TodoView } from "./views/TodoView";
 
@@ -32,6 +33,11 @@ const routeTree = rootRoute.addChildren([
       getParentRoute: () => shellRoute,
       path: "/todos",
       component: TodoView,
+    }),
+    createRoute({
+      getParentRoute: () => shellRoute,
+      path: "/times",
+      component: TimesView,
     }),
     createRoute({
       getParentRoute: () => shellRoute,

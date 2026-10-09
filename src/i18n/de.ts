@@ -90,6 +90,7 @@ export const de = {
   "todoist.notice": "Todoist: {message}",
   "nav.timer": "Timer",
   "nav.todos": "Aufgaben",
+  "nav.times": "Zeiten",
   "nav.stats": "Statistik",
   "nav.settings": "Einstellungen",
   "nav.help": "Hilfe",
@@ -103,7 +104,7 @@ export const de = {
     "Aufgaben liegen im todo.txt-Format: Priorität in Klammern am Anfang, +projekt, @kontext. Beispiel: (A) Dokumentation fertig +projekt @kontext. Ein Timer lässt sich einer Aufgabe zuordnen, die Statistik zeigt die Zeit pro Aufgabe.",
   "help.stats.title": "Statistik",
   "help.stats.body":
-    "Alle Auswertungen werden aus den einzelnen Sitzungen berechnet. Es gibt Tages-, Wochen- und Monatsansichten. Im Reiter „Zeiten“ siehst du die Arbeitszeit pro Woche und kannst Einträge nachtragen, bearbeiten und löschen.",
+    "Alle Auswertungen werden aus den einzelnen Sitzungen berechnet. Es gibt Tages-, Wochen- und Monatsansichten. In „Zeiten“ siehst du die Arbeitszeit pro Woche und kannst Einträge nachtragen, bearbeiten und löschen.",
   "help.sync.title": "Synchronisierung",
   "help.sync.body":
     "In den Einstellungen verbindest du WebDAV oder Google Drive, um Daten zwischen Geräten abzugleichen. Todoist lässt sich auf dem Desktop verbinden. Zugangsdaten liegen im Schlüsselspeicher des Systems.",
@@ -237,9 +238,8 @@ export const de = {
   "stats.noContexts": "Keine Kontext-Tags in diesem Zeitraum.",
   "stats.card.topTodos": "Top-Aufgaben",
   "stats.noTopTodos": "Noch keine Aufgaben mit Sitzungen.",
-  "stats.tabs": "Ansicht",
-  "stats.tab.overview": "Übersicht",
-  "stats.tab.times": "Zeiten",
+  "times.eyebrow": "Erfassung",
+  "times.title": "Zeiten",
   "timesheet.weekLabel": "{start} – {end}",
   "timesheet.unassigned": "ohne Zuordnung",
   "timesheet.groupBy": "Gruppieren nach",

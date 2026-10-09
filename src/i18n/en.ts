@@ -92,6 +92,7 @@ export const en: Record<keyof typeof de, string> = {
   "todoist.notice": "Todoist: {message}",
   "nav.timer": "Timer",
   "nav.todos": "Tasks",
+  "nav.times": "Times",
   "nav.stats": "Statistics",
   "nav.settings": "Settings",
   "nav.help": "Help",
@@ -105,7 +106,7 @@ export const en: Record<keyof typeof de, string> = {
     "Tasks use the todo.txt format: priority in parentheses first, +project, @context. Example: (A) Finish documentation +project @context. A timer can be linked to a task, and statistics show time per task.",
   "help.stats.title": "Statistics",
   "help.stats.body":
-    "All figures are computed from the individual sessions. Daily, weekly and monthly views are available. The “Times” tab shows work time per week and lets you add, edit and delete entries.",
+    "All figures are computed from the individual sessions. Daily, weekly and monthly views are available. The “Times” view shows work time per week and lets you add, edit and delete entries.",
   "help.sync.title": "Sync",
   "help.sync.body":
     "In Settings you connect WebDAV or Google Drive to keep data in step across devices. Todoist can be connected on the desktop. Credentials are kept in the system keychain.",
@@ -238,9 +239,8 @@ export const en: Record<keyof typeof de, string> = {
   "stats.noContexts": "No context tags in this period.",
   "stats.card.topTodos": "Top tasks",
   "stats.noTopTodos": "No tasks with sessions yet.",
-  "stats.tabs": "View",
-  "stats.tab.overview": "Overview",
-  "stats.tab.times": "Times",
+  "times.eyebrow": "Tracking",
+  "times.title": "Times",
   "timesheet.weekLabel": "{start} – {end}",
   "timesheet.unassigned": "unassigned",
   "timesheet.groupBy": "Group by",

@@ -27,6 +27,12 @@ export const TimerIcon = (p: Props) => (
     <path d="M12 9v4l2 2M9 2h6" />
   </Icon>
 );
+export const ClockIcon = (p: Props) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </Icon>
+);
 export const CheckIcon = (p: Props) => (
   <Icon {...p}>
     <circle cx="12" cy="12" r="9" />

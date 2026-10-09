@@ -6,6 +6,7 @@ import { isMobile } from "../lib/platform";
 import {
   BarsIcon,
   CheckIcon,
+  ClockIcon,
   GearIcon,
   HelpIcon,
   SidebarIcon,
@@ -13,12 +14,13 @@ import {
 } from "./icons";
 
 export const NAV_ITEMS: {
-  to: "/" | "/todos" | "/stats" | "/settings" | "/help";
+  to: "/" | "/todos" | "/times" | "/stats" | "/settings" | "/help";
   label: MessageKey;
   icon: ReactNode;
 }[] = [
   { to: "/", label: "nav.timer", icon: <TimerIcon /> },
   { to: "/todos", label: "nav.todos", icon: <CheckIcon /> },
+  { to: "/times", label: "nav.times", icon: <ClockIcon /> },
   { to: "/stats", label: "nav.stats", icon: <BarsIcon /> },
   { to: "/settings", label: "nav.settings", icon: <GearIcon /> },
   { to: "/help", label: "nav.help", icon: <HelpIcon /> },
@@ -36,7 +38,7 @@ export function Sidebar() {
       aria-label={t("nav.main")}
       data-testid="sidebar"
       data-collapsed={collapsed}
-      className={`flex shrink-0 flex-col gap-1 bg-surface-container-lowest transition-[width] duration-200 ${
+      className={`sticky top-0 flex h-dvh shrink-0 flex-col gap-1 self-start overflow-y-auto bg-surface-container-lowest transition-[width] duration-200 ${
         collapsed ? "w-16 p-2" : "w-64 p-4"
       }`}
     >
@@ -123,7 +125,7 @@ export function BottomTabs() {
           activeOptions={{ exact: item.to === "/" }}
           activeProps={{ "aria-current": "page", className: "text-primary" }}
           inactiveProps={{ className: "text-on-surface-variant" }}
-          className="flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-xs font-semibold"
+          className="flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 text-xs font-semibold"
         >
           {item.icon}
           {t(item.label)}
