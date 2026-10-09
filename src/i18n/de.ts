@@ -247,6 +247,7 @@ export const de = {
   "timesheet.group.context": "Kontext",
   "timesheet.group.todo": "Aufgabe",
   "timesheet.prevWeek": "Vorherige Woche",
+  "timesheet.today": "Heute",
   "timesheet.nextWeek": "Nächste Woche",
   "timesheet.table": "Arbeitszeit pro Woche",
   "timesheet.col.group": "Gruppe",

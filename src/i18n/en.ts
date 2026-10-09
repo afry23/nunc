@@ -248,6 +248,7 @@ export const en: Record<keyof typeof de, string> = {
   "timesheet.group.context": "Context",
   "timesheet.group.todo": "Task",
   "timesheet.prevWeek": "Previous week",
+  "timesheet.today": "Today",
   "timesheet.nextWeek": "Next week",
   "timesheet.table": "Work time per week",
   "timesheet.col.group": "Group",
