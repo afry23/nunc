@@ -630,6 +630,7 @@ fn session_crdt() -> impl Strategy<Value = SessionCrdt> {
             prop::sample::select(vec!["d1", "d2"]),
             prop::sample::select(vec!["pomodoro", "flowtime"]),
             0u32..3,
+            prop::sample::select(vec!["regular", "stopwatch"]),
         ),
         (
             register(prop::sample::select(vec![
@@ -645,7 +646,7 @@ fn session_crdt() -> impl Strategy<Value = SessionCrdt> {
     )
         .prop_map(
             |(
-                (sync_id, device, mode, planned),
+                (sync_id, device, mode, planned, kind),
                 (started_at, ended_at, actual_min, todo, note, deleted),
             )| SessionCrdt {
                 sync_id: sync_id.to_owned(),
@@ -656,6 +657,7 @@ fn session_crdt() -> impl Strategy<Value = SessionCrdt> {
                 planned_min: planned,
                 break_min: 5,
                 origin: "timer".to_owned(),
+                kind: kind.to_owned(),
                 started_at,
                 ended_at,
                 actual_min,

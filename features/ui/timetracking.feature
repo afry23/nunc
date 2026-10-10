@@ -53,6 +53,17 @@ Feature: Time tracking in the statistics view
     And I click "Nächste Woche"
     Then the week shown starts 1 weeks from the current week
 
+  @ui @US-TT01
+  Scenario: The today button returns to the current week
+    When I open the app at "/times"
+    Then the button "Heute" is disabled
+    When I click "Vorherige Woche"
+    Then the week shown starts -1 weeks from the current week
+    And the button "Heute" is enabled
+    When I click "Heute"
+    Then the week shown starts 0 weeks from the current week
+    And the button "Heute" is disabled
+
   @ui @US-TT02
   Scenario: Tapping a block opens the edit dialog
     Given the timeline of today has the sessions:

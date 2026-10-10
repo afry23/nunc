@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { t } from "../i18n";
 import { shortDate, formatMinutes, weekdayLabel } from "../lib/format";
 import {
@@ -7,7 +8,12 @@ import {
   pathThrough,
   pieSlices,
   slicePath,
+  stackSegments,
+  timerCount,
+  timerMinutes,
+  TIMERS,
   type DayPoint,
+  type TimerKey,
 } from "../lib/stats";
 
 const W = 600;
@@ -28,7 +34,49 @@ function dayLabel(days: DayPoint[], index: number): string | null {
     : shortDate(days[index].date);
 }
 
-/** Säulendiagramm: Arbeitszeit je Tag, darüber die Zahl der Pomodoros. */
+/** Beschreibung der Anzahlen je Timer für Tooltips, z. B. „4 Pomodoro, 1 Stoppuhr“. */
+function timerDetail(day: DayPoint): string {
+  return TIMERS.map((timer) => ({
+    count: timerCount(day, timer.key),
+    name: t(`timer.mode.${timer.key}`),
+  }))
+    .filter((entry) => entry.count > 0)
+    .map((entry) => t("charts.timerCount", entry))
+    .join(", ");
+}
+
+/** Legende der Timer-Farben. */
+function Legend({ keys }: { keys: readonly TimerKey[] }) {
+  return (
+    <ul
+      data-testid="chart-legend"
+      aria-label={t("charts.legend")}
+      className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-surface-variant"
+    >
+      {TIMERS.filter((timer) => keys.includes(timer.key)).map((timer) => (
+        <li key={timer.key} className="flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className="inline-block h-2.5 w-2.5 rounded-full"
+            style={{ background: timer.color }}
+          />
+          {t(`timer.mode.${timer.key}`)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Timer, die im Zeitraum Werte haben; Pomodoro steht immer dabei. */
+function usedTimers(days: DayPoint[]): TimerKey[] {
+  return TIMERS.filter(
+    (timer) =>
+      timer.key === "pomodoro" ||
+      days.some((day) => timerCount(day, timer.key) > 0),
+  ).map((timer) => timer.key);
+}
+
+/** Säulendiagramm: Arbeitszeit je Tag, gestapelt nach Timer; darüber die Anzahl je Timer in dessen Farbe. */
 export function BarChart({ days }: { days: DayPoint[] }) {
   const bars = barLayout(
     days.map((d) => d.workMinutes),
@@ -39,137 +87,204 @@ export function BarChart({ days }: { days: DayPoint[] }) {
   const total = days.reduce((sum, d) => sum + d.workMinutes, 0);
   const labelled = days.length <= MAX_LABELLED;
   return (
-    <svg
-      role="img"
-      data-testid="chart-bar"
-      aria-label={t("charts.bar", { total: formatMinutes(total) })}
-      viewBox={`0 0 ${W} ${H + LABEL_H}`}
-      className="w-full"
-    >
-      {bars.map((bar, index) => {
-        const day = days[index];
-        const y = bar.y + PAD_TOP;
-        return (
-          <g key={day.date}>
-            <rect
-              x={bar.x}
-              y={y}
-              width={bar.width}
-              height={Math.max(bar.height, 2)}
-              rx={3}
-              fill="var(--color-primary)"
-              opacity={bar.value > 0 ? 1 : 0.2}
-            >
+    <>
+      <svg
+        role="img"
+        data-testid="chart-bar"
+        aria-label={t("charts.bar", { total: formatMinutes(total) })}
+        viewBox={`0 0 ${W} ${H + LABEL_H}`}
+        className="w-full"
+      >
+        {bars.map((bar, index) => {
+          const day = days[index];
+          const base = { ...bar, y: bar.y + PAD_TOP };
+          const segments = stackSegments(
+            base,
+            TIMERS.map((timer) => timerMinutes(day, timer.key)),
+          );
+          const counts = TIMERS.map((timer) => ({
+            color: timer.color,
+            count: timerCount(day, timer.key),
+          })).filter((entry) => entry.count > 0);
+          return (
+            <g key={day.date}>
               <title>
                 {t("charts.barTitle", {
                   date: day.date,
-                  count: day.pomodoroCount,
+                  detail: timerDetail(day) || "0",
                   time: formatMinutes(bar.value),
                 })}
               </title>
-            </rect>
-            {labelled && (
-              <text
-                data-testid="bar-value"
-                x={bar.x + bar.width / 2}
-                y={y - 6}
-                textAnchor="middle"
-                fontSize="13"
-                fontWeight="600"
-                fill="var(--color-on-surface)"
-              >
-                {day.pomodoroCount}
-              </text>
-            )}
-            {dayLabel(days, index) && (
-              <text
-                x={bar.x + bar.width / 2}
-                y={H + 16}
-                textAnchor="middle"
-                fontSize="11"
-                fill="var(--color-on-surface-variant)"
-              >
-                {dayLabel(days, index)}
-              </text>
-            )}
-          </g>
-        );
-      })}
-    </svg>
+              {bar.value > 0 ? (
+                TIMERS.map((timer, n) =>
+                  segments[n].height > 0 ? (
+                    <rect
+                      key={timer.key}
+                      data-testid={`bar-${timer.key}`}
+                      x={bar.x}
+                      y={segments[n].y}
+                      width={bar.width}
+                      height={segments[n].height}
+                      rx={
+                        segments.filter((s) => s.height > 0).length === 1
+                          ? 3
+                          : 0
+                      }
+                      fill={timer.color}
+                    />
+                  ) : null,
+                )
+              ) : (
+                <rect
+                  x={bar.x}
+                  y={base.y}
+                  width={bar.width}
+                  height={2}
+                  rx={3}
+                  fill="var(--color-primary)"
+                  opacity={0.2}
+                />
+              )}
+              {labelled && (
+                <text
+                  data-testid="bar-value"
+                  x={bar.x + bar.width / 2}
+                  y={base.y - 6}
+                  textAnchor="middle"
+                  fontSize="13"
+                  fontWeight="600"
+                  fill="var(--color-on-surface)"
+                >
+                  {counts.length === 0
+                    ? "0"
+                    : counts.map((entry, n) => (
+                        <Fragment key={entry.color}>
+                          {n > 0 && " · "}
+                          <tspan fill={entry.color}>{entry.count}</tspan>
+                        </Fragment>
+                      ))}
+                </text>
+              )}
+              {dayLabel(days, index) && (
+                <text
+                  x={bar.x + bar.width / 2}
+                  y={H + 16}
+                  textAnchor="middle"
+                  fontSize="11"
+                  fill="var(--color-on-surface-variant)"
+                >
+                  {dayLabel(days, index)}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      <Legend keys={usedTimers(days)} />
+    </>
   );
 }
 
-/** Liniendiagramm: abgeschlossene Pomodoros je Tag. */
+/** Liniendiagramm: Anzahl je Tag, eine Linie je Timer in dessen Farbe (gemeinsame Skala). */
 export function LineChart({ days }: { days: DayPoint[] }) {
-  const points = linePoints(
-    days.map((d) => d.pomodoroCount),
-    W - 2 * PAD_X,
-    H - PAD_TOP,
-  ).map((p) => ({ x: p.x + PAD_X, y: p.y + PAD_TOP }));
-  const total = days.reduce((sum, d) => sum + d.pomodoroCount, 0);
+  const keys = usedTimers(days);
+  const lines = TIMERS.filter((timer) => keys.includes(timer.key));
+  const max = Math.max(
+    ...lines.flatMap((timer) => days.map((d) => timerCount(d, timer.key))),
+  );
+  const drawn = lines.map((timer) => ({
+    timer,
+    points: linePoints(
+      days.map((d) => timerCount(d, timer.key)),
+      W - 2 * PAD_X,
+      H - PAD_TOP,
+      max,
+    ).map((p) => ({ x: p.x + PAD_X, y: p.y + PAD_TOP })),
+  }));
+  const total = days.reduce(
+    (sum, d) =>
+      sum + TIMERS.reduce((n, timer) => n + timerCount(d, timer.key), 0),
+    0,
+  );
   const labelled = days.length <= MAX_LABELLED;
+  const axis = drawn[0].points;
   return (
-    <svg
-      role="img"
-      data-testid="chart-line"
-      aria-label={t("charts.line", { total })}
-      viewBox={`0 0 ${W} ${H + LABEL_H}`}
-      className="w-full"
-    >
-      <path
-        d={pathThrough(points)}
-        fill="none"
-        stroke="var(--color-secondary-fixed-dim)"
-        strokeWidth="3"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-      {points.map((p, index) => (
-        <circle
-          key={days[index].date}
-          cx={p.x}
-          cy={p.y}
-          r={days.length > 31 ? 0 : 4}
-          fill="var(--color-primary)"
-        >
-          <title>
-            {t("charts.lineTitle", {
-              date: days[index].date,
-              count: days[index].pomodoroCount,
-            })}
-          </title>
-        </circle>
-      ))}
-      {labelled &&
-        points.map((p, index) => (
-          <text
-            key={`n-${days[index].date}`}
-            data-testid="line-value"
-            x={p.x}
-            y={p.y - 10}
-            textAnchor="middle"
-            fontSize="13"
-            fontWeight="600"
-            fill="var(--color-on-surface)"
-          >
-            {days[index].pomodoroCount}
-          </text>
+    <>
+      <svg
+        role="img"
+        data-testid="chart-line"
+        aria-label={t("charts.line", { total })}
+        viewBox={`0 0 ${W} ${H + LABEL_H}`}
+        className="w-full"
+      >
+        {drawn.map(({ timer, points }) => (
+          <g key={timer.key} data-testid={`line-${timer.key}`}>
+            <path
+              d={pathThrough(points)}
+              fill="none"
+              stroke={timer.color}
+              strokeWidth="3"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {points.map((p, index) => (
+              <circle
+                key={days[index].date}
+                cx={p.x}
+                cy={p.y}
+                r={days.length > 31 ? 0 : 4}
+                fill={timer.color}
+              >
+                <title>
+                  {t("charts.lineTitle", {
+                    date: days[index].date,
+                    detail: t("charts.timerCount", {
+                      count: timerCount(days[index], timer.key),
+                      name: t(`timer.mode.${timer.key}`),
+                    }),
+                  })}
+                </title>
+              </circle>
+            ))}
+            {labelled &&
+              points.map((p, index) => {
+                const count = timerCount(days[index], timer.key);
+                // Pomodoro-Linie beschriftet jeden Tag, die übrigen nur Tage mit Werten
+                if (count === 0 && timer.key !== "pomodoro") return null;
+                return (
+                  <text
+                    key={`n-${days[index].date}`}
+                    data-testid="line-value"
+                    x={p.x}
+                    y={p.y - 10}
+                    textAnchor="middle"
+                    fontSize="13"
+                    fontWeight="600"
+                    fill={timer.color}
+                  >
+                    {count}
+                  </text>
+                );
+              })}
+          </g>
         ))}
-      {days.map((day, index) =>
-        dayLabel(days, index) ? (
-          <text
-            key={day.date}
-            x={points[index].x}
-            y={H + 16}
-            textAnchor="middle"
-            fontSize="11"
-            fill="var(--color-on-surface-variant)"
-          >
-            {dayLabel(days, index)}
-          </text>
-        ) : null,
-      )}
-    </svg>
+        {days.map((day, index) =>
+          dayLabel(days, index) ? (
+            <text
+              key={day.date}
+              x={axis[index].x}
+              y={H + 16}
+              textAnchor="middle"
+              fontSize="11"
+              fill="var(--color-on-surface-variant)"
+            >
+              {dayLabel(days, index)}
+            </text>
+          ) : null,
+        )}
+      </svg>
+      <Legend keys={keys} />
+    </>
   );
 }
 

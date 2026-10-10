@@ -236,6 +236,9 @@ pub struct SessionCrdt {
     /// `timer` oder `manual` (nachgetragen); gilt ab der Anlage.
     #[serde(default = "timer_origin")]
     pub origin: String,
+    /// `regular` oder `stopwatch` (ADR 0018); gilt ab der Anlage. Eine Stopwatch-Session steht als `flowtime` in `mode`.
+    #[serde(default = "regular_kind")]
+    pub kind: String,
     pub started_at: Register<String>,
     pub ended_at: Register<Option<String>>,
     pub actual_min: Register<u32>,
@@ -254,6 +257,15 @@ fn timer_origin() -> String {
     ORIGIN_TIMER.to_owned()
 }
 
+/// Art einer gewöhnlichen Session (auch für Dateien ohne das Feld `kind`).
+pub const KIND_REGULAR: &str = "regular";
+/// Art einer mit der Stopwatch aufgezeichneten Session (ADR 0018).
+pub const KIND_STOPWATCH: &str = "stopwatch";
+
+fn regular_kind() -> String {
+    KIND_REGULAR.to_owned()
+}
+
 impl SessionCrdt {
     /// Eine Session aus ihren Rohdaten; alle Felder tragen `clock`.
     pub fn from_session(sync_id: impl Into<String>, session: &SyncSession, clock: &Hlc) -> Self {
@@ -269,6 +281,7 @@ impl SessionCrdt {
             planned_min: session.planned_min,
             break_min: session.break_min,
             origin: timer_origin(),
+            kind: regular_kind(),
             started_at: reg(session.started_at.clone(), clock),
             ended_at: reg(session.ended_at.clone(), clock),
             actual_min: reg(session.actual_min, clock),
@@ -328,6 +341,7 @@ impl SessionCrdt {
             planned_min: self.planned_min.max(other.planned_min),
             break_min: self.break_min.max(other.break_min),
             origin: self.origin.clone().max(other.origin.clone()),
+            kind: self.kind.clone().max(other.kind.clone()),
             started_at: self.started_at.merge(&other.started_at),
             ended_at: self.ended_at.merge(&other.ended_at),
             actual_min: self.actual_min.merge(&other.actual_min),
@@ -494,6 +508,20 @@ mod tests {
         let read: SessionCrdt = serde_json::from_value(json).unwrap();
         assert_eq!(read.origin, ORIGIN_TIMER);
         assert_eq!(read, session);
+    }
+
+    #[test]
+    fn the_kind_defaults_to_regular_and_stopwatch_wins_a_merge() {
+        let session = SessionCrdt::from_session("s", &raw_session(25), &clock(1));
+        assert_eq!(session.kind, KIND_REGULAR);
+        let mut json = serde_json::to_value(&session).unwrap();
+        json.as_object_mut().unwrap().remove("kind");
+        let read: SessionCrdt = serde_json::from_value(json).unwrap();
+        assert_eq!(read, session);
+        let mut watch = session.clone();
+        watch.kind = KIND_STOPWATCH.to_owned();
+        assert_eq!(session.merge(&watch).kind, KIND_STOPWATCH);
+        assert_eq!(watch.merge(&session).kind, KIND_STOPWATCH);
     }
 
     #[test]

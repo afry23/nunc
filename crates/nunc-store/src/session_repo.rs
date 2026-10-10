@@ -3,7 +3,8 @@
 //! löschen (Tombstone in `session_meta`); die Stempel dazu verwaltet `session_sync`.
 
 use chrono::{DateTime, Utc};
-use nunc_core::model::Session;
+use nunc_core::crdt::KIND_STOPWATCH;
+use nunc_core::model::{Session, TimerMode};
 use nunc_core::timer::{Finish, Timer};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
@@ -14,7 +15,7 @@ use crate::{StoreError, increment_pomodoro_count, save_timer};
 
 const COLUMNS: &str =
     "s.id, s.mode, s.session_type, s.status, s.started_at, s.ended_at, s.planned_min,
-                s.actual_min, s.todo_id, s.break_min";
+                s.actual_min, s.todo_id, s.break_min, COALESCE(m.kind, 'regular')";
 
 fn corrupt(index: usize, what: &str, text: &str) -> rusqlite::Error {
     rusqlite::Error::FromSqlConversionFailure(
@@ -26,6 +27,7 @@ fn corrupt(index: usize, what: &str, text: &str) -> rusqlite::Error {
 
 fn session_from_row(row: &Row<'_>) -> rusqlite::Result<Session> {
     let mode: String = row.get(1)?;
+    let kind: String = row.get(10)?;
     let session_type: String = row.get(2)?;
     let status: String = row.get(3)?;
     let started_at: String = row.get(4)?;
@@ -37,7 +39,11 @@ fn session_from_row(row: &Row<'_>) -> rusqlite::Result<Session> {
     };
     Ok(Session {
         id: row.get(0)?,
-        mode: mode.parse().map_err(|_| corrupt(1, "mode", &mode))?,
+        mode: if kind == KIND_STOPWATCH && mode == TimerMode::Flowtime.as_str() {
+            TimerMode::Stopwatch
+        } else {
+            mode.parse().map_err(|_| corrupt(1, "mode", &mode))?
+        },
         session_type: session_type
             .parse()
             .map_err(|_| corrupt(2, "session_type", &session_type))?,
@@ -67,6 +73,14 @@ pub fn list_sessions(conn: &Connection) -> Result<Vec<Session>, StoreError> {
     Ok(sessions)
 }
 
+/// Die Stopwatch steht in `sessions.mode` als `flowtime` (der CHECK aus Migration 001 kennt nur zwei Modi, ADR 0018).
+fn stored_mode(mode: TimerMode) -> TimerMode {
+    match mode {
+        TimerMode::Stopwatch => TimerMode::Flowtime,
+        other => other,
+    }
+}
+
 /// Übernimmt das Ende einer Session in **einer Transaktion**: die Session anfügen, den Pomodoro-Zähler des
 /// Todos erhöhen und den neuen Timer-Zustand speichern. So gibt es nach einem Absturz weder doppelte Sessions
 /// (Timer noch „abgelaufen“) noch eine fehlende Session. `device_id` wird als `sync_device_id` vermerkt.
@@ -84,7 +98,7 @@ pub fn commit_finish(
                                todo_id, sync_device_id)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
-            s.mode.as_str(),
+            stored_mode(s.mode).as_str(),
             s.session_type.as_str(),
             s.status.as_str(),
             to_text(s.started_at),
@@ -96,6 +110,13 @@ pub fn commit_finish(
         ],
     )?;
     let id = i32::try_from(tx.last_insert_rowid()).unwrap_or(i32::MAX);
+    if s.mode == TimerMode::Stopwatch {
+        ensure_meta(&tx)?;
+        tx.execute(
+            "UPDATE session_meta SET kind = ?1 WHERE session_id = ?2",
+            params![KIND_STOPWATCH, id],
+        )?;
+    }
     if let Some(todo_id) = finish.increment_todo {
         increment_pomodoro_count(&tx, todo_id)?;
     }
@@ -107,7 +128,11 @@ pub fn commit_finish(
 
 fn get(conn: &Connection, id: i64) -> Result<Session, StoreError> {
     conn.query_row(
-        &format!("SELECT {COLUMNS} FROM sessions s WHERE s.id = ?1"),
+        &format!(
+            "SELECT {COLUMNS} FROM sessions s
+             LEFT JOIN session_meta m ON m.session_id = s.id
+             WHERE s.id = ?1"
+        ),
         [id],
         session_from_row,
     )
@@ -171,7 +196,8 @@ fn minutes_between(start: DateTime<Utc>, end: DateTime<Utc>) -> u32 {
     u32::try_from((end - start).num_minutes()).unwrap_or(0)
 }
 
-/// Trägt eine Arbeitssession nach (Modus `flowtime`, Typ `work`, Status `completed`, Herkunft `manual`) und
+/// Trägt eine Arbeitssession nach (Modus `flowtime` + Art `stopwatch`, Typ `work`, Status `completed`, Herkunft
+/// `manual`) und
 /// stempelt alle Felder, in **einer Transaktion**. Ob der Eintrag gültig ist, prüft die Fachlogik
 /// (`nunc_core::manual_entry`) vorher. `device_id` wird als `sync_device_id` vermerkt.
 pub fn insert_manual(
@@ -196,8 +222,8 @@ pub fn insert_manual(
         )?;
         let id = conn.last_insert_rowid();
         conn.execute(
-            "INSERT INTO session_meta (session_id, sync_id, origin, note) VALUES (?1, ?2, 'manual', ?3)",
-            params![id, entry.sync_id, entry.note],
+            "INSERT INTO session_meta (session_id, sync_id, origin, kind, note) VALUES (?1, ?2, 'manual', ?3, ?4)",
+            params![id, entry.sync_id, KIND_STOPWATCH, entry.note],
         )?;
         stamp_changes(conn, id, None, now)?;
         Ok(id)
@@ -370,11 +396,11 @@ mod tests {
     }
 
     #[test]
-    fn a_manual_entry_is_a_completed_flowtime_work_session() {
+    fn a_manual_entry_is_a_completed_stopwatch_work_session() {
         let conn = open_in_memory().unwrap();
         let entry = manual("m-1", "2026-10-04T09:00:00Z", "2026-10-04T10:30:00Z");
         let session = insert_manual(&conn, &entry, "dev-1", at("2026-10-04T11:00:00Z")).unwrap();
-        assert_eq!(session.mode, TimerMode::Flowtime);
+        assert_eq!(session.mode, TimerMode::Stopwatch);
         assert_eq!(session.actual_min, Some(90));
         assert_eq!(session.ended_at, Some(at("2026-10-04T10:30:00Z")));
         assert_eq!(session.planned_min, None);
@@ -394,6 +420,42 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM session_field_clock", [], |r| r.get(0))
             .unwrap();
         assert_eq!(stamped, 6);
+    }
+
+    #[test]
+    fn only_a_flowtime_row_with_the_stopwatch_kind_reads_as_stopwatch() {
+        let conn = open_in_memory().unwrap();
+        for (mode, kind) in [
+            ("flowtime", "regular"),
+            ("flowtime", "stopwatch"),
+            ("pomodoro", "stopwatch"),
+        ] {
+            conn.execute(
+                "INSERT INTO sessions (mode, session_type, status, started_at, actual_min, sync_device_id)
+                 VALUES (?1, 'work', 'completed', '2026-10-04T09:00:00Z', 5, 'dev-1')",
+                [mode],
+            )
+            .unwrap();
+            let id = conn.last_insert_rowid();
+            conn.execute(
+                "INSERT INTO session_meta (session_id, sync_id, kind) VALUES (?1, ?2, ?3)",
+                params![id, format!("s-{id}"), kind],
+            )
+            .unwrap();
+        }
+        let modes: Vec<TimerMode> = list_sessions(&conn)
+            .unwrap()
+            .iter()
+            .map(|s| s.mode)
+            .collect();
+        assert_eq!(
+            modes,
+            [
+                TimerMode::Flowtime,
+                TimerMode::Stopwatch,
+                TimerMode::Pomodoro
+            ]
+        );
     }
 
     #[test]

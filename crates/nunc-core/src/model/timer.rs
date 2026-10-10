@@ -9,11 +9,14 @@ use super::text_enum;
 pub enum TimerMode {
     Pomodoro,
     Flowtime,
+    /// Freie Zeiterfassung: zählt hoch, keine Pause, kein Todo-Pomodoro (ADR 0018).
+    Stopwatch,
 }
 
 text_enum!(TimerMode, "TimerMode", {
     Pomodoro => "pomodoro",
     Flowtime => "flowtime",
+    Stopwatch => "stopwatch",
 });
 
 /// Betriebszustand des Timers.
@@ -39,6 +42,7 @@ mod tests {
     fn text_values_match_the_database() {
         assert_eq!(TimerMode::Pomodoro.as_str(), "pomodoro");
         assert_eq!(TimerMode::Flowtime.as_str(), "flowtime");
+        assert_eq!(TimerMode::Stopwatch.as_str(), "stopwatch");
         assert_eq!(TimerState::Idle.as_str(), "idle");
         assert_eq!(TimerState::Running.as_str(), "running");
         assert_eq!(TimerState::Paused.as_str(), "paused");
@@ -46,7 +50,11 @@ mod tests {
 
     #[test]
     fn parses_every_text_value() {
-        for mode in [TimerMode::Pomodoro, TimerMode::Flowtime] {
+        for mode in [
+            TimerMode::Pomodoro,
+            TimerMode::Flowtime,
+            TimerMode::Stopwatch,
+        ] {
             assert_eq!(mode.as_str().parse::<TimerMode>(), Ok(mode));
         }
         for state in [TimerState::Idle, TimerState::Running, TimerState::Paused] {

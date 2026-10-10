@@ -32,6 +32,11 @@ export async function installPreviewBackend(): Promise<void> {
     pomodoroCount: count,
     workMinutes: count * 25,
     breakMinutes: count * 5,
+    pomodoroMinutes: count * 25,
+    flowtimeCount: 0,
+    flowtimeMinutes: 0,
+    stopwatchCount: 0,
+    stopwatchMinutes: 0,
   }));
   fake.stats = {
     ...fake.stats,

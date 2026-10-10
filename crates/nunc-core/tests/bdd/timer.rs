@@ -177,6 +177,16 @@ fn start_flowtime_for_todo(world: &mut DomainWorld, todo: i32) {
     world.timer.start(TimerMode::Flowtime, Some(todo));
 }
 
+#[when("I start a stopwatch session")]
+fn start_stopwatch(world: &mut DomainWorld) {
+    world.timer.start(TimerMode::Stopwatch, None);
+}
+
+#[when(expr = "I start a stopwatch session for todo {int}")]
+fn start_stopwatch_for_todo(world: &mut DomainWorld, todo: i32) {
+    world.timer.start(TimerMode::Stopwatch, Some(todo));
+}
+
 #[when("I start the suggested break")]
 fn start_suggested_break(world: &mut DomainWorld) {
     world.timer.start_break();
@@ -365,6 +375,11 @@ fn recorded_no_todo(world: &mut DomainWorld) {
 fn recorded_mode(world: &mut DomainWorld, mode: String) {
     let expected: TimerMode = mode.parse().expect("Modus");
     assert_eq!(world.timer.finish().session.mode, expected);
+}
+
+#[then(expr = "the recorded session lasted {int} minutes")]
+fn recorded_lasted(world: &mut DomainWorld, minutes: u32) {
+    assert_eq!(world.timer.finish().session.actual_min, minutes);
 }
 
 #[then(expr = "the suggested break is {int} minutes")]

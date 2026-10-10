@@ -15,6 +15,7 @@ export function TimerView() {
   const modes: { value: TimerMode; label: string }[] = [
     { value: "pomodoro", label: t("timer.mode.pomodoro") },
     { value: "flowtime", label: t("timer.mode.flowtime") },
+    { value: "stopwatch", label: t("timer.mode.stopwatch") },
   ];
   const snapshot = useTimerStore((s) => s.snapshot);
   const suggestedBreak = useTimerStore((s) => s.suggestedBreak);

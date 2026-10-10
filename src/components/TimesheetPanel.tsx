@@ -77,6 +77,11 @@ export function TimesheetPanel() {
     setChosen(null);
   };
 
+  const goToToday = (): void => {
+    setWeeksAgo(0);
+    setChosen(null);
+  };
+
   const exportCsv = async (): Promise<void> => {
     try {
       const path = await unwrap(
@@ -127,6 +132,13 @@ export function TimesheetPanel() {
           >
             <ChevronRightIcon />
           </IconButton>
+          <Button
+            variant="ghost"
+            disabled={weeksAgo === 0 && chosen === null}
+            onClick={goToToday}
+          >
+            {t("timesheet.today")}
+          </Button>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Segmented

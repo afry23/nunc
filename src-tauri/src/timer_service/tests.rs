@@ -261,6 +261,24 @@ fn stopping_flowtime_completes_it_and_suggests_a_break() {
 }
 
 #[test]
+fn stopping_a_stopwatch_books_a_completed_session_without_a_break() {
+    let h = Harness::new(true);
+    h.service.start(TimerMode::Stopwatch, None).unwrap();
+    h.advance_min(50);
+    h.service.stop().unwrap();
+
+    let sessions = h.sessions();
+    assert_eq!(sessions[0].status, SessionStatus::Completed);
+    assert_eq!(sessions[0].mode, TimerMode::Stopwatch);
+    assert_eq!(sessions[0].actual_min, Some(50));
+    assert_eq!(
+        h.events.names(),
+        ["timer:tick", "timer:stopped", "timer:tick"]
+    );
+    assert_eq!(h.service.suggested_break().unwrap(), None);
+}
+
+#[test]
 fn a_suggested_break_can_be_started() {
     let h = Harness::new(true);
     h.service.start(TimerMode::Pomodoro, None).unwrap();

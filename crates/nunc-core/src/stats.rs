@@ -81,10 +81,27 @@ pub fn compute_stats(
             pomodoro_count: 0,
             work_minutes: 0,
             break_minutes: 0,
+            pomodoro_minutes: 0,
+            flowtime_count: 0,
+            flowtime_minutes: 0,
+            stopwatch_count: 0,
+            stopwatch_minutes: 0,
         });
         day.pomodoro_count += pomodoro;
         day.work_minutes += work;
         day.break_minutes += rest;
+        let completed = u32::from(is_work && session.status == SessionStatus::Completed);
+        match session.mode {
+            TimerMode::Pomodoro => day.pomodoro_minutes += work,
+            TimerMode::Flowtime => {
+                day.flowtime_minutes += work;
+                day.flowtime_count += completed;
+            }
+            TimerMode::Stopwatch => {
+                day.stopwatch_minutes += work;
+                day.stopwatch_count += completed;
+            }
+        }
 
         let month = monthly
             .entry((date.year(), date.month()))

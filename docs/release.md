@@ -86,6 +86,16 @@ In die Notes des ersten Release mit CRDT-Sync aufnehmen:
 - Gelöschte Aufgaben verschwinden nach 90 Tagen aus der Sync-Datei; ein Gerät, das länger offline war, legt sie beim
   nächsten Sync ggf. wieder an.
 
+## Release-Notes: Stopwatch (ADR 0018)
+
+In die Notes des ersten Release mit der Stopwatch aufnehmen:
+
+- Neuer Timer-Modus „Stoppuhr“ für die freie Zeiterfassung (keine Pause, kein Pomodoro-Zähler).
+- Das Sync-Format hat jetzt `schema_version` 4. **Alle Geräte aktualisieren**: Ältere Versionen lehnen die Datei mit
+  „Bitte nunc aktualisieren“ ab.
+- Downgrade: Eine beim Wechsel auf eine ältere Version laufende Stoppuhr geht verloren (der gespeicherte Timer ist
+  nicht lesbar); aufgezeichnete Sessions bleiben erhalten.
+
 ## Checkliste vor dem Tag
 
 - [ ] `npm run docs:report` und alle Pflicht-Checks grün (CLAUDE.md)

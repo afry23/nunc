@@ -39,6 +39,15 @@ pub struct DailyStats {
     pub pomodoro_count: u32,
     pub work_minutes: u32,
     pub break_minutes: u32,
+    /// Arbeitszeit der Pomodoro-Sessions (auch abgebrochener); `pomodoro_minutes + flowtime_minutes +
+    /// stopwatch_minutes == work_minutes`.
+    pub pomodoro_minutes: u32,
+    /// Abgeschlossene Flowtime-Arbeitssessions.
+    pub flowtime_count: u32,
+    pub flowtime_minutes: u32,
+    /// Abgeschlossene Stopwatch-Arbeitssessions (auch nachgetragene Einträge, ADR 0018).
+    pub stopwatch_count: u32,
+    pub stopwatch_minutes: u32,
 }
 
 /// Arbeitszeit pro `+project`-Tag.
@@ -157,6 +166,11 @@ mod tests {
                 pomodoro_count: 2,
                 work_minutes: 60,
                 break_minutes: 6,
+                pomodoro_minutes: 50,
+                flowtime_count: 1,
+                flowtime_minutes: 10,
+                stopwatch_count: 0,
+                stopwatch_minutes: 0,
             }],
             projects: vec![ProjectStats {
                 project: "+work".into(),

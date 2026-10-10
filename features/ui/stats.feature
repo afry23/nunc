@@ -114,3 +114,44 @@ Feature: Statistics view
       | 2       | 6         | 150     |
     When I open the app at "/stats"
     Then the bar chart labels the days with "0, 6, 0, 4"
+
+  @ui @REQ-10
+  Scenario: The bars are stacked by timer with the count of each timer above them
+    Given the statistics contain daily data:
+      | daysAgo | pomodoros | minutes | flowtimes | flowtimeMinutes | stopwatches | stopwatchMinutes |
+      | 0       | 4         | 160     | 2         | 40              | 1           | 16               |
+    When I open the app at "/stats"
+    Then the bar chart labels the days with "0, 0, 0, 0, 0, 0, 4 · 2 · 1"
+    And the bar chart stacks the segments "pomodoro, flowtime, stopwatch" on the last day
+    And the bar chart colors the numbers of the last day with "pomodoro, flowtime, stopwatch"
+
+  @ui @REQ-10
+  Scenario: A day with only a stopwatch shows its count in the stopwatch color
+    Given the statistics contain daily data:
+      | daysAgo | pomodoros | minutes | stopwatches | stopwatchMinutes |
+      | 0       | 0         | 16      | 1           | 16               |
+    When I open the app at "/stats"
+    Then the bar chart labels the days with "0, 0, 0, 0, 0, 0, 1"
+    And the bar chart stacks the segments "stopwatch" on the last day
+    And the bar chart colors the numbers of the last day with "stopwatch"
+
+  @ui @REQ-10
+  Scenario: The line chart draws one line per timer in the timer color
+    Given the statistics contain daily data:
+      | daysAgo | pomodoros | minutes | flowtimes | flowtimeMinutes | stopwatches | stopwatchMinutes |
+      | 0       | 0         | 16      | 0         | 0               | 1           | 16               |
+      | 2       | 4         | 100     | 2         | 40              | 0           | 0                |
+    When I open the app at "/stats"
+    Then the line chart draws the lines "pomodoro, flowtime, stopwatch"
+    And the line chart labels the "stopwatch" line with "1"
+    And the line chart labels the "flowtime" line with "2"
+    And the chart legend lists "Pomodoro, Flowtime, Stoppuhr"
+
+  @ui @REQ-10
+  Scenario: Timers without any session in the period get no line
+    Given the statistics contain daily data:
+      | daysAgo | pomodoros | minutes |
+      | 0       | 4         | 100     |
+    When I open the app at "/stats"
+    Then the line chart draws the lines "pomodoro"
+    And the chart legend lists "Pomodoro"

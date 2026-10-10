@@ -204,7 +204,7 @@ impl Timer {
         self.active.as_ref()?.due_at()
     }
 
-    /// Startet eine Arbeitssession (Pomodoro: Countdown, Flowtime: Stoppuhr).
+    /// Startet eine Arbeitssession (Pomodoro: Countdown, Flowtime und Stopwatch: Stoppuhr).
     pub fn start(
         &mut self,
         now: DateTime<Utc>,
@@ -214,7 +214,7 @@ impl Timer {
     ) -> Result<(), TimerError> {
         let planned_sec = match mode {
             TimerMode::Pomodoro => settings.pomodoro_min.saturating_mul(60),
-            TimerMode::Flowtime => 0,
+            TimerMode::Flowtime | TimerMode::Stopwatch => 0,
         };
         self.start_planned(now, mode, todo_id, planned_sec)
     }
@@ -269,6 +269,7 @@ impl Timer {
     /// Beendet die Session vorzeitig.
     ///
     /// - Flowtime-Arbeit: gilt als abgeschlossen (`Completed`) und liefert die Pausenempfehlung.
+    /// - Stopwatch-Arbeit: `Completed` ohne Pause und Todo-Zähler (ADR 0018).
     /// - Pomodoro-Arbeit: unter 50 % der geplanten Zeit `aborted`, sonst `completed`; beides ohne Pause,
     ///   Zyklus-Zählung und Todo-Zähler (nur ein ablaufender Pomodoro zählt voll).
     /// - Pause: immer `skipped`.
@@ -529,6 +530,27 @@ mod tests {
             .start(now, TimerMode::Flowtime, None, &Settings::default())
             .unwrap();
         assert_eq!(timer.due_at(), None);
+    }
+
+    #[test]
+    fn a_stopped_stopwatch_is_completed_without_break_or_todo_count() {
+        let now = Utc.with_ymd_and_hms(2026, 10, 3, 9, 0, 0).unwrap();
+        let mut timer = Timer::default();
+        let settings = Settings::default();
+        timer
+            .start(now, TimerMode::Stopwatch, Some(4), &settings)
+            .unwrap();
+        let finish = timer
+            .stop(now + chrono::Duration::minutes(90), &settings)
+            .unwrap();
+        assert_eq!(finish.kind, FinishKind::Stopped);
+        assert_eq!(finish.session.status, SessionStatus::Completed);
+        assert_eq!(finish.session.mode, TimerMode::Stopwatch);
+        assert_eq!(finish.session.actual_min, 90);
+        assert_eq!(finish.suggested_break, None);
+        assert_eq!(finish.increment_todo, None);
+        assert_eq!(finish.auto_start, None);
+        assert_eq!(timer.suggested_break(), None);
     }
 
     #[test]
