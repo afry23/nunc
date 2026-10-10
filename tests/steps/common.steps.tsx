@@ -163,6 +163,29 @@ When(
   },
 );
 
+When(
+  "the backend reports a finished {string} session without a suggested break",
+  async (_world: UiWorld, mode: string) => {
+    await act(async () => {
+      await emit("timer:stopped", {
+        session: {
+          id: 1,
+          mode,
+          sessionType: "work",
+          status: "completed",
+          startedAt: "2026-10-04T09:00:00Z",
+          endedAt: "2026-10-04T10:00:00Z",
+          plannedMin: null,
+          actualMin: 60,
+          todoId: null,
+          breakMin: null,
+        },
+        suggestedBreak: null,
+      });
+    });
+  },
+);
+
 Given("the viewport is {int} pixels wide", (_world: UiWorld, width: number) => {
   window.matchMedia = ((query: string) => {
     const min = /min-width:\s*(\d+)px/.exec(query)?.[1];

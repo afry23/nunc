@@ -10,7 +10,19 @@ import {
   periodTotals,
   pieSlices,
   slicePath,
+  stackSegments,
+  timerCount,
+  timerMinutes,
+  TIMERS,
 } from "./stats";
+
+const timers0 = {
+  pomodoroMinutes: 0,
+  flowtimeCount: 0,
+  flowtimeMinutes: 0,
+  stopwatchCount: 0,
+  stopwatchMinutes: 0,
+};
 
 describe("periodRange", () => {
   const today = new Date(2026, 9, 4, 15);
@@ -43,6 +55,7 @@ describe("fillDays", () => {
           pomodoroCount: 3,
           workMinutes: 75,
           breakMinutes: 10,
+          ...timers0,
         },
       ],
       "2026-10-01",
@@ -115,9 +128,27 @@ describe("heatmapCells", () => {
   it("places days in week columns starting on Monday", () => {
     // 2026-10-04 ist ein Sonntag (Zeile 6), danach beginnt die nächste Woche
     const cells = heatmapCells([
-      { date: "2026-10-04", pomodoroCount: 4, workMinutes: 0, breakMinutes: 0 },
-      { date: "2026-10-05", pomodoroCount: 0, workMinutes: 0, breakMinutes: 0 },
-      { date: "2026-10-06", pomodoroCount: 1, workMinutes: 0, breakMinutes: 0 },
+      {
+        date: "2026-10-04",
+        pomodoroCount: 4,
+        workMinutes: 0,
+        breakMinutes: 0,
+        ...timers0,
+      },
+      {
+        date: "2026-10-05",
+        pomodoroCount: 0,
+        workMinutes: 0,
+        breakMinutes: 0,
+        ...timers0,
+      },
+      {
+        date: "2026-10-06",
+        pomodoroCount: 1,
+        workMinutes: 0,
+        breakMinutes: 0,
+        ...timers0,
+      },
     ]);
     expect(cells.map((c) => [c.column, c.row, c.level])).toEqual([
       [0, 6, 4],
@@ -132,6 +163,7 @@ describe("heatmapCells", () => {
       pomodoroCount: n,
       workMinutes: 0,
       breakMinutes: 0,
+      ...timers0,
     });
     expect(
       heatmapCells([day(2, 0), day(4, 1), day(8, 2)]).map((c) => c.level),
@@ -167,6 +199,7 @@ describe("periodTotals", () => {
     pomodoroCount,
     workMinutes,
     breakMinutes: 0,
+    ...timers0,
   });
   it("sums the days and averages per day", () => {
     expect(
@@ -183,5 +216,77 @@ describe("periodTotals", () => {
       workMinutes: 0,
       perDay: 0,
     });
+  });
+});
+
+describe("timers", () => {
+  const day = {
+    date: "2026-10-09",
+    pomodoroCount: 4,
+    workMinutes: 160,
+    breakMinutes: 0,
+    pomodoroMinutes: 100,
+    flowtimeCount: 2,
+    flowtimeMinutes: 44,
+    stopwatchCount: 1,
+    stopwatchMinutes: 16,
+  };
+  it("lists the timers in stacking order with their color", () => {
+    expect(TIMERS.map((timer) => [timer.key, timer.color])).toEqual([
+      ["pomodoro", "var(--color-pomodoro)"],
+      ["flowtime", "var(--color-flowtime)"],
+      ["stopwatch", "var(--color-stopwatch)"],
+    ]);
+  });
+  it("reads count and minutes per timer", () => {
+    expect(TIMERS.map((timer) => timerCount(day, timer.key))).toEqual([
+      4, 2, 1,
+    ]);
+    expect(TIMERS.map((timer) => timerMinutes(day, timer.key))).toEqual([
+      100, 44, 16,
+    ]);
+  });
+  it("fills the per-timer values of missing days with zeros", () => {
+    const [missing] = fillDays([], "2026-10-09", "2026-10-09");
+    expect(missing).toMatchObject({
+      pomodoroMinutes: 0,
+      flowtimeCount: 0,
+      flowtimeMinutes: 0,
+      stopwatchCount: 0,
+      stopwatchMinutes: 0,
+    });
+  });
+});
+
+describe("stackSegments", () => {
+  const bar = { x: 0, y: 20, width: 10, height: 80, value: 160 };
+  it("stacks proportional segments from the bottom", () => {
+    expect(stackSegments(bar, [100, 40, 20])).toEqual([
+      { y: 50, height: 50 },
+      { y: 30, height: 20 },
+      { y: 20, height: 10 },
+    ]);
+  });
+  it("gives empty segments no height", () => {
+    expect(stackSegments(bar, [0, 160, 0])).toEqual([
+      { y: 100, height: 0 },
+      { y: 20, height: 80 },
+      { y: 20, height: 0 },
+    ]);
+  });
+  it("has no height at all without minutes", () => {
+    expect(stackSegments({ ...bar, height: 0 }, [0, 0])).toEqual([
+      { y: 20, height: 0 },
+      { y: 20, height: 0 },
+    ]);
+  });
+});
+
+describe("linePoints with a shared maximum", () => {
+  it("scales to the given maximum instead of its own", () => {
+    expect(linePoints([0, 5], 100, 40, 10)).toEqual([
+      { x: 0, y: 40 },
+      { x: 100, y: 20 },
+    ]);
   });
 });

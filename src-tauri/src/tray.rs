@@ -53,6 +53,7 @@ fn view(snapshot: &TimerSnapshot) -> TrayView {
     let kind = match (snapshot.session_type, snapshot.mode) {
         (SessionType::Work, nunc_core::model::TimerMode::Pomodoro) => "Fokus",
         (SessionType::Work, nunc_core::model::TimerMode::Flowtime) => "Flow",
+        (SessionType::Work, nunc_core::model::TimerMode::Stopwatch) => "Stoppuhr",
         (SessionType::ShortBreak | SessionType::LongBreak, _) => "Pause",
     };
     let time = format_clock(snapshot.remaining);

@@ -8,9 +8,14 @@ export function sessionColor(
 ): string {
   if (sessionType === "short_break") return "var(--color-shortbrk)";
   if (sessionType === "long_break") return "var(--color-longbrk)";
-  return mode === "flowtime"
-    ? "var(--color-flowtime)"
-    : "var(--color-pomodoro)";
+  switch (mode) {
+    case "flowtime":
+      return "var(--color-flowtime)";
+    case "stopwatch":
+      return "var(--color-stopwatch)";
+    case "pomodoro":
+      return "var(--color-pomodoro)";
+  }
 }
 
 /** Anzeigename der Session. */
@@ -20,7 +25,14 @@ export function sessionLabel(
 ): string {
   if (sessionType === "short_break") return t("session.shortBreak");
   if (sessionType === "long_break") return t("session.longBreak");
-  return mode === "flowtime" ? t("session.flowtime") : t("session.focus");
+  switch (mode) {
+    case "flowtime":
+      return t("session.flowtime");
+    case "stopwatch":
+      return t("session.stopwatch");
+    case "pomodoro":
+      return t("session.focus");
+  }
 }
 
 /** Fortschritt des Rings 0–1. Countdown: verstrichener Anteil; Stoppuhr: aktuelle Stunde. */

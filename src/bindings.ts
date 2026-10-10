@@ -291,6 +291,17 @@ export type DailyStats = {
 	pomodoroCount: number,
 	workMinutes: number,
 	breakMinutes: number,
+	/**
+	 *  Arbeitszeit der Pomodoro-Sessions (auch abgebrochener); `pomodoro_minutes + flowtime_minutes +
+	 *  stopwatch_minutes == work_minutes`.
+	 */
+	pomodoroMinutes: number,
+	/**  Abgeschlossene Flowtime-Arbeitssessions. */
+	flowtimeCount: number,
+	flowtimeMinutes: number,
+	/**  Abgeschlossene Stopwatch-Arbeitssessions (auch nachgetragene Einträge, ADR 0018). */
+	stopwatchCount: number,
+	stopwatchMinutes: number,
 };
 
 export type DayTimeline = {
@@ -535,7 +546,9 @@ export type TimelineGap = {
 export type TimerComplete = FinishPayload;
 
 /**  Zeitmess-Technik. */
-export type TimerMode = "pomodoro" | "flowtime";
+export type TimerMode = "pomodoro" | "flowtime" | 
+/**  Freie Zeiterfassung: zählt hoch, keine Pause, kein Todo-Pomodoro (ADR 0018). */
+"stopwatch";
 
 /**  Momentaufnahme für die Anzeige (entspricht `TimerTickPayload` der Go-App). */
 export type TimerSnapshot = {

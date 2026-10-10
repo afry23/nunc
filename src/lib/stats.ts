@@ -19,7 +19,39 @@ export type DayPoint = {
   pomodoroCount: number;
   workMinutes: number;
   breakMinutes: number;
+  pomodoroMinutes: number;
+  flowtimeCount: number;
+  flowtimeMinutes: number;
+  stopwatchCount: number;
+  stopwatchMinutes: number;
 };
+
+export type TimerKey = "pomodoro" | "flowtime" | "stopwatch";
+
+/** Die Timer in der Reihenfolge der Diagramme (Balken von unten nach oben) mit ihrer Farbe. */
+export const TIMERS: readonly { key: TimerKey; color: string }[] = [
+  { key: "pomodoro", color: "var(--color-pomodoro)" },
+  { key: "flowtime", color: "var(--color-flowtime)" },
+  { key: "stopwatch", color: "var(--color-stopwatch)" },
+];
+
+/** Anzahl abgeschlossener Arbeitssessions des Timers an diesem Tag. */
+export function timerCount(day: DayPoint, key: TimerKey): number {
+  return {
+    pomodoro: day.pomodoroCount,
+    flowtime: day.flowtimeCount,
+    stopwatch: day.stopwatchCount,
+  }[key];
+}
+
+/** Arbeitszeit des Timers an diesem Tag in Minuten. */
+export function timerMinutes(day: DayPoint, key: TimerKey): number {
+  return {
+    pomodoro: day.pomodoroMinutes,
+    flowtime: day.flowtimeMinutes,
+    stopwatch: day.stopwatchMinutes,
+  }[key];
+}
 
 /** Jeder Tag von `start` bis `end` (inklusive); Tage ohne Sessions mit 0. */
 export function fillDays(
@@ -38,6 +70,11 @@ export function fillDays(
       pomodoroCount: found?.pomodoroCount ?? 0,
       workMinutes: found?.workMinutes ?? 0,
       breakMinutes: found?.breakMinutes ?? 0,
+      pomodoroMinutes: found?.pomodoroMinutes ?? 0,
+      flowtimeCount: found?.flowtimeCount ?? 0,
+      flowtimeMinutes: found?.flowtimeMinutes ?? 0,
+      stopwatchCount: found?.stopwatchCount ?? 0,
+      stopwatchMinutes: found?.stopwatchMinutes ?? 0,
     });
   }
   return days;
@@ -86,14 +123,32 @@ export function barLayout(
   });
 }
 
-/** Punkte einer Linie (gleichmäßig verteilt) in `width × height`; ein einzelner Wert liegt mittig. */
+/** Teilt einen Balken in übereinander gestapelte Segmente (erstes unten), Höhe proportional zu `minutes`. */
+export function stackSegments(
+  bar: Bar,
+  minutes: number[],
+): { y: number; height: number }[] {
+  const total = minutes.reduce((sum, m) => sum + m, 0);
+  let bottom = bar.y + bar.height;
+  return minutes.map((m) => {
+    const height = total === 0 ? 0 : (m / total) * bar.height;
+    bottom -= height;
+    return { y: bottom, height };
+  });
+}
+
+/**
+ * Punkte einer Linie (gleichmäßig verteilt) in `width × height`; ein einzelner Wert liegt mittig. `max` ist die
+ * gemeinsame Obergrenze mehrerer Linien in einem Diagramm (Standard: der größte eigene Wert).
+ */
 export function linePoints(
   values: number[],
   width: number,
   height: number,
+  max?: number,
 ): { x: number; y: number }[] {
   if (values.length === 0) return [];
-  const top = niceMax(Math.max(...values));
+  const top = niceMax(max ?? Math.max(...values));
   return values.map((value, index) => ({
     x: values.length === 1 ? width / 2 : (index / (values.length - 1)) * width,
     y: height - (value / top) * height,

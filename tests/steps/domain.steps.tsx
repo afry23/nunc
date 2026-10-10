@@ -151,12 +151,23 @@ When(
 
 function dailyFrom(world: UiWorld, table: DataTable): void {
   const today = new Date();
-  const rows = table.hashes().map((row) => ({
-    date: toIsoDate(addDays(today, -Number(row.daysAgo))),
-    pomodoroCount: Number(row.pomodoros),
-    workMinutes: Number(row.minutes),
-    breakMinutes: 0,
-  }));
+  // `minutes` ist die gesamte Arbeitszeit; Flowtime und Stoppuhr (optionale Spalten) werden davon abgezogen
+  const rows = table.hashes().map((row) => {
+    const flowtimeMinutes = Number(row.flowtimeMinutes ?? 0);
+    const stopwatchMinutes = Number(row.stopwatchMinutes ?? 0);
+    const workMinutes = Number(row.minutes);
+    return {
+      date: toIsoDate(addDays(today, -Number(row.daysAgo))),
+      pomodoroCount: Number(row.pomodoros),
+      workMinutes,
+      breakMinutes: 0,
+      pomodoroMinutes: workMinutes - flowtimeMinutes - stopwatchMinutes,
+      flowtimeCount: Number(row.flowtimes ?? 0),
+      flowtimeMinutes,
+      stopwatchCount: Number(row.stopwatches ?? 0),
+      stopwatchMinutes,
+    };
+  });
   world.fake.stats = {
     ...world.fake.stats,
     daily: rows,
@@ -337,6 +348,89 @@ Then(
         .getAllByTestId("bar-value")
         .map((node) => node.textContent);
       expect(labels.slice(-names(list).length)).toEqual(names(list));
+    });
+  },
+);
+
+Then(
+  "the bar chart stacks the segments {string} on the last day",
+  async (_world: UiWorld, list: string) => {
+    await waitFor(() => {
+      const groups = within(screen.getByTestId("chart-bar")).getAllByTestId(
+        "bar-value",
+      );
+      const last = groups[groups.length - 1].parentElement as HTMLElement;
+      const segments = Array.from(
+        last.querySelectorAll("rect[data-testid^='bar-']"),
+      ).map((node) => ({
+        key: node.getAttribute("data-testid")?.replace("bar-", ""),
+        fill: node.getAttribute("fill"),
+      }));
+      expect(segments.map((s) => s.key)).toEqual(names(list));
+      for (const segment of segments)
+        expect(segment.fill).toBe(`var(--color-${segment.key})`);
+    });
+  },
+);
+
+Then(
+  "the bar chart colors the numbers of the last day with {string}",
+  async (_world: UiWorld, list: string) => {
+    await waitFor(() => {
+      const values = within(screen.getByTestId("chart-bar")).getAllByTestId(
+        "bar-value",
+      );
+      const colors = Array.from(
+        values[values.length - 1].querySelectorAll("tspan"),
+      ).map((node) => node.getAttribute("fill"));
+      expect(colors).toEqual(names(list).map((n) => `var(--color-${n})`));
+    });
+  },
+);
+
+Then(
+  "the line chart draws the lines {string}",
+  async (_world: UiWorld, list: string) => {
+    await waitFor(() => {
+      const chart = within(screen.getByTestId("chart-line"));
+      const lines = Array.from(
+        chart.getAllByTestId(/^line-/).filter((node) => node.tagName === "g"),
+      );
+      expect(lines.map((g) => g.getAttribute("data-testid"))).toEqual(
+        names(list).map((n) => `line-${n}`),
+      );
+      for (const g of lines) {
+        const key = g.getAttribute("data-testid")?.replace("line-", "");
+        expect(g.querySelector("path")?.getAttribute("stroke")).toBe(
+          `var(--color-${key})`,
+        );
+      }
+    });
+  },
+);
+
+Then(
+  "the line chart labels the {string} line with {string}",
+  async (_world: UiWorld, key: string, list: string) => {
+    await waitFor(() => {
+      const labels = Array.from(
+        within(screen.getByTestId(`line-${key}`)).getAllByTestId("line-value"),
+      ).map((node) => node.textContent);
+      expect(labels).toEqual(names(list));
+    });
+  },
+);
+
+Then(
+  "the chart legend lists {string}",
+  async (_world: UiWorld, list: string) => {
+    await waitFor(() => {
+      const items = screen
+        .getAllByTestId("chart-legend")
+        .map((ul) =>
+          Array.from(ul.querySelectorAll("li")).map((li) => li.textContent),
+        );
+      for (const entries of items) expect(entries).toEqual(names(list));
     });
   },
 );

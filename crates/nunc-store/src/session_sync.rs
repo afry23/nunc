@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
-use nunc_core::crdt::{ORIGIN_TIMER, Register, SessionCrdt};
+use nunc_core::crdt::{KIND_STOPWATCH, ORIGIN_MANUAL, ORIGIN_TIMER, Register, SessionCrdt};
 use nunc_core::hlc::Hlc;
 use nunc_core::model::SyncSession;
 use nunc_core::sync_document::LEGACY_DEVICE;
@@ -189,9 +189,9 @@ pub(crate) fn exportable_ids(conn: &Connection) -> Result<Vec<i64>, StoreError> 
 /// Setzt voraus, dass [`ensure_meta`] gelaufen ist.
 pub(crate) fn read_session(conn: &Connection, id: i64) -> Result<SessionCrdt, StoreError> {
     let device = local_device(conn)?;
-    let (raw, sync_id, origin, todo, note, deleted) = conn.query_row(
+    let (raw, sync_id, origin, todo, note, deleted, kind) = conn.query_row(
         &format!(
-            "SELECT {RAW_COLUMNS}, m.sync_id, m.origin, t.sync_id, m.note, m.deleted
+            "SELECT {RAW_COLUMNS}, m.sync_id, m.origin, t.sync_id, m.note, m.deleted, m.kind
              FROM sessions s
              JOIN session_meta m ON m.session_id = s.id
              LEFT JOIN todos t ON t.id = s.todo_id
@@ -206,6 +206,7 @@ pub(crate) fn read_session(conn: &Connection, id: i64) -> Result<SessionCrdt, St
                 row.get::<_, Option<String>>(11)?,
                 row.get::<_, String>(12)?,
                 row.get::<_, bool>(13)?,
+                row.get::<_, String>(14)?,
             ))
         },
     )?;
@@ -218,6 +219,7 @@ pub(crate) fn read_session(conn: &Connection, id: i64) -> Result<SessionCrdt, St
     };
     let mut session = SessionCrdt::from_session(sync_id, &raw, &clock("started_at"));
     session.origin = origin;
+    session.kind = kind;
     session.started_at.clock = clock("started_at");
     session.ended_at.clock = clock("ended_at");
     session.actual_min.clock = clock("actual_min");
@@ -252,11 +254,20 @@ pub(crate) fn insert_session(conn: &Connection, session: &SessionCrdt) -> Result
     )?;
     let id = conn.last_insert_rowid();
     conn.execute(
-        "INSERT INTO session_meta (session_id, sync_id, origin) VALUES (?1, ?2, ?3)",
-        params![id, session.sync_id, session.origin],
+        "INSERT INTO session_meta (session_id, sync_id, origin, kind) VALUES (?1, ?2, ?3, ?4)",
+        params![id, session.sync_id, session.origin, kind_of(session)],
     )?;
     write_session_row(conn, id, session)?;
     Ok(id)
+}
+
+/// Nachgetragene Einträge zählen als Stoppuhr (ADR 0018), auch wenn die Datei kein `kind` kennt.
+fn kind_of(session: &SessionCrdt) -> &str {
+    if session.origin == ORIGIN_MANUAL {
+        KIND_STOPWATCH
+    } else {
+        &session.kind
+    }
 }
 
 /// Schreibt die Register einer Session samt Stempeln in die Datenbank.

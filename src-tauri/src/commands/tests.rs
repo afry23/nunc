@@ -648,7 +648,7 @@ fn a_manual_entry_shows_up_in_the_timeline_and_the_timesheet() {
         entry(start, at(8, 30), todo["id"].as_i64(), "nachgetragen"),
     );
     assert_eq!(saved["overlaps"], json!([]));
-    assert_eq!(saved["session"]["mode"], "flowtime");
+    assert_eq!(saved["session"]["mode"], "stopwatch");
     assert_eq!(saved["session"]["status"], "completed");
     assert_eq!(saved["session"]["actualMin"], 90);
     assert_eq!(saved["session"]["todoId"], todo["id"]);

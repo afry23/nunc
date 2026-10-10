@@ -34,6 +34,8 @@ pub const MIGRATIONS: &[Migration] = &[
     migration!(6, "006_active_timer.sql"),
     migration!(7, "007_todo_crdt.sql"),
     migration!(8, "008_session_crdt.sql"),
+    migration!(9, "009_session_kind.sql"),
+    migration!(10, "010_manual_is_stopwatch.sql"),
 ];
 
 /// Wendet alle noch nicht in `schema_migrations` vermerkten Migrationen an.
@@ -128,7 +130,7 @@ mod tests {
         conn.execute("INSERT INTO schema_migrations (version) VALUES (42)", [])
             .unwrap();
         migrate(&mut conn).unwrap();
-        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 9);
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 11);
     }
 
     #[test]

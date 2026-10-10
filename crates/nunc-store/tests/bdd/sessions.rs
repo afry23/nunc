@@ -178,3 +178,66 @@ fn state_sessions(world: &mut StoreWorld, expected: usize) {
     assert_eq!(state.sessions.len(), expected);
     assert!(state.sessions.keys().all(|id| id.starts_with("legacy:")));
 }
+
+#[given(expr = "device {word} records a stopwatch session from {word} to {word}")]
+fn records_stopwatch(world: &mut StoreWorld, device: String, start: String, end: String) {
+    let settings = nunc_core::model::Settings::default();
+    let mut timer = nunc_core::timer::Timer::default();
+    timer
+        .start(
+            at(&start),
+            nunc_core::model::TimerMode::Stopwatch,
+            None,
+            &settings,
+        )
+        .expect("start");
+    let finish = timer.stop(at(&end), &settings).expect("stop");
+    let device_id = format!("dev-{}", device.to_lowercase());
+    nunc_store::commit_finish(
+        world.crdt.conn(&device),
+        &finish,
+        &device_id,
+        &timer,
+        at(&end),
+    )
+    .expect("commit");
+}
+
+#[then(expr = "on device {word} the session is stored as mode {string} with kind {string}")]
+fn stored_with_kind(world: &mut StoreWorld, device: String, mode: String, kind: String) {
+    // Die Metadaten von Sessions anderer Geräte entstehen beim Einspielen, die eigenen beim Sync-Zugriff.
+    let conn = world.crdt.conn(&device);
+    let row: (String, String) = conn
+        .query_row(
+            "SELECT s.mode, m.kind FROM sessions s JOIN session_meta m ON m.session_id = s.id",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .expect("Session mit Metadaten");
+    assert_eq!(row, (mode, kind));
+}
+
+#[then(expr = "on device {word} the listed session is a stopwatch session of {int} minutes")]
+fn listed_stopwatch(world: &mut StoreWorld, device: String, minutes: u32) {
+    let sessions = nunc_store::list_sessions(world.crdt.conn(&device)).expect("list");
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0].mode, nunc_core::model::TimerMode::Stopwatch);
+    assert_eq!(sessions[0].actual_min, Some(minutes));
+}
+
+#[then(expr = "on device {word} the day has {int} minutes of work and {int} pomodoros")]
+fn day_work_and_pomodoros(world: &mut StoreWorld, device: String, minutes: u32, pomodoros: u32) {
+    let conn = world.crdt.conn(&device);
+    let sessions = nunc_store::list_sessions(conn).expect("sessions");
+    let todos = nunc_store::list_all_todos(conn).expect("todos");
+    let day = NaiveDate::from_ymd_opt(2026, 10, 4).unwrap();
+    let request = StatsRequest {
+        period: StatsPeriod::Day,
+        start_date: day,
+        end_date: day,
+    };
+    let stats = compute_stats(&sessions, &todos, &request, day, &|time| time.date_naive());
+    let today = stats.daily.iter().find(|d| d.date == day).expect("Tag");
+    assert_eq!(today.work_minutes, minutes);
+    assert_eq!(today.pomodoro_count, pomodoros);
+}

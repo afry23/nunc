@@ -187,6 +187,26 @@ fn daily(world: &mut DomainWorld, step: &Step) {
     assert_rows(actual, step);
 }
 
+#[then("the daily statistics per timer are:")]
+fn daily_per_timer(world: &mut DomainWorld, step: &Step) {
+    let actual = result(world)
+        .daily
+        .iter()
+        .map(|d| {
+            vec![
+                d.date.to_string(),
+                d.pomodoro_count.to_string(),
+                d.pomodoro_minutes.to_string(),
+                d.flowtime_count.to_string(),
+                d.flowtime_minutes.to_string(),
+                d.stopwatch_count.to_string(),
+                d.stopwatch_minutes.to_string(),
+            ]
+        })
+        .collect();
+    assert_rows(actual, step);
+}
+
 #[then("the projects are:")]
 fn projects(world: &mut DomainWorld, step: &Step) {
     let actual = result(world)

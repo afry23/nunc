@@ -23,12 +23,14 @@ describe("sessionColor and label", () => {
   it("depends on mode and session type", () => {
     expect(sessionColor("pomodoro", "work")).toBe("var(--color-pomodoro)");
     expect(sessionColor("flowtime", "work")).toBe("var(--color-flowtime)");
+    expect(sessionColor("stopwatch", "work")).toBe("var(--color-stopwatch)");
     expect(sessionColor("pomodoro", "short_break")).toBe(
       "var(--color-shortbrk)",
     );
     expect(sessionColor("flowtime", "long_break")).toBe("var(--color-longbrk)");
     expect(sessionLabel("pomodoro", "work")).toBe("Fokus");
     expect(sessionLabel("flowtime", "work")).toBe("Flowtime");
+    expect(sessionLabel("stopwatch", "work")).toBe("Stoppuhr");
     expect(sessionLabel("pomodoro", "short_break")).toBe("Kurze Pause");
     expect(sessionLabel("pomodoro", "long_break")).toBe("Lange Pause");
   });
