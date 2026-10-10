@@ -423,6 +423,42 @@ mod tests {
     }
 
     #[test]
+    fn only_a_flowtime_row_with_the_stopwatch_kind_reads_as_stopwatch() {
+        let conn = open_in_memory().unwrap();
+        for (mode, kind) in [
+            ("flowtime", "regular"),
+            ("flowtime", "stopwatch"),
+            ("pomodoro", "stopwatch"),
+        ] {
+            conn.execute(
+                "INSERT INTO sessions (mode, session_type, status, started_at, actual_min, sync_device_id)
+                 VALUES (?1, 'work', 'completed', '2026-10-04T09:00:00Z', 5, 'dev-1')",
+                [mode],
+            )
+            .unwrap();
+            let id = conn.last_insert_rowid();
+            conn.execute(
+                "INSERT INTO session_meta (session_id, sync_id, kind) VALUES (?1, ?2, ?3)",
+                params![id, format!("s-{id}"), kind],
+            )
+            .unwrap();
+        }
+        let modes: Vec<TimerMode> = list_sessions(&conn)
+            .unwrap()
+            .iter()
+            .map(|s| s.mode)
+            .collect();
+        assert_eq!(
+            modes,
+            [
+                TimerMode::Flowtime,
+                TimerMode::Stopwatch,
+                TimerMode::Pomodoro
+            ]
+        );
+    }
+
+    #[test]
     fn details_list_note_and_origin_without_deleted_sessions() {
         let conn = open_in_memory().unwrap();
         let now = at("2026-10-04T11:00:00Z");

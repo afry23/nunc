@@ -44,3 +44,25 @@ Feature: Statistics per timer
     And the daily statistics are:
       | date       | pomodoros | work | break |
       | 2025-03-12 | 0         | 16   | 0     |
+
+  @domain @REQ-10
+  Scenario: Aborted flowtime and stopwatch sessions count their minutes but not as sessions
+    Given the sessions:
+      | start            | mode      | type | status  | minutes | todo |
+      | 2025-03-12 09:00 | flowtime  | work | aborted | 7       |      |
+      | 2025-03-12 10:00 | stopwatch | work | aborted | 9       |      |
+    When I calculate the statistics
+    Then the daily statistics per timer are:
+      | date       | pomodoros | pomodoro min | flowtimes | flowtime min | stopwatches | stopwatch min |
+      | 2025-03-12 | 0         | 0            | 0         | 7            | 0           | 9             |
+
+  @domain @REQ-10
+  Scenario: Break time is not counted for any timer
+    Given the sessions:
+      | start            | mode      | type        | status    | minutes | todo |
+      | 2025-03-12 09:00 | flowtime  | short_break | completed | 5       |      |
+      | 2025-03-12 10:00 | stopwatch | long_break  | completed | 9       |      |
+    When I calculate the statistics
+    Then the daily statistics per timer are:
+      | date       | pomodoros | pomodoro min | flowtimes | flowtime min | stopwatches | stopwatch min |
+      | 2025-03-12 | 0         | 0            | 0         | 0            | 0           | 0             |

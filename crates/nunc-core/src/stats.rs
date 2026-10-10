@@ -92,7 +92,6 @@ pub fn compute_stats(
         day.break_minutes += rest;
         let completed = u32::from(is_work && session.status == SessionStatus::Completed);
         match session.mode {
-            _ if !is_work => {}
             TimerMode::Pomodoro => day.pomodoro_minutes += work,
             TimerMode::Flowtime => {
                 day.flowtime_minutes += work;
