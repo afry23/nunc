@@ -23,7 +23,7 @@ pub use drive::{
 pub use engine::{SyncSetup, SyncStore, WebDavRunner, sync_webdav};
 pub use error::SyncError;
 pub use todoist::{
-    Account, CALLBACK_PORTS, Named, TaskPayload, TodoistClient, TodoistConfig, TodoistRunner,
-    TodoistService, TodoistStore, sync_todoist,
+    Account, Named, TaskPayload, TodoistClient, TodoistConfig, TodoistRunner, TodoistService,
+    TodoistStore, sync_todoist,
 };
 pub use webdav::{Precondition, Remote, SYNC_FILE_NAME, WebDavClient};

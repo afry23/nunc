@@ -268,7 +268,6 @@ export function createFakeBackend(): FakeBackend {
     driveConnectError: null,
     importInfo: { available: false, todoCount: 0, sessionCount: 0 },
     todoist: {
-      configured: true,
       connected: false,
       email: null,
       avatarUrl: null,
@@ -631,7 +630,7 @@ export function createFakeBackend(): FakeBackend {
     check_sync_import: () => fake.importInfo,
     finish_connect: () => null,
     get_todoist_status: () => fake.todoist,
-    connect_todoist: () => {
+    connect_todoist_token: () => {
       if (fake.todoistConnectError) throw fake.todoistConnectError;
       fake.todoist = {
         ...fake.todoist,

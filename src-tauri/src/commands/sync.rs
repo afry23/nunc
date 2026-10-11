@@ -224,14 +224,17 @@ pub fn get_todoist_status(state: State<'_, AppState>) -> Result<TodoistStatus, A
     Ok(state.todoist_service.status()?)
 }
 
-/// Meldet im Browser bei Todoist an (Desktop). Danach läuft der erste Abgleich im Hintergrund.
+/// Verbindet Todoist mit dem persönlichen API-Token (Desktop, ADR 0020). Danach läuft der erste Abgleich im
+/// Hintergrund. Das Token geht nie zurück an die Oberfläche.
 #[tauri::command]
 #[specta::specta]
-pub async fn connect_todoist(state: State<'_, AppState>) -> Result<TodoistStatus, AppError> {
+pub async fn connect_todoist_token(
+    state: State<'_, AppState>,
+    token: String,
+) -> Result<TodoistStatus, AppError> {
     todoist_desktop_only()?;
     let service = state.todoist_service.clone();
-    let opener = state.opener.clone();
-    let status = service.connect(&*opener).await?;
+    let status = service.connect_token(&token).await?;
     state.todoist.trigger(Trigger::Connected);
     Ok(status)
 }

@@ -264,20 +264,12 @@ Given("Todoist is connected", (world: UiWorld) => {
   };
 });
 
-Given("this build has no Todoist credentials", (world: UiWorld) => {
-  world.fake.todoist = { ...world.fake.todoist, configured: false };
-});
-
 Given(
   "connecting Todoist fails with {string}: {string}",
   (world: UiWorld, code: string, message: string) => {
     world.fake.todoistConnectError = { code, message };
   },
 );
-
-When("the Todoist login works again", (world: UiWorld) => {
-  world.fake.todoistConnectError = null;
-});
 
 /** Eine Uhrzeit in lokaler Zeit (die Anzeige ist lokal, der Test soll nicht von der Zeitzone abhängen). */
 function localIso(time: string): string {

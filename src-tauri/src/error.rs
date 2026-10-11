@@ -87,6 +87,8 @@ impl From<SyncError> for AppError {
                 "google_client_missing"
             }
             SyncError::GoogleClientInvalid(_) => "google_client_invalid",
+            SyncError::TodoistTokenRejected => "todoist_token_invalid",
+            SyncError::TodoistTokenInvalid => "unauthorized",
             SyncError::OAuth(_) => "oauth",
             SyncError::Open(_) => "browser",
             SyncError::Status { .. } => "server",
@@ -205,6 +207,11 @@ mod tests {
             code(SyncError::GoogleClientInvalid("x")),
             "google_client_invalid"
         );
+        assert_eq!(
+            code(SyncError::TodoistTokenRejected),
+            "todoist_token_invalid"
+        );
+        assert_eq!(code(SyncError::TodoistTokenInvalid), "unauthorized");
         assert_eq!(
             code(SyncError::Open(nunc_platform::OpenError("x".into()))),
             "browser"

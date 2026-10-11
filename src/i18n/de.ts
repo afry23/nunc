@@ -406,9 +406,13 @@ export const de = {
   "todoist.notConnected": "Nicht verbunden",
   "todoist.explain":
     "Aufgaben werden in beide Richtungen abgeglichen. Sessions und Einstellungen bleiben auf diesem Gerät.",
-  "todoist.noCredentials":
-    "In diesem Build sind keine Todoist-Zugangsdaten hinterlegt.",
-  "todoist.waiting": "Warte auf den Browser …",
+  "todoist.token": "API-Token",
+  "todoist.tokenHelp":
+    "Dein persönliches API-Token findest du in Todoist unter Einstellungen → Integrationen → Entwickler.",
+  "todoist.tokenWarning":
+    "Das Token hat vollen Zugriff auf dein Todoist-Konto. nunc speichert es nur im Schlüsselbund dieses Geräts; in Todoist kannst du es jederzeit erneuern.",
+  "todoist.openSettings": "Todoist-Einstellungen öffnen",
+  "todoist.waiting": "Prüfe das Token …",
   "todoist.connect": "Mit Todoist verbinden",
   "todoist.avatar": "Avatar",
   "todoist.connectedAs": "Verbunden als {email}",

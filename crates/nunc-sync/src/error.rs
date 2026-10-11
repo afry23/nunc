@@ -44,6 +44,12 @@ pub enum SyncError {
     /// Client-ID oder -Secret unbrauchbar, bereits als Text für die Anzeige.
     #[error("{0}")]
     GoogleClientInvalid(&'static str),
+    /// Todoist lehnt das eingegebene persönliche Token ab (oder es ist leer, ADR 0020).
+    #[error("Todoist hat das Token abgelehnt. Bitte prüfe es in den Todoist-Einstellungen.")]
+    TodoistTokenRejected,
+    /// Das gespeicherte Todoist-Token gilt nicht mehr (widerrufen oder alte, abgelaufene OAuth-Anmeldung).
+    #[error("Todoist: Token ungültig – bitte neu eintragen")]
+    TodoistTokenInvalid,
     /// Fehler beim Anmelden (Browser, Rückruf, Token-Austausch), bereits als Text für die Anzeige.
     #[error("{0}")]
     OAuth(String),

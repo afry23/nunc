@@ -81,7 +81,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             sync::check_sync_import,
             sync::finish_connect,
             sync::get_todoist_status,
-            sync::connect_todoist,
+            sync::connect_todoist_token,
             sync::disconnect_todoist,
             sync::get_todoist_sync_status,
             sync::todoist_sync_now,

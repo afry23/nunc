@@ -24,6 +24,7 @@ pub struct Logged {
     pub method: String,
     pub path: String,
     pub body: Value,
+    pub bearer: Option<String>,
 }
 
 pub struct TodoistState {
@@ -194,7 +195,12 @@ impl Respond for Responder {
             &body,
             bearer.as_deref(),
         );
-        state.log.push(Logged { method, path, body });
+        state.log.push(Logged {
+            method,
+            path,
+            body,
+            bearer,
+        });
         response
     }
 }

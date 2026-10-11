@@ -3,8 +3,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Duration as ChronoDuration;
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when};
@@ -13,10 +11,8 @@ use nunc_core::model::TodoistStatus;
 use nunc_platform::{MemorySecretStore, SecretStore};
 use nunc_sync::oauth::{Connection, Tokens, Vault};
 use nunc_sync::{SyncRunner, TodoistConfig, TodoistRunner, TodoistService};
-use sha2::{Digest, Sha256};
 
 use crate::SyncWorld;
-use crate::google::AutoBrowser;
 use crate::todoist_server::Todoist;
 
 const ACCOUNT: &str = "todoist";
@@ -24,8 +20,9 @@ const ACCOUNT: &str = "todoist";
 pub struct State {
     pub server: Option<Todoist>,
     pub secrets: Arc<MemorySecretStore>,
-    pub client_id: String,
     pub status: Option<TodoistStatus>,
+    /// Tokens, die das Test-Todoist ablehnt (sonst nimmt es jedes eingegebene persönliche Token an).
+    pub rejected: Vec<String>,
 }
 
 impl Default for State {
@@ -33,8 +30,8 @@ impl Default for State {
         Self {
             server: None,
             secrets: Arc::new(MemorySecretStore::default()),
-            client_id: "todoist-client".to_owned(),
             status: None,
+            rejected: Vec::new(),
         }
     }
 }
@@ -47,18 +44,10 @@ fn server(world: &SyncWorld) -> &Todoist {
         .expect("kein Todoist gestartet")
 }
 
-fn browser(world: &SyncWorld) -> Arc<AutoBrowser> {
-    world.google.browser.clone().expect("kein Browser")
-}
-
 pub fn service(world: &SyncWorld) -> Arc<TodoistService> {
     let uri = server(world).server.uri();
-    let mut config = TodoistConfig::todoist(&world.todoist.client_id, "todoist-secret");
-    config.app.auth_url = format!("{uri}/auth");
-    config.app.token_url = format!("{uri}/oauth/access_token");
+    let mut config = TodoistConfig::todoist();
     config.api_base = format!("{uri}/api/v1");
-    config.ports = vec![0];
-    config.auth_timeout = world.google.auth_timeout;
     Arc::new(
         TodoistService::new(config, world.todoist.secrets.clone(), world.clock.clone())
             .expect("Todoist-Dienst"),
@@ -98,9 +87,6 @@ fn words(text: &str) -> Vec<String> {
 #[given("a Todoist server")]
 async fn start_server(world: &mut SyncWorld) {
     world.todoist.server = Some(Todoist::start().await);
-    world.google.browser = Some(Arc::new(
-        AutoBrowser::new(tokio::runtime::Handle::current()),
-    ));
 }
 
 #[given("Todoist is connected")]
@@ -125,31 +111,6 @@ fn token_expired(world: &mut SyncWorld) {
     let mut connection = vault.load().unwrap().expect("nicht verbunden");
     connection.tokens.expires_at = Some(world.clock.now() - ChronoDuration::minutes(1));
     vault.save(&connection).unwrap();
-}
-
-#[given("Todoist no longer accepts the access token")]
-fn token_rejected(world: &mut SyncWorld) {
-    server(world).with(|state| state.valid.clear());
-}
-
-#[given("Todoist refuses to renew tokens")]
-fn refuses(world: &mut SyncWorld) {
-    server(world).with(|state| state.reject_refresh = true);
-}
-
-#[given(expr = "Todoist rejects the authorization code with {string}")]
-fn rejects_code(world: &mut SyncWorld, error: String) {
-    server(world).with(|state| state.reject_code = Some(error));
-}
-
-#[given("Todoist issues tokens that never expire")]
-fn no_expiry(world: &mut SyncWorld) {
-    server(world).with(|state| state.expires_in = None);
-}
-
-#[given("the app has no Todoist credentials")]
-fn no_credentials(world: &mut SyncWorld) {
-    world.todoist.client_id = String::new();
 }
 
 #[given(expr = "Todoist answers every request with {int}")]
@@ -237,11 +198,21 @@ fn coordinator_runs(world: &mut SyncWorld) {
 // ---------------------------------------------------------------------------------------------
 // When
 
-#[when("I connect Todoist")]
-async fn connect(world: &mut SyncWorld) {
+#[given(expr = "Todoist rejects the token {string}")]
+#[when(expr = "Todoist rejects the token {string}")]
+fn rejects_token(world: &mut SyncWorld, token: String) {
+    server(world).with(|state| state.valid.remove(&token));
+    world.todoist.rejected.push(token);
+}
+
+#[when(expr = "I connect Todoist with the token {string}")]
+async fn connect_token(world: &mut SyncWorld, token: String) {
+    let trimmed = token.trim().to_owned();
+    if !trimmed.is_empty() && !world.todoist.rejected.contains(&trimmed) {
+        server(world).with(|state| state.valid.insert(trimmed));
+    }
     let service = service(world);
-    let browser = browser(world);
-    match service.connect(&*browser).await {
+    match service.connect_token(&token).await {
         Ok(status) => {
             world.todoist.status = Some(status);
             world.google.error = None;
@@ -278,47 +249,6 @@ fn just_connected(world: &mut SyncWorld) {
 // ---------------------------------------------------------------------------------------------
 // Then
 
-fn opened_url(world: &SyncWorld) -> reqwest::Url {
-    let urls = browser(world).opened();
-    assert_eq!(urls.len(), 1, "Der Browser sollte einmal geöffnet werden");
-    urls.into_iter().next().unwrap()
-}
-
-fn param(url: &reqwest::Url, name: &str) -> String {
-    url.query_pairs()
-        .find(|(key, _)| key == name)
-        .map(|(_, value)| value.into_owned())
-        .unwrap_or_else(|| panic!("Parameter {name} fehlt in {url}"))
-}
-
-#[then("the browser was opened once with the Todoist authorization page")]
-fn browser_opened(world: &mut SyncWorld) {
-    let url = opened_url(world);
-    assert!(
-        url.as_str()
-            .starts_with(&format!("{}/auth?", server(world).server.uri()))
-    );
-    assert_eq!(param(&url, "client_id"), "todoist-client");
-    assert_eq!(param(&url, "scope"), "data:read_write");
-    assert_eq!(param(&url, "code_challenge_method"), "S256");
-    assert!(param(&url, "redirect_uri").starts_with("http://127.0.0.1:"));
-    assert!(param(&url, "redirect_uri").ends_with("/oauth/callback"));
-}
-
-#[then("the Todoist token request carries the code and the verifier of the challenge")]
-fn token_request(world: &mut SyncWorld) {
-    let url = opened_url(world);
-    let request = server(world).with(|state| state.token_requests[0].clone());
-    assert_eq!(request["grant_type"], "authorization_code");
-    assert_eq!(request["code"], "auth-code");
-    assert_eq!(request["client_secret"], "todoist-secret");
-    assert_eq!(request["redirect_uri"], param(&url, "redirect_uri"));
-    assert_eq!(
-        URL_SAFE_NO_PAD.encode(Sha256::digest(request["code_verifier"].as_bytes())),
-        param(&url, "code_challenge")
-    );
-}
-
 #[then(expr = "the Todoist status shows the account {string} with an avatar")]
 fn status_account(world: &mut SyncWorld, email: String) {
     let status = world.todoist.status.as_ref().expect("keine Verbindung");
@@ -354,21 +284,6 @@ fn holds_nothing(world: &mut SyncWorld) {
     );
 }
 
-#[then(expr = "the stored Todoist refresh token is {string}")]
-fn stored_refresh(world: &mut SyncWorld, token: String) {
-    let connection = vault(world).load().unwrap().expect("nicht verbunden");
-    assert_eq!(
-        connection.tokens.refresh_token.as_deref(),
-        Some(token.as_str())
-    );
-}
-
-#[then("the stored Todoist token never expires")]
-fn never_expires(world: &mut SyncWorld) {
-    let connection = vault(world).load().unwrap().expect("nicht verbunden");
-    assert_eq!(connection.tokens.expires_at, None);
-}
-
 #[then(expr = "Todoist issued {int} tokens by renewal")]
 fn renewals(world: &mut SyncWorld, count: usize) {
     let renewals = server(world).with(|state| {
@@ -379,6 +294,42 @@ fn renewals(world: &mut SyncWorld, count: usize) {
             .count()
     });
     assert_eq!(renewals, count);
+}
+
+#[then("the secret store holds a Todoist connection that never expires")]
+fn holds_fixed(world: &mut SyncWorld) {
+    let connection = vault(world).load().unwrap().expect("nicht verbunden");
+    assert_eq!(connection.tokens.expires_at, None);
+    assert_eq!(connection.tokens.refresh_token, None);
+}
+
+#[then(expr = "Todoist received {string} with the bearer token {string}")]
+fn received_with_bearer(world: &mut SyncWorld, request: String, token: String) {
+    let (method, path) = request.split_once(' ').expect("METHODE PFAD");
+    let found = server(world).with(|state| {
+        state.log.iter().any(|logged| {
+            logged.method == method
+                && logged.path == path
+                && logged.bearer.as_deref() == Some(token.as_str())
+        })
+    });
+    assert!(found, "{request} mit {token} fehlt");
+}
+
+#[then(expr = "every Todoist request carried the bearer token {string}")]
+fn every_bearer(world: &mut SyncWorld, token: String) {
+    let bearers = server(world).with(|state| {
+        state
+            .log
+            .iter()
+            .map(|logged| logged.bearer.clone())
+            .collect::<Vec<_>>()
+    });
+    assert!(!bearers.is_empty());
+    assert!(
+        bearers.iter().all(|b| b.as_deref() == Some(token.as_str())),
+        "{bearers:?}"
+    );
 }
 
 #[then("Todoist was not contacted")]

@@ -96,6 +96,7 @@ impl Harness {
                 sync::check_sync_import,
                 sync::finish_connect,
                 sync::get_todoist_status,
+                sync::connect_todoist_token,
                 sync::disconnect_todoist,
                 sync::get_todoist_sync_status,
                 sync::todoist_sync_now,
@@ -390,6 +391,11 @@ fn todoist_is_not_connected_until_the_user_signs_in() {
     assert_eq!(status["connected"], false);
     assert!(status["email"].is_null() && status["avatarUrl"].is_null());
     assert_eq!(h.ok("disconnect_todoist", json!({}))["connected"], false);
+    // ein leeres Token wird abgelehnt, ohne Todoist zu fragen
+    assert_eq!(
+        h.err_code("connect_todoist_token", json!({ "token": "  " })),
+        "todoist_token_invalid"
+    );
     let sync = h.ok("get_todoist_sync_status", json!({}));
     assert_eq!(sync["state"], "idle");
     // ohne Verbindung gibt es nichts abzugleichen

@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
 import { t, useT } from "../i18n";
 import { formatTimeOfDay } from "../lib/format";
+import { openExternal } from "../lib/links";
 import { useTodoistStore } from "../stores/todoistStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Button } from "./ui";
+
+/** Todoist-Einstellungen mit dem persönlichen API-Token. */
+export const TODOIST_TOKEN_URL =
+  "https://app.todoist.com/app/settings/integrations/developer";
+
+const FIELD =
+  "w-full min-w-0 min-h-11 rounded-lg bg-surface-container-highest px-3 focus:bg-secondary-container";
 
 /** Kurze Statuszeile: `✓ Todoist: 08:30` · `⟳ Todoist synchronisiert…` · `⚠ Todoist-Sync fehlgeschlagen`. */
 export function todoistStatusText(
@@ -26,6 +34,7 @@ export function TodoistSection() {
   const error = useTodoistStore((s) => s.connectError);
   const { connect, disconnect, syncNow } = useTodoistStore.getState();
   const [confirming, setConfirming] = useState(false);
+  const [token, setToken] = useState("");
   useEffect(() => {
     void useTodoistStore.getState().load();
   }, []);
@@ -48,26 +57,56 @@ export function TodoistSection() {
             <p className="text-sm text-on-surface-variant">
               {t("todoist.explain")}
             </p>
-            {!account.configured && (
-              <p className="text-sm text-orange-300">
-                {t("todoist.noCredentials")}
+            <form
+              aria-label={t("todoist.title")}
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (token.trim() === "" || connecting) return;
+                void connect(token).then((ok) => {
+                  if (ok) setToken("");
+                });
+              }}
+              className="flex min-w-0 flex-col gap-3"
+            >
+              <div className="flex min-w-0 flex-col gap-2">
+                <label htmlFor="todoist-token" className="font-semibold">
+                  {t("todoist.token")}
+                </label>
+                <input
+                  id="todoist-token"
+                  type="password"
+                  autoComplete="off"
+                  value={token}
+                  onChange={(event) => setToken(event.target.value)}
+                  className={FIELD}
+                />
+              </div>
+              <p className="text-sm">{t("todoist.tokenHelp")}</p>
+              <p className="text-sm text-on-surface-variant">
+                {t("todoist.tokenWarning")}
               </p>
-            )}
-            {error && (
-              <p role="alert" className="text-red-300">
-                {error}
-              </p>
-            )}
-            <div>
-              <Button
-                variant="primary"
-                disabled={connecting || !account.configured}
-                aria-busy={connecting}
-                onClick={() => void connect()}
-              >
-                {connecting ? t("todoist.waiting") : t("todoist.connect")}
-              </Button>
-            </div>
+              {error && (
+                <p role="alert" className="text-red-300">
+                  {error}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={connecting || token.trim() === ""}
+                  aria-busy={connecting}
+                >
+                  {connecting ? t("todoist.waiting") : t("todoist.connect")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => void openExternal(TODOIST_TOKEN_URL)}
+                >
+                  {t("todoist.openSettings")}
+                </Button>
+              </div>
+            </form>
           </>
         ) : (
           <>

@@ -1,12 +1,12 @@
-//! Synchronisierung der Todos mit Todoist (Go: `services/todoist/sync.go`, `auth.go`): Anmeldung, Lauf und
-//! Verbindung. Die Merge-Regeln sind pur (`nunc_core::todoist_mapping`); die Datenbank sieht dieses Modul nur über
-//! [`TodoistStore`], damit nie eine Sperre über einen Netzwerkzugriff hinweg gehalten wird.
+//! Synchronisierung der Todos mit Todoist (Go: `services/todoist/sync.go`): Anmeldung mit dem persönlichen
+//! API-Token (ADR 0020), Lauf und Verbindung. Die Merge-Regeln sind pur (`nunc_core::todoist_mapping`); die
+//! Datenbank sieht dieses Modul nur über [`TodoistStore`], damit nie eine Sperre über einen Netzwerkzugriff hinweg
+//! gehalten wird.
 
 mod client;
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
 
 use chrono::{DateTime, NaiveDate, Utc};
 use nunc_core::clock::Clock;
@@ -15,53 +15,30 @@ use nunc_core::todoist_mapping::{
     LocalChange, LocalTodo, TodoistMapping, map_todo_to_task, merge_todoist, same_on_todoist,
 };
 use nunc_core::todotxt::{ParsedTodo, build_raw_text};
-use nunc_platform::{SecretStore, UrlOpener, to_local_date};
+use nunc_platform::{MemorySecretStore, SecretStore, to_local_date};
 use nunc_store::{StoreError, TodoistApplied, TodoistWrite};
 
 pub use client::{Account, Named, TaskPayload, TodoistClient};
 
 use crate::SyncError;
 use crate::coordinator::{RunFuture, SyncRunner};
-use crate::oauth::{
-    AuthorizeOptions, Connection, OAuthApp, Page, TokenSource, Vault, authorize, http_client,
-};
+use crate::oauth::{Connection, TokenSource, Tokens, Vault, http_client};
 
 /// Eintrag im Tresor.
 pub const SECRET_ACCOUNT: &str = "todoist";
 const SERVICE: &str = "Todoist";
-const CALLBACK_PATH: &str = "/oauth/callback";
-/// Rückruf-Ports in der Reihenfolge der Versuche. Todoist verlangt registrierte Adressen: alle eintragen.
-pub const CALLBACK_PORTS: [u16; 5] = [42813, 42814, 42815, 42816, 42817];
 
-/// Adressen und Zugangsdaten; Tests setzen die Adressen auf einen Testserver.
+/// Adresse der API; Tests setzen sie auf einen Testserver.
 #[derive(Debug, Clone)]
 pub struct TodoistConfig {
-    pub app: OAuthApp,
     pub api_base: String,
-    pub ports: Vec<u16>,
-    pub auth_timeout: Duration,
 }
 
 impl TodoistConfig {
-    pub fn todoist(client_id: &str, client_secret: &str) -> Self {
+    pub fn todoist() -> Self {
         Self {
-            app: OAuthApp {
-                service: SERVICE,
-                client_id: client_id.to_owned(),
-                client_secret: Some(client_secret.to_owned()).filter(|secret| !secret.is_empty()),
-                auth_url: "https://app.todoist.com/oauth/authorize".to_owned(),
-                token_url: "https://api.todoist.com/oauth/access_token".to_owned(),
-                scope: "data:read_write".to_owned(),
-                auth_params: Vec::new(),
-            },
             api_base: "https://api.todoist.com/api/v1".to_owned(),
-            ports: CALLBACK_PORTS.to_vec(),
-            auth_timeout: Duration::from_secs(120),
         }
-    }
-
-    pub fn is_configured(&self) -> bool {
-        !self.app.client_id.is_empty()
     }
 }
 
@@ -116,60 +93,59 @@ impl TodoistService {
     pub fn status(&self) -> Result<TodoistStatus, SyncError> {
         let connection = self.vault.load_lenient();
         Ok(TodoistStatus {
-            configured: self.config.is_configured(),
             connected: connection.is_some(),
             email: connection.as_ref().and_then(|c| c.email.clone()),
             avatar_url: connection.and_then(|c| c.avatar_url),
         })
     }
 
+    /// Ein Client für das Token in `vault`. Todoist erneuert persönliche Tokens nicht; eine alte OAuth-Anmeldung
+    /// (mit Refresh-Token) wird ebenfalls nicht mehr erneuert, es gibt keinen Client dafür.
+    fn client_for(&self, vault: Vault) -> TodoistClient {
+        let tokens = Arc::new(TokenSource::fixed(
+            vault,
+            SERVICE,
+            self.http.clone(),
+            self.clock.clone(),
+        ));
+        TodoistClient::new(self.http.clone(), &self.config, tokens)
+    }
+
     fn client(&self) -> Result<TodoistClient, SyncError> {
         if !self.is_connected()? {
             return Err(SyncError::NotConnected(SERVICE));
         }
-        let tokens = Arc::new(TokenSource::new(
-            self.vault.clone(),
-            self.config.app.clone(),
-            self.http.clone(),
-            self.clock.clone(),
-        ));
-        Ok(TodoistClient::new(self.http.clone(), &self.config, tokens))
+        Ok(self.client_for(self.vault.clone()))
     }
 
-    /// Meldet im Browser an und legt die Tokens im Tresor ab. E-Mail und Avatar sind nur Anzeige: kann das Konto
-    /// nicht gelesen werden, ist die Verbindung trotzdem hergestellt.
-    pub async fn connect(&self, opener: &dyn UrlOpener) -> Result<TodoistStatus, SyncError> {
-        if !self.config.is_configured() {
-            return Err(SyncError::OAuth(
-                "In diesem Build sind keine Todoist-Zugangsdaten hinterlegt (NUNC_TODOIST_CLIENT_ID, NUNC_TODOIST_CLIENT_SECRET)."
-                    .to_owned(),
-            ));
+    /// Verbindet mit dem persönlichen API-Token: prüft es über das Konto (E-Mail, Avatar) und legt es erst danach
+    /// im Tresor ab. Ein abgelehntes Token ändert nichts an einer bestehenden Verbindung.
+    pub async fn connect_token(&self, token: &str) -> Result<TodoistStatus, SyncError> {
+        let token = token.trim();
+        if token.is_empty() {
+            return Err(SyncError::TodoistTokenRejected);
         }
-        let options = AuthorizeOptions {
-            ports: self.config.ports.clone(),
-            callback_path: CALLBACK_PATH,
-            timeout: self.config.auth_timeout,
-            success_page: Page {
-                title: "Verbunden!",
-                message: "Todoist wurde erfolgreich mit nunc verbunden.",
+        let mut connection = Connection {
+            tokens: Tokens {
+                access_token: token.to_owned(),
+                refresh_token: None,
+                expires_at: None,
             },
-        };
-        let tokens =
-            authorize(&self.http, &self.config.app, &options, opener, &*self.clock).await?;
-        self.vault.save(&Connection {
-            tokens,
             email: None,
             avatar_url: None,
-        })?;
-        let account = match self.client() {
-            Ok(client) => client.account().await.ok(),
-            Err(_) => None,
         };
-        if let (Some(account), Some(mut connection)) = (account, self.vault.load()?) {
-            connection.email = account.email;
-            connection.avatar_url = account.avatar_url;
-            self.vault.save(&connection)?;
-        }
+        let trial = Vault::new(Arc::new(MemorySecretStore::default()), SECRET_ACCOUNT);
+        trial.save(&connection)?;
+        let account = match self.client_for(trial).account().await {
+            Ok(account) => account,
+            Err(SyncError::AuthExpired(_) | SyncError::Forbidden) => {
+                return Err(SyncError::TodoistTokenRejected);
+            }
+            Err(error) => return Err(error),
+        };
+        connection.email = account.email;
+        connection.avatar_url = account.avatar_url;
+        self.vault.save(&connection)?;
         self.status()
     }
 
@@ -180,7 +156,12 @@ impl TodoistService {
 
     pub async fn sync(&self, store: &dyn TodoistStore) -> Result<SyncResult, SyncError> {
         let client = self.client()?;
-        sync_todoist(&client, store, &*self.clock).await
+        sync_todoist(&client, store, &*self.clock)
+            .await
+            .map_err(|error| match error {
+                SyncError::AuthExpired(_) => SyncError::TodoistTokenInvalid,
+                other => other,
+            })
     }
 }
 
@@ -455,7 +436,7 @@ mod tests {
 
     fn service(secrets: Arc<dyn SecretStore>) -> TodoistService {
         TodoistService::new(
-            TodoistConfig::todoist("id", "secret"),
+            TodoistConfig::todoist(),
             secrets,
             Arc::new(ManualClock::new(
                 Utc.with_ymd_and_hms(2026, 10, 4, 9, 0, 0).unwrap(),
@@ -465,19 +446,18 @@ mod tests {
     }
 
     #[test]
-    fn the_config_points_at_todoist_and_needs_a_client_id() {
-        let config = TodoistConfig::todoist("id", "");
-        assert!(config.is_configured() && config.app.client_secret.is_none());
-        assert!(!TodoistConfig::todoist("", "s").is_configured());
-        assert_eq!(config.ports, CALLBACK_PORTS);
-        assert_eq!(config.app.scope, "data:read_write");
+    fn the_config_points_at_todoist() {
+        assert_eq!(
+            TodoistConfig::todoist().api_base,
+            "https://api.todoist.com/api/v1"
+        );
     }
 
     #[test]
     fn the_status_follows_the_vault() {
         let service = service(Arc::new(MemorySecretStore::default()));
         let status = service.status().unwrap();
-        assert!(status.configured && !status.connected);
+        assert!(!status.connected);
         assert!(!service.is_connected().unwrap());
     }
 

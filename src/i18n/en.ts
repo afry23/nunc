@@ -405,8 +405,13 @@ export const en: Record<keyof typeof de, string> = {
   "todoist.notConnected": "Not connected",
   "todoist.explain":
     "Tasks are synced in both directions. Sessions and settings stay on this device.",
-  "todoist.noCredentials": "This build has no Todoist credentials.",
-  "todoist.waiting": "Waiting for the browser …",
+  "todoist.token": "API token",
+  "todoist.tokenHelp":
+    "You find your personal API token in Todoist under Settings → Integrations → Developer.",
+  "todoist.tokenWarning":
+    "The token has full access to your Todoist account. nunc keeps it only in this device's keychain; you can renew it in Todoist at any time.",
+  "todoist.openSettings": "Open Todoist settings",
+  "todoist.waiting": "Checking the token …",
   "todoist.connect": "Connect to Todoist",
   "todoist.avatar": "Avatar",
   "todoist.connectedAs": "Connected as {email}",

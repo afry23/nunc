@@ -135,8 +135,6 @@ pub struct SyncImportInfo {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TodoistStatus {
-    /// Ob dieser Build Zugangsdaten für Todoist hat.
-    pub configured: bool,
     pub connected: bool,
     pub email: Option<String>,
     pub avatar_url: Option<String>,

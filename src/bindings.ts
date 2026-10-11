@@ -171,8 +171,11 @@ export const commands = {
 	finishConnect: () => __TAURI_INVOKE<void>("finish_connect"),
 	/**  Zustand der Todoist-Verbindung (ohne Netzwerkzugriff). */
 	getTodoistStatus: () => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("get_todoist_status")),
-	/**  Meldet im Browser bei Todoist an (Desktop). Danach läuft der erste Abgleich im Hintergrund. */
-	connectTodoist: () => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("connect_todoist")),
+	/**
+	 *  Verbindet Todoist mit dem persönlichen API-Token (Desktop, ADR 0020). Danach läuft der erste Abgleich im
+	 *  Hintergrund. Das Token geht nie zurück an die Oberfläche.
+	 */
+	connectTodoistToken: (token: string) => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("connect_todoist_token", { token })),
 	/**  Löscht die Anmeldung lokal; lokale Todos bleiben. */
 	disconnectTodoist: () => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("disconnect_todoist")),
 	/**  Zustand des Todoist-Syncs (für die Statusleiste beim Öffnen; danach kommt `todoist:sync_status`). */
@@ -664,8 +667,6 @@ export type TodoStats = {
 
 /**  Zustand der Todoist-Verbindung (`get_todoist_status`). */
 export type TodoistStatus = {
-	/**  Ob dieser Build Zugangsdaten für Todoist hat. */
-	configured: boolean,
 	connected: boolean,
 	email: string | null,
 	avatarUrl: string | null,

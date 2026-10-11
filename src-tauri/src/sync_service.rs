@@ -246,12 +246,8 @@ pub fn coordinator(
         last_sync_at,
     );
 
-    let todoist_credentials = credentials::todoist();
     let todoist_service = Arc::new(TodoistService::new(
-        TodoistConfig::todoist(
-            &todoist_credentials.client_id,
-            &todoist_credentials.client_secret,
-        ),
+        TodoistConfig::todoist(),
         secrets,
         clock.clone(),
     )?);
