@@ -53,10 +53,3 @@ Drive verbinden“. Der Browser öffnet die Google-Anmeldung.
   Geräte mit verschiedenen Clients sehen die Sync-Datei der anderen nicht.
 - Eine andere Client-ID trennt die bestehende Verbindung (Tokens gelten nur für ihren Client). Ein neues Secret zur
   selben Client-ID behält sie.
-
-## Umstieg von einer Version mit eingebautem Zugang
-
-Bis nunc 0.3 war ein Google-Client eingebaut. Nach dem Update fragt nunc nach einem eigenen Zugang. Die alte
-`nunc/nunc-sync.v2.json` in Drive ist für den neuen Client nicht sichtbar: Der erste Sync legt eine neue Datei an und
-lädt den lokalen Stand hoch. Ein Gerät mit den vollständigsten Daten zuerst verbinden, danach die anderen (mit
-derselben Client-ID). Die alte Datei und den Ordner kann man danach in Drive löschen.
