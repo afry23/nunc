@@ -13,9 +13,10 @@ use crate::state::AppState;
 pub const MAIN: &str = "main";
 pub const MINI: &str = "mini";
 
-/// Startgröße (zugleich Maximum) und Mindestgröße des Mini-Timers in Pixeln.
-const MINI_SIZE: (f64, f64) = (264.0, 280.0);
-const MINI_MIN_SIZE: (f64, f64) = (160.0, 190.0);
+/// Startgröße (zugleich Maximum) und Mindestgröße des Mini-Timers in Pixeln. Höhe = Ring (170 bzw. 90) +
+/// `MINI_CHROME_HEIGHT` (140, `src/lib/timer.ts`): Tasten und „Zur App“ passen ohne Scrollen.
+const MINI_SIZE: (f64, f64) = (264.0, 310.0);
+const MINI_MIN_SIZE: (f64, f64) = (160.0, 230.0);
 
 /// Route der Oberfläche für den Mini-Timer (M4-10).
 const MINI_ROUTE: &str = "mini";

@@ -36,11 +36,13 @@ Feature: Keyboard shortcuts
     Then the field "Neue Aufgabe" has the focus
 
   @ui @REQ-9 @desktop
-  Scenario: 1, 2 and 3 switch the views
+  Scenario: 1 to 4 switch the views
     When I open the app
     And I press the key "2"
     Then I see the heading "Aufgaben"
     When I press the key "3"
+    Then I see the heading "Zeiten"
+    When I press the key "4"
     Then I see the heading "Statistik"
     When I press the key "1"
     Then the ring shows "25:00"

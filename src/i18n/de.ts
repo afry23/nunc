@@ -125,6 +125,7 @@ export const de = {
   "help.shortcuts.newTodo": "Neue Aufgabe",
   "help.shortcuts.timer": "Zum Timer",
   "help.shortcuts.todos": "Zu den Aufgaben",
+  "help.shortcuts.times": "Zu den Zeiten",
   "help.shortcuts.stats": "Zur Statistik",
   "help.shortcuts.settings": "Zu den Einstellungen",
   "help.shortcuts.help": "Zur Hilfe",

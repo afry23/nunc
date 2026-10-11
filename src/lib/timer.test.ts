@@ -83,8 +83,9 @@ describe("spokenRemaining", () => {
 
 describe("miniRingSize", () => {
   it("fits the window and stays within bounds", () => {
-    expect(miniRingSize(264, 280)).toBe(170);
-    expect(miniRingSize(160, 190)).toBe(90);
+    expect(miniRingSize(264, 310)).toBe(170);
+    expect(miniRingSize(264, 280)).toBe(140);
+    expect(miniRingSize(160, 230)).toBe(90);
     expect(miniRingSize(100, 100)).toBe(90);
     expect(miniRingSize(900, 900)).toBe(200);
     expect(miniRingSize(264, 400)).toBe(200);

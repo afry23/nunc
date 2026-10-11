@@ -38,6 +38,9 @@ export function useShortcuts(): void {
         case "go-todos":
           void navigate({ to: "/todos" });
           return;
+        case "go-times":
+          void navigate({ to: "/times" });
+          return;
         case "go-stats":
           void navigate({ to: "/stats" });
           return;

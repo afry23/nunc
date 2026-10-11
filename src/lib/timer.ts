@@ -64,9 +64,18 @@ export function spokenRemaining(snapshot: TimerSnapshot): string {
   );
 }
 
+/**
+ * Platz im Mini-Timer neben dem Ring (Höhe): Rand 2 × 12, Tastenzeile 44, „Zur App“ 44, zwei Abstände à 12.
+ * Das Fenster (`MINI_SIZE` in `src-tauri/src/windows.rs`) ist so hoch, dass Ring und Tasten ohne Scrollen passen.
+ */
+export const MINI_CHROME_HEIGHT = 140;
+
 /** Ringdurchmesser des Mini-Timers: passt in das Fenster (Platz für Tasten darunter), 90–200 px. */
 export function miniRingSize(width: number, height: number): number {
   return Math.round(
-    Math.min(200, Math.max(90, Math.min(width - 24, height - 110))),
+    Math.min(
+      200,
+      Math.max(90, Math.min(width - 24, height - MINI_CHROME_HEIGHT)),
+    ),
   );
 }

@@ -6,6 +6,7 @@ export type ShortcutAction =
   | "new-todo"
   | "go-timer"
   | "go-todos"
+  | "go-times"
   | "go-stats"
   | "go-settings"
   | "go-help";
@@ -50,6 +51,8 @@ export function shortcutFor(
     case "2":
       return "go-todos";
     case "3":
+      return "go-times";
+    case "4":
       return "go-stats";
     case ",":
       return "go-settings";
@@ -67,7 +70,8 @@ export const SHORTCUTS: { keys: string; label: MessageKey }[] = [
   { keys: "N", label: "help.shortcuts.newTodo" },
   { keys: "1", label: "help.shortcuts.timer" },
   { keys: "2", label: "help.shortcuts.todos" },
-  { keys: "3", label: "help.shortcuts.stats" },
+  { keys: "3", label: "help.shortcuts.times" },
+  { keys: "4", label: "help.shortcuts.stats" },
   { keys: ",", label: "help.shortcuts.settings" },
   { keys: "?", label: "help.shortcuts.help" },
 ];
