@@ -15,6 +15,7 @@ Feature: Help
     When I open the app at "/help"
     Then I see the heading "Tastenkürzel"
     And I see "Timer starten, pausieren, fortsetzen"
+    And I see "Zu den Zeiten"
 
   @ui @REQ-9 @desktop
   Scenario: The question mark key opens the help

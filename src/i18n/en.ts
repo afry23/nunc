@@ -127,6 +127,7 @@ export const en: Record<keyof typeof de, string> = {
   "help.shortcuts.newTodo": "New task",
   "help.shortcuts.timer": "Go to timer",
   "help.shortcuts.todos": "Go to tasks",
+  "help.shortcuts.times": "Go to times",
   "help.shortcuts.stats": "Go to statistics",
   "help.shortcuts.settings": "Go to settings",
   "help.shortcuts.help": "Go to help",
