@@ -1,7 +1,7 @@
 Feature: Own Google OAuth client
   Source: ADR 0019; nunc ships no Google client, every user registers their own; desktop only
 
-  @ui @US-S08 @desktop @wip
+  @ui @US-S08 @desktop
   Scenario: Without an own client the Drive section asks for one
     Given the setting "syncProvider" is "google_drive"
     And no Google client is configured
@@ -11,7 +11,7 @@ Feature: Own Google OAuth client
     And the button "Mit Google Drive verbinden" is disabled
     And I see "nunc bringt keinen eigenen Google-Zugang mit."
 
-  @ui @US-S08 @desktop @wip
+  @ui @US-S08 @desktop
   Scenario: The setup guide links to the Google Cloud Console
     Given the setting "syncProvider" is "google_drive"
     And no Google client is configured
@@ -22,7 +22,7 @@ Feature: Own Google OAuth client
     When I click "Google Cloud Console öffnen"
     Then the browser opened "https://console.cloud.google.com/apis/credentials"
 
-  @ui @US-S08 @desktop @wip
+  @ui @US-S08 @desktop
   Scenario: Saving the client enables connecting
     Given the setting "syncProvider" is "google_drive"
     And no Google client is configured
@@ -34,7 +34,7 @@ Feature: Own Google OAuth client
     And the button "Mit Google Drive verbinden" is enabled
     And the field "Client-Secret" is empty
 
-  @ui @US-S08 @desktop @wip
+  @ui @US-S08 @desktop
   Scenario: A client ID that is not a Google client ID is rejected
     Given the setting "syncProvider" is "google_drive"
     And no Google client is configured

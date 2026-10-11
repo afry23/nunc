@@ -345,8 +345,30 @@ export const de = {
   "sync.switch.body":
     "Die Synchronisierung mit {provider} wird beendet. Die gespeicherten Zugangsdaten bleiben erhalten.",
   "drive.notConnected": "Nicht verbunden",
-  "drive.noCredentials":
-    "In diesem Build sind keine Google-Zugangsdaten hinterlegt.",
+  "drive.client.title": "Google-Zugang",
+  "drive.client.intro":
+    "nunc bringt keinen eigenen Google-Zugang mit. Mit deinem eigenen Client bleiben Zugriff und Kontingent bei dir.",
+  "drive.client.id": "Client-ID",
+  "drive.client.secret": "Client-Secret",
+  "drive.client.current": "Eingetragene Client-ID: {id}",
+  "drive.client.save": "Zugang speichern",
+  "drive.client.remove": "Zugang entfernen",
+  "drive.client.saved": "Google-Zugang gespeichert.",
+  "drive.guide.toggle": "So richtest du einen Google-Zugang ein",
+  "drive.guide.step1": "In der Google Cloud Console ein Projekt anlegen.",
+  "drive.guide.step2":
+    "Unter „APIs und Dienste“ die „Google Drive API“ aktivieren.",
+  "drive.guide.step3":
+    "OAuth-Zustimmungsbildschirm einrichten: Typ „Extern“, App-Name frei wählbar, deine E-Mail-Adresse, Scope „…/auth/drive.file“ hinzufügen.",
+  "drive.guide.step4":
+    "Veröffentlichungsstatus auf „In Produktion“ setzen. Im Status „Testen“ läuft die Anmeldung nach 7 Tagen ab. Für drive.file ist keine Prüfung durch Google nötig.",
+  "drive.guide.step5":
+    "Unter „Anmeldedaten“ eine OAuth-Client-ID vom Typ „Desktop-App“ erstellen und Client-ID und Client-Secret hier eintragen.",
+  "drive.guide.devices":
+    "Nutze auf allen Geräten dieselbe Client-ID, sonst sehen sie die Sync-Datei der anderen nicht.",
+  "drive.guide.alternative":
+    "Ohne Google-Konsole geht es mit WebDAV, z. B. Nextcloud.",
+  "drive.guide.console": "Google Cloud Console öffnen",
   "drive.waiting": "Warte auf den Browser …",
   "drive.connect": "Mit Google Drive verbinden",
   "drive.connectedAs": "Verbunden als {email}",

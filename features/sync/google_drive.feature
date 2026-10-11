@@ -445,14 +445,6 @@ Feature: Google Drive sync
     And the button "Mit Google Drive verbinden" is enabled
 
   @ui @US-S01 @desktop
-  Scenario: A build without Google credentials cannot connect
-    Given the setting "syncProvider" is "google_drive"
-    And this build has no Google credentials
-    When I open the app at "/settings"
-    Then I see "In diesem Build sind keine Google-Zugangsdaten hinterlegt."
-    And the button "Mit Google Drive verbinden" is disabled
-
-  @ui @US-S01 @desktop
   Scenario: Disconnecting returns to the not connected state
     Given the setting "syncProvider" is "google_drive"
     And Google Drive is connected as "me@example.org"

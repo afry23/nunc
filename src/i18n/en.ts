@@ -344,7 +344,30 @@ export const en: Record<keyof typeof de, string> = {
   "sync.switch.body":
     "Syncing with {provider} will stop. The saved credentials are kept.",
   "drive.notConnected": "Not connected",
-  "drive.noCredentials": "This build has no Google credentials.",
+  "drive.client.title": "Google access",
+  "drive.client.intro":
+    "nunc does not ship its own Google access. With your own client, access and quota stay with you.",
+  "drive.client.id": "Client ID",
+  "drive.client.secret": "Client secret",
+  "drive.client.current": "Saved client ID: {id}",
+  "drive.client.save": "Save access",
+  "drive.client.remove": "Remove access",
+  "drive.client.saved": "Google access saved.",
+  "drive.guide.toggle": "How to set up Google access",
+  "drive.guide.step1": "Create a project in the Google Cloud Console.",
+  "drive.guide.step2":
+    "Under “APIs & Services”, enable the “Google Drive API”.",
+  "drive.guide.step3":
+    "Set up the OAuth consent screen: type “External”, any app name, your e-mail address, add the scope “…/auth/drive.file”.",
+  "drive.guide.step4":
+    "Set the publishing status to “In production”. In “Testing” the sign-in expires after 7 days. drive.file needs no verification by Google.",
+  "drive.guide.step5":
+    "Under “Credentials”, create an OAuth client ID of type “Desktop app” and enter the client ID and client secret here.",
+  "drive.guide.devices":
+    "Use the same client ID on all devices, otherwise they cannot see each other's sync file.",
+  "drive.guide.alternative":
+    "Without the Google console, use WebDAV, e.g. Nextcloud.",
+  "drive.guide.console": "Open Google Cloud Console",
   "drive.waiting": "Waiting for the browser …",
   "drive.connect": "Connect to Google Drive",
   "drive.connectedAs": "Connected as {email}",

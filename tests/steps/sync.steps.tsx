@@ -208,8 +208,8 @@ Given(
   },
 );
 
-Given("this build has no Google credentials", (world: UiWorld) => {
-  world.fake.drive = { ...world.fake.drive, configured: false };
+Given("no Google client is configured", (world: UiWorld) => {
+  world.fake.drive = { ...world.fake.drive, configured: false, clientId: null };
 });
 
 Given(

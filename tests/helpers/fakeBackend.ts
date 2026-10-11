@@ -585,6 +585,40 @@ export function createFakeBackend(): FakeBackend {
       };
       return fake.drive;
     },
+    set_google_client: ({
+      clientId,
+      clientSecret,
+    }: {
+      clientId: string;
+      clientSecret: string;
+    }) => {
+      const id = clientId.trim();
+      if (!id.endsWith(".apps.googleusercontent.com"))
+        fail(
+          "google_client_invalid",
+          "Die Client-ID muss auf .apps.googleusercontent.com enden.",
+        );
+      if (clientSecret.trim() === "")
+        fail("google_client_invalid", "Das Client-Secret fehlt.");
+      const changed = fake.drive.clientId !== id;
+      fake.drive = {
+        ...fake.drive,
+        configured: true,
+        clientId: id,
+        ...(changed ? { connected: false, email: null } : {}),
+      };
+      return fake.drive;
+    },
+    clear_google_client: () => {
+      fake.drive = {
+        ...fake.drive,
+        configured: false,
+        clientId: null,
+        connected: false,
+        email: null,
+      };
+      return fake.drive;
+    },
     disconnect_drive: () => {
       fake.drive = {
         ...fake.drive,
