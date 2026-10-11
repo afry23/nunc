@@ -46,9 +46,9 @@ Then install the dependencies once:
 npm ci
 ```
 
-Optional: Google Drive and Todoist sync need OAuth credentials at build time. Copy `.env.example` to `.env` and fill it
-in (debug builds read it; release builds need `NUNC_*` set as environment variables). Without them, "Connect" is
-disabled. See [CLAUDE.md](./CLAUDE.md).
+No OAuth credentials are needed to build. Google Drive uses the user's own Google client (entered in the settings,
+see [docs/google-drive.md](./docs/google-drive.md)), Todoist the user's personal API token. For development, a fixed
+Google client can be put into `.env` (copy `.env.example`; debug builds only).
 
 ### Desktop (macOS, Windows, Linux)
 
@@ -121,9 +121,11 @@ stored in the database but in the system keychain (service `nunc`).
 
 - **WebDAV:** URL, login (Basic or Digest), remote path; "Test connection". Runs on start, on exit, after changes,
   manually, and when returning from the background (mobile).
-- **Google Drive** (desktop): sign in via browser, file `nunc/nunc-sync.json` in the app's own Drive folder (scope
-  `drive.file`).
-- **Todoist** (desktop, in addition to the provider): tasks, projects and labels.
+- **Google Drive** (desktop): needs your own Google OAuth client ("Desktop app", see
+  [docs/google-drive.md](./docs/google-drive.md)); sign in via browser, file `nunc/nunc-sync.v2.json` in the app's own
+  Drive folder (scope `drive.file`).
+- **Todoist** (desktop, in addition to the provider): connect with your personal API token (Todoist: Settings →
+  Integrations → Developer); tasks, projects and labels.
 - **Automatic sync** (desktop): while the app stays open, the provider is synced every 5, 15 (default) or 30 minutes,
   or never (*Settings → Sync*, "Sync automatically every"). Todoist is not part of it. Mobile devices sync when the
   app returns from or goes to the background instead.

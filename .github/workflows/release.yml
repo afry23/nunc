@@ -12,10 +12,6 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  NUNC_GOOGLE_CLIENT_ID: ${{ secrets.NUNC_GOOGLE_CLIENT_ID }}
-  NUNC_GOOGLE_CLIENT_SECRET: ${{ secrets.NUNC_GOOGLE_CLIENT_SECRET }}
-  NUNC_TODOIST_CLIENT_ID: ${{ secrets.NUNC_TODOIST_CLIENT_ID }}
-  NUNC_TODOIST_CLIENT_SECRET: ${{ secrets.NUNC_TODOIST_CLIENT_SECRET }}
 
 jobs:
   # Vor dem Bauen: Version stimmt überall, alle Szenarien sind abgenommen (M8-08)

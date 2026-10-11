@@ -1,6 +1,6 @@
 # ADR 0020 – Todoist mit persönlichem API-Token
 
-- Status: vorgeschlagen
+- Status: akzeptiert
 - Datum: 2026-10-11
 - Ergänzt: ADR 0009 (Abschnitt „Todoist“, OAuth), ADR 0019 (eigener Google-Client)
 - Referenz: ADR 0005 (SecretStore), `crates/nunc-sync/src/todoist/mod.rs`, `src-tauri/src/credentials.rs`

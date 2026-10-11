@@ -1,6 +1,6 @@
 # ADR 0009 – Google Drive und Todoist (M7)
 
-- Status: akzeptiert
+- Status: akzeptiert, teilweise ersetzt durch ADR 0019 (eigener Google-Client) und ADR 0020 (Todoist-Token)
 - Datum: 2026-10-04
 - Referenz: `nunc-go/internal/services/sync.go`, `sync_drive.go`, `todoist/*.go`, ADR 0005 (SecretStore), ADR 0008 (WebDAV)
 

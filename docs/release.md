@@ -25,7 +25,6 @@ wenn Versionen auseinanderlaufen (`bump-version.mjs --check`) oder `npm run docs
 
 | Plattform | Secret | Inhalt |
 |---|---|---|
-| alle | `NUNC_GOOGLE_CLIENT_ID/_SECRET`, `NUNC_TODOIST_CLIENT_ID/_SECRET` | OAuth-Zugangsdaten (werden eingebaut, siehe CLAUDE.md) |
 | macOS | `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD` | „Developer ID Application“-Zertifikat als `.p12`, Base64 |
 | macOS | `APPLE_SIGNING_IDENTITY` | z. B. `Developer ID Application: Name (TEAMID)` |
 | macOS | `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | Notarisierung (App-spezifisches Passwort) |
@@ -86,6 +85,22 @@ In die Notes des ersten Release mit CRDT-Sync aufnehmen:
 - Gelöschte Aufgaben verschwinden nach 90 Tagen aus der Sync-Datei; ein Gerät, das länger offline war, legt sie beim
   nächsten Sync ggf. wieder an.
 
+## Release-Notes: Eigene Zugangsdaten (ADR 0019, ADR 0020)
+
+In die Notes des ersten Release ohne eingebaute OAuth-Clients aufnehmen:
+
+- **Google Drive braucht einen eigenen Google-Zugang.** nunc bringt keinen Google-Client mehr mit. Unter
+  *Einstellungen → Sync → Google Drive* Client-ID und -Secret eines eigenen „Desktop-App“-Clients eintragen
+  (Anleitung in der App und in [google-drive.md](./google-drive.md)). Die bisherige Verbindung endet mit dem Update.
+- Die alte Sync-Datei in Drive ist für den neuen Client **nicht sichtbar** (`drive.file` sieht nur eigene Dateien). Der
+  erste Sync legt `nunc/nunc-sync.v2.json` neu an und lädt den lokalen Stand hoch. **Auf allen Geräten dieselbe
+  Client-ID eintragen**, sonst sehen sie die Datei der anderen nicht. Die alte Datei kann danach in Drive gelöscht
+  werden.
+- **Todoist verbindet sich mit dem persönlichen API-Token** (Todoist: Einstellungen → Integrationen → Entwickler).
+  Eine bestehende Anmeldung läuft bis zu ihrem Ablauf weiter, danach fragt nunc nach dem Token. Zuordnungen zu
+  Todoist-Aufgaben bleiben erhalten.
+- WebDAV ist unverändert.
+
 ## Release-Notes: Stopwatch (ADR 0018)
 
 In die Notes des ersten Release mit der Stopwatch aufnehmen:
@@ -100,6 +115,7 @@ In die Notes des ersten Release mit der Stopwatch aufnehmen:
 
 - [ ] `npm run docs:report` und alle Pflicht-Checks grün (CLAUDE.md)
 - [ ] `tests/nfr/measure-desktop.sh` ([docs/nfr.md](./nfr.md)) auf dem Release-Build
-- [ ] manuell: Anmeldung Google/Todoist mit echten Konten; Sync zwischen zwei Geräten (CRDT, ADR 0016)
+- [ ] manuell: Google Drive mit eigenem Client („In Produktion“) und Todoist mit persönlichem Token; Sync zwischen zwei
+      Geräten (CRDT, ADR 0016)
 - [ ] Release-Notes enthalten den Abschnitt zum Sync-Format (oben), solange es der erste Release mit ADR 0016 ist
 - [ ] manuell: Android- und iOS-Gerät (Timer im Hintergrund, App-Kill, Notification, Restore)

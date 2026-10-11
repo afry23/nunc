@@ -1,6 +1,6 @@
 # ADR 0019 – Google Drive nur mit eigenem OAuth-Client der Nutzer
 
-- Status: vorgeschlagen
+- Status: akzeptiert
 - Datum: 2026-10-11
 - Ersetzt teilweise: ADR 0009 (Abschnitt „Anmeldung“, Zugangsdaten für Google)
 - Referenz: ADR 0005 (SecretStore), `src-tauri/src/credentials.rs`, `crates/nunc-sync/src/drive/mod.rs`
@@ -33,8 +33,8 @@ Der Maintainer möchte für Google keinen eigenen Client mehr betreiben.
 - **Laufzeitänderung:** `DriveConfig` wird nicht mehr nur beim Start gebaut. `DriveService` liest den Client bei jeder
   Anmeldung und Token-Erneuerung aus dem Tresor (oder hält ihn hinter einem `RwLock` und bekommt ein `set_client`).
   Ändert sich die Client-ID, wird die bestehende Verbindung getrennt (Tokens gelten nur für ihren Client) und der
-  Status zeigt „Bitte neu verbinden“. Ein neues Command `set_google_client` / `clear_google_client`, ein Feld
-  `clientConfigured` im Drive-Status; das Secret geht nie zurück ans Frontend.
+  Status zeigt „Bitte neu verbinden“. Neue Commands `set_google_client` / `clear_google_client`; der Drive-Status
+  zeigt mit `configured` und `clientId`, ob und welcher Client eingetragen ist. Das Secret geht nie zurück ans Frontend.
 - **Validierung:** Client-ID muss auf `.apps.googleusercontent.com` enden (sonst `AppError`
   `google_client_invalid`). Das Secret ist Pflicht: Google verlangt es bei Desktop-Clients auch mit PKCE beim
   Tokentausch.
@@ -55,8 +55,7 @@ Der Maintainer möchte für Google keinen eigenen Client mehr betreiben.
      (`https://console.cloud.google.com/apis/credentials`). Client-ID und -Secret hier eintragen.
 
   Dazu ein Satz, warum: „nunc bringt keinen eigenen Google-Zugang mit. Mit deinem eigenen Client bleiben Zugriff und
-  Kontingent bei dir.“ Ausführlicher steht dasselbe mit Screenshots in `docs/google-drive.md`, auf das die App
-  ebenfalls verlinkt.
+  Kontingent bei dir.“ Ausführlicher steht dasselbe in `docs/google-drive.md`.
 
 ## Folgen
 
