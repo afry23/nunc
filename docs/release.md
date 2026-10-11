@@ -54,11 +54,44 @@ wenn Versionen auseinanderlaufen (`bump-version.mjs --check`) oder `npm run docs
 3. `npm run tauri android build -- --aab --apk` → `app/build/outputs/bundle/universalRelease/*.aab`.
 4. Play Console: App `com.afry.nunc` anlegen, internen Test-Track mit Testern, erstes Bundle von Hand hochladen
    (danach kann der Workflow hochladen). `versionCode` leitet Tauri aus der Version ab und muss pro Upload steigen.
-5. Test ohne Play Store: Der Job `android-asset` hängt die APK als `nunc_<version>_android.apk` an den Release-Entwurf
-   (nur bei Tag-Läufen). Installieren per `adb install` oder Download auf dem Gerät. Ohne Signierschlüssel ist die APK
+5. Test ohne Play Store: Der Job `android-asset` hängt die APK als `nunc_<version>_android.apk` (universal) und je ABI als
+   `nunc_<version>_android_<abi>.apk` an den Release-Entwurf (nur bei Tag-Läufen). Installieren per `adb install` oder Download auf dem Gerät. Ohne Signierschlüssel ist die APK
    unsigniert und lässt sich nicht installieren.
 6. Berechtigungen: `USE_EXACT_ALARM` (ab Android 13, für den Timer-Wecker) und `POST_NOTIFICATIONS` (kommt aus dem Notification-Plugin) – die Play Console
    verlangt dafür eine Begründung (Zweck: Timer-Ende als Wecker-Benachrichtigung).
+
+## F-Droid / IzzyOnDroid (ADR 0021)
+
+Metadaten (Texte, Icon, Screenshots, Changelogs) liegen in `fastlane/metadata/android/{de-DE,en-US}/`; IzzyOnDroid und
+F-Droid lesen sie direkt aus dem Repository.
+
+**Pro Release**
+
+1. Changelog je Sprache anlegen: `fastlane/metadata/android/<sprache>/changelogs/<versionCode>.txt` (höchstens 500
+   Zeichen, Klartext). `versionCode` = Major·1 000 000 + Minor·1 000 + Patch, z. B. 0.4.0 → `4000.txt`.
+2. Den GitHub-Release **veröffentlichen** (nicht nur als Entwurf lassen); IzzyOnDroid holt die APKs je ABI
+   (`nunc_<version>_android_arm64-v8a.apk` usw., der Job `android-asset` hängt sie an) von dort, meist innerhalb eines Tages.
+3. Bei geänderten Funktionen `full_description.txt` mitpflegen. Kommen Google Drive oder Todoist auf Android: Anti-Feature
+   `NonFreeNet` bei IzzyOnDroid und F-Droid melden.
+
+**Einmalig: IzzyOnDroid**
+
+1. Repository öffentlich, erster Release mit signierter APK veröffentlicht.
+2. Signatur-Fingerprint ermitteln und hier eintragen:
+   `apksigner verify --print-certs nunc_<version>_android_arm64-v8a.apk` (Zeile „SHA-256 digest“). Fingerprint: _noch offen_.
+3. Aufnahme beantragen: Issue „New app“ unter <https://codeberg.org/IzzyOnDroid/repodata/issues> mit Repo-URL,
+   Asset-Muster (`nunc_.*_android_(arm64-v8a|armeabi-v7a|x86|x86_64)\.apk`) und Fingerprint.
+4. Screenshots: `fastlane/metadata/android/en-US/images/phoneScreenshots/1.png …` (Hochformat, z. B. vom Emulator per
+   `adb exec-out screencap -p > 1.png`).
+
+**Offizielles F-Droid** (baut selbst aus dem Quellcode, siehe ADR 0021)
+
+1. `fdroid/fdroiddata` auf gitlab.com forken, `metadata/com.afry.nunc.yml` anlegen (Rust per `rustup`-srclib, `ndk:`,
+   `tauri-cli` per `cargo install --locked` statt npm-Binary, `npm ci`, `cargo tauri android build --apk`,
+   `UpdateCheckMode: Tags`).
+2. Lokal prüfen: `fdroid readmeta`, `fdroid lint com.afry.nunc`, `fdroid build -v -l com.afry.nunc` (fdroidserver-Image).
+3. Merge Request öffnen. Offene Punkte: native npm-Binaries im Build, reproduzierbarer Build, damit F-Droid die eigene
+   Signatur übernimmt (`AllowedAPKSigningKeys`).
 
 ## iOS (M8-06)
 
@@ -103,3 +136,4 @@ In die Notes des ersten Release mit der Stopwatch aufnehmen:
       Geräten (CRDT, ADR 0016)
 - [ ] Release-Notes enthalten den Abschnitt zum Sync-Format (oben), solange es der erste Release mit ADR 0016 ist
 - [ ] manuell: Android- und iOS-Gerät (Timer im Hintergrund, App-Kill, Notification, Restore)
+- [ ] Android-Changelogs in `fastlane/metadata/android/*/changelogs/<versionCode>.txt` (ADR 0021)

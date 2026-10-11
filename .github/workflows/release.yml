@@ -159,12 +159,21 @@ jobs:
           NUNC_ANDROID_KEY_PASSWORD: ${{ secrets.NUNC_ANDROID_KEY_PASSWORD }}
         run: npm run tauri android build -- --aab --apk
 
+      # Eine APK je ABI (11–16 MB statt ≈ 57 MB universal): IzzyOnDroid nimmt höchstens 30 MB (ADR 0021).
+      # Rust ist schon gebaut, der Schritt packt nur neu.
+      - name: APKs je ABI
+        env:
+          NUNC_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.NUNC_ANDROID_KEYSTORE_PASSWORD }}
+          NUNC_ANDROID_KEY_ALIAS: ${{ secrets.NUNC_ANDROID_KEY_ALIAS }}
+          NUNC_ANDROID_KEY_PASSWORD: ${{ secrets.NUNC_ANDROID_KEY_PASSWORD }}
+        run: npm run tauri android build -- --apk --split-per-abi
+
       - uses: actions/upload-artifact@v4
         with:
           name: android-release
           path: |
             src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
-            src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk
+            src-tauri/gen/android/app/build/outputs/apk/*/release/*.apk
 
       # Interner Test-Track der Play Console (Paketname com.afry.nunc, App muss dort bereits angelegt sein)
       - name: In die Play Console hochladen
@@ -179,8 +188,9 @@ jobs:
           track: internal
           status: draft
 
-  # APK an den Release-Entwurf hängen (zum Herunterladen und manuellen Installieren). Läuft erst nach `desktop`,
-  # damit der Entwurf sicher existiert und nicht doppelt angelegt wird.
+  # APKs an den Release-Entwurf hängen (zum Herunterladen und manuellen Installieren, Quelle für IzzyOnDroid). Läuft
+  # erst nach `desktop`, damit der Entwurf sicher existiert und nicht doppelt angelegt wird. Die Namen sind stabil,
+  # IzzyOnDroid findet die APKs per Muster (ADR 0021).
   android-asset:
     needs: [desktop, android]
     if: startsWith(github.ref, 'refs/tags/v')
@@ -191,17 +201,23 @@ jobs:
           name: android-release
           path: android-release
 
-      - name: APK an den Release anhängen
+      - name: APKs an den Release anhängen
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          apk=$(find android-release -name '*.apk' | head -n 1)
-          [ -n "$apk" ] || { echo "::error::Keine APK gefunden"; exit 1; }
-          name="nunc_${TAG#v}_android.apk"
-          cp "$apk" "$name"
-          gh release upload "$TAG" "$name" --clobber
+          version="${TAG#v}"
+          # Gradle-Ordner → Android-ABI; "universal" ergibt den bisherigen Namen ohne ABI
+          for pair in universal: arm64:_arm64-v8a arm:_armeabi-v7a x86:_x86 x86_64:_x86_64; do
+            dir="${pair%%:*}"
+            suffix="${pair#*:}"
+            apk=$(find android-release -path "*/apk/$dir/release/*.apk" | head -n 1)
+            [ -n "$apk" ] || { echo "::error::Keine APK für $dir gefunden"; exit 1; }
+            name="nunc_${version}_android${suffix}.apk"
+            cp "$apk" "$name"
+            gh release upload "$TAG" "$name" --clobber
+          done
 
   ios:
     needs: verify

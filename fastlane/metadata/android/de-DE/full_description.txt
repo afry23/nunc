@@ -1,0 +1,31 @@
+<p><i>Nunc</i> ist Latein für „jetzt“: nunc hilft dir, dich auf das zu konzentrieren, was du gerade tust.</p>
+
+<p><b>Timer</b></p>
+<ul>
+<li>Pomodoro (Arbeit, kurze und lange Pause, Auto-Start)</li>
+<li>Flowtime: arbeiten, solange der Flow trägt; die Pause ergibt sich aus dem Verhältnis Arbeit : Pause</li>
+<li>Stoppuhr für die freie Zeiterfassung</li>
+<li>Der Timer rechnet mit Zeitstempeln und übersteht Hintergrund, Neustart und Beenden der App; eine Benachrichtigung meldet das Ende</li>
+</ul>
+
+<p><b>Aufgaben</b></p>
+<ul>
+<li>todo.txt-Format mit Priorität, +Projekt, @Kontext und Pomodoro-Zähler</li>
+<li>Filter, Suche, Sortierung, Drag &amp; Drop</li>
+<li>Import und Export einer todo.txt-Datei</li>
+</ul>
+
+<p><b>Statistik</b></p>
+<ul>
+<li>Tag, Woche, Monat und Jahr, Serien, Auswertung nach Projekt und Kontext</li>
+<li>Immer aus den aufgezeichneten Sessions berechnet; Export als CSV oder JSON</li>
+</ul>
+
+<p><b>Deine Daten</b></p>
+<ul>
+<li>Alles bleibt auf dem Gerät; tägliche automatische Datensicherung mit Wiederherstellung</li>
+<li>Optionaler Sync zwischen Geräten über deinen eigenen WebDAV-Server (z. B. Nextcloud)</li>
+<li>Keine Werbung, kein Tracking, kein Konto</li>
+</ul>
+
+<p>nunc gibt es auch für macOS, Windows, Linux und iOS. Sprachen: Deutsch und Englisch.</p>
