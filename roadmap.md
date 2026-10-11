@@ -415,6 +415,8 @@ ein (Tresor, Anleitung in der App). Todoist: persönliches API-Token statt OAuth
 
 | In-App-Hilfe (`@REQ-9`) | Route `/help` (fünfter Nav-Eintrag), Kurzanleitung je Bereich, Kürzel-Tabelle aus `SHORTCUTS` (nur Desktop), Kürzel `?`. Rein Frontend. **Manuell prüfen:** fünf Tabs bei ≈ 411 px ohne horizontalen Überlauf. |
 
+| F-Droid / IzzyOnDroid (ADR 0021) | Store-Metadaten in `fastlane/metadata/android/`, Ablauf in [docs/release.md](./docs/release.md). **Manuell:** Repository öffentlich machen (vorher Secret-Scan der History), Screenshots, Signatur-Fingerprint, Aufnahmeantrag bei IzzyOnDroid. **Offen:** reproduzierbarer Android-Build und Rezept in `fdroiddata` für das offizielle F-Droid. |
+
 ## Nach 1.0 (Backlog)
 
 | Thema | Notiz |
