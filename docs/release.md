@@ -85,22 +85,6 @@ In die Notes des ersten Release mit CRDT-Sync aufnehmen:
 - Gelöschte Aufgaben verschwinden nach 90 Tagen aus der Sync-Datei; ein Gerät, das länger offline war, legt sie beim
   nächsten Sync ggf. wieder an.
 
-## Release-Notes: Eigene Zugangsdaten (ADR 0019, ADR 0020)
-
-In die Notes des ersten Release ohne eingebaute OAuth-Clients aufnehmen:
-
-- **Google Drive braucht einen eigenen Google-Zugang.** nunc bringt keinen Google-Client mehr mit. Unter
-  *Einstellungen → Sync → Google Drive* Client-ID und -Secret eines eigenen „Desktop-App“-Clients eintragen
-  (Anleitung in der App und in [google-drive.md](./google-drive.md)). Die bisherige Verbindung endet mit dem Update.
-- Die alte Sync-Datei in Drive ist für den neuen Client **nicht sichtbar** (`drive.file` sieht nur eigene Dateien). Der
-  erste Sync legt `nunc/nunc-sync.v2.json` neu an und lädt den lokalen Stand hoch. **Auf allen Geräten dieselbe
-  Client-ID eintragen**, sonst sehen sie die Datei der anderen nicht. Die alte Datei kann danach in Drive gelöscht
-  werden.
-- **Todoist verbindet sich mit dem persönlichen API-Token** (Todoist: Einstellungen → Integrationen → Entwickler).
-  Eine bestehende Anmeldung läuft bis zu ihrem Ablauf weiter, danach fragt nunc nach dem Token. Zuordnungen zu
-  Todoist-Aufgaben bleiben erhalten.
-- WebDAV ist unverändert.
-
 ## Release-Notes: Stopwatch (ADR 0018)
 
 In die Notes des ersten Release mit der Stopwatch aufnehmen:
