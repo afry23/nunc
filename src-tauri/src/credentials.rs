@@ -1,12 +1,13 @@
-//! Zugangsdaten der App bei Google und Todoist (OAuth-Client). Reihenfolge der Quellen:
+//! Zugangsdaten der App bei Google und Todoist (OAuth-Client). Quellen:
 //!
-//! 1. Umgebungsvariable (`NUNC_GOOGLE_CLIENT_ID`, …) beim Start,
+//! 1. Umgebungsvariable (`NUNC_GOOGLE_CLIENT_ID`, `NUNC_TODOIST_CLIENT_ID`, …) beim Start,
 //! 2. nur in Debug-Builds eine `.env`-Datei (im aktuellen Ordner oder darüber, auch mit den Namen der Go-App:
 //!    `GOOGLE_CLIENT_ID`, `TODOIST_CLIENT_SECRET`, …),
-//! 3. der beim Bauen eingesetzte Wert (`option_env!`).
+//! 3. nur Todoist: der beim Bauen eingesetzte Wert (`option_env!`).
 //!
-//! Desktop-Clients gelten bei beiden Diensten nicht als geheim, gehören aber nicht ins Repository (`.env` ist
-//! in `.gitignore`). Release-Builds lesen nie eine `.env`.
+//! Google (ADR 0019) hat keinen eingebauten Client: Release-Builds liefern hier nichts, Nutzer tragen ihren
+//! eigenen Client ein (Tresor). Debug-Builds nehmen 1. und 2., damit Entwicklung und Tests ohne Eingabe laufen.
+//! `.env` ist in `.gitignore`; Release-Builds lesen nie eine `.env`.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -81,20 +82,27 @@ fn pick(
         .unwrap_or_default()
 }
 
+/// Fester Google-Client nur für die Entwicklung; leer = Client aus dem Tresor.
 pub fn google() -> Credentials {
+    if !cfg!(debug_assertions) {
+        return Credentials {
+            client_id: String::new(),
+            client_secret: String::new(),
+        };
+    }
     let env = dotenv();
     Credentials {
         client_id: pick(
             "NUNC_GOOGLE_CLIENT_ID",
             &["NUNC_GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_ID"],
             &env,
-            option_env!("NUNC_GOOGLE_CLIENT_ID"),
+            None,
         ),
         client_secret: pick(
             "NUNC_GOOGLE_CLIENT_SECRET",
             &["NUNC_GOOGLE_CLIENT_SECRET", "GOOGLE_CLIENT_SECRET"],
             &env,
-            option_env!("NUNC_GOOGLE_CLIENT_SECRET"),
+            None,
         ),
     }
 }

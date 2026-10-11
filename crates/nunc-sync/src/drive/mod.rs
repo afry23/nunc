@@ -182,8 +182,10 @@ impl DriveService {
             log::warn!("Tresor nicht lesbar ({CLIENT_ACCOUNT}): {error}");
             None
         });
+        let client_id = self.google_client().ok().flatten().map(|c| c.client_id);
         Ok(DriveStatus {
             configured: configured.is_some(),
+            client_id,
             connected: connection.is_some(),
             email: connection.and_then(|connection| connection.email),
             folder_url: folder_id.filter(|id| !id.is_empty()).map(folder_url),
@@ -482,7 +484,12 @@ mod tests {
         assert_eq!(app.client_id, "1.apps.googleusercontent.com");
         assert_eq!(app.client_secret.as_deref(), Some("s1"));
         assert_eq!(app.token_url, "https://oauth2.googleapis.com/token");
-        assert!(service.status(None).unwrap().configured);
+        let status = service.status(None).unwrap();
+        assert!(status.configured);
+        assert_eq!(
+            status.client_id.as_deref(),
+            Some("1.apps.googleusercontent.com")
+        );
 
         connect(&service, None);
         service

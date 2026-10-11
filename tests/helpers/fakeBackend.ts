@@ -259,6 +259,7 @@ export function createFakeBackend(): FakeBackend {
     providerError: null,
     drive: {
       configured: true,
+      clientId: "123-abc.apps.googleusercontent.com",
       connected: false,
       email: null,
       folderUrl: null,

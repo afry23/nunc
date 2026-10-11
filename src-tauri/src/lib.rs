@@ -76,6 +76,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             sync::get_drive_status,
             sync::connect_drive,
             sync::disconnect_drive,
+            sync::set_google_client,
+            sync::clear_google_client,
             sync::check_sync_import,
             sync::finish_connect,
             sync::get_todoist_status,

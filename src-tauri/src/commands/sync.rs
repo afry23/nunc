@@ -169,6 +169,27 @@ pub fn disconnect_drive(state: State<'_, AppState>) -> Result<DriveStatus, AppEr
     get_drive_status(state)
 }
 
+/// Trägt den eigenen OAuth-Client für Google ein (ADR 0019). Eine andere Client-ID trennt die Verbindung.
+#[tauri::command]
+#[specta::specta]
+pub fn set_google_client(
+    state: State<'_, AppState>,
+    client_id: String,
+    client_secret: String,
+) -> Result<DriveStatus, AppError> {
+    desktop_only()?;
+    state.drive.set_client(&client_id, &client_secret)?;
+    get_drive_status(state)
+}
+
+/// Entfernt den eigenen OAuth-Client und damit auch die Verbindung.
+#[tauri::command]
+#[specta::specta]
+pub fn clear_google_client(state: State<'_, AppState>) -> Result<DriveStatus, AppError> {
+    state.drive.clear_client()?;
+    get_drive_status(state)
+}
+
 /// Liegt im Drive Stand, den dieses (leere) Gerät übernehmen kann?
 #[tauri::command]
 #[specta::specta]
