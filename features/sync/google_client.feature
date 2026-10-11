@@ -45,7 +45,7 @@ Feature: Own Google OAuth client
     Then I see "Die Client-ID muss auf .apps.googleusercontent.com enden."
     And the button "Mit Google Drive verbinden" is disabled
 
-  @integration @sync @US-S08 @desktop @wip
+  @integration @sync @US-S08 @desktop
   Scenario: Connecting uses the client from the secret store
     Given a Google server for the account "me@example.org"
     And the Google client "123-abc.apps.googleusercontent.com" with the secret "GOCSPX-secret" is configured
@@ -54,14 +54,15 @@ Feature: Own Google OAuth client
     And the token request carries the client secret "GOCSPX-secret"
     And the Drive status shows the account "me@example.org"
 
-  @integration @sync @US-S08 @desktop @wip
+  @integration @sync @US-S08 @desktop
   Scenario: The client is stored only in the secret store
-    Given the Google client "123-abc.apps.googleusercontent.com" with the secret "GOCSPX-secret" is configured
+    Given a Google server for the account "me@example.org"
+    And the Google client "123-abc.apps.googleusercontent.com" with the secret "GOCSPX-secret" is configured
     Then the secret store holds a Google client
     And the database does not contain "GOCSPX-secret"
     And the database does not contain "123-abc.apps.googleusercontent.com"
 
-  @integration @sync @US-S08 @desktop @wip
+  @integration @sync @US-S08 @desktop
   Scenario: Without a client connecting is refused and the browser stays closed
     Given a Google server for the account "me@example.org"
     And no Google client is configured
@@ -69,7 +70,7 @@ Feature: Own Google OAuth client
     Then connecting failed with "Kein Google-Zugang eingerichtet. Trage Client-ID und Client-Secret in den Einstellungen ein."
     And the browser was not opened
 
-  @integration @sync @US-S08 @desktop @wip
+  @integration @sync @US-S08 @desktop
   Scenario: Changing the client ID ends the connection
     Given a Google server for the account "me@example.org"
     And the Google client "123-abc.apps.googleusercontent.com" with the secret "GOCSPX-secret" is configured
@@ -78,16 +79,19 @@ Feature: Own Google OAuth client
     Then the secret store holds no Google Drive connection
     And the Drive status asks to connect again
 
-  @integration @sync @US-S08 @desktop @wip
+  @integration @sync @US-S08 @desktop
   Scenario: Saving the same client ID with a new secret keeps the connection
     Given a Google server for the account "me@example.org"
     And the Google client "123-abc.apps.googleusercontent.com" with the secret "GOCSPX-secret" is configured
     And Google Drive is connected as "me@example.org"
     When I configure the Google client "123-abc.apps.googleusercontent.com" with the secret "GOCSPX-rotated"
     Then the secret store holds a Google Drive connection
-    And the next token renewal carries the client secret "GOCSPX-rotated"
+    When the access token has expired
+    And I sync with Google Drive
+    Then the sync succeeds
+    And the token request carries the client secret "GOCSPX-rotated"
 
-  @integration @sync @US-S08 @desktop @wip
+  @integration @sync @US-S08 @desktop
   Scenario: Removing the client also ends the connection
     Given a Google server for the account "me@example.org"
     And the Google client "123-abc.apps.googleusercontent.com" with the secret "GOCSPX-secret" is configured
@@ -96,13 +100,12 @@ Feature: Own Google OAuth client
     Then the secret store holds no Google client
     And the secret store holds no Google Drive connection
 
-  @integration @sync @US-S08 @desktop @wip
+  @integration @sync @US-S08 @desktop
   Scenario: A connection made with the former built-in client asks for an own client
     Given a Google server for the account "me@example.org"
     And Google Drive is connected as "me@example.org"
     And no Google client is configured
     And no database exists yet
-    And the sync provider is "google_drive"
-    When I sync
+    When I sync with Google Drive
     Then the sync fails with "Google Drive braucht jetzt einen eigenen Zugang – bitte in den Einstellungen einrichten"
     And Google was not contacted

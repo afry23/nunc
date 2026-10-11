@@ -16,6 +16,8 @@ export const de = {
   "error.network": "Server nicht erreichbar.",
   "error.unauthorized": "Anmeldung abgelehnt oder abgelaufen.",
   "error.not_connected": "Nicht verbunden.",
+  "error.google_client_missing": "Kein Google-Zugang eingerichtet.",
+  "error.google_client_invalid": "Google-Zugang ungültig.",
   "error.oauth": "Anmeldung fehlgeschlagen.",
   "error.browser": "Der Browser konnte nicht geöffnet werden.",
   "error.server": "Der Server meldet einen Fehler.",

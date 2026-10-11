@@ -18,6 +18,8 @@ export const en: Record<keyof typeof de, string> = {
   "error.network": "Server cannot be reached.",
   "error.unauthorized": "Sign-in was rejected or has expired.",
   "error.not_connected": "Not connected.",
+  "error.google_client_missing": "No Google access set up.",
+  "error.google_client_invalid": "Invalid Google access.",
   "error.oauth": "Sign-in failed.",
   "error.browser": "The browser could not be opened.",
   "error.server": "The server reported an error.",

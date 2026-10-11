@@ -396,7 +396,7 @@ ein (Tresor, Anleitung in der App). Todoist: persönliches API-Token statt OAuth
 | ID | Ticket |
 |---|---|
 | M12-01 | ADR 0019 und 0020, `@wip`-Szenarien `features/sync/google_client.feature` und `features/todoist/token.feature` |
-| M12-02 | `nunc-sync`: Google-Client aus dem Tresor (Konto `google-drive-client`), `DriveService` liest ihn bei Anmeldung und Erneuerung, Trennen bei geänderter Client-ID, Fehler ohne Client (`@integration @sync`). Debug-Builds: Umgebung/`.env` vor dem Tresor |
+| M12-02 | `nunc-sync`: Google-Client aus dem Tresor (Konto `google-drive-client`), `DriveService` liest ihn bei Anmeldung und Erneuerung, Trennen bei geänderter Client-ID, Fehler ohne Client (`@integration @sync`) – erledigt. Debug-Umgebung/`.env` als fester Client vor dem Tresor folgt mit M12-03 (`credentials.rs`) |
 | M12-03 | Commands `set_google_client`/`clear_google_client`, `clientConfigured` im Drive-Status, `AppError` `google_client_invalid` und `google_client_missing` (beide Kataloge), Bindings. `option_env!` für Google aus `credentials.rs` entfernen |
 | M12-04 | UI Google Drive: Felder Client-ID/-Secret, „Zugang speichern“/„Zugang entfernen“, aufklappbare Anleitung mit Links (`UrlOpener`), Texte in `de.ts`/`en.ts` (`@ui`). Szenarien „A build without Google credentials …“ in `google_drive.feature` ablösen |
 | M12-05 | `nunc-sync`: `connect_todoist_token` (Prüfung über `GET /api/v1/user`, Ablage als `Tokens` ohne Ablauf), `401` → „Token ungültig“, keine Erneuerung ohne Client; Todoist-OAuth, `credentials::todoist()` und Port-Liste 42813–42817 entfernen (`@integration @sync`). OAuth-Szenarien in `features/todoist/auth.feature` streichen bzw. auf Token umstellen |

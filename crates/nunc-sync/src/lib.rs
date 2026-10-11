@@ -17,7 +17,8 @@ pub use coordinator::{
     RunFuture, RunOutcome, SyncCoordinator, SyncObserver, SyncRunner, Timing, Trigger,
 };
 pub use drive::{
-    ChainRunner, DriveClient, DriveConfig, DriveFile, DriveRunner, DriveService, sync_drive,
+    CLIENT_ACCOUNT, ChainRunner, DriveClient, DriveConfig, DriveFile, DriveRunner, DriveService,
+    GoogleClient, sync_drive,
 };
 pub use engine::{SyncSetup, SyncStore, WebDavRunner, sync_webdav};
 pub use error::SyncError;

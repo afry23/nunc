@@ -15,6 +15,7 @@ use nunc_core::crdt::SyncState;
 use nunc_core::model::{DriveStatus, SyncFile, SyncImportInfo, SyncProvider, SyncResult};
 use nunc_core::sync_document::SyncDocument;
 use nunc_platform::{SecretStore, UrlOpener};
+use serde::{Deserialize, Serialize};
 
 pub use client::{DriveClient, DriveFile};
 
@@ -22,7 +23,8 @@ use crate::SyncError;
 use crate::coordinator::{RunFuture, SyncRunner};
 use crate::engine::{MAX_ATTEMPTS, SyncStore, merge_remote, remote_state};
 use crate::oauth::{
-    AuthorizeOptions, Connection, OAuthApp, Page, TokenSource, Vault, authorize, http_client,
+    AuthorizeOptions, Connection, OAuthApp, Page, SECRET_SERVICE, TokenSource, Vault, authorize,
+    http_client,
 };
 
 /// Ordner und Datei im Drive.
@@ -32,6 +34,10 @@ pub const FILE_NAME: &str = "nunc-sync.v2.json";
 pub const LEGACY_FILE_NAME: &str = "nunc-sync.json";
 /// Eintrag im Tresor.
 pub const SECRET_ACCOUNT: &str = "google-drive";
+/// Eintrag im Tresor für den eigenen OAuth-Client der Nutzer (ADR 0019).
+pub const CLIENT_ACCOUNT: &str = "google-drive-client";
+/// Endung jeder Client-ID von Google.
+const CLIENT_ID_SUFFIX: &str = ".apps.googleusercontent.com";
 const SERVICE: &str = "Google Drive";
 const CALLBACK_PATH: &str = "/callback";
 
@@ -45,7 +51,7 @@ pub struct DriveConfig {
 }
 
 impl DriveConfig {
-    /// Google mit den Zugangsdaten des Builds (leer = nicht eingerichtet).
+    /// Google mit fest vorgegebenen Zugangsdaten (nur Entwicklung und Tests); leer = Client aus dem Tresor.
     pub fn google(client_id: &str, client_secret: &str) -> Self {
         Self {
             app: OAuthApp {
@@ -71,6 +77,34 @@ impl DriveConfig {
     }
 }
 
+/// Der eigene OAuth-Client der Nutzer („Desktop-App“ in der Google Cloud Console), liegt nur im Tresor.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GoogleClient {
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+impl GoogleClient {
+    /// Prüft die Eingabe: Client-ID von Google, Secret nicht leer (Google verlangt es auch mit PKCE).
+    pub fn new(client_id: &str, client_secret: &str) -> Result<Self, SyncError> {
+        let client_id = client_id.trim();
+        let client_secret = client_secret.trim();
+        if client_id.len() <= CLIENT_ID_SUFFIX.len() || !client_id.ends_with(CLIENT_ID_SUFFIX) {
+            return Err(SyncError::GoogleClientInvalid(
+                "Die Client-ID muss auf .apps.googleusercontent.com enden.",
+            ));
+        }
+        if client_secret.is_empty() {
+            return Err(SyncError::GoogleClientInvalid("Das Client-Secret fehlt."));
+        }
+        Ok(Self {
+            client_id: client_id.to_owned(),
+            client_secret: client_secret.to_owned(),
+        })
+    }
+}
+
 /// Link auf den Ordner im Drive.
 pub fn folder_url(folder_id: &str) -> String {
     format!("https://drive.google.com/drive/folders/{folder_id}")
@@ -80,6 +114,7 @@ pub fn folder_url(folder_id: &str) -> String {
 pub struct DriveService {
     config: DriveConfig,
     vault: Vault,
+    secrets: Arc<dyn SecretStore>,
     clock: Arc<dyn Clock>,
     http: reqwest::Client,
 }
@@ -92,17 +127,63 @@ impl DriveService {
     ) -> Result<Self, SyncError> {
         Ok(Self {
             config,
-            vault: Vault::new(secrets, SECRET_ACCOUNT),
+            vault: Vault::new(secrets.clone(), SECRET_ACCOUNT),
+            secrets,
             clock,
             http: http_client()?,
         })
     }
 
+    /// Der eingetragene Client; ein unlesbarer Eintrag zählt als nicht eingetragen.
+    pub fn google_client(&self) -> Result<Option<GoogleClient>, SyncError> {
+        let Some(text) = self.secrets.get(SECRET_SERVICE, CLIENT_ACCOUNT)? else {
+            return Ok(None);
+        };
+        Ok(serde_json::from_str(&text).ok())
+    }
+
+    /// Trägt den eigenen Client ein. Eine andere Client-ID beendet die Verbindung: Tokens gelten nur für den
+    /// Client, der sie ausgestellt hat. Ein neues Secret zur selben ID behält sie.
+    pub fn set_client(&self, client_id: &str, client_secret: &str) -> Result<(), SyncError> {
+        let client = GoogleClient::new(client_id, client_secret)?;
+        let same_client = self
+            .google_client()?
+            .is_some_and(|stored| stored.client_id == client.client_id);
+        if !same_client {
+            self.vault.delete()?;
+        }
+        let text =
+            serde_json::to_string(&client).map_err(|error| SyncError::OAuth(error.to_string()))?;
+        Ok(self.secrets.set(SECRET_SERVICE, CLIENT_ACCOUNT, &text)?)
+    }
+
+    /// Entfernt den eigenen Client und damit auch die Verbindung.
+    pub fn clear_client(&self) -> Result<(), SyncError> {
+        self.vault.delete()?;
+        Ok(self.secrets.delete(SECRET_SERVICE, CLIENT_ACCOUNT)?)
+    }
+
+    /// Der OAuth-Client für Anmeldung und Erneuerung: fest vorgegeben (Entwicklung) oder aus dem Tresor.
+    fn app(&self) -> Result<Option<OAuthApp>, SyncError> {
+        if self.config.is_configured() {
+            return Ok(Some(self.config.app.clone()));
+        }
+        Ok(self.google_client()?.map(|client| OAuthApp {
+            client_id: client.client_id,
+            client_secret: Some(client.client_secret),
+            ..self.config.app.clone()
+        }))
+    }
+
     /// Zustand der Verbindung (ohne Netzwerkzugriff). `folder_id`: der Ordner aus dem letzten Sync.
     pub fn status(&self, folder_id: Option<&str>) -> Result<DriveStatus, SyncError> {
         let connection = self.vault.load_lenient();
+        let configured = self.app().unwrap_or_else(|error| {
+            log::warn!("Tresor nicht lesbar ({CLIENT_ACCOUNT}): {error}");
+            None
+        });
         Ok(DriveStatus {
-            configured: self.config.is_configured(),
+            configured: configured.is_some(),
             connected: connection.is_some(),
             email: connection.and_then(|connection| connection.email),
             folder_url: folder_id.filter(|id| !id.is_empty()).map(folder_url),
@@ -117,9 +198,10 @@ impl DriveService {
         if !self.is_connected()? {
             return Err(SyncError::NotConnected(SERVICE));
         }
+        let app = self.app()?.ok_or(SyncError::GoogleClientRequired)?;
         let tokens = Arc::new(TokenSource::new(
             self.vault.clone(),
-            self.config.app.clone(),
+            app,
             self.http.clone(),
             self.clock.clone(),
         ));
@@ -133,12 +215,7 @@ impl DriveService {
     /// Meldet im Browser an und legt die Tokens im Tresor ab. Die E-Mail-Adresse ist nur Anzeige: kann sie
     /// nicht gelesen werden, ist die Verbindung trotzdem hergestellt.
     pub async fn connect(&self, opener: &dyn UrlOpener) -> Result<DriveStatus, SyncError> {
-        if !self.config.is_configured() {
-            return Err(SyncError::OAuth(
-                "In diesem Build sind keine Google-Zugangsdaten hinterlegt (NUNC_GOOGLE_CLIENT_ID, NUNC_GOOGLE_CLIENT_SECRET)."
-                    .to_owned(),
-            ));
-        }
+        let app = self.app()?.ok_or(SyncError::GoogleClientMissing)?;
         let options = AuthorizeOptions {
             ports: vec![0],
             callback_path: CALLBACK_PATH,
@@ -148,8 +225,7 @@ impl DriveService {
                 message: "Google Drive wurde erfolgreich mit nunc verbunden.",
             },
         };
-        let tokens =
-            authorize(&self.http, &self.config.app, &options, opener, &*self.clock).await?;
+        let tokens = authorize(&self.http, &app, &options, opener, &*self.clock).await?;
         self.vault.save(&Connection {
             tokens,
             email: None,
@@ -373,6 +449,78 @@ mod tests {
         let without_secret = DriveConfig::google("id", "");
         assert_eq!(without_secret.app.client_secret, None);
         assert!(!DriveConfig::google("", "secret").is_configured());
+    }
+
+    #[test]
+    fn a_google_client_needs_a_google_client_id_and_a_secret() {
+        let client =
+            GoogleClient::new(" 123-abc.apps.googleusercontent.com ", " GOCSPX-x ").unwrap();
+        assert_eq!(client.client_id, "123-abc.apps.googleusercontent.com");
+        assert_eq!(client.client_secret, "GOCSPX-x");
+        for id in ["", "not-a-client", ".apps.googleusercontent.com"] {
+            assert!(matches!(
+                GoogleClient::new(id, "secret"),
+                Err(SyncError::GoogleClientInvalid(_))
+            ));
+        }
+        assert_eq!(
+            GoogleClient::new("1.apps.googleusercontent.com", "  ")
+                .unwrap_err()
+                .to_string(),
+            "Das Client-Secret fehlt."
+        );
+    }
+
+    #[test]
+    fn the_own_client_is_used_and_a_new_client_id_ends_the_connection() {
+        let service = service("", "");
+        assert!(!service.status(None).unwrap().configured);
+        service
+            .set_client("1.apps.googleusercontent.com", "s1")
+            .unwrap();
+        let app = service.app().unwrap().unwrap();
+        assert_eq!(app.client_id, "1.apps.googleusercontent.com");
+        assert_eq!(app.client_secret.as_deref(), Some("s1"));
+        assert_eq!(app.token_url, "https://oauth2.googleapis.com/token");
+        assert!(service.status(None).unwrap().configured);
+
+        connect(&service, None);
+        service
+            .set_client("1.apps.googleusercontent.com", "s2")
+            .unwrap();
+        assert!(service.is_connected().unwrap());
+        assert_eq!(
+            service.app().unwrap().unwrap().client_secret.as_deref(),
+            Some("s2")
+        );
+        service
+            .set_client("2.apps.googleusercontent.com", "s2")
+            .unwrap();
+        assert!(!service.is_connected().unwrap());
+
+        connect(&service, None);
+        service.clear_client().unwrap();
+        assert!(!service.is_connected().unwrap());
+        assert_eq!(service.google_client().unwrap(), None);
+    }
+
+    #[test]
+    fn a_fixed_client_wins_over_the_stored_one() {
+        let service = service("fixed", "secret");
+        service
+            .set_client("1.apps.googleusercontent.com", "s1")
+            .unwrap();
+        assert_eq!(service.app().unwrap().unwrap().client_id, "fixed");
+    }
+
+    #[test]
+    fn a_connection_without_a_client_asks_for_one() {
+        let service = service("", "");
+        connect(&service, None);
+        assert!(matches!(
+            service.client(),
+            Err(SyncError::GoogleClientRequired)
+        ));
     }
 
     #[test]

@@ -136,6 +136,7 @@ fn refuses_renewal(world: &mut SyncWorld) {
 }
 
 #[given("the access token has expired")]
+#[when("the access token has expired")]
 fn token_expired(world: &mut SyncWorld) {
     let vault = vault(world);
     let mut connection = vault.load().unwrap().expect("nicht verbunden");
@@ -148,9 +149,16 @@ fn token_rejected(world: &mut SyncWorld) {
     google(world).with(|state| state.valid.clear());
 }
 
-#[given("the app has no Google credentials")]
-fn no_credentials(world: &mut SyncWorld) {
+#[given("no Google client is configured")]
+fn no_client(world: &mut SyncWorld) {
     world.google.client_id = String::new();
+}
+
+#[given(expr = "the Google client {string} with the secret {string} is configured")]
+#[when(expr = "I configure the Google client {string} with the secret {string}")]
+fn client_configured(world: &mut SyncWorld, client_id: String, secret: String) {
+    world.google.client_id = String::new();
+    service(world).set_client(&client_id, &secret).unwrap();
 }
 
 #[given(expr = "Google answers every request with {int}")]
@@ -213,6 +221,11 @@ async fn connect(world: &mut SyncWorld) {
         }
         Err(error) => world.google.error = Some(error.to_string()),
     }
+}
+
+#[when("I remove the Google client")]
+fn remove_client(world: &mut SyncWorld) {
+    service(world).clear_client().unwrap();
 }
 
 #[when("I disconnect Google Drive")]
@@ -303,6 +316,34 @@ fn verifier_matches(world: &mut SyncWorld) {
 #[then(expr = "the authorization request asks for the scope {string} only")]
 fn only_scope(world: &mut SyncWorld, scope: String) {
     assert_eq!(param(&opened_url(world), "scope"), scope);
+}
+
+#[then(expr = "the authorization request carries the client ID {string}")]
+fn auth_client_id(world: &mut SyncWorld, client_id: String) {
+    assert_eq!(param(&opened_url(world), "client_id"), client_id);
+}
+
+#[then(expr = "the token request carries the client secret {string}")]
+fn token_client_secret(world: &mut SyncWorld, secret: String) {
+    let requests = google(world).with(|state| state.token_requests.clone());
+    let last = requests.last().expect("keine Token-Anfrage");
+    assert_eq!(last.get("client_secret"), Some(&secret));
+}
+
+#[then("the Drive status asks to connect again")]
+fn asks_to_connect(world: &mut SyncWorld) {
+    let status = service(world).status(None).unwrap();
+    assert!(status.configured && !status.connected, "{status:?}");
+}
+
+#[then("the secret store holds a Google client")]
+fn holds_client(world: &mut SyncWorld) {
+    assert!(service(world).google_client().unwrap().is_some());
+}
+
+#[then("the secret store holds no Google client")]
+fn holds_no_client(world: &mut SyncWorld) {
+    assert!(service(world).google_client().unwrap().is_none());
 }
 
 #[then(expr = "the Drive status shows the account {string}")]

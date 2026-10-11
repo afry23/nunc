@@ -31,6 +31,19 @@ pub enum SyncError {
     /// Der Dienst lehnt das Token ab und es lässt sich nicht erneuern.
     #[error("{0}: Anmeldung abgelaufen – bitte neu verbinden")]
     AuthExpired(&'static str),
+    /// Für Google Drive ist kein eigener OAuth-Client eingetragen (ADR 0019).
+    #[error(
+        "Kein Google-Zugang eingerichtet. Trage Client-ID und Client-Secret in den Einstellungen ein."
+    )]
+    GoogleClientMissing,
+    /// Es gibt noch eine Verbindung, aber keinen eigenen Client (Anmeldung mit dem früher eingebauten Client).
+    #[error(
+        "Google Drive braucht jetzt einen eigenen Zugang – bitte in den Einstellungen einrichten"
+    )]
+    GoogleClientRequired,
+    /// Client-ID oder -Secret unbrauchbar, bereits als Text für die Anzeige.
+    #[error("{0}")]
+    GoogleClientInvalid(&'static str),
     /// Fehler beim Anmelden (Browser, Rückruf, Token-Austausch), bereits als Text für die Anzeige.
     #[error("{0}")]
     OAuth(String),

@@ -334,14 +334,6 @@ Feature: Google Drive sync
     And the secret store holds no Google Drive connection
 
   @integration @sync @US-S01 @desktop
-  Scenario: A build without Google credentials cannot connect
-    Given a Google server for the account "me@example.org"
-    And the app has no Google credentials
-    When I connect Google Drive
-    Then connecting failed with "In diesem Build sind keine Google-Zugangsdaten hinterlegt (NUNC_GOOGLE_CLIENT_ID, NUNC_GOOGLE_CLIENT_SECRET)."
-    And the browser was not opened
-
-  @integration @sync @US-S01 @desktop
   Scenario: An expired access token is renewed before the request
     Given a Google server for the account "me@example.org"
     And Google Drive is connected as "me@example.org"
