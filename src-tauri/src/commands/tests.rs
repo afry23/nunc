@@ -91,9 +91,12 @@ impl Harness {
                 sync::test_webdav_connection,
                 sync::get_drive_status,
                 sync::disconnect_drive,
+                sync::set_google_client,
+                sync::clear_google_client,
                 sync::check_sync_import,
                 sync::finish_connect,
                 sync::get_todoist_status,
+                sync::connect_todoist_token,
                 sync::disconnect_todoist,
                 sync::get_todoist_sync_status,
                 sync::todoist_sync_now,
@@ -346,12 +349,53 @@ fn google_drive_is_not_connected_until_the_user_signs_in() {
 }
 
 #[test]
+fn the_own_google_client_is_kept_in_the_secret_store_and_never_returned() {
+    let h = Harness::new();
+    let status = h.ok(
+        "set_google_client",
+        json!({ "clientId": " 1.apps.googleusercontent.com ", "clientSecret": "GOCSPX-x" }),
+    );
+    assert_eq!(status["clientId"], "1.apps.googleusercontent.com");
+    assert_eq!(status["configured"], true);
+    assert!(!status.to_string().contains("GOCSPX-x"));
+    let stored = h
+        .state()
+        .secrets
+        .get("nunc", "google-drive-client")
+        .unwrap()
+        .unwrap();
+    assert!(stored.contains("GOCSPX-x"));
+
+    assert_eq!(
+        h.err_code(
+            "set_google_client",
+            json!({ "clientId": "kein-client", "clientSecret": "x" })
+        ),
+        "google_client_invalid"
+    );
+    let status = h.ok("clear_google_client", json!({}));
+    assert!(status["clientId"].is_null());
+    assert!(
+        h.state()
+            .secrets
+            .get("nunc", "google-drive-client")
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
 fn todoist_is_not_connected_until_the_user_signs_in() {
     let h = Harness::new();
     let status = h.ok("get_todoist_status", json!({}));
     assert_eq!(status["connected"], false);
     assert!(status["email"].is_null() && status["avatarUrl"].is_null());
     assert_eq!(h.ok("disconnect_todoist", json!({}))["connected"], false);
+    // ein leeres Token wird abgelehnt, ohne Todoist zu fragen
+    assert_eq!(
+        h.err_code("connect_todoist_token", json!({ "token": "  " })),
+        "todoist_token_invalid"
+    );
     let sync = h.ok("get_todoist_sync_status", json!({}));
     assert_eq!(sync["state"], "idle");
     // ohne Verbindung gibt es nichts abzugleichen

@@ -17,12 +17,13 @@ pub use coordinator::{
     RunFuture, RunOutcome, SyncCoordinator, SyncObserver, SyncRunner, Timing, Trigger,
 };
 pub use drive::{
-    ChainRunner, DriveClient, DriveConfig, DriveFile, DriveRunner, DriveService, sync_drive,
+    CLIENT_ACCOUNT, ChainRunner, DriveClient, DriveConfig, DriveFile, DriveRunner, DriveService,
+    GoogleClient, sync_drive,
 };
 pub use engine::{SyncSetup, SyncStore, WebDavRunner, sync_webdav};
 pub use error::SyncError;
 pub use todoist::{
-    Account, CALLBACK_PORTS, Named, TaskPayload, TodoistClient, TodoistConfig, TodoistRunner,
-    TodoistService, TodoistStore, sync_todoist,
+    Account, Named, TaskPayload, TodoistClient, TodoistConfig, TodoistRunner, TodoistService,
+    TodoistStore, sync_todoist,
 };
 pub use webdav::{Precondition, Remote, SYNC_FILE_NAME, WebDavClient};

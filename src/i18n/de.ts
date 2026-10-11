@@ -16,6 +16,8 @@ export const de = {
   "error.network": "Server nicht erreichbar.",
   "error.unauthorized": "Anmeldung abgelehnt oder abgelaufen.",
   "error.not_connected": "Nicht verbunden.",
+  "error.google_client_missing": "Kein Google-Zugang eingerichtet.",
+  "error.google_client_invalid": "Google-Zugang ungültig.",
   "error.oauth": "Anmeldung fehlgeschlagen.",
   "error.browser": "Der Browser konnte nicht geöffnet werden.",
   "error.server": "Der Server meldet einen Fehler.",
@@ -343,8 +345,30 @@ export const de = {
   "sync.switch.body":
     "Die Synchronisierung mit {provider} wird beendet. Die gespeicherten Zugangsdaten bleiben erhalten.",
   "drive.notConnected": "Nicht verbunden",
-  "drive.noCredentials":
-    "In diesem Build sind keine Google-Zugangsdaten hinterlegt.",
+  "drive.client.title": "Google-Zugang",
+  "drive.client.intro":
+    "nunc bringt keinen eigenen Google-Zugang mit. Mit deinem eigenen Client bleiben Zugriff und Kontingent bei dir.",
+  "drive.client.id": "Client-ID",
+  "drive.client.secret": "Client-Secret",
+  "drive.client.current": "Eingetragene Client-ID: {id}",
+  "drive.client.save": "Zugang speichern",
+  "drive.client.remove": "Zugang entfernen",
+  "drive.client.saved": "Google-Zugang gespeichert.",
+  "drive.guide.toggle": "So richtest du einen Google-Zugang ein",
+  "drive.guide.step1": "In der Google Cloud Console ein Projekt anlegen.",
+  "drive.guide.step2":
+    "Unter „APIs und Dienste“ die „Google Drive API“ aktivieren.",
+  "drive.guide.step3":
+    "OAuth-Zustimmungsbildschirm einrichten: Typ „Extern“, App-Name frei wählbar, deine E-Mail-Adresse, Scope „…/auth/drive.file“ hinzufügen.",
+  "drive.guide.step4":
+    "Veröffentlichungsstatus auf „In Produktion“ setzen. Im Status „Testen“ läuft die Anmeldung nach 7 Tagen ab. Für drive.file ist keine Prüfung durch Google nötig.",
+  "drive.guide.step5":
+    "Unter „Anmeldedaten“ eine OAuth-Client-ID vom Typ „Desktop-App“ erstellen und Client-ID und Client-Secret hier eintragen.",
+  "drive.guide.devices":
+    "Nutze auf allen Geräten dieselbe Client-ID, sonst sehen sie die Sync-Datei der anderen nicht.",
+  "drive.guide.alternative":
+    "Ohne Google-Konsole geht es mit WebDAV, z. B. Nextcloud.",
+  "drive.guide.console": "Google Cloud Console öffnen",
   "drive.waiting": "Warte auf den Browser …",
   "drive.connect": "Mit Google Drive verbinden",
   "drive.connectedAs": "Verbunden als {email}",
@@ -382,9 +406,13 @@ export const de = {
   "todoist.notConnected": "Nicht verbunden",
   "todoist.explain":
     "Aufgaben werden in beide Richtungen abgeglichen. Sessions und Einstellungen bleiben auf diesem Gerät.",
-  "todoist.noCredentials":
-    "In diesem Build sind keine Todoist-Zugangsdaten hinterlegt.",
-  "todoist.waiting": "Warte auf den Browser …",
+  "todoist.token": "API-Token",
+  "todoist.tokenHelp":
+    "Dein persönliches API-Token findest du in Todoist unter Einstellungen → Integrationen → Entwickler.",
+  "todoist.tokenWarning":
+    "Das Token hat vollen Zugriff auf dein Todoist-Konto. nunc speichert es nur im Schlüsselbund dieses Geräts; in Todoist kannst du es jederzeit erneuern.",
+  "todoist.openSettings": "Todoist-Einstellungen öffnen",
+  "todoist.waiting": "Prüfe das Token …",
   "todoist.connect": "Mit Todoist verbinden",
   "todoist.avatar": "Avatar",
   "todoist.connectedAs": "Verbunden als {email}",

@@ -387,6 +387,24 @@ Projektzeit aus den Roh-Sessions, Korrektur und Nachtrag von Sessions, Tages-Tim
 
 ---
 
+## M12 – Eigene Zugangsdaten für Google Drive und Todoist (ADR 0019, ADR 0020)
+
+nunc bringt keine OAuth-Clients des Maintainers mehr mit. Google Drive: Nutzer tragen ihren eigenen „Desktop-App“-Client
+ein (Tresor, Anleitung in der App). Todoist: persönliches API-Token statt OAuth. Szenarien:
+`features/sync/google_client.feature`, `features/todoist/token.feature`.
+
+| ID | Ticket |
+|---|---|
+| M12-01 | ADR 0019 und 0020, `@wip`-Szenarien `features/sync/google_client.feature` und `features/todoist/token.feature` |
+| M12-02 | `nunc-sync`: Google-Client aus dem Tresor (Konto `google-drive-client`), `DriveService` liest ihn bei Anmeldung und Erneuerung, Trennen bei geänderter Client-ID, Fehler ohne Client (`@integration @sync`) – erledigt. Debug-Umgebung/`.env` als fester Client vor dem Tresor folgt mit M12-03 (`credentials.rs`) |
+| M12-03 | Commands `set_google_client`/`clear_google_client`, `clientConfigured` im Drive-Status, `AppError` `google_client_invalid` und `google_client_missing` (beide Kataloge), Bindings. `option_env!` für Google aus `credentials.rs` entfernen (Release liest nur den Tresor, Debug Umgebung/`.env`) – erledigt |
+| M12-04 | UI Google Drive: Felder Client-ID/-Secret, „Zugang speichern“/„Zugang entfernen“, aufklappbare Anleitung mit Links (`UrlOpener`), Texte in `de.ts`/`en.ts` (`@ui`). Szenarien „A build without Google credentials …“ in `google_drive.feature` ablösen – erledigt. **Manuell prüfen:** Formular bei ≈ 411 px ohne horizontalen Überlauf, Anleitung mit echtem Google-Konto durchspielen |
+| M12-05 | `nunc-sync`: `connect_todoist_token` (Prüfung über `GET /api/v1/user`, Ablage als `Tokens` ohne Ablauf), `401` → „Token ungültig“, keine Erneuerung ohne Client; Todoist-OAuth, `credentials::todoist()` und Port-Liste 42813–42817 entfernen (`@integration @sync`). OAuth-Szenarien in `features/todoist/auth.feature` streichen bzw. auf Token umstellen – erledigt |
+| M12-06 | UI Todoist: Token-Feld, Anleitung mit Link, `AppError` `todoist_token_invalid` (`@ui`) – erledigt. **Manuell prüfen:** echtes Todoist-Token, Formular bei ≈ 411 px |
+| M12-07 | Aufräumen und Doku: GitHub-Secrets `NUNC_GOOGLE_*`/`NUNC_TODOIST_*` aus `ci.yml`/`release.yml` und dem Repository löschen, `.env.example`, `docs/google-drive.md`, CLAUDE.md „Stolpersteine“ (OAuth), ADR 0009 auf 0019/0020 verweisen, Release-Hinweis (Drive: neue Sync-Datei, alle Geräte mit derselben Client-ID; Todoist: Token eintragen). **Manuell:** eigener Google-Client im Status „In Produktion“ (Refresh nach > 7 Tagen), echtes Todoist-Token, danach Maintainer-Client bei Google und App-Registrierung bei Todoist löschen – Code und Doku erledigt; offen: Secrets im Repository löschen und die manuellen Schritte |
+
+---
+
 ## Erweiterungen nach M8
 
 | Thema | Notiz |

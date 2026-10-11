@@ -2,6 +2,7 @@ import { useT } from "../i18n";
 import { openExternal } from "../lib/links";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useSyncStore } from "../stores/syncStore";
+import { GoogleClientForm } from "./GoogleClientForm";
 import { Button, Toggle } from "./ui";
 
 /** Verbindung zu Google Drive: anmelden, abmelden, pausieren, Ablageort (nur Desktop). */
@@ -21,11 +22,6 @@ export function DriveSection() {
       {!drive.connected ? (
         <>
           <p data-testid="drive-state">{t("drive.notConnected")}</p>
-          {!drive.configured && (
-            <p className="text-sm text-orange-300">
-              {t("drive.noCredentials")}
-            </p>
-          )}
           {error && (
             <p role="alert" className="text-red-300">
               {error}
@@ -41,6 +37,8 @@ export function DriveSection() {
               {connecting ? t("drive.waiting") : t("drive.connect")}
             </Button>
           </div>
+          <h4 className="font-semibold">{t("drive.client.title")}</h4>
+          <GoogleClientForm storedId={drive.clientId} />
         </>
       ) : (
         <>

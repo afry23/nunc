@@ -161,14 +161,21 @@ export const commands = {
 	connectDrive: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("connect_drive")),
 	/**  Löscht die Anmeldung lokal; die Sync-Datei im Drive bleibt. */
 	disconnectDrive: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("disconnect_drive")),
+	/**  Trägt den eigenen OAuth-Client für Google ein (ADR 0019). Eine andere Client-ID trennt die Verbindung. */
+	setGoogleClient: (clientId: string, clientSecret: string) => typedError<DriveStatus, AppError>(__TAURI_INVOKE("set_google_client", { clientId, clientSecret })),
+	/**  Entfernt den eigenen OAuth-Client und damit auch die Verbindung. */
+	clearGoogleClient: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("clear_google_client")),
 	/**  Liegt im Drive Stand, den dieses (leere) Gerät übernehmen kann? */
 	checkSyncImport: () => typedError<SyncImportInfo, AppError>(__TAURI_INVOKE("check_sync_import")),
 	/**  Nach dem Verbinden: der erste Abgleich im Hintergrund (außer die Oberfläche bietet einen Import an). */
 	finishConnect: () => __TAURI_INVOKE<void>("finish_connect"),
 	/**  Zustand der Todoist-Verbindung (ohne Netzwerkzugriff). */
 	getTodoistStatus: () => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("get_todoist_status")),
-	/**  Meldet im Browser bei Todoist an (Desktop). Danach läuft der erste Abgleich im Hintergrund. */
-	connectTodoist: () => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("connect_todoist")),
+	/**
+	 *  Verbindet Todoist mit dem persönlichen API-Token (Desktop, ADR 0020). Danach läuft der erste Abgleich im
+	 *  Hintergrund. Das Token geht nie zurück an die Oberfläche.
+	 */
+	connectTodoistToken: (token: string) => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("connect_todoist_token", { token })),
 	/**  Löscht die Anmeldung lokal; lokale Todos bleiben. */
 	disconnectTodoist: () => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("disconnect_todoist")),
 	/**  Zustand des Todoist-Syncs (für die Statusleiste beim Öffnen; danach kommt `todoist:sync_status`). */
@@ -312,8 +319,10 @@ export type DayTimeline = {
 
 /**  Zustand der Google-Drive-Verbindung (`get_drive_status`). */
 export type DriveStatus = {
-	/**  Ob dieser Build Zugangsdaten für Google hat (Client-ID und -Secret). */
+	/**  Ob ein OAuth-Client für Google eingetragen ist (ADR 0019). */
 	configured: boolean,
+	/**  Die eingetragene Client-ID (Anzeige); das Secret verlässt den Tresor nie. */
+	clientId: string | null,
 	connected: boolean,
 	email: string | null,
 	/**  Link auf den Ordner `nunc` im Drive (erst nach dem ersten Sync bekannt). */
@@ -658,8 +667,6 @@ export type TodoStats = {
 
 /**  Zustand der Todoist-Verbindung (`get_todoist_status`). */
 export type TodoistStatus = {
-	/**  Ob dieser Build Zugangsdaten für Todoist hat. */
-	configured: boolean,
 	connected: boolean,
 	email: string | null,
 	avatarUrl: string | null,

@@ -19,7 +19,8 @@ interface TodoistState {
   connectError: string | null;
   load: () => Promise<void>;
   setStatus: (status: SyncStatus) => void;
-  connect: () => Promise<void>;
+  /** Verbindet mit dem persönlichen API-Token (ADR 0020); `true` bei Erfolg. */
+  connect: (token: string) => Promise<boolean>;
   disconnect: () => Promise<void>;
   /** Gleicht jetzt ab. Das Ergebnis meldet `todoist:sync_complete`, Fehler `todoist:sync_status`. */
   syncNow: () => Promise<SyncResult | null>;
@@ -48,15 +49,17 @@ export const useTodoistStore = create<TodoistState>((set) => ({
     }
   },
   setStatus: (status) => set({ status }),
-  connect: async () => {
+  connect: async (token) => {
     set({ connecting: true, connectError: null });
     try {
-      set({ account: await unwrap(commands.connectTodoist()) });
+      set({ account: await unwrap(commands.connectTodoistToken(token)) });
+      return true;
     } catch (error) {
       set({
         connectError:
           error instanceof Error ? errorMessage(error) : t("common.error"),
       });
+      return false;
     } finally {
       set({ connecting: false });
     }

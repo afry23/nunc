@@ -42,6 +42,15 @@ interface SyncState {
   /** Meldet bei Google an. Bietet einen Import an, wenn auf Drive Stand liegt und dieses Gerät leer ist. */
   connectDrive: () => Promise<void>;
   disconnectDrive: () => Promise<void>;
+  /** Fehler beim Eintragen des eigenen Google-Clients, inline angezeigt; `null` = keiner. */
+  clientError: string | null;
+  /** Trägt den eigenen Google-Client ein (ADR 0019); `true` bei Erfolg. */
+  saveGoogleClient: (
+    clientId: string,
+    clientSecret: string,
+  ) => Promise<boolean>;
+  /** Entfernt den eigenen Google-Client (und damit die Verbindung). */
+  clearGoogleClient: () => Promise<void>;
   /** Übernimmt den Stand von Drive („Importieren“). */
   runImport: () => Promise<void>;
   /** Schließt das Import-Angebot („Leer starten“ / „Fertig“). */
@@ -71,6 +80,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   drive: null,
   connecting: false,
   connectError: null,
+  clientError: null,
   importOffer: null,
   loadStatus: async () => {
     try {
@@ -117,6 +127,29 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   disconnectDrive: async () => {
     try {
       set({ drive: await unwrap(commands.disconnectDrive()) });
+    } catch (error) {
+      useUiStore.getState().fail(error);
+    }
+  },
+  saveGoogleClient: async (clientId, clientSecret) => {
+    set({ clientError: null });
+    try {
+      const drive = await unwrap(
+        commands.setGoogleClient(clientId, clientSecret),
+      );
+      set({ drive, connectError: null });
+      return true;
+    } catch (error) {
+      set({ clientError: errorMessage(error) });
+      return false;
+    }
+  },
+  clearGoogleClient: async () => {
+    try {
+      set({
+        drive: await unwrap(commands.clearGoogleClient()),
+        clientError: null,
+      });
     } catch (error) {
       useUiStore.getState().fail(error);
     }

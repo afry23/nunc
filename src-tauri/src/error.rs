@@ -83,6 +83,12 @@ impl From<SyncError> for AppError {
             | SyncError::WrongAuthMethod(..)
             | SyncError::AuthExpired(_) => "unauthorized",
             SyncError::NotConnected(_) => "not_connected",
+            SyncError::GoogleClientMissing | SyncError::GoogleClientRequired => {
+                "google_client_missing"
+            }
+            SyncError::GoogleClientInvalid(_) => "google_client_invalid",
+            SyncError::TodoistTokenRejected => "todoist_token_invalid",
+            SyncError::TodoistTokenInvalid => "unauthorized",
             SyncError::OAuth(_) => "oauth",
             SyncError::Open(_) => "browser",
             SyncError::Status { .. } => "server",
@@ -189,6 +195,23 @@ mod tests {
         assert_eq!(code(SyncError::AuthExpired("Todoist")), "unauthorized");
         assert_eq!(code(SyncError::NotConnected("Todoist")), "not_connected");
         assert_eq!(code(SyncError::OAuth("x".into())), "oauth");
+        assert_eq!(
+            code(SyncError::GoogleClientMissing),
+            "google_client_missing"
+        );
+        assert_eq!(
+            code(SyncError::GoogleClientRequired),
+            "google_client_missing"
+        );
+        assert_eq!(
+            code(SyncError::GoogleClientInvalid("x")),
+            "google_client_invalid"
+        );
+        assert_eq!(
+            code(SyncError::TodoistTokenRejected),
+            "todoist_token_invalid"
+        );
+        assert_eq!(code(SyncError::TodoistTokenInvalid), "unauthorized");
         assert_eq!(
             code(SyncError::Open(nunc_platform::OpenError("x".into()))),
             "browser"

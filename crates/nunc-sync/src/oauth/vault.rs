@@ -71,7 +71,9 @@ impl Vault {
 /// ein zweiter gleichzeitiger Versuch mit dem alten würde scheitern.
 pub struct TokenSource {
     vault: Vault,
-    app: OAuthApp,
+    service: &'static str,
+    /// Ohne Client (persönliches Token, ADR 0020) gibt es nichts zu erneuern.
+    app: Option<OAuthApp>,
     http: reqwest::Client,
     clock: Arc<dyn Clock>,
     renewal: tokio::sync::Mutex<()>,
@@ -81,7 +83,26 @@ impl TokenSource {
     pub fn new(vault: Vault, app: OAuthApp, http: reqwest::Client, clock: Arc<dyn Clock>) -> Self {
         Self {
             vault,
-            app,
+            service: app.service,
+            app: Some(app),
+            http,
+            clock,
+            renewal: tokio::sync::Mutex::new(()),
+        }
+    }
+
+    /// Für ein Token ohne OAuth-Client (persönliches API-Token): wird es abgelehnt oder ist es abgelaufen,
+    /// meldet der Lieferant [`SyncError::AuthExpired`], statt zu erneuern.
+    pub fn fixed(
+        vault: Vault,
+        service: &'static str,
+        http: reqwest::Client,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
+        Self {
+            vault,
+            service,
+            app: None,
             http,
             clock,
             renewal: tokio::sync::Mutex::new(()),
@@ -91,7 +112,7 @@ impl TokenSource {
     fn connection(&self) -> Result<Connection, SyncError> {
         self.vault
             .load()?
-            .ok_or(SyncError::NotConnected(self.app.service))
+            .ok_or(SyncError::NotConnected(self.service))
     }
 
     pub async fn access_token(&self) -> Result<String, SyncError> {
@@ -110,13 +131,17 @@ impl TokenSource {
         if connection.tokens.access_token != rejected {
             return Ok(connection.tokens.access_token);
         }
+        let app = self
+            .app
+            .as_ref()
+            .ok_or(SyncError::AuthExpired(self.service))?;
         let refresh_token = connection
             .tokens
             .refresh_token
             .clone()
-            .ok_or(SyncError::AuthExpired(self.app.service))?;
+            .ok_or(SyncError::AuthExpired(self.service))?;
         connection.tokens =
-            refresh_tokens(&self.http, &self.app, &refresh_token, self.clock.now()).await?;
+            refresh_tokens(&self.http, app, &refresh_token, self.clock.now()).await?;
         self.vault.save(&connection)?;
         Ok(connection.tokens.access_token)
     }
@@ -238,6 +263,39 @@ mod tests {
         let source = source(&vault, "http://127.0.0.1:1/token".into());
         // abgelehnt wurde das alte Token, gespeichert ist schon ein neues: kein Netzwerkzugriff
         assert_eq!(source.renew("alt").await.unwrap(), "schon-neu");
+    }
+
+    #[tokio::test]
+    async fn a_fixed_token_is_never_renewed() {
+        let vault = vault();
+        vault
+            .save(&connection("fest", Some("r"), Some(-10)))
+            .unwrap();
+        let source = TokenSource::fixed(
+            vault.clone(),
+            "Fest",
+            reqwest::Client::new(),
+            Arc::new(ManualClock::new(start())),
+        );
+        assert!(matches!(
+            source.access_token().await,
+            Err(SyncError::AuthExpired("Fest"))
+        ));
+        assert!(matches!(
+            source.renew("fest").await,
+            Err(SyncError::AuthExpired("Fest"))
+        ));
+        assert!(matches!(
+            TokenSource::fixed(
+                self::vault(),
+                "Fest",
+                reqwest::Client::new(),
+                Arc::new(ManualClock::new(start())),
+            )
+            .access_token()
+            .await,
+            Err(SyncError::NotConnected("Fest"))
+        ));
     }
 
     #[tokio::test]

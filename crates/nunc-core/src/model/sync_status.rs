@@ -112,8 +112,10 @@ pub struct SyncResult {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DriveStatus {
-    /// Ob dieser Build Zugangsdaten für Google hat (Client-ID und -Secret).
+    /// Ob ein OAuth-Client für Google eingetragen ist (ADR 0019).
     pub configured: bool,
+    /// Die eingetragene Client-ID (Anzeige); das Secret verlässt den Tresor nie.
+    pub client_id: Option<String>,
     pub connected: bool,
     pub email: Option<String>,
     /// Link auf den Ordner `nunc` im Drive (erst nach dem ersten Sync bekannt).
@@ -133,8 +135,6 @@ pub struct SyncImportInfo {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct TodoistStatus {
-    /// Ob dieser Build Zugangsdaten für Todoist hat.
-    pub configured: bool,
     pub connected: bool,
     pub email: Option<String>,
     pub avatar_url: Option<String>,

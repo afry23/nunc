@@ -259,6 +259,7 @@ export function createFakeBackend(): FakeBackend {
     providerError: null,
     drive: {
       configured: true,
+      clientId: "123-abc.apps.googleusercontent.com",
       connected: false,
       email: null,
       folderUrl: null,
@@ -267,7 +268,6 @@ export function createFakeBackend(): FakeBackend {
     driveConnectError: null,
     importInfo: { available: false, todoCount: 0, sessionCount: 0 },
     todoist: {
-      configured: true,
       connected: false,
       email: null,
       avatarUrl: null,
@@ -584,6 +584,40 @@ export function createFakeBackend(): FakeBackend {
       };
       return fake.drive;
     },
+    set_google_client: ({
+      clientId,
+      clientSecret,
+    }: {
+      clientId: string;
+      clientSecret: string;
+    }) => {
+      const id = clientId.trim();
+      if (!id.endsWith(".apps.googleusercontent.com"))
+        fail(
+          "google_client_invalid",
+          "Die Client-ID muss auf .apps.googleusercontent.com enden.",
+        );
+      if (clientSecret.trim() === "")
+        fail("google_client_invalid", "Das Client-Secret fehlt.");
+      const changed = fake.drive.clientId !== id;
+      fake.drive = {
+        ...fake.drive,
+        configured: true,
+        clientId: id,
+        ...(changed ? { connected: false, email: null } : {}),
+      };
+      return fake.drive;
+    },
+    clear_google_client: () => {
+      fake.drive = {
+        ...fake.drive,
+        configured: false,
+        clientId: null,
+        connected: false,
+        email: null,
+      };
+      return fake.drive;
+    },
     disconnect_drive: () => {
       fake.drive = {
         ...fake.drive,
@@ -596,7 +630,7 @@ export function createFakeBackend(): FakeBackend {
     check_sync_import: () => fake.importInfo,
     finish_connect: () => null,
     get_todoist_status: () => fake.todoist,
-    connect_todoist: () => {
+    connect_todoist_token: () => {
       if (fake.todoistConnectError) throw fake.todoistConnectError;
       fake.todoist = {
         ...fake.todoist,

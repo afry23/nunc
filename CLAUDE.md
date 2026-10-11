@@ -21,7 +21,7 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 
 | Schicht | Technik |
 |---|---|
-| Shell | Tauri 2 (`src-tauri/`), Plugins: opener (auch für die OAuth-Anmeldung), notification, dialog, fs, single-instance (Desktop) |
+| Shell | Tauri 2 (`src-tauri/`), Plugins: opener (auch für die Google-Anmeldung), notification, dialog, fs, single-instance (Desktop) |
 | Backend | Rust, Edition 2024, Cargo-Workspace |
 | DB | SQLite über `rusqlite` (bundled), WAL, Foreign Keys |
 | Typen Rust↔TS | `tauri-specta` → `src/bindings.ts` |
@@ -31,7 +31,7 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 ```
 crates/nunc-core      pure Fachlogik, kein I/O, kein tokio
 crates/nunc-store     rusqlite, Migrationen, Repos, Backup/Restore
-crates/nunc-sync      WebDAV-, Google-Drive- und Todoist-Client (reqwest), OAuth (PKCE, Loopback), Sync-Läufe (CRDT-Merge liegt pur in nunc-core), Steuerung (Koordinator)
+crates/nunc-sync      WebDAV-, Google-Drive- und Todoist-Client (reqwest), OAuth für Google (PKCE, Loopback), Sync-Läufe (CRDT-Merge liegt pur in nunc-core), Steuerung (Koordinator)
 crates/nunc-api       lokale HTTP-Schnittstelle (127.0.0.1, Token): pures Routing + hyper-Server, Desktop (ADR 0013)
 crates/nunc-platform  Traits + Fakes: Clock, EventSink, Notifier, SecretStore (Keyring), UrlOpener
 src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)])
@@ -40,7 +40,7 @@ src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)
   src/adapters.rs     Tauri-Adapter für EventSink/Notifier/UrlOpener (brauchen AppHandle)
   src/sync_service.rs Verdrahtung des Syncs: Store-Adapter, Koordinatoren (Sync-Anbieter, Todoist), Ereignisse
   src/api_service.rs  ApiService (Server an/aus, Token im Tresor) und AppBackend (Todos für nunc-api), nur Desktop
-  src/credentials.rs  OAuth-Client-IDs: Umgebung (`NUNC_GOOGLE_*`, `NUNC_TODOIST_*`) → `.env` (nur Debug) → Build
+  src/credentials.rs  fester Google-Client nur in Debug-Builds: Umgebung (`NUNC_GOOGLE_*`) → `.env`
   src/commands/       dünne Commands je Bereich, Tests in commands/tests.rs (mock_builder)
 src/                  React-Frontend (src/lib/api.ts = einziger Backend-Zugang)
   src/lib/            reine Hilfen (format, timer, todos, stats, shortcuts, sound), je mit Unit-Test
@@ -154,10 +154,11 @@ oder specta-Typen `cargo test -p nunc export_bindings` ausführen und `src/bindi
 - `tauri-plugin-notification` (iOS): `Schedule.at` parst das UTC-Datum als Ortszeit und lehnt es still ab,
   `sendNotification` verschluckt Fehler (ADR 0004). Nicht unverändert verwenden.
 - Android: `USE_EXACT_ALARM` ist nötig, sonst feuern Timer-Notifications Minuten zu spät (ADR 0004).
-- OAuth: Google und Todoist brauchen eine App-Registrierung (Client-ID/-Secret per Umgebungsvariable, in Debug-Builds auch per `.env`
-  wie `.env.example`, die `.env` der Go-App passt unverändert; Release: beim Bauen,
-  `src-tauri/src/credentials.rs`). Todoist verlangt registrierte Rückruf-Adressen: `http://127.0.0.1:42813/oauth/callback` bis
-  `…:42817/…` eintragen. Tokens liegen nur im Tresor (Dienst `nunc`, Konten `google-drive`, `todoist`, `webdav`).
+- Zugangsdaten: nunc baut **keine** OAuth-Clients ein. Google Drive nutzt den eigenen „Desktop-App“-Client der Nutzer
+  (Einstellungen, Tresor-Konto `google-drive-client`, ADR 0019), Todoist das persönliche API-Token (ADR 0020). Für die
+  Entwicklung liest ein Debug-Build einen festen Google-Client aus Umgebung/`.env` (`.env.example`); er hat Vorrang vor
+  dem eingetragenen. Tokens liegen nur im Tresor (Dienst `nunc`, Konten `google-drive`, `google-drive-client`,
+  `todoist`, `webdav`). Kein Workflow braucht OAuth-Secrets.
 - Keychain-Tests berühren die Login-Keychain und können einen Dialog auslösen; sie sind `#[ignore]` und nutzen nur
   eigene Wegwerf-Einträge. Secrets der Go-App werden nicht übernommen (ADR 0005).
 - Headless-iOS-Simulator: kein `Simulator.app`, `simctl` kann nicht tippen; UI-Interaktion braucht XCUITest oder ein
