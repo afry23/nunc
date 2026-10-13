@@ -1,0 +1,7 @@
+# Review requests for sensitive areas. Add owners here as the project grows.
+*                          @afry23
+/.github/                  @afry23
+/src-tauri/                @afry23
+/crates/nunc-api/          @afry23
+/crates/nunc-sync/         @afry23
+/crates/nunc-platform/     @afry23
