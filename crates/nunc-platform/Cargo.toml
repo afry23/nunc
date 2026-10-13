@@ -2,7 +2,6 @@
 name = "nunc-platform"
 version.workspace = true
 edition.workspace = true
-authors.workspace = true
 description = "Plattform-Traits: Clock, EventSink, Notifier, SecretStore"
 license.workspace = true
 

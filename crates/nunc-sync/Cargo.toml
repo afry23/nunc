@@ -2,7 +2,6 @@
 name = "nunc-sync"
 version.workspace = true
 edition.workspace = true
-authors.workspace = true
 description = "Sync-Clients: WebDAV, Google Drive, Todoist"
 license.workspace = true
 

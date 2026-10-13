@@ -9,7 +9,7 @@ Entscheidungen (User):
 - Gherkin **englisch**
 - Mobile v1: **WebDAV-Sync + Backup/Restore**. Google Drive + Todoist v1 nur Desktop (Mobile später, Deep-Link-OAuth).
 - **Kein Go-Parallelbetrieb mehr** (Entscheidung 2026-10-07, ADR 0016): Schema 001–005 bleibt für Bestandsdaten, das Sync-Format ist ein eigenes CRDT-Format (`nunc-sync.v2.json`).
-- Projektort: **`/Users/afry/code/tauri/nunc-app/nunc`** (eigenes Git-Repo). `nunc-go/` bleibt Referenz, unverändert.
+- Projektort: dieses Repository (`nunc/`, eigenes Git-Repo). `nunc-go/` bleibt Referenz, unverändert.
 
 Quellen der Wahrheit für Fachlogik: `nunc-go/REQUIREMENTS.md`, `STORIES.md`, `nunc-userstories/*.md`, `DESIGN.md`, `screens/*` (Stitch-Mockups), Go-Tests in `nunc-go/internal/**/_test.go` (Table-Driven → Scenario Outlines). Achtung: `nunc-go/CLAUDE.md` teils veraltet (sagt Wails v2, kennt Sync nicht). Die Go-Quellen sind Referenz, nicht mehr bindend.
 

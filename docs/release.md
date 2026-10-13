@@ -23,6 +23,10 @@ wenn Versionen auseinanderlaufen (`bump-version.mjs --check`) oder `npm run docs
 
 ## Secrets
 
+Die Secrets liegen im **Environment `release`** (Settings → Environments), nicht als Repository-Secrets. Dort ist ein
+*Required reviewer* eingetragen: ein Release-Lauf wartet auf die Freigabe, bevor die Jobs `desktop`, `android` und `ios`
+Zugriff bekommen. Zusätzlich schützt ein Tag-Ruleset für `v*` das Anlegen der Tags.
+
 | Plattform | Secret | Inhalt |
 |---|---|---|
 | macOS | `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD` | „Developer ID Application“-Zertifikat als `.p12`, Base64 |

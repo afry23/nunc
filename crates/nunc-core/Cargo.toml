@@ -2,7 +2,6 @@
 name = "nunc-core"
 version.workspace = true
 edition.workspace = true
-authors.workspace = true
 description = "Domain-Kern: pure Fachlogik ohne I/O"
 license.workspace = true
 
