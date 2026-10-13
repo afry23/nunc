@@ -2,7 +2,7 @@
 
 - Status: akzeptiert (Android und iOS-Simulator verifiziert, echtes iOS-Gerät offen)
 - Datum: 2026-10-03
-- Prototyp: Branch `spike/m0-09-background-timer`
+- Prototyp: Tag `archive/spike-m0-09` (früher Branch `spike/m0-09-background-timer`)
 
 ## Kontext
 

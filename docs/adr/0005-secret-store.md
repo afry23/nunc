@@ -3,7 +3,7 @@
 - Status: akzeptiert (macOS, Android-Emulator, iOS-Simulator verifiziert; Windows nur Compile, Linux offen)
 - Ergänzung 2026-10-03: Kompatibilität zu Go-Keychain-Einträgen ist **nicht** mehr gefordert (siehe Kontext)
 - Datum: 2026-10-03
-- Prototyp: Branch `spike/m0-10-secretstore` (`crates/nunc-platform/src/secret.rs`, `tests/keychain_compat.rs`)
+- Prototyp: Tag `archive/spike-m0-10` (früher Branch `spike/m0-10-secretstore`; `crates/nunc-platform/src/secret.rs`, `tests/keychain_compat.rs`)
 
 ## Kontext
 
