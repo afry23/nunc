@@ -14,7 +14,7 @@ serde_json = "1"
 thiserror = "2"
 # ohne "clock": die Fachlogik kann damit nicht selbst Utc::now() aufrufen (Clock wird injiziert)
 chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
-rusqlite = { version = "0.37", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 specta = { version = "=2.0.0-rc.25", features = ["derive", "chrono"] }
 specta-typescript = "0.0.12"
