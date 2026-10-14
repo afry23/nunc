@@ -1,10 +1,10 @@
 # Release-Anleitung (1.0 und folgende)
 
 Ein Release entsteht aus einem Tag `vX.Y.Z`: [`.github/workflows/release.yml`](../.github/workflows/release.yml) prüft die
-Abnahme und baut macOS (arm64 + x86_64), Windows, Linux, Android und iOS. Alles, was Signierschlüssel oder Konten braucht,
-ist **nicht im Repository** und läuft nur, wenn das jeweilige Secret gesetzt ist; ohne Secret entsteht der Teil unsigniert
-oder wird mit Warnung übersprungen. Nicht geprüft werden konnte bisher (kein Zugriff auf Zertifikate, Konten, Geräte):
-Signierung, Notarisierung, Play-Console- und TestFlight-Upload.
+Abnahme und baut macOS (arm64 + x86_64), Windows, Linux und Android. Verteilt wird **nur über GitHub Releases**: Es gibt
+kein Apple-Developer-Konto, keinen App-Store- oder Play-Store-Upload und keinen iOS-Job. Alle Secrets sind optional;
+ohne Apple-Zertifikat wird die macOS-App ad-hoc signiert (nicht notarisiert), ohne Android-Schlüssel bleibt die APK
+unsigniert und lässt sich nicht installieren. Hinweise für Nutzer (Gatekeeper, SmartScreen) stehen in der README.
 
 ## Ablauf
 
@@ -29,14 +29,20 @@ Zugriff bekommen. Zusätzlich schützt ein Tag-Ruleset für `v*` das Anlegen der
 
 | Plattform | Secret | Inhalt |
 |---|---|---|
-| macOS | `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD` | „Developer ID Application“-Zertifikat als `.p12`, Base64 |
-| macOS | `APPLE_SIGNING_IDENTITY` | z. B. `Developer ID Application: Name (TEAMID)` |
-| macOS | `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | Notarisierung (App-spezifisches Passwort) |
-| Android | `NUNC_ANDROID_KEYSTORE_BASE64`, `NUNC_ANDROID_KEYSTORE_PASSWORD`, `NUNC_ANDROID_KEY_ALIAS`, `NUNC_ANDROID_KEY_PASSWORD` | Upload-Schlüssel |
-| Android | `PLAY_SERVICE_ACCOUNT_JSON` | Dienstkonto für den internen Test-Track |
-| iOS | `IOS_CERTIFICATE`, `IOS_CERTIFICATE_PASSWORD`, `IOS_PROVISIONING_PROFILE` | „Apple Distribution“-Zertifikat (`.p12`) und App-Store-Profil, Base64 |
-| iOS | `APPLE_DEVELOPMENT_TEAM` | Team-ID für `tauri ios build` |
-| iOS | `APP_STORE_CONNECT_API_KEY`, `_KEY_ID`, `_ISSUER_ID` | API-Schlüssel (`.p8`) für den TestFlight-Upload |
+| Android | `NUNC_ANDROID_KEYSTORE_BASE64`, `NUNC_ANDROID_KEYSTORE_PASSWORD`, `NUNC_ANDROID_KEY_ALIAS`, `NUNC_ANDROID_KEY_PASSWORD` | eigener Schlüssel, einmal selbst erzeugt und gesichert (Verlust = keine Updates mehr) |
+| macOS (optional) | `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY` | nur mit Developer-Konto: „Developer ID Application“-Zertifikat als `.p12`, Base64 (eine Zeile) |
+| macOS (optional) | `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | nur mit Developer-Konto: Notarisierung (App-spezifisches Passwort) |
+
+**Ungültige Werte brechen den Lauf ab** (`base64: invalid input`, `SecKeychainItemImport: Unknown format`). Ein Secret
+entweder korrekt setzen oder gar nicht anlegen. Wert prüfen: `echo "$WERT" | base64 --decode | openssl pkcs12 -info -noout`
+bzw. `keytool -list -keystore nunc-release.jks`.
+
+Schlüssel erzeugen:
+
+```bash
+keytool -genkeypair -v -keystore nunc-release.jks -alias nunc -keyalg RSA -keysize 4096 -validity 10000
+base64 -i nunc-release.jks | tr -d '\n' | pbcopy     # → NUNC_ANDROID_KEYSTORE_BASE64
+```
 
 ## Desktop (M8-04)
 
@@ -56,8 +62,8 @@ Zugriff bekommen. Zusätzlich schützt ein Tag-Ruleset für `v*` das Anlegen der
 2. Lokal: `src-tauri/gen/android/keystore.properties` mit `storeFile`, `storePassword`, `keyAlias`, `keyPassword`
    (ist in `.gitignore`). CI: die Secrets oben.
 3. `npm run tauri android build -- --aab --apk` → `app/build/outputs/bundle/universalRelease/*.aab`.
-4. Play Console: App `com.afry.nunc` anlegen, internen Test-Track mit Testern, erstes Bundle von Hand hochladen
-   (danach kann der Workflow hochladen). `versionCode` leitet Tauri aus der Version ab und muss pro Upload steigen.
+4. Play Console: nicht angebunden (der Workflow lädt nichts hoch). Das `.aab` entsteht weiter und kann bei Bedarf von Hand
+   hochgeladen werden. `versionCode` leitet Tauri aus der Version ab und muss pro Upload steigen.
 5. Test ohne Play Store: Der Job `android-asset` hängt die APK als `nunc_<version>_android.apk` (universal) und je ABI als
    `nunc_<version>_android_<abi>.apk` an den Release-Entwurf (nur bei Tag-Läufen). Installieren per `adb install` oder Download auf dem Gerät. Ohne Signierschlüssel ist die APK
    unsigniert und lässt sich nicht installieren.
@@ -97,7 +103,10 @@ F-Droid lesen sie direkt aus dem Repository.
 3. Merge Request öffnen. Offene Punkte: native npm-Binaries im Build, reproduzierbarer Build, damit F-Droid die eigene
    Signatur übernimmt (`AllowedAPKSigningKeys`).
 
-## iOS (M8-06)
+## iOS (M8-06, nicht im Release-Workflow)
+
+Seit der Umstellung auf reine GitHub-Releases gibt es keinen iOS-Job mehr (braucht ein kostenpflichtiges Developer-Konto).
+Die Schritte unten gelten, falls iOS später wieder aufgenommen wird; der Job muss dann in `release.yml` ergänzt werden.
 
 1. Im Apple Developer Portal: App-ID `com.afry.nunc`, „Apple Distribution“-Zertifikat, App-Store-Provisioning-Profil;
    in App Store Connect die App anlegen.

@@ -29,8 +29,20 @@ time. nunc does not just measure time; it supports a moment that is lived consci
 
 ## Installation
 
-Prebuilt installers are available under *Releases*: macOS (`.dmg`), Windows (`.exe`/`.msi`), Linux (`.deb`, `.rpm`,
-AppImage), Android (Play Store, internal test track or APK), iOS (TestFlight).
+Prebuilt installers are available under [*Releases*](https://github.com/afry23/nunc/releases): macOS (`.dmg`), Windows
+(`.exe`/`.msi`), Linux (`.deb`, `.rpm`, AppImage) and Android (`.apk`). nunc is distributed from this repository only, not
+through the App Store, the Play Store or the Microsoft Store. There is no iOS download; build it yourself (see below).
+
+The installers are **not notarized and not signed with a purchased certificate**, so the operating system warns on the
+first start:
+
+- **macOS:** the app is ad-hoc signed. Open the `.dmg`, drag nunc to *Applications*, then right-click it → *Open* (macOS 15
+  and later: *System Settings → Privacy & Security → Open Anyway*). Alternatively remove the quarantine flag:
+  `xattr -dr com.apple.quarantine /Applications/nunc.app`.
+- **Windows:** SmartScreen shows "Windows protected your PC". Choose *More info → Run anyway*.
+- **Linux:** no warning. `chmod +x nunc_*.AppImage` for the AppImage.
+- **Android:** download the APK that matches your device (usually `arm64-v8a`) and allow installing from this source.
+  The APKs are signed with the project's own key; updates only install over APKs signed with the same key.
 
 ## Building locally
 

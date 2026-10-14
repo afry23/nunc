@@ -1,7 +1,9 @@
 name: Release
 
-# Ein Tag `vX.Y.Z` baut alle Plattformen und legt einen Entwurf des Releases an (roadmap M8-04…06).
-# Benötigte Secrets stehen in docs/release.md; sie gehören ins Environment `release` (Required Reviewer). Fehlt ein Secret, entsteht dieser Teil unsigniert bzw. wird übersprungen.
+# Ein Tag `vX.Y.Z` baut Desktop (macOS, Windows, Linux) und Android und legt einen Entwurf des Releases an
+# (roadmap M8-04…06). Verteilt wird nur über GitHub Releases: kein Apple-Developer-Konto, kein App Store, keine Play Console.
+# Alle Secrets sind optional und stehen in docs/release.md; sie gehören ins Environment `release` (Required Reviewer).
+# Ohne Apple-Zertifikat wird die macOS-App ad-hoc signiert, ohne Android-Schlüssel bleibt die APK unsigniert.
 on:
   push:
     tags: ["v*"]
@@ -179,19 +181,6 @@ jobs:
             src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
             src-tauri/gen/android/app/build/outputs/apk/*/release/*.apk
 
-      # Interner Test-Track der Play Console (Paketname com.afry.nunc, App muss dort bereits angelegt sein)
-      - name: In die Play Console hochladen
-        if: env.PLAY_SERVICE_ACCOUNT_JSON != ''
-        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1
-        env:
-          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.afry.nunc
-          releaseFiles: src-tauri/gen/android/app/build/outputs/bundle/universalRelease/*.aab
-          track: internal
-          status: draft
-
   # APKs an den Release-Entwurf hängen (zum Herunterladen und manuellen Installieren, Quelle für IzzyOnDroid). Läuft
   # erst nach `desktop`, damit der Entwurf sicher existiert und nicht doppelt angelegt wird. Die Namen sind stabil,
   # IzzyOnDroid findet die APKs per Muster (ADR 0021).
@@ -224,69 +213,3 @@ jobs:
             cp "$apk" "$name"
             gh release upload "$TAG" "$name" --clobber
           done
-
-  ios:
-    needs: verify
-    environment: release
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
-        with:
-          targets: aarch64-apple-ios
-
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
-
-      - run: brew install xcodegen
-
-      - run: npm ci
-
-      - name: Zertifikat und Provisioning-Profil installieren
-        if: env.IOS_CERTIFICATE != ''
-        env:
-          IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
-          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-        run: |
-          echo "$IOS_CERTIFICATE" | base64 --decode > certificate.p12
-          security create-keychain -p ci build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p ci build.keychain
-          security import certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ci build.keychain
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/nunc.mobileprovision"
-          rm certificate.p12
-
-      - name: IPA für den App Store bauen
-        if: env.APPLE_DEVELOPMENT_TEAM != ''
-        env:
-          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
-        run: npm run tauri ios build -- --export-method app-store-connect
-
-      - name: Zu TestFlight hochladen
-        if: env.APP_STORE_CONNECT_API_KEY != ''
-        env:
-          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-        run: |
-          mkdir -p "$HOME/.appstoreconnect/private_keys"
-          echo "$APP_STORE_CONNECT_API_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
-          xcrun altool --upload-app --type ios \
-            --file src-tauri/gen/apple/build/arm64/nunc.ipa \
-            --apiKey "$APP_STORE_CONNECT_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
-          rm -rf "$HOME/.appstoreconnect"
-
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
-        with:
-          name: ios-release
-          path: src-tauri/gen/apple/build/arm64/*.ipa
-          if-no-files-found: ignore
