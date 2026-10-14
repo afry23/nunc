@@ -1,6 +1,6 @@
 # F-Droid / IzzyOnDroid – offene Schritte
 
-Stand: 2026-10-11, Branch `build/fdroid-metadata` (Commit `0ffaebb`). Entscheidung und Hintergrund:
+Stand: 2026-10-14 (Release v0.3.1 veröffentlicht, Repository öffentlich). Entscheidung und Hintergrund:
 [ADR 0021](./adr/0021-fdroid-verteilung.md), Ablauf pro Release: [release.md](./release.md#f-droid--izzyondroid-adr-0021).
 
 Bereits erledigt: Store-Metadaten unter `fastlane/metadata/android/{de-DE,en-US}/` (Titel, Kurz- und Langbeschreibung,
@@ -8,18 +8,18 @@ Icon), Release-Workflow hängt zusätzlich eine APK je ABI an (11–16 MB statt 
 
 ## 1. Branch abschließen
 
-- [ ] Branch pushen, PR öffnen, nach grünen Checks mergen.
+- [x] Branch pushen, PR öffnen, nach grünen Checks mergen.
 
 ## 2. Repository öffentlich machen
 
-- [ ] Secret-Scan über die gesamte Git-History, z. B.:
+- [x] Secret-Scan über die gesamte Git-History, z. B.:
       ```bash
       brew install gitleaks
       gitleaks detect --source . --log-opts="--all"
       ```
       Bei Funden (`.env`, Keystores, Tokens, Client-Secrets): Secret widerrufen und History bereinigen
       (`git filter-repo`), **bevor** das Repository öffentlich wird.
-- [ ] GitHub → `afry23/nunc` → Settings → General → Danger Zone → „Change visibility“ → Public.
+- [x] GitHub → `afry23/nunc` → Settings → General → Danger Zone → „Change visibility“ → Public.
 
 ## 3. Metadaten vervollständigen
 
@@ -32,11 +32,11 @@ Icon), Release-Workflow hängt zusätzlich eine APK je ABI an (11–16 MB statt 
 
 ## 4. Ersten Release veröffentlichen
 
-- [ ] Android-Signier-Secrets in GitHub gesetzt (`NUNC_ANDROID_KEYSTORE_BASE64`, `…_PASSWORD`, `…_KEY_ALIAS`,
+- [x] Android-Signier-Secrets in GitHub gesetzt (`NUNC_ANDROID_KEYSTORE_BASE64`, `…_PASSWORD`, `…_KEY_ALIAS`,
       `…_KEY_PASSWORD`), sonst sind die APKs unsigniert und IzzyOnDroid kann sie nicht nutzen.
-- [ ] Release nach [release.md](./release.md) taggen; prüfen, dass der Entwurf diese Assets enthält:
+- [x] Release nach [release.md](./release.md) taggen; prüfen, dass der Entwurf diese Assets enthält:
       `nunc_<v>_android.apk`, `nunc_<v>_android_arm64-v8a.apk`, `…_armeabi-v7a.apk`, `…_x86.apk`, `…_x86_64.apk`.
-- [ ] Release **veröffentlichen** (Entwürfe sieht IzzyOnDroid nicht).
+- [x] Release **veröffentlichen** (Entwürfe sieht IzzyOnDroid nicht).
 - [ ] Signatur-Fingerprint auslesen und in `docs/release.md` eintragen:
       ```bash
       apksigner verify --print-certs nunc_<v>_android_arm64-v8a.apk   # Zeile „SHA-256 digest“
