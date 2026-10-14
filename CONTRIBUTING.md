@@ -1,6 +1,7 @@
 # Contributing
 
 Thanks for your interest in nunc. Issues and pull requests are welcome, in English or German.
+Participation is governed by the [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Before you start
 
