@@ -1,3 +1,4 @@
+/// <reference types="expect-webdriverio" />
 import { $, expect } from "@wdio/globals";
 import { Given, Then, When } from "@wdio/cucumber-framework";
 
