@@ -121,3 +121,28 @@ export const HelpIcon = (p: Props) => (
     <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01" />
   </Icon>
 );
+export const PlayIcon = (p: Props) => (
+  <Icon {...p}>
+    <path d="M7 5v14l11-7z" />
+  </Icon>
+);
+export const PauseIcon = (p: Props) => (
+  <Icon {...p}>
+    <path d="M9 5v14M15 5v14" />
+  </Icon>
+);
+export const StopIcon = (p: Props) => (
+  <Icon {...p}>
+    <rect x="6" y="6" width="12" height="12" rx="1" />
+  </Icon>
+);
+export const SkipIcon = (p: Props) => (
+  <Icon {...p}>
+    <path d="M6 5v14l9-7zM18 5v14" />
+  </Icon>
+);
+export const UploadIcon = (p: Props) => (
+  <Icon {...p}>
+    <path d="M12 16V5m0 0-4 4m4-4 4 4M5 20h14" />
+  </Icon>
+);

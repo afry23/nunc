@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart, Heatmap, LineChart, PieChart } from "../components/charts";
 import { DownloadIcon } from "../components/icons";
-import { Button, Segmented, SectionLabel } from "../components/ui";
+import {
+  ActionButton,
+  Button,
+  Segmented,
+  SectionLabel,
+} from "../components/ui";
 import {
   commands,
   errorMessage,
@@ -105,14 +110,15 @@ export function StatsView() {
             onChange={setPeriod}
           />
           <div className="relative">
-            <Button
+            <ActionButton
+              icon={<DownloadIcon />}
               aria-haspopup="true"
               aria-expanded={exportOpen}
               disabled={!data}
               onClick={() => setExportOpen(!exportOpen)}
             >
-              <DownloadIcon /> {t("stats.export")}
-            </Button>
+              {t("stats.export")}
+            </ActionButton>
             {exportOpen && (
               <div
                 role="group"

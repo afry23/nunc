@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Button, Segmented } from "../components/ui";
+import { PauseIcon, PlayIcon, SkipIcon, StopIcon } from "../components/icons";
+import { ActionButton, Segmented } from "../components/ui";
 import { useT } from "../i18n";
 import { NotificationHint } from "../components/NotificationHint";
 import { RingTimer } from "../components/RingTimer";
@@ -75,40 +76,44 @@ export function TimerView() {
 
       <div className="flex flex-wrap justify-center gap-3">
         {idle && (
-          <Button
+          <ActionButton
+            icon={<PlayIcon />}
             variant="primary"
-            className="min-w-48 py-4 text-lg"
+            className="py-4 text-lg sm:min-w-48"
             onClick={() => void start(mode)}
           >
             {t("timer.start")}
-          </Button>
+          </ActionButton>
         )}
         {snapshot.state === "running" && (
-          <Button
+          <ActionButton
+            icon={<PauseIcon />}
             variant="secondary"
-            className="min-w-36"
+            className="sm:min-w-36"
             onClick={() => void pause()}
           >
             {t("timer.pause")}
-          </Button>
+          </ActionButton>
         )}
         {snapshot.state === "paused" && (
-          <Button
+          <ActionButton
+            icon={<PlayIcon />}
             variant="primary"
-            className="min-w-36"
+            className="sm:min-w-36"
             onClick={() => void resume()}
           >
             {t("timer.resume")}
-          </Button>
+          </ActionButton>
         )}
         {!idle && (
-          <Button
+          <ActionButton
+            icon={onBreak ? <SkipIcon /> : <StopIcon />}
             variant="secondary"
-            className="min-w-36"
+            className="sm:min-w-36"
             onClick={() => void stop()}
           >
             {onBreak ? t("timer.skip") : t("timer.stop")}
-          </Button>
+          </ActionButton>
         )}
       </div>
 
@@ -123,9 +128,13 @@ export function TimerView() {
               ({sessionLabel(mode, suggestedBreak.sessionType)})
             </span>
           </p>
-          <Button variant="secondary" onClick={() => void startBreak()}>
+          <ActionButton
+            icon={<PlayIcon />}
+            variant="secondary"
+            onClick={() => void startBreak()}
+          >
             {t("timer.startBreak")}
-          </Button>
+          </ActionButton>
         </div>
       )}
 

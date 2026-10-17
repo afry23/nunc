@@ -14,9 +14,16 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useState, type FormEvent } from "react";
-import { PlusIcon } from "../components/icons";
+import {
+  CheckIcon,
+  CloseIcon,
+  DownloadIcon,
+  PlusIcon,
+  UploadIcon,
+} from "../components/icons";
+import { FilterMenu } from "../components/FilterMenu";
 import { TodoItem } from "../components/TodoItem";
-import { Button, Chip, SectionLabel } from "../components/ui";
+import { ActionButton, Button, Chip } from "../components/ui";
 import { useT } from "../i18n";
 import type { TodoSort } from "../lib/api";
 import { collectTags, moveItem } from "../lib/todos";
@@ -67,6 +74,23 @@ export function TodoView() {
       all.map((todo) => todo.priority).filter((p): p is string => p !== null),
     ),
   ].sort();
+  const activeFilters = [
+    ...filter.priorities.map((value) => ({
+      kind: "priorities" as const,
+      value,
+      text: `(${value})`,
+    })),
+    ...filter.projects.map((value) => ({
+      kind: "projects" as const,
+      value,
+      text: value,
+    })),
+    ...filter.contexts.map((value) => ({
+      kind: "contexts" as const,
+      value,
+      text: value,
+    })),
+  ];
   const filtering =
     filter.projects.length + filter.contexts.length + filter.priorities.length >
       0 || filter.text !== "";
@@ -106,8 +130,15 @@ export function TodoView() {
           <p className="text-on-surface-variant">{t("todos.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => void importFile()}>{t("todos.import")}</Button>
-          <Button onClick={() => void exportFile()}>{t("todos.export")}</Button>
+          <ActionButton icon={<UploadIcon />} onClick={() => void importFile()}>
+            {t("todos.import")}
+          </ActionButton>
+          <ActionButton
+            icon={<DownloadIcon />}
+            onClick={() => void exportFile()}
+          >
+            {t("todos.export")}
+          </ActionButton>
           <label htmlFor="todo-sort" className="sr-only">
             {t("todos.sort.label")}
           </label>
@@ -124,6 +155,7 @@ export function TodoView() {
             ))}
           </select>
           <Button
+            className="max-sm:size-11 max-sm:px-0"
             aria-label={
               direction === "ascending"
                 ? t("todos.sort.ascending")
@@ -157,14 +189,15 @@ export function TodoView() {
           autoComplete="off"
           className="min-h-11 min-w-0 flex-1 bg-transparent px-2 placeholder:text-on-surface-variant focus:outline-none"
         />
-        <Button
+        <ActionButton
           type="submit"
+          icon={<PlusIcon />}
           variant="primary"
-          className="shrink-0 px-3 text-sm sm:px-5 sm:text-base"
+          className="shrink-0"
           disabled={draft.trim() === ""}
         >
           {t("todos.add")}
-        </Button>
+        </ActionButton>
       </form>
 
       <div
@@ -185,44 +218,52 @@ export function TodoView() {
             className="min-h-11 min-w-48 flex-1 rounded-sm bg-surface-container-highest px-3 focus:bg-secondary-container"
           />
           {filtering && (
-            <Button variant="ghost" onClick={() => void clearFilters()}>
+            <ActionButton
+              icon={<CloseIcon />}
+              variant="ghost"
+              onClick={() => void clearFilters()}
+            >
               {t("todos.filter.reset")}
-            </Button>
+            </ActionButton>
           )}
         </div>
-        {(tags.projects.length > 0 ||
-          tags.contexts.length > 0 ||
-          priorities.length > 0) && (
-          <div className="flex flex-wrap items-center gap-2">
-            <SectionLabel>{t("todos.filter")}</SectionLabel>
-            {priorities.map((p) => (
-              <Chip
-                key={p}
-                selected={filter.priorities.includes(p)}
-                onClick={() => void toggleTag("priorities", p)}
-              >
-                ({p})
-              </Chip>
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterMenu
+            label={t("todos.filter.priorities")}
+            options={priorities}
+            selected={filter.priorities}
+            onToggle={(p) => void toggleTag("priorities", p)}
+          />
+          <FilterMenu
+            label={t("todos.filter.projects")}
+            options={tags.projects}
+            selected={filter.projects}
+            onToggle={(tag) => void toggleTag("projects", tag)}
+          />
+          <FilterMenu
+            label={t("todos.filter.contexts")}
+            options={tags.contexts}
+            selected={filter.contexts}
+            onToggle={(tag) => void toggleTag("contexts", tag)}
+          />
+        </div>
+        {activeFilters.length > 0 && (
+          <ul
+            aria-label={t("todos.filter")}
+            className="flex flex-wrap items-center gap-2"
+          >
+            {activeFilters.map(({ kind, value, text }) => (
+              <li key={`${kind}:${value}`}>
+                <Chip
+                  selected
+                  label={t("todos.filter.remove", { tag: text })}
+                  onClick={() => void toggleTag(kind, value)}
+                >
+                  {text} <CloseIcon size={14} />
+                </Chip>
+              </li>
             ))}
-            {tags.projects.map((tag) => (
-              <Chip
-                key={tag}
-                selected={filter.projects.includes(tag)}
-                onClick={() => void toggleTag("projects", tag)}
-              >
-                {tag}
-              </Chip>
-            ))}
-            {tags.contexts.map((tag) => (
-              <Chip
-                key={tag}
-                selected={filter.contexts.includes(tag)}
-                onClick={() => void toggleTag("contexts", tag)}
-              >
-                {tag}
-              </Chip>
-            ))}
-          </div>
+          </ul>
         )}
       </div>
 
@@ -256,7 +297,8 @@ export function TodoView() {
       )}
 
       {completedCount > 0 && (
-        <Button
+        <ActionButton
+          icon={<CheckIcon />}
           variant="ghost"
           aria-pressed={showCompleted}
           onClick={() => void setShowCompleted(!showCompleted)}
@@ -264,7 +306,7 @@ export function TodoView() {
           {showCompleted
             ? t("todos.completed.hide")
             : t("todos.completed.show", { count: completedCount })}
-        </Button>
+        </ActionButton>
       )}
     </section>
   );

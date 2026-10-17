@@ -90,9 +90,11 @@ Feature: Todo list
       | Einkaufen @street      |
       | Steuer +privat @desk   |
     When I open the app at "/todos"
+    And I click "Projekte"
     And I click "+work"
     Then the todo list shows "(A) Bericht +work"
-    When I click "+work"
+    When I click "+work entfernen"
+    And I click "Kontexte"
     And I click "@street"
     Then the todo list shows "Einkaufen @street"
     When I click "Filter zurücksetzen"

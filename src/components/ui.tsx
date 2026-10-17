@@ -32,6 +32,29 @@ export function Button({
   );
 }
 
+/**
+ * Button mit Icon und Beschriftung. Auf schmalen Screens (< sm) bleibt nur das Icon sichtbar;
+ * die Beschriftung bleibt als zugänglicher Name erhalten. Breiten-Klassen mit `sm:` übergeben.
+ */
+export function ActionButton({
+  icon,
+  children,
+  className = "",
+  ...rest
+}: ButtonProps & { icon: ReactNode; children: string }) {
+  return (
+    <Button
+      aria-label={children}
+      title={children}
+      className={`max-sm:size-11 max-sm:min-w-0 max-sm:px-0 ${className}`}
+      {...rest}
+    >
+      {icon}
+      <span className="max-sm:sr-only">{children}</span>
+    </Button>
+  );
+}
+
 /** Quadratischer Icon-Button mit Pflicht-Beschriftung (Touch-Ziel ≥ 44 px). */
 export function IconButton({
   label,
@@ -111,14 +134,18 @@ export function Chip({
   selected,
   onClick,
   children,
+  label,
 }: {
   selected: boolean;
   onClick: () => void;
   children: ReactNode;
+  /** Abweichender zugänglicher Name (sonst der Inhalt). */
+  label?: string;
 }) {
   return (
     <button
       type="button"
+      aria-label={label}
       aria-pressed={selected}
       onClick={onClick}
       className={`min-h-11 rounded-full px-3 text-sm transition-colors ${
