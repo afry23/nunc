@@ -93,96 +93,100 @@ export function TodoItem({
         style={{
           transform: offset > 0 ? `translateX(${offset}px)` : undefined,
         }}
-        className="relative flex touch-pan-y items-center gap-2 bg-surface-container-low py-2 pr-2 pl-3"
+        className="relative flex touch-pan-y flex-col gap-1 bg-surface-container-low py-2 pr-2 pl-3 sm:flex-row sm:items-center sm:gap-2"
       >
-        {canReorder && (
-          <button
-            type="button"
-            ref={setActivatorNodeRef}
-            aria-label={t("todos.item.move", { title })}
-            className="inline-flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-bright"
-            {...attributes}
-            {...listeners}
-          >
-            <GripIcon />
-          </button>
-        )}
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {canReorder && (
+            <button
+              type="button"
+              ref={setActivatorNodeRef}
+              aria-label={t("todos.item.move", { title })}
+              className="inline-flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-bright"
+              {...attributes}
+              {...listeners}
+            >
+              <GripIcon />
+            </button>
+          )}
 
-        <label className="inline-flex size-11 shrink-0 items-center justify-center">
-          <input
-            type="checkbox"
-            checked={todo.completed}
-            onChange={() => void toggle(todo.id)}
-            aria-label={t("todos.item.done", { title })}
-            className="size-6 accent-[var(--color-primary)]"
-          />
-        </label>
-
-        {editing ? (
-          <form
-            onSubmit={(event) => void submit(event)}
-            className="flex flex-1 items-center gap-2"
-          >
+          <label className="inline-flex size-11 shrink-0 items-center justify-center">
             <input
-              autoFocus
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  event.stopPropagation();
-                  setEditing(false);
-                }
-              }}
-              aria-label={t("todos.item.editLabel", { title })}
-              className="min-h-11 flex-1 rounded-sm bg-surface-container-highest px-3 focus:bg-secondary-container"
+              type="checkbox"
+              checked={todo.completed}
+              onChange={() => void toggle(todo.id)}
+              aria-label={t("todos.item.done", { title })}
+              className="size-6 accent-[var(--color-primary)]"
             />
-          </form>
-        ) : (
-          <div
-            className={`flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 ${todo.completed ? "text-on-surface-variant line-through" : ""}`}
-            onDoubleClick={startEditing}
-          >
-            {todo.priority && (
-              <span
-                className={`font-semibold ${TONE_CLASS[tone]}`}
-                aria-label={t("todos.item.priority", {
-                  priority: todo.priority,
-                })}
-              >
-                ({todo.priority})
-              </span>
-            )}
-            <span className="break-words">
-              {splitSegments(todo.description).map((segment, index) => (
-                <span
-                  key={index}
-                  className={
-                    segment.kind === "project"
-                      ? "text-primary"
-                      : segment.kind === "context"
-                        ? "text-secondary-fixed-dim"
-                        : undefined
+          </label>
+
+          {editing ? (
+            <form
+              onSubmit={(event) => void submit(event)}
+              className="flex flex-1 items-center gap-2"
+            >
+              <input
+                autoFocus
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.stopPropagation();
+                    setEditing(false);
                   }
+                }}
+                aria-label={t("todos.item.editLabel", { title })}
+                className="min-h-11 flex-1 rounded-sm bg-surface-container-highest px-3 focus:bg-secondary-container"
+              />
+            </form>
+          ) : (
+            <div
+              className={`flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 ${todo.completed ? "text-on-surface-variant line-through" : ""}`}
+              onDoubleClick={startEditing}
+            >
+              {todo.priority && (
+                <span
+                  className={`font-semibold ${TONE_CLASS[tone]}`}
+                  aria-label={t("todos.item.priority", {
+                    priority: todo.priority,
+                  })}
                 >
-                  {segment.text}
+                  ({todo.priority})
                 </span>
-              ))}
+              )}
+              <span className="break-words">
+                {splitSegments(todo.description).map((segment, index) => (
+                  <span
+                    key={index}
+                    className={
+                      segment.kind === "project"
+                        ? "text-primary"
+                        : segment.kind === "context"
+                          ? "text-secondary-fixed-dim"
+                          : undefined
+                    }
+                  >
+                    {segment.text}
+                  </span>
+                ))}
+              </span>
+            </div>
+          )}
+
+          {todo.pomodoroCount > 0 && (
+            <span
+              className="shrink-0 rounded-lg bg-surface-container-high px-2 py-1 text-sm tabular-nums"
+              aria-label={t("todos.item.pomodoros", {
+                count: todo.pomodoroCount,
+              })}
+            >
+              🍅 {todo.pomodoroCount}
             </span>
-          </div>
-        )}
+          )}
+        </div>
 
-        {todo.pomodoroCount > 0 && (
-          <span
-            className="shrink-0 rounded-lg bg-surface-container-high px-2 py-1 text-sm tabular-nums"
-            aria-label={t("todos.item.pomodoros", {
-              count: todo.pomodoroCount,
-            })}
-          >
-            🍅 {todo.pomodoroCount}
-          </span>
-        )}
-
-        <div className="flex shrink-0">
+        <div
+          className={`flex shrink-0 max-sm:justify-end ${editing ? "max-sm:hidden" : ""}`}
+        >
           {canReorder && (
             <>
               <IconButton
