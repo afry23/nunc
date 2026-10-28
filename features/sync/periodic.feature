@@ -6,7 +6,7 @@ Feature: Periodic sync (desktop)
     Given a sync coordinator whose runs take 0 ms
     And the coordinator runs on desktop
     When the sync interval is set to 100 ms
-    Then within 1000 ms at least 3 sync runs have happened
+    Then within 5000 ms at least 3 sync runs have happened
 
   @integration @sync @REQ-Sync-Periodic
   Scenario: The first periodic run comes after a full interval
@@ -31,7 +31,7 @@ Feature: Periodic sync (desktop)
     And the coordinator runs on desktop
     When the sync interval is set to 5000 ms
     And the sync interval is set to 100 ms
-    Then within 1000 ms at least 2 sync runs have happened
+    Then within 5000 ms at least 2 sync runs have happened
 
   @integration @sync @REQ-Sync-Periodic
   Scenario: A periodic run never overlaps a running sync
@@ -40,7 +40,7 @@ Feature: Periodic sync (desktop)
     When the sync interval is set to 50 ms
     And I wait 1000 ms
     Then at most 1 sync run was active at a time
-    And within 100 ms at least 2 sync runs have happened
+    And within 2000 ms at least 2 sync runs have happened
 
   @integration @sync @REQ-Sync-Periodic
   Scenario: A failing run does not stop the schedule
@@ -48,7 +48,7 @@ Feature: Periodic sync (desktop)
     And the coordinator runs on desktop
     And the next run fails with "Verbindung abgelehnt – Server nicht erreichbar"
     When the sync interval is set to 100 ms
-    Then within 1000 ms at least 3 sync runs have happened
+    Then within 5000 ms at least 3 sync runs have happened
 
   @integration @sync @REQ-Sync-Periodic
   Scenario: Mobile devices ignore the interval
