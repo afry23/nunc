@@ -88,3 +88,8 @@ Feature: Settings view
     When I select "Deutsch" in the field "Language"
     And I click "Save"
     Then I see "Konfiguration"
+
+  @ui @REQ-5.4
+  Scenario: The settings show the running app version
+    When I open the app at "/settings"
+    Then I see "Version 1.2.3"

@@ -336,6 +336,7 @@ export function createFakeBackend(): FakeBackend {
   };
 
   const handlers: Record<string, (args: never) => unknown> = {
+    app_info: () => ({ name: "nunc", version: "1.2.3" }),
     get_settings: () => fake.settings,
     get_notification_status: () => ({
       permission: fake.notificationPermission,

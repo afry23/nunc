@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { AboutSection } from "../components/AboutSection";
 import { ApiSection } from "../components/ApiSection";
 import { BackupSection } from "../components/BackupSection";
 import { InfoIcon } from "../components/icons";
@@ -36,6 +37,7 @@ export function SettingsView() {
         <SyncSection />
         {!isMobile() && <TodoistSection />}
         <BackupSection />
+        <AboutSection />
       </div>
     </div>
   );
@@ -75,6 +77,7 @@ function SectionJumpList() {
           ? []
           : [{ id: "settings-todoist", label: t("todoist.title") }]),
         { id: "settings-backup", label: t("backup.title") },
+        { id: "settings-about", label: t("about.title") },
       ],
     },
   ];
