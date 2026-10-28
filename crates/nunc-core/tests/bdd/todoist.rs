@@ -96,6 +96,7 @@ fn to_todo(id: i32, line: &str) -> Todo {
         context_tags: parsed.context_tags,
         pomodoro_count: 0,
         position: id as u32,
+        parent_id: None,
     }
 }
 

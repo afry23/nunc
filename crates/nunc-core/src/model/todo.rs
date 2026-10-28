@@ -21,6 +21,9 @@ pub struct Todo {
     pub context_tags: Vec<String>,
     pub pomodoro_count: u32,
     pub position: u32,
+    /// Lokale `id` des Elternknotens (Subtask, ADR 0022); `null` für Wurzeln und nicht auflösbare Verweise.
+    #[serde(default)]
+    pub parent_id: Option<i32>,
 }
 
 #[cfg(test)]
@@ -33,13 +36,14 @@ mod tests {
             "id": 4, "rawText": "x 2026-09-25 2026-09-18 Plan sprint +work", "priority": null,
             "completed": true, "completedAt": "2026-09-25", "createdAt": "2026-09-18",
             "description": "Plan sprint +work", "projectTags": ["+work"], "contextTags": [],
-            "pomodoroCount": 3, "position": 4
+            "pomodoroCount": 3, "position": 4, "parentId": 2
         }"#;
         let todo: Todo = serde_json::from_str(json).unwrap();
         assert!(todo.completed && todo.priority.is_none());
         assert_eq!(todo.completed_at, NaiveDate::from_ymd_opt(2026, 9, 25));
         assert_eq!(todo.created_at, NaiveDate::from_ymd_opt(2026, 9, 18));
         assert_eq!(todo.project_tags, ["+work"]);
+        assert_eq!(todo.parent_id, Some(2));
 
         let value = serde_json::to_value(&todo).unwrap();
         assert_eq!(value["completedAt"], "2026-09-25");

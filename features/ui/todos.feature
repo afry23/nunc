@@ -151,3 +151,44 @@ Feature: Todo list
     When I open the app at "/todos"
     And I swipe the todo "Einkaufen" to the right by 30 pixels
     Then the backend did not receive "set_todo_completed"
+
+  @ui @REQ-4.2
+  Scenario: Subtasks are shown as an indented tree
+    Given the todos:
+      | rawText | parent |
+      | Projekt |        |
+      | Teil A  | 1      |
+      | Teil B  | 1      |
+      | Anderes |        |
+    When I open the app at "/todos"
+    Then the todo "Teil A" is at depth 1
+    And the todo "Projekt" is at depth 0
+
+  @ui @REQ-4.2
+  Scenario: Indenting a todo makes it a subtask of the one above
+    Given the todos:
+      | rawText |
+      | Projekt |
+      | Teil A  |
+    When I open the app at "/todos"
+    And I click "Einrücken: Teil A"
+    Then the backend received "set_todo_parent" with:
+      """
+      { "id": 2, "parentId": 1 }
+      """
+    And the todo "Teil A" is at depth 1
+
+  @ui @REQ-4.2
+  Scenario: Adding a subtask
+    Given the todos:
+      | rawText |
+      | Projekt |
+    When I open the app at "/todos"
+    And I click "Unteraufgabe hinzufügen: Projekt"
+    And I enter "Teil A" into the field "Neue Unteraufgabe zu Projekt"
+    And I press the key "Enter" in the field "Neue Unteraufgabe zu Projekt"
+    Then the backend received "add_subtask" with:
+      """
+      { "parentId": 1, "rawText": "Teil A" }
+      """
+    And the todo "Teil A" is at depth 1

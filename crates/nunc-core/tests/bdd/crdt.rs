@@ -120,6 +120,10 @@ impl State {
             .expect("Session fehlt im Ergebnis")
     }
 
+    fn merged_or_a_todo(&self) -> &TodoCrdt {
+        self.a.todos.get(&self.todo_id).expect("Todo fehlt")
+    }
+
     fn merged_todo(&self) -> &TodoCrdt {
         self.merged
             .as_ref()
@@ -774,4 +778,41 @@ fn read_and_write(world: &mut DomainWorld) {
 #[then(expr = "the written file has format {int}")]
 fn written_format(world: &mut DomainWorld, version: u32) {
     assert_eq!(world.crdt.written_version, Some(version));
+}
+
+#[given(expr = "device {word} moves the todo below {string} at {word}")]
+fn moves_below(world: &mut DomainWorld, device: String, parent: String, time: String) {
+    world
+        .crdt
+        .edit(&device, Some(time_of_day(&time)), |todo, clock| {
+            todo.parent.set(Some(parent), clock);
+        });
+}
+
+#[then(expr = "the merged todo is below {string}")]
+fn merged_below(world: &mut DomainWorld, parent: String) {
+    assert_eq!(
+        world.crdt.merged_todo().parent.value.as_deref(),
+        Some(parent.as_str())
+    );
+}
+
+#[when("a todo is read from a sync file that has no parent field")]
+fn read_without_parent(world: &mut DomainWorld) {
+    let todo = world.crdt.merged_or_a_todo().clone();
+    let mut json = serde_json::to_value(&todo).expect("serialisieren");
+    json.as_object_mut()
+        .expect("Objekt")
+        .remove("parent")
+        .expect("parent war da");
+    let read: TodoCrdt = serde_json::from_value(json).expect("lesen");
+    world.crdt.merged = Some(SyncState {
+        todos: std::collections::BTreeMap::from([(read.sync_id.clone(), read)]),
+        sessions: std::collections::BTreeMap::new(),
+    });
+}
+
+#[then("the todo has no parent")]
+fn has_no_parent(world: &mut DomainWorld) {
+    assert_eq!(world.crdt.merged_todo().parent.value, None);
 }

@@ -2,16 +2,23 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, type FormEvent } from "react";
 import { useT } from "../i18n";
-import type { Todo } from "../lib/api";
 import { useSwipeToComplete } from "../hooks/useSwipeToComplete";
-import { priorityTone, splitSegments, titleOf } from "../lib/todos";
+import {
+  priorityTone,
+  splitSegments,
+  titleOf,
+  type TreeRow,
+} from "../lib/todos";
 import { useTodoStore } from "../stores/todoStore";
 import {
   CheckIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ChevronUpIcon,
   GripIcon,
   PencilIcon,
+  PlusIcon,
   TrashIcon,
 } from "./icons";
 import { IconButton } from "./ui";
@@ -25,19 +32,37 @@ const TONE_CLASS = {
 
 /** Eine Zeile der Aufgabenliste: abhaken, bearbeiten (todo.txt-Syntax), löschen, umsortieren. */
 export function TodoItem({
-  todo,
+  row,
+  collapsed,
   canReorder,
+  canIndent,
+  canOutdent,
   isFirst,
   isLast,
 }: {
-  todo: Todo;
+  row: TreeRow;
+  collapsed: boolean;
   canReorder: boolean;
+  canIndent: boolean;
+  canOutdent: boolean;
   isFirst: boolean;
   isLast: boolean;
 }) {
   const t = useT();
-  const { toggle, remove, update, move } = useTodoStore.getState();
+  const { todo, depth, hasChildren, pomodoroTotal } = row;
+  const {
+    toggle,
+    remove,
+    update,
+    move,
+    addSubtask,
+    toggleCollapsed,
+    indent,
+    outdent,
+  } = useTodoStore.getState();
   const [editing, setEditing] = useState(false);
+  const [addingSub, setAddingSub] = useState(false);
+  const [subDraft, setSubDraft] = useState("");
   const [draft, setDraft] = useState(todo.rawText);
   const {
     setNodeRef,
@@ -56,6 +81,16 @@ export function TodoItem({
     transform: CSS.Transform.toString(transform),
     transition: transition,
     opacity: isDragging ? 0.6 : 1,
+    marginLeft: `${depth * 1.5}rem`,
+  };
+
+  const submitSub = async (event: FormEvent): Promise<void> => {
+    event.preventDefault();
+    if (subDraft.trim() === "") return;
+    if (await addSubtask(todo.id, subDraft)) {
+      setSubDraft("");
+      setAddingSub(false);
+    }
   };
 
   const startEditing = (): void => {
@@ -79,6 +114,7 @@ export function TodoItem({
       data-testid="todo-item"
       data-raw={todo.rawText}
       data-completed={todo.completed}
+      data-depth={depth}
       className="relative overflow-hidden rounded-xl bg-surface-container-low"
     >
       <span
@@ -107,6 +143,19 @@ export function TodoItem({
             >
               <GripIcon />
             </button>
+          )}
+
+          {hasChildren && (
+            <IconButton
+              label={
+                collapsed
+                  ? t("todos.item.expand", { title })
+                  : t("todos.item.collapse", { title })
+              }
+              onClick={() => toggleCollapsed(todo.id)}
+            >
+              {collapsed ? <ChevronRightIcon /> : <ChevronDownIcon />}
+            </IconButton>
           )}
 
           <label className="inline-flex size-11 shrink-0 items-center justify-center">
@@ -172,14 +221,14 @@ export function TodoItem({
             </div>
           )}
 
-          {todo.pomodoroCount > 0 && (
+          {pomodoroTotal > 0 && (
             <span
               className="shrink-0 rounded-lg bg-surface-container-high px-2 py-1 text-sm tabular-nums"
               aria-label={t("todos.item.pomodoros", {
-                count: todo.pomodoroCount,
+                count: pomodoroTotal,
               })}
             >
-              🍅 {todo.pomodoroCount}
+              🍅 {pomodoroTotal}
             </span>
           )}
         </div>
@@ -205,6 +254,30 @@ export function TodoItem({
               </IconButton>
             </>
           )}
+          {canReorder && (
+            <>
+              <IconButton
+                label={t("todos.item.indent", { title })}
+                disabled={!canIndent}
+                onClick={() => void indent(todo.id)}
+              >
+                <ChevronRightIcon />
+              </IconButton>
+              <IconButton
+                label={t("todos.item.outdent", { title })}
+                disabled={!canOutdent}
+                onClick={() => void outdent(todo.id)}
+              >
+                <ChevronLeftIcon />
+              </IconButton>
+            </>
+          )}
+          <IconButton
+            label={t("todos.item.addSub", { title })}
+            onClick={() => setAddingSub((open) => !open)}
+          >
+            <PlusIcon />
+          </IconButton>
           <IconButton
             label={t("todos.item.edit", { title })}
             onClick={startEditing}
@@ -219,6 +292,27 @@ export function TodoItem({
           </IconButton>
         </div>
       </div>
+      {addingSub && (
+        <form
+          onSubmit={(event) => void submitSub(event)}
+          className="flex items-center gap-2 bg-surface-container-low px-3 pb-2"
+        >
+          <input
+            autoFocus
+            value={subDraft}
+            onChange={(event) => setSubDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.stopPropagation();
+                setAddingSub(false);
+              }
+            }}
+            placeholder={t("todos.item.subPlaceholder")}
+            aria-label={t("todos.item.subLabel", { title })}
+            className="min-h-11 flex-1 rounded-sm bg-surface-container-highest px-3 focus:bg-secondary-container"
+          />
+        </form>
+      )}
     </li>
   );
 }

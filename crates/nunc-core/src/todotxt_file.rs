@@ -17,12 +17,14 @@ pub struct ImportPlan {
 }
 
 /// Die Datei zu den Todos: `raw_text` je Zeile in der manuellen Reihenfolge (`position`, dann `id`), mit
-/// Zeilenende `\n` hinter jeder Zeile. Leer, wenn es nichts zu schreiben gibt.
+/// Zeilenende `\n` hinter jeder Zeile. Subtasks (`parent_id`) fehlen, todo.txt kennt keine Hierarchie. Leer, wenn es nichts zu schreiben gibt.
 pub fn export_todotxt(todos: &[Todo], include_completed: bool) -> String {
     let mut ordered: Vec<&Todo> = todos
         .iter()
         .filter(|todo| include_completed || !todo.completed)
         .filter(|todo| !todo.raw_text.trim().is_empty())
+        // Subtasks gibt es nur in nunc (ADR 0022)
+        .filter(|todo| todo.parent_id.is_none())
         .collect();
     ordered.sort_by_key(|todo| (todo.position, todo.id));
     ordered
@@ -67,6 +69,7 @@ mod tests {
             context_tags: parsed.context_tags,
             pomodoro_count: 0,
             position,
+            parent_id: None,
         }
     }
 

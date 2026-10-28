@@ -132,12 +132,12 @@ Feature: CRDT sync
   @domain @REQ-SYNC
   Scenario Outline: A sync file of another format is refused
     When a sync file of format <format> is read
-    Then reading fails with "Die Sync-Datei hat das Format <format>, diese Version versteht 2 bis 4. Bitte nunc aktualisieren."
+    Then reading fails with "Die Sync-Datei hat das Format <format>, diese Version versteht 2 bis 5. Bitte nunc aktualisieren."
 
     Examples:
       | format |
       | 1      |
-      | 5      |
+      | 6      |
 
   @domain @REQ-SYNC
   Scenario: A session is the same however its start is written
@@ -180,3 +180,17 @@ Feature: CRDT sync
   Scenario: Collecting garbage twice changes nothing more
     Then the property "garbage collection is idempotent and only drops deleted todos" holds for 300 random cases
 
+
+  @domain @REQ-SYNC
+  Scenario: The parent of a todo merges last writer wins
+    Given a todo "a" on both devices
+    And device A moves the todo below "p1" at 10:00:00
+    And device B moves the todo below "p2" at 10:00:05
+    When the states are merged in either order
+    Then the merged todo is below "p2"
+
+  @domain @REQ-SYNC
+  Scenario: A sync file without parent fields still loads
+    Given a todo "a" on both devices
+    When a todo is read from a sync file that has no parent field
+    Then the todo has no parent

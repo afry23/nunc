@@ -5,6 +5,7 @@
 //! und mehrere Sortierungen (REQUIREMENTS 4.2).
 
 use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -52,18 +53,59 @@ pub enum SortDirection {
     Descending,
 }
 
-/// Gibt die Todos zurück, auf die der Filter zutrifft; die Reihenfolge bleibt erhalten.
+/// Gibt die Todos zurück, auf die der Filter zutrifft; die Reihenfolge bleibt erhalten. Wer trifft, bringt seine
+/// Vorfahren als Kontext mit (Subtasks, ADR 0022). Ohne Filter bleibt alles erhalten.
 pub fn filter_todos(todos: &[Todo], filter: &TodoFilter) -> Vec<Todo> {
     let terms: Vec<String> = filter
         .text
         .split_whitespace()
         .map(str::to_lowercase)
         .collect();
-    todos
+    let mut keep: HashSet<i32> = todos
         .iter()
         .filter(|todo| matches(todo, filter, &terms))
+        .map(|todo| todo.id)
+        .collect();
+    let parents: HashMap<i32, Option<i32>> = todos.iter().map(|t| (t.id, t.parent_id)).collect();
+    for id in keep.clone() {
+        // höchstens so viele Schritte wie Todos: schützt vor Zyklen
+        let mut next = parents.get(&id).copied().flatten();
+        for _ in 0..parents.len() {
+            let Some(parent) = next else { break };
+            keep.insert(parent);
+            next = parents.get(&parent).copied().flatten();
+        }
+    }
+    todos
+        .iter()
+        .filter(|todo| keep.contains(&todo.id))
         .cloned()
         .collect()
+}
+
+/// Macht aus Verweisen ohne Elternknoten in `todos` (gelöscht, nicht geladen) und aus Zyklen (gleichzeitiges
+/// Umhängen auf zwei Geräten) Wurzeln. Alle anderen Verweise bleiben.
+pub fn normalize_parents(todos: &mut [Todo]) {
+    let parents: HashMap<i32, Option<i32>> = todos.iter().map(|t| (t.id, t.parent_id)).collect();
+    for todo in todos.iter_mut() {
+        // Die Kette endet an einer Wurzel (gültig) oder an einem fehlenden Todo; nach so vielen Schritten wie Todos
+        // läuft sie im Kreis.
+        let mut next = todo.parent_id;
+        let mut valid = false;
+        for _ in 0..parents.len() {
+            let Some(id) = next else {
+                valid = true;
+                break;
+            };
+            let Some(parent) = parents.get(&id) else {
+                break;
+            };
+            next = *parent;
+        }
+        if !valid {
+            todo.parent_id = None;
+        }
+    }
 }
 
 fn matches(todo: &Todo, filter: &TodoFilter, terms: &[String]) -> bool {
@@ -109,6 +151,7 @@ pub fn query_todos(
     direction: SortDirection,
 ) -> Vec<Todo> {
     let mut result = filter_todos(todos, filter);
+    normalize_parents(&mut result);
     sort_todos(&mut result, sort, direction);
     result
 }
@@ -142,5 +185,91 @@ fn compare_optional<T: Ord>(a: Option<T>, b: Option<T>, direction: SortDirection
         (Some(_), None) => Ordering::Less,
         (None, Some(_)) => Ordering::Greater,
         (None, None) => Ordering::Equal,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::todotxt::parse_line;
+
+    fn todo(id: i32, line: &str, parent_id: Option<i32>) -> Todo {
+        let parsed = parse_line(line);
+        Todo {
+            id,
+            raw_text: line.to_owned(),
+            priority: parsed.priority,
+            completed: parsed.completed,
+            completed_at: parsed.completed_at,
+            created_at: parsed.created_at,
+            description: parsed.description,
+            project_tags: parsed.project_tags,
+            context_tags: parsed.context_tags,
+            pomodoro_count: 0,
+            position: id as u32,
+            parent_id,
+        }
+    }
+
+    fn ids(todos: &[Todo]) -> Vec<i32> {
+        todos.iter().map(|todo| todo.id).collect()
+    }
+
+    fn parents(todos: &[Todo]) -> Vec<Option<i32>> {
+        todos.iter().map(|todo| todo.parent_id).collect()
+    }
+
+    #[test]
+    fn a_filter_hit_brings_its_ancestors() {
+        let todos = [
+            todo(1, "root", None),
+            todo(2, "child", Some(1)),
+            todo(3, "grandchild needle", Some(2)),
+            todo(4, "other", None),
+        ];
+        let filter = TodoFilter {
+            text: "needle".into(),
+            ..TodoFilter::default()
+        };
+        assert_eq!(ids(&filter_todos(&todos, &filter)), [1, 2, 3]);
+    }
+
+    #[test]
+    fn ancestor_lookup_stops_at_a_cycle() {
+        let todos = [todo(1, "a needle", Some(2)), todo(2, "b", Some(1))];
+        let filter = TodoFilter {
+            text: "needle".into(),
+            ..TodoFilter::default()
+        };
+        assert_eq!(ids(&filter_todos(&todos, &filter)), [1, 2]);
+    }
+
+    #[test]
+    fn a_chain_through_every_todo_stays() {
+        let mut todos = [
+            todo(1, "a", None),
+            todo(2, "b", Some(1)),
+            todo(3, "c", Some(2)),
+        ];
+        normalize_parents(&mut todos);
+        assert_eq!(parents(&todos), [None, Some(1), Some(2)]);
+    }
+
+    #[test]
+    fn missing_parents_and_cycles_become_roots() {
+        let mut todos = [
+            todo(1, "ok root", None),
+            todo(2, "ok child", Some(1)),
+            todo(3, "orphan", Some(99)),
+            todo(4, "cycle a", Some(5)),
+            todo(5, "cycle b", Some(4)),
+            todo(6, "below cycle", Some(4)),
+            todo(7, "self", Some(7)),
+        ];
+        normalize_parents(&mut todos);
+        assert_eq!(
+            parents(&todos),
+            [None, Some(1), None, None, None, None, None]
+        );
     }
 }

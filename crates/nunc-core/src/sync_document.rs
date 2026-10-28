@@ -14,8 +14,8 @@ use crate::hlc::Hlc;
 use crate::model::{SyncFile, SyncSession, SyncTodo};
 use crate::todotxt::parse_line;
 
-/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`).
-pub const SCHEMA_VERSION: u32 = 4;
+/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`).
+pub const SCHEMA_VERSION: u32 = 5;
 
 /// Älteste Version, die noch gelesen wird: Version 2 kennt Sessions nur als Rohdaten ([`SyncSession`]).
 pub const MIN_SCHEMA_VERSION: u32 = 2;
@@ -126,6 +126,8 @@ fn legacy_todo(todo: &SyncTodo, rank: usize) -> TodoCrdt {
         created_at: reg(day(&todo.created_at), &clock),
         description: reg(description, &clock),
         position: reg(legacy_position_key(rank), &clock),
+        // Version-2-Dateien kennen keine Unteraufgaben; der uralte Stempel entspricht Bestandsdaten ohne Zeile
+        parent: reg(None, &Hlc::new(0, 0, LEGACY_DEVICE)),
         deleted: reg(todo.deleted, &clock),
         pomodoros: if todo.pomodoro_count > 0 {
             BTreeMap::from([(LEGACY_DEVICE.to_owned(), todo.pomodoro_count)])

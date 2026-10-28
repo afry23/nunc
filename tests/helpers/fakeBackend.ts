@@ -84,6 +84,7 @@ export function parseTodo(id: number, position: number, rawText: string): Todo {
     contextTags: words.filter((w) => w.length > 1 && w.startsWith("@")),
     pomodoroCount: 0,
     position,
+    parentId: null,
   };
 }
 
@@ -394,6 +395,28 @@ export function createFakeBackend(): FakeBackend {
       if (rawText.trim() === "")
         fail("invalid_input", "Der Text einer Aufgabe darf nicht leer sein.");
       return fake.addTodo(rawText);
+    },
+    add_subtask: ({
+      parentId,
+      rawText,
+    }: {
+      parentId: number;
+      rawText: string;
+    }) => {
+      find(parentId);
+      return fake.addTodo(rawText, { parentId });
+    },
+    set_todo_parent: ({
+      id,
+      parentId,
+    }: {
+      id: number;
+      parentId: number | null;
+    }) => {
+      const todo = find(id);
+      if (parentId !== null) find(parentId);
+      todo.parentId = parentId;
+      return todo;
     },
     update_todo: ({ id, rawText }: { id: number; rawText: string }) => {
       const todo = find(id);

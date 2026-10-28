@@ -65,6 +65,7 @@ fn store_code(error: &StoreError) -> &'static str {
         StoreError::BackupDir(_) => "backup_dir",
         StoreError::InvalidBackup(_) => "invalid_backup",
         StoreError::NotFound { .. } => "not_found",
+        StoreError::InvalidParent { .. } => "invalid_parent",
     }
 }
 

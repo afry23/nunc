@@ -267,6 +267,7 @@ mod tests {
             context_tags: vec![],
             pomodoro_count: 0,
             position: id as u32,
+            parent_id: None,
         }
     }
 

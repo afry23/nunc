@@ -238,3 +238,51 @@ fn top_todos_include(world: &mut StoreWorld, id: i32, pomodoros: u32) {
     assert_eq!(found.pomodoro_count, pomodoros);
     assert!(!found.description.is_empty());
 }
+
+#[when(expr = "I move todo {int} below todo {int}")]
+fn move_below(world: &mut StoreWorld, id: i32, parent: i32) {
+    nunc_store::set_todo_parent(world.conn(), id, Some(parent), at(NOW)).expect("move");
+}
+
+#[when(expr = "I move todo {int} to the top level")]
+fn move_to_root(world: &mut StoreWorld, id: i32) {
+    nunc_store::set_todo_parent(world.conn(), id, None, at(NOW)).expect("move");
+}
+
+#[when(expr = "I add the subtask {string} to todo {int}")]
+fn add_subtask(world: &mut StoreWorld, text: String, parent: i32) {
+    world.sync_counter += 1;
+    let sync_id = format!("sync-{}", world.sync_counter);
+    nunc_store::add_subtask(world.conn(), parent, &text, &sync_id, at(NOW)).expect("subtask");
+}
+
+#[then(expr = "the todo {int} is below the todo {int}")]
+fn is_below(world: &mut StoreWorld, id: i32, parent: i32) {
+    assert_eq!(todo(world, id).parent_id, Some(parent));
+}
+
+#[then(expr = "the todo {int} is at the top level")]
+fn at_top_level(world: &mut StoreWorld, id: i32) {
+    assert_eq!(todo(world, id).parent_id, None);
+}
+
+#[then(expr = "the Todoist sync sees the todos {string}")]
+fn todoist_sees(world: &mut StoreWorld, ids: String) {
+    let seen: Vec<String> = nunc_store::list_local_todos(world.conn())
+        .expect("local todos")
+        .iter()
+        .map(|local| local.todo.id.to_string())
+        .collect();
+    assert_eq!(seen, ids.split_whitespace().collect::<Vec<_>>());
+}
+
+#[then(expr = "the todo {int} is not marked as deleted")]
+fn not_deleted(world: &mut StoreWorld, id: i32) {
+    let deleted: i64 = world
+        .conn()
+        .query_row("SELECT deleted FROM todos WHERE id = ?1", [id], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(deleted, 0);
+}

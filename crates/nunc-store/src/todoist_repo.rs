@@ -16,9 +16,13 @@ use crate::todo_repo::set_todo_completed;
 const COLUMNS: &str = "id, raw_text, priority, completed, completed_at, created_at, description, \
                        project_tags, context_tags, pomodoro_count, position, updated_at, deleted";
 
-/// Alle Todos – auch gelöschte – mit Änderungszeit, in Datenbankreihenfolge.
+/// Alle Todos – auch gelöschte – mit Änderungszeit, in Datenbankreihenfolge. Subtasks fehlen (ADR 0022).
 pub fn list_local_todos(conn: &Connection) -> Result<Vec<LocalTodo>, StoreError> {
-    let mut stmt = conn.prepare(&format!("SELECT {COLUMNS} FROM todos ORDER BY id"))?;
+    let mut stmt = conn.prepare(&format!(
+        "SELECT {COLUMNS} FROM todos
+         WHERE NOT EXISTS (SELECT 1 FROM todo_parent WHERE todo_id = todos.id)
+         ORDER BY id"
+    ))?;
     let todos = stmt
         .query_map([], |row| {
             let tags = |index: usize| -> rusqlite::Result<Vec<String>> {
@@ -42,6 +46,7 @@ pub fn list_local_todos(conn: &Connection) -> Result<Vec<LocalTodo>, StoreError>
                     context_tags: tags(8)?,
                     pomodoro_count: row.get::<_, i64>(9)?.try_into().unwrap_or(0),
                     position: row.get::<_, i64>(10)?.try_into().unwrap_or(0),
+                    parent_id: None,
                 },
                 updated_at: updated_at.as_deref().and_then(parse_instant),
                 deleted: row.get(12)?,

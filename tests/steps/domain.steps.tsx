@@ -73,6 +73,19 @@ Then("the todo list shows {string}", async (_world: UiWorld, list: string) => {
   await waitFor(() => expect(raws()).toEqual(names(list)));
 });
 
+Then(
+  "the todo {string} is at depth {int}",
+  async (_world: UiWorld, name: string, depth: number) => {
+    await waitFor(() =>
+      expect(
+        items()
+          .find((item) => (item.getAttribute("data-raw") ?? "") === name)
+          ?.getAttribute("data-depth"),
+      ).toBe(String(depth)),
+    );
+  },
+);
+
 Then("the todo list is empty", async () => {
   await waitFor(() => expect(items()).toHaveLength(0));
 });

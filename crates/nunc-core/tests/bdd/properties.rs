@@ -597,6 +597,7 @@ fn todo_crdt(id: &'static str) -> impl Strategy<Value = TodoCrdt> {
         ),
         (
             register(small_text()),
+            register(prop::option::of(small_text())),
             register(prop::bool::ANY),
             prop::collection::btree_map(
                 prop::sample::select(vec!["d1".to_owned(), "d2".to_owned(), "d3".to_owned()]),
@@ -608,7 +609,7 @@ fn todo_crdt(id: &'static str) -> impl Strategy<Value = TodoCrdt> {
         .prop_map(
             move |(
                 (priority, completed, completed_at, created_at, description),
-                (position, deleted, pomodoros),
+                (position, parent, deleted, pomodoros),
             )| TodoCrdt {
                 sync_id: id.to_owned(),
                 priority,
@@ -617,6 +618,7 @@ fn todo_crdt(id: &'static str) -> impl Strategy<Value = TodoCrdt> {
                 created_at,
                 description,
                 position,
+                parent,
                 deleted,
                 pomodoros,
             },

@@ -12,12 +12,14 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::StoreError;
 use crate::crdt_repo::{
-    add_pomodoro, atomic, fields_of, register_new_todo, rekey_positions, stamp_changes,
+    add_pomodoro, atomic, fields_of, register_new_todo, rekey_positions, set_parent, stamp_changes,
 };
 use crate::time::{day_text, parse_day, to_text};
 
 const COLUMNS: &str = "id, raw_text, priority, completed, completed_at, created_at, description, \
-                       project_tags, context_tags, pomodoro_count, position";
+                       project_tags, context_tags, pomodoro_count, position, \
+                       (SELECT p.id FROM todos p WHERE p.sync_id =
+                            (SELECT parent_sync_id FROM todo_parent WHERE todo_id = todos.id))";
 
 fn todo_from_row(row: &Row<'_>) -> rusqlite::Result<Todo> {
     let priority: Option<String> = row.get(2)?;
@@ -40,6 +42,7 @@ fn todo_from_row(row: &Row<'_>) -> rusqlite::Result<Todo> {
         context_tags: tags(8)?,
         pomodoro_count: row.get::<_, i64>(9)?.try_into().unwrap_or(0),
         position: row.get::<_, i64>(10)?.try_into().unwrap_or(0),
+        parent_id: row.get(11)?,
     })
 }
 
@@ -112,6 +115,21 @@ pub fn add_todo(
     get(conn, id)
 }
 
+/// Legt ein Todo wie [`add_todo`] an und hängt es unter `parent` (eine Transaktion).
+pub fn add_subtask(
+    conn: &Connection,
+    parent: i32,
+    raw_text: &str,
+    sync_id: &str,
+    now: DateTime<Utc>,
+) -> Result<Todo, StoreError> {
+    get(conn, parent)?;
+    atomic(conn, || {
+        let todo = add_todo(conn, raw_text, sync_id, now)?;
+        set_todo_parent(conn, todo.id, Some(parent), now)
+    })
+}
+
 /// Ersetzt den Inhalt durch die neu geparste Zeile; Position, Pomodoro-Zähler und `sync_id` bleiben.
 pub fn update_todo(
     conn: &Connection,
@@ -145,24 +163,107 @@ pub fn update_todo(
     get(conn, id)
 }
 
-/// Löscht weich. Sessions behalten ihre Verknüpfung zum Todo.
+/// Löscht weich, samt aller Nachfahren (ADR 0022). Sessions behalten ihre Verknüpfung zum Todo.
 pub fn delete_todo(conn: &Connection, id: i32, now: DateTime<Utc>) -> Result<(), StoreError> {
     atomic(conn, || {
+        delete_one(conn, id, now)?;
+        for descendant in descendants(conn, id)? {
+            delete_one(conn, descendant, now)?;
+        }
+        Ok(())
+    })
+}
+
+fn delete_one(conn: &Connection, id: i32, now: DateTime<Utc>) -> Result<(), StoreError> {
+    let before = fields_of(conn, id.into())?;
+    let changed = conn.execute(
+        "UPDATE todos SET deleted = 1, updated_at = ?1 WHERE id = ?2",
+        params![to_text(now), id],
+    )?;
+    if changed == 0 {
+        return Err(StoreError::NotFound { entity: "Todo", id });
+    }
+    stamp_changes(conn, id.into(), before.as_ref(), now)
+}
+
+/// Alle nicht gelöschten Nachfahren von `id` (Kinder, Enkel, …) ohne `id` selbst; Zyklen enden von selbst.
+fn descendants(conn: &Connection, id: i32) -> Result<Vec<i32>, StoreError> {
+    let ids = conn
+        .prepare(
+            "WITH RECURSIVE sub(id) AS (
+                 SELECT ?1
+                 UNION
+                 SELECT c.todo_id FROM todo_parent c
+                     JOIN todos p ON p.sync_id = c.parent_sync_id
+                     JOIN sub ON sub.id = p.id
+             )
+             SELECT s.id FROM sub s JOIN todos t ON t.id = s.id
+             WHERE s.id != ?1 AND t.deleted = 0 ORDER BY s.id",
+        )?
+        .query_map([id], |row| row.get(0))?
+        .collect::<Result<_, _>>()?;
+    Ok(ids)
+}
+
+/// Hängt das Todo unter `parent` (`None`: zur Wurzel machen). Der Elternknoten muss existieren, darf nicht gelöscht
+/// sein und weder das Todo selbst noch einer seiner Nachfahren sein.
+pub fn set_todo_parent(
+    conn: &Connection,
+    id: i32,
+    parent: Option<i32>,
+    now: DateTime<Utc>,
+) -> Result<Todo, StoreError> {
+    get(conn, id)?;
+    let parent_sync_id = match parent {
+        None => None,
+        Some(parent) => {
+            if parent == id || descendants(conn, id)?.contains(&parent) {
+                return Err(StoreError::InvalidParent { id, parent });
+            }
+            get(conn, parent)?;
+            let sync_id: String =
+                conn.query_row("SELECT sync_id FROM todos WHERE id = ?1", [parent], |row| {
+                    row.get(0)
+                })?;
+            Some(sync_id)
+        }
+    };
+    atomic(conn, || {
         let before = fields_of(conn, id.into())?;
-        let changed = conn.execute(
-            "UPDATE todos SET deleted = 1, updated_at = ?1 WHERE id = ?2",
+        set_parent(conn, id.into(), parent_sync_id.as_deref())?;
+        conn.execute(
+            "UPDATE todos SET updated_at = ?1 WHERE id = ?2",
             params![to_text(now), id],
         )?;
-        if changed == 0 {
-            return Err(StoreError::NotFound { entity: "Todo", id });
-        }
         stamp_changes(conn, id.into(), before.as_ref(), now)
-    })
+    })?;
+    get(conn, id)
 }
 
 /// Hakt ab (`today` wird Erledigungsdatum) oder nimmt den Haken zurück; `raw_text` wird neu aufgebaut.
 /// Die Priorität bleibt in der Spalte erhalten und kommt beim Zurücknehmen wieder in die Zeile.
+/// Abhaken trifft auch alle offenen Nachfahren, Zurücknehmen nur das Todo selbst (ADR 0022).
 pub fn set_todo_completed(
+    conn: &Connection,
+    id: i32,
+    completed: bool,
+    today: NaiveDate,
+    now: DateTime<Utc>,
+) -> Result<Todo, StoreError> {
+    get(conn, id)?;
+    atomic(conn, || {
+        if completed {
+            for descendant in descendants(conn, id)? {
+                if !get(conn, descendant)?.completed {
+                    complete_one(conn, descendant, true, today, now)?;
+                }
+            }
+        }
+        complete_one(conn, id, completed, today, now)
+    })
+}
+
+fn complete_one(
     conn: &Connection,
     id: i32,
     completed: bool,
@@ -282,6 +383,66 @@ mod tests {
             }) => assert_eq!(got, id),
             other => panic!("erwartet NotFound, erhalten {other:?}"),
         }
+    }
+
+    fn tree() -> Connection {
+        let conn = open_in_memory().unwrap();
+        add_todo(&conn, "root", "s1", now()).unwrap();
+        add_subtask(&conn, 1, "child", "s2", now()).unwrap();
+        add_subtask(&conn, 2, "grandchild", "s3", now()).unwrap();
+        conn
+    }
+
+    fn invalid_parent(result: Result<Todo, StoreError>, id: i32, parent: i32) {
+        match result {
+            Err(StoreError::InvalidParent {
+                id: got_id,
+                parent: got_parent,
+            }) => assert_eq!((got_id, got_parent), (id, parent)),
+            other => panic!("erwartet InvalidParent, erhalten {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_todo_cannot_move_below_itself_or_its_descendants() {
+        let conn = tree();
+        invalid_parent(set_todo_parent(&conn, 1, Some(1), now()), 1, 1);
+        invalid_parent(set_todo_parent(&conn, 1, Some(3), now()), 1, 3);
+        assert_eq!(get(&conn, 1).unwrap().parent_id, None);
+    }
+
+    #[test]
+    fn the_parent_must_exist_and_not_be_deleted() {
+        let conn = tree();
+        not_found(set_todo_parent(&conn, 3, Some(99), now()), 99);
+        add_todo(&conn, "gone", "s4", now()).unwrap();
+        delete_todo(&conn, 4, now()).unwrap();
+        not_found(set_todo_parent(&conn, 3, Some(4), now()), 4);
+        not_found(add_subtask(&conn, 4, "x", "s5", now()), 4);
+    }
+
+    #[test]
+    fn a_deleted_parent_leaves_its_children_without_a_parent_id() {
+        let conn = tree();
+        conn.execute("UPDATE todos SET deleted = 1 WHERE id = 1", [])
+            .unwrap();
+        let all = list_all_todos(&conn).unwrap();
+        // Der Verweis bleibt gespeichert und löst weiter auf; das Filtern der Liste macht den Rest.
+        assert_eq!(all[1].parent_id, Some(1));
+        assert_eq!(list_todos(&conn).unwrap()[0].parent_id, Some(1));
+    }
+
+    #[test]
+    fn completing_skips_descendants_that_are_already_done() {
+        let conn = tree();
+        set_todo_completed(&conn, 3, true, today(), now()).unwrap();
+        let later = DateTime::parse_from_rfc3339("2026-10-05T10:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let next_day = NaiveDate::from_ymd_opt(2026, 10, 5).unwrap();
+        set_todo_completed(&conn, 1, true, next_day, later).unwrap();
+        assert_eq!(get(&conn, 3).unwrap().completed_at, Some(today()));
+        assert_eq!(get(&conn, 2).unwrap().completed_at, Some(next_day));
     }
 
     #[test]

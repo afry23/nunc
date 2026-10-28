@@ -51,6 +51,10 @@ export const commands = {
 "alphabetical" | null, direction: "ascending" | "descending" | null) => typedError<Todo[], AppError>(__TAURI_INVOKE("get_todos", { filter, sort, direction })),
 	/**  Legt ein Todo aus einer todo.txt-Zeile an. */
 	addTodo: (rawText: string) => typedError<Todo, AppError>(__TAURI_INVOKE("add_todo", { rawText })),
+	/**  Legt ein Todo als Unteraufgabe von `parent_id` an. */
+	addSubtask: (parentId: number, rawText: string) => typedError<Todo, AppError>(__TAURI_INVOKE("add_subtask", { parentId, rawText })),
+	/**  Hängt ein Todo unter `parent_id` oder macht es mit `null` zur Wurzel. */
+	setTodoParent: (id: number, parentId: number | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_parent", { id, parentId })),
 	/**  Ersetzt den Text eines Todos (Position, Pomodoro-Zähler und Sync-Kennung bleiben). */
 	updateTodo: (id: number, rawText: string) => typedError<Todo, AppError>(__TAURI_INVOKE("update_todo", { id, rawText })),
 	/**  Löscht ein Todo (als Löschmarke, damit der Sync es weiterträgt). */
@@ -617,6 +621,8 @@ export type Todo = {
 	contextTags: string[],
 	pomodoroCount: number,
 	position: number,
+	/**  Lokale `id` des Elternknotens (Subtask, ADR 0022); `null` für Wurzeln und nicht auflösbare Verweise. */
+	parentId?: number | null,
 };
 
 /**  Filter für die Todo-Liste. Leere Felder filtern nicht. */

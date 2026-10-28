@@ -37,6 +37,40 @@ pub fn add_todo(state: State<'_, AppState>, raw_text: String) -> Result<Todo, Ap
     Ok(todo)
 }
 
+/// Legt ein Todo als Unteraufgabe von `parent_id` an.
+#[tauri::command]
+#[specta::specta]
+pub fn add_subtask(
+    state: State<'_, AppState>,
+    parent_id: i32,
+    raw_text: String,
+) -> Result<Todo, AppError> {
+    let raw_text = non_empty(&raw_text)?;
+    let sync_id = uuid::Uuid::new_v4().to_string();
+    let now = state.clock.now();
+    let todo = state
+        .db
+        .with(|conn| nunc_store::add_subtask(conn, parent_id, raw_text, &sync_id, now))?;
+    state.todos_changed();
+    Ok(todo)
+}
+
+/// Hängt ein Todo unter `parent_id` oder macht es mit `null` zur Wurzel.
+#[tauri::command]
+#[specta::specta]
+pub fn set_todo_parent(
+    state: State<'_, AppState>,
+    id: i32,
+    parent_id: Option<i32>,
+) -> Result<Todo, AppError> {
+    let now = state.clock.now();
+    let todo = state
+        .db
+        .with(|conn| nunc_store::set_todo_parent(conn, id, parent_id, now))?;
+    state.todos_changed();
+    Ok(todo)
+}
+
 /// Ersetzt den Text eines Todos (Position, Pomodoro-Zähler und Sync-Kennung bleiben).
 #[tauri::command]
 #[specta::specta]

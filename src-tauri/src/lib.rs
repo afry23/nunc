@@ -38,6 +38,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             settings::save_settings::<tauri::Wry>,
             todos::get_todos,
             todos::add_todo,
+            todos::add_subtask,
+            todos::set_todo_parent,
             todos::update_todo,
             todos::delete_todo,
             todos::set_todo_completed,

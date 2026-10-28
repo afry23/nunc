@@ -80,6 +80,86 @@ export function moveItem<T>(items: T[], from: number, to: number): T[] {
   return next;
 }
 
+/** Eine Zeile des Todo-Baums: Tiefe, Kinder und Pomodoros des ganzen Teilbaums. */
+export type TreeRow = {
+  todo: Todo;
+  depth: number;
+  hasChildren: boolean;
+  /** Pomodoros des Todos und aller Nachfahren (nur Anzeige). */
+  pomodoroTotal: number;
+  /** Zeilenindex des Elternknotens in der Liste, `null` bei Wurzeln. */
+  parentIndex: number | null;
+};
+
+/**
+ * Ordnet die Liste als Baum (Tiefensuche): Kinder stehen direkt unter ihrem Elternknoten, Geschwister behalten
+ * die Reihenfolge der Eingabe. Ein Todo, dessen Elternknoten nicht in der Liste steht, ist eine Wurzel.
+ * Eingeklappte Todos (`collapsed`) zeigen ihre Nachfahren nicht, zählen sie aber in `pomodoroTotal`.
+ */
+export function buildTree(
+  todos: Todo[],
+  collapsed: ReadonlySet<number> = new Set(),
+): TreeRow[] {
+  const ids = new Set(todos.map((todo) => todo.id));
+  const children = new Map<number | null, Todo[]>();
+  for (const todo of todos) {
+    const parent =
+      todo.parentId != null && ids.has(todo.parentId) ? todo.parentId : null;
+    children.set(parent, [...(children.get(parent) ?? []), todo]);
+  }
+  const total = (todo: Todo, seen: Set<number>): number => {
+    if (seen.has(todo.id)) return 0;
+    seen.add(todo.id);
+    return (children.get(todo.id) ?? []).reduce(
+      (sum, child) => sum + total(child, seen),
+      todo.pomodoroCount,
+    );
+  };
+  const rows: TreeRow[] = [];
+  const walk = (
+    todo: Todo,
+    depth: number,
+    parentIndex: number | null,
+  ): void => {
+    const kids = children.get(todo.id) ?? [];
+    const index = rows.length;
+    rows.push({
+      todo,
+      depth,
+      hasChildren: kids.length > 0,
+      pomodoroTotal: 0,
+      parentIndex,
+    });
+    if (collapsed.has(todo.id)) return;
+    for (const kid of kids) walk(kid, depth + 1, index);
+  };
+  for (const root of children.get(null) ?? []) walk(root, 0, null);
+  for (const row of rows) row.pomodoroTotal = total(row.todo, new Set());
+  return rows;
+}
+
+/** Neuer Elternknoten beim Einrücken: das vorherige Geschwister (gleiche Tiefe, selber Elternknoten) oder `null`. */
+export function indentParent(rows: TreeRow[], index: number): number | null {
+  const row = rows[index];
+  if (!row) return null;
+  for (let i = index - 1; i >= 0; i--) {
+    if (rows[i].depth < row.depth) return null;
+    if (rows[i].depth === row.depth) return rows[i].todo.id;
+  }
+  return null;
+}
+
+/** Neuer Elternknoten beim Ausrücken: der Elternknoten des Elternknotens; `undefined`, wenn schon Wurzel. */
+export function outdentParent(
+  rows: TreeRow[],
+  index: number,
+): number | null | undefined {
+  const parentIndex = rows[index]?.parentIndex ?? null;
+  if (parentIndex === null) return undefined;
+  const grand = rows[parentIndex].parentIndex;
+  return grand === null ? null : rows[grand].todo.id;
+}
+
 /** Farb-Token der Priorität (A kritisch, B mittel, sonst gedämpft). */
 export function priorityTone(
   priority: string | null,
