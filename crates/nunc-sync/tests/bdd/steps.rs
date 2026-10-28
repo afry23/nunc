@@ -72,9 +72,9 @@ async fn server_failing(world: &mut SyncWorld, status: u16) {
 
 #[given("a WebDAV server that is not running")]
 async fn server_dead(world: &mut SyncWorld) {
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-    world.dead_url = Some(format!("http://{}", listener.local_addr().unwrap()));
-    drop(listener);
+    // Port 1: kein Mock-Server bekommt ihn je zugewiesen, der geteilte Client hält dort also keine
+    // Verbindung aus einem früheren Szenario (ein freigegebener Port würde wiederverwendet).
+    world.dead_url = Some("http://127.0.0.1:1".to_owned());
 }
 
 #[given(
