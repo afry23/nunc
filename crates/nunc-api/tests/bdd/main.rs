@@ -53,6 +53,7 @@ pub fn make_todo(id: i32, line: &str, pomodoros: u32, position: u32) -> Todo {
         context_tags: parsed.context_tags,
         pomodoro_count: pomodoros,
         position,
+        parent_id: None,
     }
 }
 

@@ -26,8 +26,17 @@ import { TodoItem } from "../components/TodoItem";
 import { ActionButton, Button, Chip } from "../components/ui";
 import { useT } from "../i18n";
 import type { TodoSort } from "../lib/api";
-import { collectTags, moveItem } from "../lib/todos";
+import {
+  buildTree,
+  collectTags,
+  indentParent,
+  moveItem,
+  outdentParent,
+} from "../lib/todos";
 import { useTodoStore } from "../stores/todoStore";
+
+/** Horizontale Zugstrecke, ab der ein Ziehen als Ein-/Ausrücken gilt. */
+const INDENT_DRAG_PX = 40;
 
 const SORTS: TodoSort[] = [
   "manual",
@@ -41,6 +50,7 @@ export function TodoView() {
   const t = useT();
   const all = useTodoStore((s) => s.all);
   const visible = useTodoStore((s) => s.visible);
+  const collapsed = useTodoStore((s) => s.collapsed);
   const filter = useTodoStore((s) => s.filter);
   const showCompleted = useTodoStore((s) => s.showCompleted);
   const sort = useTodoStore((s) => s.sort);
@@ -53,6 +63,8 @@ export function TodoView() {
     setShowCompleted,
     setSort,
     reorderVisible,
+    indent,
+    outdent,
     importFile,
     exportFile,
   } = useTodoStore.getState();
@@ -96,6 +108,7 @@ export function TodoView() {
       0 || filter.text !== "";
   const canReorder =
     sort === "manual" && direction === "ascending" && !filtering;
+  const rows = buildTree(visible, collapsed);
   const completedCount = all.filter((todo) => todo.completed).length;
 
   const submit = async (event: FormEvent): Promise<void> => {
@@ -105,8 +118,16 @@ export function TodoView() {
   };
 
   const onDragEnd = (event: DragEndEvent): void => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    const { active, over, delta } = event;
+    // Ziehen nach rechts/links ohne Platzwechsel rückt ein bzw. aus
+    if (!over || active.id === over.id) {
+      if (canReorder && Math.abs(delta.x) >= INDENT_DRAG_PX) {
+        void (delta.x > 0
+          ? indent(Number(active.id))
+          : outdent(Number(active.id)));
+      }
+      return;
+    }
     const ids = visible.map((todo) => todo.id);
     void reorderVisible(
       moveItem(
@@ -278,19 +299,29 @@ export function TodoView() {
           onDragEnd={onDragEnd}
         >
           <SortableContext
-            items={visible.map((todo) => todo.id)}
+            items={rows.map((row) => row.todo.id)}
             strategy={verticalListSortingStrategy}
           >
             <ul aria-label={t("todos.list")} className="flex flex-col gap-3">
-              {visible.map((todo, index) => (
-                <TodoItem
-                  key={todo.id}
-                  todo={todo}
-                  canReorder={canReorder}
-                  isFirst={index === 0}
-                  isLast={index === visible.length - 1}
-                />
-              ))}
+              {rows.map((row, index) => {
+                const siblings = rows.filter(
+                  (other) =>
+                    other.parentIndex === row.parentIndex &&
+                    other.depth === row.depth,
+                );
+                return (
+                  <TodoItem
+                    key={row.todo.id}
+                    row={row}
+                    collapsed={collapsed.has(row.todo.id)}
+                    canReorder={canReorder}
+                    canIndent={indentParent(rows, index) !== null}
+                    canOutdent={outdentParent(rows, index) !== undefined}
+                    isFirst={siblings[0] === row}
+                    isLast={siblings[siblings.length - 1] === row}
+                  />
+                );
+              })}
             </ul>
           </SortableContext>
         </DndContext>

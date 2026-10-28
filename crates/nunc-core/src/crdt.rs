@@ -70,6 +70,9 @@ pub struct TodoCrdt {
     pub description: Register<String>,
     /// Fractional-Index, siehe [`crate::position`].
     pub position: Register<String>,
+    /// `sync_id` des Elternknotens (ADR 0022); fehlt in Dateien vor Schema 5.
+    #[serde(default = "no_parent")]
+    pub parent: Register<Option<String>>,
     pub deleted: Register<bool>,
     /// Pomodoros je Gerät; der Wert des Todos ist die Summe.
     pub pomodoros: BTreeMap<String, u32>,
@@ -89,6 +92,7 @@ impl TodoCrdt {
             created_at: reg(None, clock),
             description: reg(String::new(), clock),
             position: reg(String::new(), clock),
+            parent: reg(None, clock),
             deleted: reg(false, clock),
             pomodoros: BTreeMap::new(),
         }
@@ -148,6 +152,7 @@ impl TodoCrdt {
             &self.created_at.clock,
             &self.description.clock,
             &self.position.clock,
+            &self.parent.clock,
         ]
         .into_iter()
         .max()
@@ -180,6 +185,7 @@ impl TodoCrdt {
             created_at: self.created_at.merge(&other.created_at),
             description: self.description.merge(&other.description),
             position: self.position.merge(&other.position),
+            parent: self.parent.merge(&other.parent),
             deleted: self.deleted.merge(&other.deleted),
             pomodoros,
         }
@@ -194,10 +200,16 @@ impl TodoCrdt {
             created_at: self.created_at.capped(now_ms),
             description: self.description.capped(now_ms),
             position: self.position.capped(now_ms),
+            parent: self.parent.capped(now_ms),
             deleted: self.deleted.capped(now_ms),
             pomodoros: self.pomodoros.clone(),
         }
     }
+}
+
+/// Vorgabe für Dateien ohne `parent`: Wurzel, uralter Stempel.
+fn no_parent() -> Register<Option<String>> {
+    Register::new(None, Hlc::new(0, 0, "legacy"))
 }
 
 fn tags(description: &str, prefix: char) -> Vec<String> {

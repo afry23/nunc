@@ -73,6 +73,7 @@ fn todos(world: &mut DomainWorld, step: &Step) {
                 context_tags: parsed.context_tags,
                 pomodoro_count: row[pomodoros].parse().expect("pomodoros"),
                 position: row[position].parse().expect("position"),
+                parent_id: None,
             }
         })
         .collect();
@@ -142,6 +143,31 @@ fn result_ids(world: &mut DomainWorld, expected: String) {
         .result
         .iter()
         .map(|t| t.id.to_string())
+        .collect();
+    assert_eq!(actual, words(&expected));
+}
+
+#[given(expr = "the todo {int} is below the todo {int}")]
+fn below(world: &mut DomainWorld, child: i32, parent: i32) {
+    let todo = world
+        .todo_query
+        .todos
+        .iter_mut()
+        .find(|todo| todo.id == child)
+        .expect("Kind fehlt");
+    todo.parent_id = Some(parent);
+}
+
+#[then(expr = "the parent ids are {string}")]
+fn parent_ids(world: &mut DomainWorld, expected: String) {
+    let actual: Vec<String> = world
+        .todo_query
+        .result
+        .iter()
+        .map(|t| {
+            t.parent_id
+                .map_or_else(|| "-".to_owned(), |id| id.to_string())
+        })
         .collect();
     assert_eq!(actual, words(&expected));
 }

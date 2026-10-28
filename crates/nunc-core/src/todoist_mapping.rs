@@ -342,6 +342,7 @@ mod same_on_todoist_tests {
             context_tags: parsed.context_tags,
             pomodoro_count: 0,
             position: 0,
+            parent_id: None,
         }
     }
 

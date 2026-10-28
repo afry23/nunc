@@ -20,13 +20,14 @@ use crate::sync_repo::Applied;
 use crate::time::{day_text, parse_day, to_text};
 
 /// Felder mit eigenem Stempel. Zeile (`raw_text`) und Tags folgen aus ihnen und haben keinen.
-const FIELDS: [&str; 7] = [
+const FIELDS: [&str; 8] = [
     "priority",
     "completed",
     "completed_at",
     "created_at",
     "description",
     "position",
+    "parent",
     "deleted",
 ];
 
@@ -45,6 +46,8 @@ pub(crate) struct Fields {
     created_at: Option<String>,
     description: String,
     position: String,
+    /// `sync_id` des Elternknotens.
+    parent: Option<String>,
     deleted: bool,
 }
 
@@ -61,6 +64,7 @@ impl Fields {
             self.created_at != before.created_at,
             self.description != before.description,
             self.position != before.position,
+            self.parent != before.parent,
             self.deleted != before.deleted,
         ];
         FIELDS
@@ -84,8 +88,9 @@ pub(crate) fn fields_of(conn: &Connection, id: i64) -> Result<Option<Fields>, St
     Ok(conn
         .query_row(
             "SELECT t.priority, t.completed, t.completed_at, t.created_at, t.raw_text,
-                    COALESCE(k.key, ''), t.deleted
+                    COALESCE(k.key, ''), t.deleted, pa.parent_sync_id
              FROM todos t LEFT JOIN todo_position_key k ON k.todo_id = t.id
+                  LEFT JOIN todo_parent pa ON pa.todo_id = t.id
              WHERE t.id = ?1",
             [id],
             |row| {
@@ -97,6 +102,7 @@ pub(crate) fn fields_of(conn: &Connection, id: i64) -> Result<Option<Fields>, St
                     // Die Go-App speichert die Beschreibung ohne Tags; die Zeile ist maßgeblich.
                     description: parse_line(&row.get::<_, String>(4)?).description,
                     position: row.get(5)?,
+                    parent: non_empty(row.get(7)?),
                     deleted: row.get(6)?,
                 })
             },
@@ -210,6 +216,23 @@ fn last_key(conn: &Connection) -> Result<Option<String>, StoreError> {
             row.get(0)
         })?;
     Ok(key.filter(|key| !key.is_empty()))
+}
+
+/// Setzt oder löscht den Elternknoten (`sync_id`).
+pub(crate) fn set_parent(
+    conn: &Connection,
+    id: i64,
+    parent_sync_id: Option<&str>,
+) -> Result<(), StoreError> {
+    match parent_sync_id {
+        Some(parent) => conn.execute(
+            "INSERT INTO todo_parent (todo_id, parent_sync_id) VALUES (?1, ?2)
+             ON CONFLICT(todo_id) DO UPDATE SET parent_sync_id = ?2",
+            params![id, parent],
+        )?,
+        None => conn.execute("DELETE FROM todo_parent WHERE todo_id = ?1", [id])?,
+    };
+    Ok(())
 }
 
 fn set_key(conn: &Connection, id: i64, key: &str) -> Result<(), StoreError> {
@@ -409,6 +432,7 @@ fn read_todo(conn: &Connection, id: i64, sync_id: &str) -> Result<TodoCrdt, Stor
         created_at: Register::new(fields.created_at, clock("created_at")),
         description: Register::new(fields.description, clock("description")),
         position: Register::new(fields.position, clock("position")),
+        parent: Register::new(fields.parent, clock("parent")),
         deleted: Register::new(fields.deleted, clock("deleted")),
         pomodoros: pomodoros_of(conn, id)?,
     })
@@ -455,6 +479,7 @@ fn updated_at(todo: &TodoCrdt) -> String {
         &todo.created_at.clock,
         &todo.description.clock,
         &todo.position.clock,
+        &todo.parent.clock,
         &todo.deleted.clock,
     ]
     .into_iter()
@@ -489,6 +514,7 @@ fn write_todo_row(conn: &Connection, id: i64, todo: &TodoCrdt) -> Result<(), Sto
         ],
     )?;
     set_key(conn, id, &todo.position.value)?;
+    set_parent(conn, id, todo.parent.value.as_deref())?;
     let clocks = [
         ("priority", &todo.priority.clock),
         ("completed", &todo.completed.clock),
@@ -496,6 +522,7 @@ fn write_todo_row(conn: &Connection, id: i64, todo: &TodoCrdt) -> Result<(), Sto
         ("created_at", &todo.created_at.clock),
         ("description", &todo.description.clock),
         ("position", &todo.position.clock),
+        ("parent", &todo.parent.clock),
         ("deleted", &todo.deleted.clock),
     ];
     for (field, clock) in clocks {
@@ -589,6 +616,7 @@ mod tests {
             created_at: None,
             description: "task".to_owned(),
             position: "i".to_owned(),
+            parent: None,
             deleted: false,
         }
     }
@@ -642,6 +670,13 @@ mod tests {
                 },
             ),
             (
+                "parent",
+                Fields {
+                    parent: Some("p".into()),
+                    ..base_fields()
+                },
+            ),
+            (
                 "deleted",
                 Fields {
                     deleted: true,
@@ -670,6 +705,39 @@ mod tests {
         assert_eq!(apply_state(&mut conn, &state).unwrap().todos_added, 1);
         let again = apply_state(&mut conn, &state).unwrap();
         assert_eq!(again, Applied::default());
+    }
+
+    #[test]
+    fn a_child_arriving_before_its_parent_is_resolved_later() {
+        let mut conn = open_in_memory().unwrap();
+        let clock = |wall| Hlc::new(wall, 0, "other");
+        let todo = |id: &str, parent: Option<&str>| {
+            let mut todo = TodoCrdt::new(id, &clock(1));
+            todo.position.set(format!("{id}5"), clock(1));
+            todo.parent.set(parent.map(str::to_owned), clock(2));
+            todo
+        };
+        let state = |todos: Vec<TodoCrdt>| SyncState {
+            todos: todos.into_iter().map(|t| (t.sync_id.clone(), t)).collect(),
+            sessions: BTreeMap::new(),
+        };
+        apply_state(&mut conn, &state(vec![todo("child", Some("parent"))])).unwrap();
+        assert_eq!(crate::list_todos(&conn).unwrap()[0].parent_id, None);
+        apply_state(
+            &mut conn,
+            &state(vec![todo("child", Some("parent")), todo("parent", None)]),
+        )
+        .unwrap();
+        let todos = crate::list_todos(&conn).unwrap();
+        let parent = todos.iter().find(|t| t.parent_id.is_none()).unwrap().id;
+        assert_eq!(
+            todos.iter().find(|t| t.id != parent).unwrap().parent_id,
+            Some(parent)
+        );
+        // und geht mit dem lokalen Stand wieder hinaus
+        let out = local_state(&conn, String::new).unwrap();
+        assert_eq!(out.todos["child"].parent.value.as_deref(), Some("parent"));
+        assert_eq!(out.todos["parent"].parent.value, None);
     }
 
     #[test]

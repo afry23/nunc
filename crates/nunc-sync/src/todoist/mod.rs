@@ -179,6 +179,7 @@ fn as_todo(id: i32, parsed: &ParsedTodo) -> nunc_core::model::Todo {
         context_tags: parsed.context_tags.clone(),
         pomodoro_count: 0,
         position: 0,
+        parent_id: None,
     }
 }
 

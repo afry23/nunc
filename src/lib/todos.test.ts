@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Todo } from "../bindings";
 import {
+  buildTree,
   describeImport,
+  indentParent,
+  outdentParent,
   collectTags,
   mergeOrder,
   moveItem,
@@ -22,6 +25,7 @@ const todo = (over: Partial<Todo>): Todo => ({
   contextTags: [],
   pomodoroCount: 0,
   position: 0,
+  parentId: null,
   ...over,
 });
 
@@ -118,5 +122,67 @@ describe("describeImport", () => {
     expect(describeImport({ added: 0, duplicates: 4 })).toBe(
       "0 Aufgaben importiert, 4 Duplikate übersprungen.",
     );
+  });
+});
+
+describe("buildTree", () => {
+  const list = [
+    todo({ id: 1, pomodoroCount: 1 }),
+    todo({ id: 2, parentId: 1, pomodoroCount: 2 }),
+    todo({ id: 3, parentId: 2, pomodoroCount: 4 }),
+    todo({ id: 4 }),
+    todo({ id: 5, parentId: 99 }),
+    todo({ id: 6, parentId: 1 }),
+  ];
+  it("puts children under their parent and keeps sibling order", () => {
+    const rows = buildTree(list);
+    expect(rows.map((r) => [r.todo.id, r.depth])).toEqual([
+      [1, 0],
+      [2, 1],
+      [3, 2],
+      [6, 1],
+      [4, 0],
+      [5, 0],
+    ]);
+    expect(rows[0].hasChildren).toBe(true);
+    expect(rows[3].hasChildren).toBe(false);
+    expect(rows[2].parentIndex).toBe(1);
+    expect(rows[4].parentIndex).toBeNull();
+  });
+  it("sums pomodoros over the subtree, also when collapsed", () => {
+    const rows = buildTree(list, new Set([1]));
+    expect(rows.map((r) => r.todo.id)).toEqual([1, 4, 5]);
+    expect(rows[0].pomodoroTotal).toBe(7);
+  });
+  it("survives a cycle in the input", () => {
+    const rows = buildTree([
+      todo({ id: 1, parentId: 2, pomodoroCount: 1 }),
+      todo({ id: 2, parentId: 1 }),
+    ]);
+    expect(rows).toEqual([]);
+  });
+});
+
+describe("indent and outdent", () => {
+  const rows = buildTree([
+    todo({ id: 1 }),
+    todo({ id: 2, parentId: 1 }),
+    todo({ id: 3, parentId: 2 }),
+    todo({ id: 4, parentId: 1 }),
+    todo({ id: 5 }),
+  ]);
+  it("indents under the previous sibling", () => {
+    expect(indentParent(rows, 3)).toBe(2); // 4 unter 2
+    expect(indentParent(rows, 4)).toBe(1); // 5 unter 1
+  });
+  it("cannot indent the first sibling", () => {
+    expect(indentParent(rows, 0)).toBeNull();
+    expect(indentParent(rows, 1)).toBeNull();
+    expect(indentParent(rows, 99)).toBeNull();
+  });
+  it("outdents to the grandparent or the root", () => {
+    expect(outdentParent(rows, 2)).toBe(1);
+    expect(outdentParent(rows, 1)).toBeNull();
+    expect(outdentParent(rows, 0)).toBeUndefined();
   });
 });

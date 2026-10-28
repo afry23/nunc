@@ -163,6 +163,7 @@ mod tests {
             context_tags: contexts.iter().map(|tag| (*tag).to_owned()).collect(),
             pomodoro_count: 0,
             position: 0,
+            parent_id: None,
         }
     }
 

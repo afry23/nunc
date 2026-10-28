@@ -413,6 +413,8 @@ ein (Tresor, Anleitung in der App). Todoist: persönliches API-Token statt OAuth
 
 | Lokale HTTP-Schnittstelle (`@REQ-API`) | Desktop, aus, `127.0.0.1` + Token: todo.txt lesen/anlegen, Aufgabenstatus abfragen/abhaken (ADR 0013). Crate `nunc-api` (pures Routing + hyper-Server), `ApiService` in `src-tauri`, Abschnitt „Lokale Schnittstelle“ in den Einstellungen. **Manuell prüfen:** echter Schlüsselspeicher (Token), Verhalten bei belegtem Port. Später: Timer-Status, Statistik, Änderungs-Benachrichtigung. |
 
+| Subtasks (ADR 0022) | Todos als Baum: `Todo.parent_id`, CRDT-Feld `parent` (Sync-Schema 5), Migration 011, Kaskade bei Abhaken/Löschen, Filter behält Vorfahren, Export nach todo.txt und Todoist ohne Subtasks. UI: Einrücken/Ausrücken (Buttons und Ziehen nach rechts/links), „Unteraufgabe hinzufügen“, Auf-/Zuklappen. Szenarien: `features/todos/subtasks.feature`, `subtask_tree.feature`, `features/ui/todos.feature`. **Manuell prüfen:** Ziehen nach rechts auf Touch, Baum bei ≈ 411 px ohne horizontalen Überlauf, Sync zweier Geräte mit Umhängen. |
+
 | In-App-Hilfe (`@REQ-9`) | Route `/help` (fünfter Nav-Eintrag), Kurzanleitung je Bereich, Kürzel-Tabelle aus `SHORTCUTS` (nur Desktop), Kürzel `?`. Rein Frontend. **Manuell prüfen:** fünf Tabs bei ≈ 411 px ohne horizontalen Überlauf. |
 
 | F-Droid / IzzyOnDroid (ADR 0021) | Store-Metadaten in `fastlane/metadata/android/`, Ablauf in [docs/release.md](./docs/release.md). **Manuell:** Repository öffentlich machen (vorher Secret-Scan der History), Screenshots, Signatur-Fingerprint, Aufnahmeantrag bei IzzyOnDroid. **Offen:** reproduzierbarer Android-Build und Rezept in `fdroiddata` für das offizielle F-Droid. |

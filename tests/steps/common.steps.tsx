@@ -102,6 +102,7 @@ Given("the todos:", (world: UiWorld, table: DataTable) => {
     world.fake.addTodo(row.rawText, {
       pomodoroCount: Number(row.pomodoroCount ?? 0),
       completed: row.completed === "true",
+      parentId: row.parent ? Number(row.parent) : null,
     });
   }
 });

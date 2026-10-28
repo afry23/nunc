@@ -13,6 +13,8 @@ pub enum StoreError {
     InvalidBackup(String),
     #[error("{entity} {id} nicht gefunden")]
     NotFound { entity: &'static str, id: i32 },
+    #[error("Todo {id} kann nicht unter Todo {parent} stehen")]
+    InvalidParent { id: i32, parent: i32 },
     #[error("Migration {version} fehlgeschlagen: {source}")]
     Migration {
         version: u32,
