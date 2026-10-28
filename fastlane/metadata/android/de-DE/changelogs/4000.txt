@@ -1,0 +1,2 @@
+- Unteraufgaben: Todos lassen sich jetzt als Baum verschachteln
+- Die Einstellungen zeigen die installierte App-Version
