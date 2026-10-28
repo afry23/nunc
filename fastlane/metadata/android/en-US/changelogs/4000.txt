@@ -1,0 +1,2 @@
+- Subtasks: todos can now be nested as a tree
+- The settings show the installed app version
