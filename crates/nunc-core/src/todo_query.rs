@@ -68,9 +68,10 @@ pub fn filter_todos(todos: &[Todo], filter: &TodoFilter) -> Vec<Todo> {
         .collect();
     let parents: HashMap<i32, Option<i32>> = todos.iter().map(|t| (t.id, t.parent_id)).collect();
     for id in keep.clone() {
-        let mut seen = HashSet::from([id]);
+        // höchstens so viele Schritte wie Todos: schützt vor Zyklen
         let mut next = parents.get(&id).copied().flatten();
-        while let Some(parent) = next.filter(|parent| seen.insert(*parent)) {
+        for _ in 0..parents.len() {
+            let Some(parent) = next else { break };
             keep.insert(parent);
             next = parents.get(&parent).copied().flatten();
         }
@@ -87,18 +88,19 @@ pub fn filter_todos(todos: &[Todo], filter: &TodoFilter) -> Vec<Todo> {
 pub fn normalize_parents(todos: &mut [Todo]) {
     let parents: HashMap<i32, Option<i32>> = todos.iter().map(|t| (t.id, t.parent_id)).collect();
     for todo in todos.iter_mut() {
-        let Some(first) = todo.parent_id else {
-            continue;
-        };
-        let mut seen = HashSet::from([todo.id]);
-        let mut next = Some(first);
-        let mut valid = true;
-        while let Some(id) = next {
-            if !parents.contains_key(&id) || !seen.insert(id) {
-                valid = false;
+        // Die Kette endet an einer Wurzel (gültig) oder an einem fehlenden Todo; nach so vielen Schritten wie Todos
+        // läuft sie im Kreis.
+        let mut next = todo.parent_id;
+        let mut valid = false;
+        for _ in 0..parents.len() {
+            let Some(id) = next else {
+                valid = true;
                 break;
-            }
-            next = parents[&id];
+            };
+            let Some(parent) = parents.get(&id) else {
+                break;
+            };
+            next = *parent;
         }
         if !valid {
             todo.parent_id = None;
@@ -240,6 +242,17 @@ mod tests {
             ..TodoFilter::default()
         };
         assert_eq!(ids(&filter_todos(&todos, &filter)), [1, 2]);
+    }
+
+    #[test]
+    fn a_chain_through_every_todo_stays() {
+        let mut todos = [
+            todo(1, "a", None),
+            todo(2, "b", Some(1)),
+            todo(3, "c", Some(2)),
+        ];
+        normalize_parents(&mut todos);
+        assert_eq!(parents(&todos), [None, Some(1), Some(2)]);
     }
 
     #[test]
