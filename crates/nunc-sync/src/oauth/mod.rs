@@ -388,6 +388,15 @@ mod tests {
             }
         }
 
+        /// Eigener Client ohne Pool: der geteilte aus `http_client()` hielte Verbindungen einer
+        /// beendeten Test-Runtime, und ein wiederverwendeter Port träfe darauf.
+        fn client() -> reqwest::Client {
+            reqwest::Client::builder()
+                .pool_max_idle_per_host(0)
+                .build()
+                .unwrap()
+        }
+
         fn now() -> DateTime<Utc> {
             DateTime::parse_from_rfc3339("2026-10-04T10:00:00Z")
                 .unwrap()
@@ -408,7 +417,7 @@ mod tests {
         async fn exchange(status: u16, body: serde_json::Value) -> Result<Tokens, SyncError> {
             let (_server, app) = answer(status, body).await;
             exchange_code(
-                &http_client().unwrap(),
+                &client(),
                 &app,
                 "code",
                 "verifier",
@@ -495,9 +504,7 @@ mod tests {
                 serde_json::json!({ "access_token": "neu", "expires_in": 60 }),
             )
             .await;
-            let tokens = refresh_tokens(&http_client().unwrap(), &app, "alt", now())
-                .await
-                .unwrap();
+            let tokens = refresh_tokens(&client(), &app, "alt", now()).await.unwrap();
             assert_eq!(tokens.access_token, "neu");
             assert_eq!(tokens.refresh_token.as_deref(), Some("alt"));
         }
@@ -505,7 +512,7 @@ mod tests {
         #[tokio::test]
         async fn a_rejected_renewal_asks_for_a_new_login() {
             let (_server, app) = answer(400, serde_json::json!({ "error": "invalid_grant" })).await;
-            let error = refresh_tokens(&http_client().unwrap(), &app, "alt", now())
+            let error = refresh_tokens(&client(), &app, "alt", now())
                 .await
                 .unwrap_err();
             assert!(matches!(error, SyncError::AuthExpired("Test")), "{error}");
