@@ -377,6 +377,28 @@ When(
   },
 );
 
+Then(
+  "the field {string} has the option {string}",
+  async (_world: UiWorld, label: string, option: string) => {
+    const select = (await screen.findByLabelText(label)) as HTMLSelectElement;
+    await waitFor(() =>
+      expect(
+        Array.from(select.options).map((o) => normalize(o.textContent)),
+      ).toContain(option),
+    );
+  },
+);
+
+Then(
+  "the field {string} has no option {string}",
+  async (_world: UiWorld, label: string, option: string) => {
+    const select = (await screen.findByLabelText(label)) as HTMLSelectElement;
+    expect(
+      Array.from(select.options).map((o) => normalize(o.textContent)),
+    ).not.toContain(option);
+  },
+);
+
 When(
   "I select {string} in the field {string}",
   async (_world: UiWorld, option: string, label: string) => {
