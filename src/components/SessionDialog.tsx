@@ -8,6 +8,7 @@ import {
   type Todo,
 } from "../lib/api";
 import { formatTimeOfDay } from "../lib/format";
+import { selectableTodos } from "../lib/todos";
 import { defaultEntry, fromLocalInput, toLocalInput } from "../lib/timesheet";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Button } from "./ui";
@@ -189,7 +190,7 @@ export function SessionDialog({
             {!known && draft.todoId !== null && (
               <option value={draft.todoId}>#{draft.todoId}</option>
             )}
-            {todos.map((todo) => (
+            {selectableTodos(todos, draft.todoId).map((todo) => (
               <option key={todo.id} value={todo.id}>
                 {todo.description}
               </option>

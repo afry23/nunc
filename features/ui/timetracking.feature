@@ -116,6 +116,31 @@ Feature: Time tracking in the statistics view
     And I see "nachgetragen"
 
   @ui @US-TT03
+  Scenario: The task choice offers only open tasks
+    Given the todos:
+      | rawText      | completed |
+      | Write report | false     |
+      | Old task     | true      |
+    When I open the app at "/times"
+    And I click "Eintrag hinzufügen"
+    Then the field "Aufgabe" has the option "Write report"
+    And the field "Aufgabe" has no option "Old task"
+
+  @ui @US-TT02
+  Scenario: An entry keeps its completed task when edited
+    Given the todos:
+      | rawText      | completed |
+      | Write report | false     |
+      | Old task     | true      |
+    And the timeline of today has the sessions:
+      | start | end   | type | todo     | note | origin |
+      | 09:00 | 10:30 | work | Old task | Spec | timer  |
+    When I open the app at "/times"
+    And I click "09:00–10:30 Old task"
+    Then the field "Aufgabe" has the option "Old task"
+    And the field "Aufgabe" has the option "Write report"
+
+  @ui @US-TT03
   Scenario: An invalid range shows an error in the dialog
     Given saving a session fails with "session_invalid_range": "Das Ende muss nach dem Beginn liegen."
     When I open the app at "/times"

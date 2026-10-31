@@ -9,6 +9,7 @@ import {
   mergeOrder,
   moveItem,
   priorityTone,
+  selectableTodos,
   splitSegments,
   titleOf,
 } from "./todos";
@@ -184,5 +185,17 @@ describe("indent and outdent", () => {
     expect(outdentParent(rows, 2)).toBe(1);
     expect(outdentParent(rows, 1)).toBeNull();
     expect(outdentParent(rows, 0)).toBeUndefined();
+  });
+});
+
+describe("selectableTodos", () => {
+  const todo = (id: number, completed: boolean) =>
+    ({ id, completed }) as unknown as Todo;
+  const all = [todo(1, false), todo(2, true), todo(3, true)];
+  it("hides completed todos", () => {
+    expect(selectableTodos(all, null).map((x) => x.id)).toEqual([1]);
+  });
+  it("keeps the current todo even when completed", () => {
+    expect(selectableTodos(all, 3).map((x) => x.id)).toEqual([1, 3]);
   });
 });

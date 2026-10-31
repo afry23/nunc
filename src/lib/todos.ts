@@ -37,6 +37,14 @@ export function titleOf(todo: Pick<Todo, "description">): string {
   return words.join(" ") || todo.description.trim();
 }
 
+/** Todos für die Aufgabenauswahl: offene plus das aktuell gewählte (auch wenn erledigt). */
+export function selectableTodos(
+  todos: Todo[],
+  currentId: number | null,
+): Todo[] {
+  return todos.filter((todo) => !todo.completed || todo.id === currentId);
+}
+
 /** Alle vorkommenden Tags (mit Präfix), alphabetisch und ohne Duplikate. */
 export function collectTags(todos: Todo[]): {
   projects: string[];
