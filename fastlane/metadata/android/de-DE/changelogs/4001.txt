@@ -1,0 +1,1 @@
+- Zeiteintrag bearbeiten: Die Aufgabenauswahl zeigt nur noch offene Aufgaben

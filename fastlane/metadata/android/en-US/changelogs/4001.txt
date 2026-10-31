@@ -1,0 +1,1 @@
+- Editing a time entry: the task choice now lists open tasks only
