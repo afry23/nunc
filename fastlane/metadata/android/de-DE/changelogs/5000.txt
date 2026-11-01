@@ -1,0 +1,3 @@
+- Zeit ohne Aufgabe erfassen: Stoppuhr und Einträge können Projekte, Kontexte und eine Notiz tragen
+- Der Dialog für Zeiteinträge bietet nur offene Aufgaben an
+- Sync-Format 6: alle Geräte aktualisieren
