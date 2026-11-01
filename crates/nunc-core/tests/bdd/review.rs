@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 
 use cucumber::{gherkin::Step, given, then, when};
+use nunc_core::model::Language;
 use nunc_core::review::{
     GroupMinutes, Period, PeriodKind, Review, build_review, period_containing, review_markdown,
 };
@@ -77,9 +78,14 @@ fn ask_period(world: &mut DomainWorld, kind_text: String, date: String) {
     world.review.period = Some(period_containing(kind(&kind_text), day(&date)));
 }
 
-#[when("I export the review as Markdown")]
-fn export(world: &mut DomainWorld) {
-    let markdown = review_markdown(review(world));
+#[when(expr = "I export the review as Markdown in {word}")]
+fn export(world: &mut DomainWorld, language: String) {
+    let language = match language.as_str() {
+        "English" => Language::En,
+        "German" => Language::De,
+        other => panic!("unbekannte Sprache {other}"),
+    };
+    let markdown = review_markdown(review(world), language);
     world.review.markdown = Some(markdown);
 }
 

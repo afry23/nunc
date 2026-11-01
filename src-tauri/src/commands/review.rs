@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use chrono::NaiveDate;
+use nunc_core::model::Language;
 use nunc_core::review::{Review, build_review, review_markdown};
 use nunc_platform::to_local_date;
 use tauri::{AppHandle, Runtime, State};
@@ -58,7 +59,7 @@ pub fn get_review(
     review_for(&state, from, to)
 }
 
-/// Schreibt den Rückblick als Markdown in eine vom Nutzer gewählte Datei. `None`, wenn der Dialog abgebrochen wurde.
+/// Schreibt den Rückblick als Markdown in eine vom Nutzer gewählte Datei, in der Sprache der Oberfläche (`system` gilt als Deutsch). `None`, wenn der Dialog abgebrochen wurde.
 #[tauri::command]
 #[specta::specta]
 pub async fn save_review_markdown<R: Runtime>(
@@ -66,8 +67,9 @@ pub async fn save_review_markdown<R: Runtime>(
     state: State<'_, AppState>,
     from: NaiveDate,
     to: NaiveDate,
+    language: Language,
 ) -> Result<Option<String>, AppError> {
-    let content = review_markdown(&review_for(&state, from, to)?);
+    let content = review_markdown(&review_for(&state, from, to)?, language);
     let Some(target) = app
         .dialog()
         .file()

@@ -104,8 +104,8 @@ export const commands = {
 	deleteSession: (id: number) => typedError<null, AppError>(__TAURI_INVOKE("delete_session", { id })),
 	/**  Rückblick für die lokalen Tage `from` bis `to` (inklusive), mit Vergleich zur Vorperiode. */
 	getReview: (from: string, to: string) => typedError<Review, AppError>(__TAURI_INVOKE("get_review", { from, to })),
-	/**  Schreibt den Rückblick als Markdown in eine vom Nutzer gewählte Datei. `None`, wenn der Dialog abgebrochen wurde. */
-	saveReviewMarkdown: (from: string, to: string) => typedError<string | null, AppError>(__TAURI_INVOKE("save_review_markdown", { from, to })),
+	/**  Schreibt den Rückblick als Markdown in eine vom Nutzer gewählte Datei, in der Sprache der Oberfläche (`system` gilt als Deutsch). `None`, wenn der Dialog abgebrochen wurde. */
+	saveReviewMarkdown: (from: string, to: string, language: Language) => typedError<string | null, AppError>(__TAURI_INVOKE("save_review_markdown", { from, to, language })),
 	/**  Kennzahlen aus den rohen Sessions (nichts davon ist gespeichert). */
 	getStats: (request: StatsRequest) => typedError<StatsResponse, AppError>(__TAURI_INVOKE("get_stats", { request })),
 	/**  Export der Sessions im Zeitraum als CSV- oder JSON-Text. */

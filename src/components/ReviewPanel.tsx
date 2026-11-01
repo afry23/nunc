@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from "./icons";
 import { Button, IconButton, Segmented } from "./ui";
-import { useT } from "../i18n";
+import { currentLanguage, useT } from "../i18n";
 import {
   commands,
   errorMessage,
@@ -106,7 +106,9 @@ export function ReviewPanel() {
 
   const exportMarkdown = async (): Promise<void> => {
     try {
-      const path = await unwrap(commands.saveReviewMarkdown(from, to));
+      const path = await unwrap(
+        commands.saveReviewMarkdown(from, to, currentLanguage()),
+      );
       if (path) notify(t("review.exportSaved", { path }));
     } catch (error) {
       useUiStore.getState().fail(error);
