@@ -44,6 +44,8 @@ function blocksFrom(
       null,
     note: row.note ?? "",
     origin: row.origin || "timer",
+    projectTags: (row.projects ?? "").split(" ").filter(Boolean),
+    contextTags: (row.contexts ?? "").split(" ").filter(Boolean),
     overlaps: false,
   }));
 }

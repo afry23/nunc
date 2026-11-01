@@ -35,3 +35,38 @@ Feature: Stopwatch in the UI
     When I open the app
     And the backend reports a finished "stopwatch" session without a suggested break
     Then I do not see a dialog
+
+  @ui @US-B01
+  Scenario: A stopwatch without a task is started with projects, contexts and a note
+    Given the setting "activeMode" is "stopwatch"
+    When I open the app
+    And I enter "meetings" into the field "Projekt hinzufügen"
+    And I press the key "Enter" in the field "Projekt hinzufügen"
+    And I enter "@office" into the field "Kontext hinzufügen"
+    And I press the key "Enter" in the field "Kontext hinzufügen"
+    And I enter "Weekly" into the field "Notiz"
+    And I click "Start"
+    Then the backend received "start_timer" with:
+      """
+      { "mode": "stopwatch", "todoId": null, "labels": { "projectTags": ["+meetings"], "contextTags": ["@office"], "note": "Weekly" } }
+      """
+    And I see "Weekly · +meetings · @office"
+
+  @ui @US-B01
+  Scenario: Projects and contexts are offered only without a task
+    Given the todos:
+      | rawText      | completed |
+      | Write report | false     |
+    When I open the app
+    Then I see "Zuordnung ohne Aufgabe"
+    When I select "Write report" in the field "Aktive Aufgabe"
+    Then I do not see "Zuordnung ohne Aufgabe"
+
+  @ui @US-B01
+  Scenario: A chosen project can be removed again
+    When I open the app
+    And I enter "+meetings" into the field "Projekt hinzufügen"
+    And I press the key "Enter" in the field "Projekt hinzufügen"
+    Then I see "+meetings ×"
+    When I click "+meetings entfernen"
+    Then I do not see "+meetings ×"

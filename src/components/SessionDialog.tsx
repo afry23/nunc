@@ -8,9 +8,11 @@ import {
   type Todo,
 } from "../lib/api";
 import { formatTimeOfDay } from "../lib/format";
+import { useTimerStore } from "../stores/timerStore";
 import { selectableTodos } from "../lib/todos";
 import { defaultEntry, fromLocalInput, toLocalInput } from "../lib/timesheet";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { TagInput } from "./TagInput";
 import { Button } from "./ui";
 
 /** Ein bestehender Eintrag, der bearbeitet wird. */
@@ -20,6 +22,8 @@ export type EditedSession = {
   end: string;
   todoId: number | null;
   note: string;
+  projectTags: string[];
+  contextTags: string[];
 };
 
 const FIELD =
@@ -55,13 +59,25 @@ export function SessionDialog({
           end: toLocalInput(session.end),
           todoId: session.todoId,
           note: session.note,
+          projectTags: session.projectTags,
+          contextTags: session.contextTags,
         }
-      : { ...defaultEntry(date), todoId: null as number | null, note: "" },
+      : {
+          ...defaultEntry(date),
+          todoId: null as number | null,
+          note: "",
+          projectTags: [] as string[],
+          contextTags: [] as string[],
+        },
   );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   useEffect(() => first.current?.focus(), []);
+  const knownTags = useTimerStore((s) => s.knownTags);
+  useEffect(() => {
+    void useTimerStore.getState().loadKnownTags();
+  }, []);
 
   const save = async (): Promise<void> => {
     const startedAt = fromLocalInput(draft.start);
@@ -75,6 +91,9 @@ export function SessionDialog({
       endedAt,
       todoId: draft.todoId,
       note: draft.note.trim(),
+      // eigene Zuordnung gilt nur ohne Aufgabe
+      projectTags: draft.todoId === null ? draft.projectTags : [],
+      contextTags: draft.todoId === null ? draft.contextTags : [],
     };
     setBusy(true);
     try {
@@ -197,6 +216,26 @@ export function SessionDialog({
             ))}
           </select>
         </label>
+        {draft.todoId === null && (
+          <>
+            <TagInput
+              label={t("labels.projects")}
+              addLabel={t("labels.addProject")}
+              prefix="+"
+              value={draft.projectTags}
+              suggestions={knownTags.projects}
+              onChange={(projectTags) => setDraft({ ...draft, projectTags })}
+            />
+            <TagInput
+              label={t("labels.contexts")}
+              addLabel={t("labels.addContext")}
+              prefix="@"
+              value={draft.contextTags}
+              suggestions={knownTags.contexts}
+              onChange={(contextTags) => setDraft({ ...draft, contextTags })}
+            />
+          </>
+        )}
         <label className="flex flex-col gap-1">
           <span className="label-md text-on-surface-variant">
             {t("entry.note")}

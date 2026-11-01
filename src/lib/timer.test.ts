@@ -16,6 +16,7 @@ const snap = (over: Partial<TimerSnapshot>): TimerSnapshot => ({
   remaining: 1500,
   total: 1500,
   todoId: null,
+  labels: { projectTags: [], contextTags: [], note: "" },
   ...over,
 });
 

@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use nunc_core::manual_entry::validate_entry;
-use nunc_core::model::Session;
+use nunc_core::model::{KnownTags, Session, known_tags, normalize_tags};
 use nunc_core::timeline::{DayTimeline, day_timeline};
 use nunc_core::timesheet::{GroupBy, Timesheet, timesheet};
 use nunc_platform::to_local_date;
@@ -25,6 +25,24 @@ pub struct SessionInput {
     pub ended_at: DateTime<Utc>,
     pub todo_id: Option<i32>,
     pub note: String,
+    /// Eigene Projekte/Kontexte, nur wirksam ohne Todo (ADR 0023).
+    #[serde(default)]
+    pub project_tags: Vec<String>,
+    #[serde(default)]
+    pub context_tags: Vec<String>,
+}
+
+impl SessionInput {
+    /// Normalisierte Projekte und Kontexte; mit Todo leer (es zählen dessen Tags).
+    fn tags(&self) -> (Vec<String>, Vec<String>) {
+        if self.todo_id.is_some() {
+            return (Vec::new(), Vec::new());
+        }
+        (
+            normalize_tags(&self.project_tags, '+'),
+            normalize_tags(&self.context_tags, '@'),
+        )
+    }
 }
 
 /// Die gespeicherte Session und die Sessions, die sie überlappt (Warnung, kein Fehler).
@@ -88,6 +106,19 @@ pub fn get_day_timeline(
     Ok(timeline)
 }
 
+/// Alle bekannten Projekte und Kontexte (Todos und Sessions) als Vorschläge für die Auswahl.
+#[tauri::command]
+#[specta::specta]
+pub fn get_known_tags(state: State<'_, AppState>) -> Result<KnownTags, AppError> {
+    let (sessions, todos) = state.db.with(|conn| {
+        Ok::<_, nunc_store::StoreError>((
+            nunc_store::list_sessions(conn)?,
+            nunc_store::list_all_todos(conn)?,
+        ))
+    })?;
+    Ok(known_tags(&sessions, &todos))
+}
+
 /// Trägt eine Arbeitssession nach.
 #[tauri::command]
 #[specta::specta]
@@ -96,6 +127,7 @@ pub fn create_manual_session(
     input: SessionInput,
 ) -> Result<SessionSaved, AppError> {
     let now = state.clock.now();
+    let (project_tags, context_tags) = input.tags();
     let saved = state.db.with(|conn| {
         let overlaps = validate_entry(
             input.started_at,
@@ -111,6 +143,8 @@ pub fn create_manual_session(
             ended_at: input.ended_at,
             todo_id: input.todo_id,
             note: input.note,
+            project_tags,
+            context_tags,
         };
         let session = nunc_store::insert_manual(conn, &entry, &device, now)?;
         Ok::<_, AppError>(SessionSaved { session, overlaps })
@@ -128,6 +162,7 @@ pub fn update_session(
     input: SessionInput,
 ) -> Result<SessionSaved, AppError> {
     let now = state.clock.now();
+    let (project_tags, context_tags) = input.tags();
     let saved = state.db.with(|conn| {
         let overlaps = validate_entry(
             input.started_at,
@@ -142,6 +177,8 @@ pub fn update_session(
             actual_min: minutes(input.ended_at - input.started_at),
             todo_id: input.todo_id,
             note: input.note,
+            project_tags,
+            context_tags,
         };
         let session = nunc_store::update_session(conn, id, &edit, now)?;
         Ok::<_, AppError>(SessionSaved { session, overlaps })

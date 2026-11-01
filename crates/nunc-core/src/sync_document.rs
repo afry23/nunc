@@ -14,8 +14,8 @@ use crate::hlc::Hlc;
 use crate::model::{SyncFile, SyncSession, SyncTodo};
 use crate::todotxt::parse_line;
 
-/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`).
-pub const SCHEMA_VERSION: u32 = 5;
+/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`, ADR 0023: Projekte/Kontexte der Session).
+pub const SCHEMA_VERSION: u32 = 6;
 
 /// Älteste Version, die noch gelesen wird: Version 2 kennt Sessions nur als Rohdaten ([`SyncSession`]).
 pub const MIN_SCHEMA_VERSION: u32 = 2;

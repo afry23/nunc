@@ -14,7 +14,7 @@ use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 
 use crate::model::{
     ContextStats, DailyStats, MonthlyStats, ProjectStats, Session, SessionStatus, SessionType,
-    StatsRequest, StatsResponse, TimerMode, Todo, TodoStats, WeekdayStats,
+    StatsRequest, StatsResponse, TimerMode, Todo, TodoStats, WeekdayStats, effective_tags,
 };
 
 /// Anzahl der Todos in der Top-Liste.
@@ -121,18 +121,19 @@ pub fn compute_stats(
         if !is_work {
             continue;
         }
-        let Some(todo) = session.todo_id.and_then(|id| todo_by_id.get(&id)) else {
-            continue;
-        };
-        for tag in &todo.project_tags {
+        let todo = session.todo_id.and_then(|id| todo_by_id.get(&id).copied());
+        let (project_tags, context_tags) = effective_tags(session, todo);
+        for tag in project_tags {
             *projects.entry(tag).or_default() += work;
         }
-        for tag in &todo.context_tags {
+        for tag in context_tags {
             *contexts.entry(tag).or_default() += work;
         }
-        let entry = per_todo.entry(todo.id).or_default();
-        entry.0 += pomodoro;
-        entry.1 += work;
+        if let Some(todo) = todo {
+            let entry = per_todo.entry(todo.id).or_default();
+            entry.0 += pomodoro;
+            entry.1 += work;
+        }
     }
 
     let mut project_stats: Vec<ProjectStats> = projects
@@ -283,6 +284,8 @@ mod tests {
             actual_min: Some(25),
             todo_id: Some(todo_id),
             break_min: None,
+            project_tags: Vec::new(),
+            context_tags: Vec::new(),
         }
     }
 

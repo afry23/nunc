@@ -82,3 +82,27 @@ Feature: Time report
       | group    | 2026-03-02 | total |
       | +holiday | 60         | 60    |
       | +home    | 60         | 60    |
+
+  @domain @US-TT01
+  Scenario: Sessions without a todo are grouped by their own projects and contexts
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects        | contexts |
+      | 2026-03-02 09:00 | stopwatch | work | completed | 45      |      | +meetings +team | @office  |
+      | 2026-03-02 10:00 | stopwatch | work | completed | 30      | 1    | +ignored        | @ignored |
+    When I calculate the timesheet from 2026-03-02 to 2026-03-02 grouped by project
+    Then the timesheet is:
+      | group     | 2026-03-02 | total |
+      | +meetings | 45         | 45    |
+      | +team     | 45         | 45    |
+      | +work     | 30         | 30    |
+    And the day totals are "75" and the total is 75
+
+  @domain @US-TT01
+  Scenario: Own contexts group the report by context
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects | contexts |
+      | 2026-03-02 09:00 | stopwatch | work | completed | 45      |      | +meetings | @office |
+    When I calculate the timesheet from 2026-03-02 to 2026-03-02 grouped by context
+    Then the timesheet is:
+      | group   | 2026-03-02 | total |
+      | @office | 45         | 45    |

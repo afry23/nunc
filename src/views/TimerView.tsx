@@ -3,6 +3,7 @@ import { PauseIcon, PlayIcon, SkipIcon, StopIcon } from "../components/icons";
 import { ActionButton, Segmented } from "../components/ui";
 import { useT } from "../i18n";
 import { NotificationHint } from "../components/NotificationHint";
+import { TagInput } from "../components/TagInput";
 import { RingTimer } from "../components/RingTimer";
 import type { TimerMode } from "../lib/api";
 import { sessionLabel } from "../lib/timer";
@@ -27,8 +28,18 @@ export function TimerView() {
       s.finish.payload.suggestedBreak !== null,
   );
   const selectedTodoId = useTimerStore((s) => s.selectedTodoId);
-  const { start, startBreak, pause, resume, stop, selectTodo } =
-    useTimerStore.getState();
+  const labels = useTimerStore((s) => s.labels);
+  const knownTags = useTimerStore((s) => s.knownTags);
+  const {
+    start,
+    startBreak,
+    pause,
+    resume,
+    stop,
+    selectTodo,
+    setLabels,
+    loadKnownTags,
+  } = useTimerStore.getState();
   const settings = useSettingsStore((s) => s.settings);
   const patchSettings = useSettingsStore((s) => s.patch);
   const todos = useTodoStore((s) => s.all);
@@ -40,6 +51,10 @@ export function TimerView() {
   const activeTodo = todos.find(
     (t) => t.id === (idle ? selectedTodoId : snapshot.todoId),
   );
+
+  useEffect(() => {
+    void loadKnownTags();
+  }, [loadKnownTags]);
 
   // ein erledigtes oder gelöschtes Todo bleibt nicht ausgewählt
   useEffect(() => {
@@ -173,6 +188,62 @@ export function TimerView() {
           </p>
         )}
       </div>
+
+      {idle && selectedTodoId === null && (
+        <fieldset className="flex w-full flex-col gap-4">
+          <legend className="label-md mb-1 text-center text-on-surface-variant">
+            {t("labels.heading")}
+          </legend>
+          <p className="text-center text-sm text-on-surface-variant">
+            {t("labels.hint")}
+          </p>
+          <TagInput
+            label={t("labels.projects")}
+            addLabel={t("labels.addProject")}
+            prefix="+"
+            value={labels.projectTags}
+            suggestions={knownTags.projects}
+            onChange={(projectTags) => setLabels({ ...labels, projectTags })}
+          />
+          <TagInput
+            label={t("labels.contexts")}
+            addLabel={t("labels.addContext")}
+            prefix="@"
+            value={labels.contextTags}
+            suggestions={knownTags.contexts}
+            onChange={(contextTags) => setLabels({ ...labels, contextTags })}
+          />
+          <label className="flex flex-col gap-2">
+            <span className="label-md text-on-surface-variant">
+              {t("labels.note")}
+            </span>
+            <input
+              type="text"
+              value={labels.note}
+              autoComplete="off"
+              onChange={(event) =>
+                setLabels({ ...labels, note: event.target.value })
+              }
+              className="min-h-11 w-full rounded-lg bg-surface-container-highest px-3 focus:bg-secondary-container"
+            />
+          </label>
+        </fieldset>
+      )}
+
+      {!idle && !onBreak && snapshot.todoId === null && (
+        <p
+          data-testid="running-labels"
+          className="text-center text-sm text-on-surface-variant"
+        >
+          {[
+            snapshot.labels.note,
+            ...snapshot.labels.projectTags,
+            ...snapshot.labels.contextTags,
+          ]
+            .filter((part) => part !== "")
+            .join(" · ")}
+        </p>
+      )}
     </section>
   );
 }

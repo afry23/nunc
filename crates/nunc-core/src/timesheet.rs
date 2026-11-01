@@ -11,7 +11,7 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::model::{Session, SessionType, Todo};
+use crate::model::{Session, SessionType, Todo, effective_tags};
 
 /// Wonach die Zeilen des Timesheets gruppiert werden.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -74,7 +74,7 @@ pub fn timesheet(
         let minutes = session.actual_min.unwrap_or(0);
         day_totals[index] += minutes;
         let todo = session.todo_id.and_then(|id| todo_by_id.get(&id).copied());
-        for key in group_keys(todo, group_by) {
+        for key in group_keys(session, todo, group_by) {
             rows.entry(key).or_insert_with(|| vec![0; days.len()])[index] += minutes;
         }
     }
@@ -104,7 +104,11 @@ pub fn timesheet(
     }
 }
 
-fn group_keys(todo: Option<&Todo>, group_by: GroupBy) -> Vec<(Option<String>, Option<i32>)> {
+fn group_keys(
+    session: &Session,
+    todo: Option<&Todo>,
+    group_by: GroupBy,
+) -> Vec<(Option<String>, Option<i32>)> {
     let tags = |tags: &[String]| -> Vec<(Option<String>, Option<i32>)> {
         if tags.is_empty() {
             vec![(None, None)]
@@ -112,11 +116,12 @@ fn group_keys(todo: Option<&Todo>, group_by: GroupBy) -> Vec<(Option<String>, Op
             tags.iter().map(|tag| (Some(tag.clone()), None)).collect()
         }
     };
+    let (project_tags, context_tags) = effective_tags(session, todo);
     match (group_by, todo) {
-        (_, None) => vec![(None, None)],
-        (GroupBy::Project, Some(todo)) => tags(&todo.project_tags),
-        (GroupBy::Context, Some(todo)) => tags(&todo.context_tags),
+        (GroupBy::Project, _) => tags(project_tags),
+        (GroupBy::Context, _) => tags(context_tags),
         (GroupBy::Todo, Some(todo)) => vec![(Some(todo.description.clone()), Some(todo.id))],
+        (GroupBy::Todo, None) => vec![(None, None)],
     }
 }
 
@@ -147,6 +152,8 @@ mod tests {
             actual_min: Some(minutes),
             todo_id,
             break_min: None,
+            project_tags: Vec::new(),
+            context_tags: Vec::new(),
         }
     }
 

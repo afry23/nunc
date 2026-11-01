@@ -72,7 +72,11 @@ export const commands = {
 	/**  Schreibt alle Todos in eine vom Nutzer gewählte Datei. Liefert den Pfad, `None` bei Abbruch. */
 	saveTodotxtFile: () => typedError<string | null, AppError>(__TAURI_INVOKE("save_todotxt_file")),
 	/**  Startet eine Arbeitssession. Die Dauer kommt aus den Einstellungen, Flowtime ist eine Stoppuhr. */
-	startTimer: (mode: TimerMode, todoId: number | null) => typedError<TimerSnapshot, AppError>(__TAURI_INVOKE("start_timer", { mode, todoId })),
+	startTimer: (mode: TimerMode, todoId: number | null, labels: {
+	projectTags: string[],
+	contextTags: string[],
+	note: string,
+} | null) => typedError<TimerSnapshot, AppError>(__TAURI_INVOKE("start_timer", { mode, todoId, labels })),
 	/**  Startet die vorgeschlagene Pause. */
 	startBreak: () => typedError<TimerSnapshot, AppError>(__TAURI_INVOKE("start_break")),
 	pauseTimer: () => typedError<TimerSnapshot, AppError>(__TAURI_INVOKE("pause_timer")),
@@ -90,6 +94,8 @@ export const commands = {
 	getTimesheet: (startDate: string, endDate: string, groupBy: GroupBy) => typedError<Timesheet, AppError>(__TAURI_INVOKE("get_timesheet", { startDate, endDate, groupBy })),
 	/**  Die Sessions eines lokalen Tages als Blöcke, mit Notiz und Herkunft. */
 	getDayTimeline: (date: string) => typedError<DayTimeline, AppError>(__TAURI_INVOKE("get_day_timeline", { date })),
+	/**  Alle bekannten Projekte und Kontexte (Todos und Sessions) als Vorschläge für die Auswahl. */
+	getKnownTags: () => typedError<KnownTags, AppError>(__TAURI_INVOKE("get_known_tags")),
 	/**  Trägt eine Arbeitssession nach. */
 	createManualSession: (input: SessionInput) => typedError<SessionSaved, AppError>(__TAURI_INVOKE("create_manual_session", { input })),
 	/**  Ersetzt Beginn, Ende, Todo und Notiz einer Session; die Dauer folgt aus Beginn und Ende. */
@@ -345,6 +351,19 @@ export type FinishPayload = {
 /**  Wonach die Zeilen des Timesheets gruppiert werden. */
 export type GroupBy = "project" | "context" | "todo";
 
+/**  Alle bekannten Projekte und Kontexte (Vorschläge für die Auswahl), sortiert und ohne Duplikate. */
+export type KnownTags = {
+	projects: string[],
+	contexts: string[],
+};
+
+/**  Zuordnung einer Session ohne Todo: eigene Projekte, Kontexte und eine Notiz (ADR 0023). */
+export type Labels = {
+	projectTags: string[],
+	contextTags: string[],
+	note: string,
+};
+
 /**  Sprache der Oberfläche (`system` folgt dem Betriebssystem). */
 export type Language = "system" | "de" | "en";
 
@@ -385,6 +404,10 @@ export type Session = {
 	todoId: number | null,
 	/**  Empfohlene bzw. genutzte Pausendauer in Minuten. */
 	breakMin: number | null,
+	/**  Eigene Projekte (`+name`); zählen nur, wenn die Session kein Todo hat (ADR 0023). */
+	projectTags?: string[],
+	/**  Eigene Kontexte (`@name`); zählen nur, wenn die Session kein Todo hat (ADR 0023). */
+	contextTags?: string[],
 };
 
 /**  Beginn, Ende, Todo und Notiz einer Session. */
@@ -393,6 +416,9 @@ export type SessionInput = {
 	endedAt: string,
 	todoId: number | null,
 	note: string,
+	/**  Eigene Projekte/Kontexte, nur wirksam ohne Todo (ADR 0023). */
+	projectTags?: string[],
+	contextTags?: string[],
 };
 
 /**  Die gespeicherte Session und die Sessions, die sie überlappt (Warnung, kein Fehler). */
@@ -544,6 +570,9 @@ export type TimelineBlock = {
 	note: string,
 	/**  `timer` oder `manual`, siehe `note`. */
 	origin: string,
+	/**  Eigene Projekte/Kontexte der Session (ADR 0023); leer, wenn ein Todo gesetzt ist. */
+	projectTags: string[],
+	contextTags: string[],
 	/**  Der Block überlappt mit mindestens einem anderen Block des Tages. */
 	overlaps: boolean,
 };
@@ -573,6 +602,8 @@ export type TimerSnapshot = {
 	/**  Gesamtdauer in Sekunden, `0` bei der Stoppuhr. */
 	total: number,
 	todoId: number | null,
+	/**  Eigene Zuordnung der laufenden Session (leer ohne eigene Angaben oder mit Todo). */
+	labels: Labels,
 };
 
 /**  Betriebszustand des Timers. */

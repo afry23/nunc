@@ -22,6 +22,9 @@ pub struct TimelineBlock {
     pub note: String,
     /// `timer` oder `manual`, siehe `note`.
     pub origin: String,
+    /// Eigene Projekte/Kontexte der Session (ADR 0023); leer, wenn ein Todo gesetzt ist.
+    pub project_tags: Vec<String>,
+    pub context_tags: Vec<String>,
     /// Der Block überlappt mit mindestens einem anderen Block des Tages.
     pub overlaps: bool,
 }
@@ -77,6 +80,8 @@ pub fn day_timeline(
                 todo_id: session.todo_id,
                 note: String::new(),
                 origin: ORIGIN_TIMER.to_owned(),
+                project_tags: session.project_tags.clone(),
+                context_tags: session.context_tags.clone(),
                 overlaps: false,
             }
         })
@@ -135,6 +140,8 @@ mod tests {
             actual_min: Some(minutes),
             todo_id: None,
             break_min: None,
+            project_tags: Vec::new(),
+            context_tags: Vec::new(),
         }
     }
 

@@ -30,3 +30,11 @@ Feature: Stopwatch sessions in the store
     Given device A adds a manual session from 09:00:00 to 10:00:00
     When the devices exchange their state
     Then on device B the listed session is a stopwatch session of 60 minutes
+
+  @integration @US-B01
+  Scenario: A stopwatch session without a todo keeps its projects, contexts and note on another device
+    Given device A records a stopwatch session from 09:00:00 to 09:45:00 with projects "+meetings +team" contexts "@office" and note "Weekly"
+    When the devices exchange their state
+    Then on device B the session has projects "+meetings +team" and contexts "@office"
+    And on device B the session note is "Weekly"
+    And on device B the project "+team" has 45 minutes

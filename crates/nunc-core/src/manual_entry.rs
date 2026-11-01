@@ -67,6 +67,8 @@ mod tests {
             actual_min: Some(minutes),
             todo_id: None,
             break_min: None,
+            project_tags: Vec::new(),
+            context_tags: Vec::new(),
         }
     }
 

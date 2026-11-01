@@ -9,7 +9,10 @@ mod sync_status;
 mod timer;
 mod todo;
 
-pub use session::{Session, SessionStatus, SessionType};
+pub use session::{
+    KnownTags, Labels, Session, SessionStatus, SessionType, effective_tags, known_tags,
+    normalize_tags,
+};
 pub use settings::{Language, SYNC_INTERVALS_MIN, Settings, SettingsIssue, SyncProvider};
 pub use stats::{
     ContextStats, DailyStats, MonthlyStats, ProjectStats, StatsPeriod, StatsRequest, StatsResponse,

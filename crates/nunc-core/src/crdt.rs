@@ -212,6 +212,11 @@ fn no_parent() -> Register<Option<String>> {
     Register::new(None, Hlc::new(0, 0, "legacy"))
 }
 
+/// Vorgabe für Dateien ohne eigene Projekte/Kontexte einer Session: leer, uralter Stempel.
+fn no_tags() -> Register<Vec<String>> {
+    Register::new(Vec::new(), Hlc::new(0, 0, "legacy"))
+}
+
 fn tags(description: &str, prefix: char) -> Vec<String> {
     description
         .split_whitespace()
@@ -257,6 +262,12 @@ pub struct SessionCrdt {
     /// `sync_id` des Todos, nicht die lokale Zeilen-ID.
     pub todo: Register<Option<String>>,
     pub note: Register<String>,
+    /// Eigene Projekte (`+name`), nur wirksam ohne Todo (ADR 0023); fehlt in Dateien vor Schema 6.
+    #[serde(default = "no_tags")]
+    pub project_tags: Register<Vec<String>>,
+    /// Eigene Kontexte (`@name`), nur wirksam ohne Todo (ADR 0023); fehlt in Dateien vor Schema 6.
+    #[serde(default = "no_tags")]
+    pub context_tags: Register<Vec<String>>,
     pub deleted: Register<bool>,
 }
 
@@ -299,6 +310,8 @@ impl SessionCrdt {
             actual_min: reg(session.actual_min, clock),
             todo: reg(None, clock),
             note: reg(String::new(), clock),
+            project_tags: reg(Vec::new(), clock),
+            context_tags: reg(Vec::new(), clock),
             deleted: reg(false, clock),
         }
     }
@@ -326,6 +339,8 @@ impl SessionCrdt {
             &self.actual_min.clock,
             &self.todo.clock,
             &self.note.clock,
+            &self.project_tags.clock,
+            &self.context_tags.clock,
         ]
         .into_iter()
         .max()
@@ -359,6 +374,8 @@ impl SessionCrdt {
             actual_min: self.actual_min.merge(&other.actual_min),
             todo: self.todo.merge(&other.todo),
             note: self.note.merge(&other.note),
+            project_tags: self.project_tags.merge(&other.project_tags),
+            context_tags: self.context_tags.merge(&other.context_tags),
             deleted: self.deleted.merge(&other.deleted),
         }
     }
@@ -370,6 +387,8 @@ impl SessionCrdt {
             actual_min: self.actual_min.capped(now_ms),
             todo: self.todo.capped(now_ms),
             note: self.note.capped(now_ms),
+            project_tags: self.project_tags.capped(now_ms),
+            context_tags: self.context_tags.capped(now_ms),
             deleted: self.deleted.capped(now_ms),
             ..self.clone()
         }
@@ -598,8 +617,10 @@ mod tests {
             all.actual_min.clock.wall_ms,
             all.todo.clock.wall_ms,
             all.note.clock.wall_ms,
+            all.project_tags.clock.wall_ms,
+            all.context_tags.clock.wall_ms,
             all.deleted.clock.wall_ms,
         ];
-        assert_eq!(stamps, [MAX_DRIFT_MS; 6]);
+        assert_eq!(stamps, [MAX_DRIFT_MS; 8]);
     }
 }

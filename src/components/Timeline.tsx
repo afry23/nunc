@@ -75,6 +75,12 @@ export function Timeline({
               {block.note !== "" && (
                 <span className="ml-2 opacity-80">{block.note}</span>
               )}
+              {block.todoId === null &&
+                [...block.projectTags, ...block.contextTags].length > 0 && (
+                  <span className="ml-2 text-xs opacity-80">
+                    {[...block.projectTags, ...block.contextTags].join(" ")}
+                  </span>
+                )}
               {block.origin === "manual" && (
                 <span className="ml-2 text-xs opacity-80">
                   ✎ {t("timeline.manual")}

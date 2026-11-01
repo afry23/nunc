@@ -148,6 +148,24 @@ fn blocks_are(world: &mut DomainWorld, step: &Step) {
     assert_eq!(actual, expected);
 }
 
+#[then(expr = "the block starting {word} {word} has projects {string} and contexts {string}")]
+fn block_labels(
+    world: &mut DomainWorld,
+    date: String,
+    time: String,
+    projects: String,
+    contexts: String,
+) {
+    let start = crate::stats::instant(&format!("{date} {time}"));
+    let block = timeline(world)
+        .blocks
+        .iter()
+        .find(|block| block.start == start)
+        .expect("kein Block zu diesem Beginn");
+    assert_eq!(block.project_tags.join(" "), projects);
+    assert_eq!(block.context_tags.join(" "), contexts);
+}
+
 #[then("the timeline has no blocks")]
 fn no_blocks(world: &mut DomainWorld) {
     assert!(timeline(world).blocks.is_empty());
