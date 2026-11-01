@@ -60,6 +60,91 @@ Feature: Review report
       | +work | 85      |
 
   @domain @US-RV01
+  Scenario: Pomodoros, flowtime and stopwatch are counted separately
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo |
+      | 2026-03-02 09:00 | pomodoro  | work | completed | 25      | 1    |
+      | 2026-03-02 10:00 | pomodoro  | work | completed | 25      | 1    |
+      | 2026-03-02 11:00 | pomodoro  | work | aborted   | 10      | 1    |
+      | 2026-03-03 09:00 | flowtime  | work | completed | 40      | 1    |
+      | 2026-03-03 14:00 | stopwatch | work | completed | 30      |      |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review has 2 pomodoros
+    And the review modes are:
+      | mode      | sessions | minutes |
+      | pomodoro  | 2        | 50      |
+      | flowtime  | 1        | 40      |
+      | stopwatch | 1        | 30      |
+
+  @domain @US-RV01
+  Scenario: Every day with focus time shows minutes and pomodoros
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo |
+      | 2026-03-03 09:00 | pomodoro  | work | completed | 25      | 1    |
+      | 2026-03-02 09:00 | pomodoro  | work | completed | 25      | 1    |
+      | 2026-03-02 10:00 | flowtime  | work | completed | 40      | 1    |
+      | 2026-03-05 09:00 | pomodoro  | work | aborted   | 10      | 1    |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review days are:
+      | date       | minutes | pomodoros |
+      | 2026-03-02 | 65      | 1         |
+      | 2026-03-03 | 25      | 1         |
+
+  @domain @US-RV01
+  Scenario: Time, pomodoros and sessions are summed per task
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo |
+      | 2026-03-02 09:00 | pomodoro  | work | completed | 25      | 1    |
+      | 2026-03-02 10:00 | pomodoro  | work | completed | 25      | 1    |
+      | 2026-03-02 11:00 | flowtime  | work | completed | 40      | 1    |
+      | 2026-03-03 09:00 | pomodoro  | work | completed | 25      | 2    |
+      | 2026-03-03 10:00 | stopwatch | work | completed | 90      |      |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review tasks are:
+      | text                     | minutes | pomodoros | sessions |
+      | Write report +work @desk | 90      | 2         | 3        |
+      | Plan trip +home          | 25      | 1         | 1        |
+
+  @domain @US-RV01
+  Scenario: Projects and contexts are related to each other
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects | contexts |
+      | 2026-03-02 09:00 | flowtime  | work | completed | 60      | 1    |          |          |
+      | 2026-03-02 10:00 | flowtime  | work | completed | 20      | 2    |          |          |
+      | 2026-03-02 11:00 | flowtime  | work | completed | 10      | 3    |          |          |
+      | 2026-03-03 09:00 | stopwatch | work | completed | 30      |      | +x +y    | @call    |
+      | 2026-03-03 10:00 | stopwatch | work | completed | 5       |      |          | @call    |
+      | 2026-03-03 11:00 | stopwatch | work | completed | 3       |      |          |          |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review project context pairs are:
+      | project | context | minutes |
+      | +work   | @desk   | 60      |
+      | +x      | @call   | 30      |
+      | +y      | @call   | 30      |
+      | +home   | (none)  | 20      |
+      | +work   | (none)  | 10      |
+      | (none)  | @call   | 5       |
+      | (none)  | (none)  | 3       |
+
+  @domain @US-RV01
+  Scenario: Pairs with equal time are ordered by project, then context, without a tag last
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects | contexts |
+      | 2026-03-02 09:00 | stopwatch | work | completed | 10      |      |          |          |
+      | 2026-03-02 10:00 | stopwatch | work | completed | 10      |      |          | @b       |
+      | 2026-03-02 11:00 | stopwatch | work | completed | 10      |      | +a       |          |
+      | 2026-03-02 12:00 | stopwatch | work | completed | 10      |      | +a       | @z       |
+      | 2026-03-02 13:00 | stopwatch | work | completed | 10      |      | +a       | @c       |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review project context pairs are:
+      | project | context | minutes |
+      | +a      | @c      | 10      |
+      | +a      | @z      | 10      |
+      | +a      | (none)  | 10      |
+      | (none)  | @b      | 10      |
+      | (none)  | (none)  | 10      |
+
+  @domain @US-RV01
   Scenario Outline: A period is derived from a day
     When I ask for the <kind> containing <day>
     Then the period is <from> to <to>
@@ -112,3 +197,8 @@ Feature: Review report
     And the Markdown contains "+45 min"
     And the Markdown contains "+work"
     And the Markdown contains "Plan trip"
+    And the Markdown contains "- Pomodoros: 1"
+    And the Markdown contains "- flowtime: 1 sessions, 60 min"
+    And the Markdown contains "- Write report +work @desk: 85 min, 1 pomodoros, 2 sessions"
+    And the Markdown contains "- +work × @desk: 85 min"
+    And the Markdown contains "- 2026-03-03: 25 min, 1 pomodoros"

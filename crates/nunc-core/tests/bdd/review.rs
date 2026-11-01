@@ -136,3 +136,74 @@ fn markdown_contains(world: &mut DomainWorld, text: String) {
     let markdown = world.review.markdown.as_ref().expect("kein Markdown");
     assert!(markdown.contains(&text), "{text:?} fehlt in:\n{markdown}");
 }
+
+#[then(expr = "the review has {int} pomodoros")]
+fn pomodoros(world: &mut DomainWorld, count: u32) {
+    assert_eq!(review(world).pomodoro_count, count);
+}
+
+#[then("the review modes are:")]
+fn modes_are(world: &mut DomainWorld, step: &Step) {
+    let actual: Vec<Vec<String>> = review(world)
+        .modes
+        .iter()
+        .map(|entry| {
+            vec![
+                entry.mode.as_str().to_owned(),
+                entry.sessions.to_string(),
+                entry.minutes.to_string(),
+            ]
+        })
+        .collect();
+    assert_eq!(actual, crate::stats::rows(step));
+}
+
+#[then("the review days are:")]
+fn days_are(world: &mut DomainWorld, step: &Step) {
+    let actual: Vec<Vec<String>> = review(world)
+        .days
+        .iter()
+        .map(|entry| {
+            vec![
+                entry.date.to_string(),
+                entry.minutes.to_string(),
+                entry.pomodoros.to_string(),
+            ]
+        })
+        .collect();
+    assert_eq!(actual, crate::stats::rows(step));
+}
+
+#[then("the review tasks are:")]
+fn tasks_are(world: &mut DomainWorld, step: &Step) {
+    let actual: Vec<Vec<String>> = review(world)
+        .tasks
+        .iter()
+        .map(|entry| {
+            vec![
+                entry.text.clone(),
+                entry.minutes.to_string(),
+                entry.pomodoros.to_string(),
+                entry.sessions.to_string(),
+            ]
+        })
+        .collect();
+    assert_eq!(actual, crate::stats::rows(step));
+}
+
+#[then("the review project context pairs are:")]
+fn pairs_are(world: &mut DomainWorld, step: &Step) {
+    let name = |value: &Option<String>| value.clone().unwrap_or_else(|| NO_GROUP.to_owned());
+    let actual: Vec<Vec<String>> = review(world)
+        .pairs
+        .iter()
+        .map(|entry| {
+            vec![
+                name(&entry.project),
+                name(&entry.context),
+                entry.minutes.to_string(),
+            ]
+        })
+        .collect();
+    assert_eq!(actual, crate::stats::rows(step));
+}

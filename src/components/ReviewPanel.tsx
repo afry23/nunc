@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from "./icons";
 import { Button, IconButton, Segmented } from "./ui";
 import { useT } from "../i18n";
@@ -9,7 +9,7 @@ import {
   type GroupMinutes,
   type Review,
 } from "../lib/api";
-import { formatMinutes, shortDate } from "../lib/format";
+import { formatMinutes, shortDate, weekdayLabel } from "../lib/format";
 import {
   REVIEW_KINDS,
   deltaText,
@@ -20,6 +20,24 @@ import {
 import { useUiStore } from "../stores/uiStore";
 
 type Loaded = { review: Review } | { error: string };
+
+function Card({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-2xl bg-surface-container-low p-5">
+      <h2 className="font-display mb-3 text-lg font-bold">{title}</h2>
+      <ul className="flex flex-col gap-1">{children}</ul>
+    </section>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <li className="flex flex-wrap justify-between gap-x-4 tabular-nums">
+      <span className="min-w-0 break-words">{label}</span>
+      <span className="text-on-surface-variant">{value}</span>
+    </li>
+  );
+}
 
 function GroupList({
   title,
@@ -160,6 +178,10 @@ export function ReviewPanel() {
               })}
             </p>
             <p className="label-md mt-4 text-on-surface-variant">
+              {t("review.pomodoros")}
+            </p>
+            <p className="tabular-nums">{review.pomodoroCount}</p>
+            <p className="label-md mt-4 text-on-surface-variant">
               {t("review.sessions")}
             </p>
             <p>
@@ -170,8 +192,60 @@ export function ReviewPanel() {
               })}
             </p>
           </section>
+          <Card title={t("review.modes")}>
+            {review.modes.map((entry) => (
+              <Row
+                key={entry.mode}
+                label={t(`review.mode.${entry.mode}`)}
+                value={t("review.modeValue", {
+                  sessions: entry.sessions,
+                  time: formatMinutes(entry.minutes),
+                })}
+              />
+            ))}
+          </Card>
+          {review.tasks.length > 0 && (
+            <Card title={t("review.tasks")}>
+              {review.tasks.map((task) => (
+                <Row
+                  key={task.todoId}
+                  label={task.text}
+                  value={t("review.taskValue", {
+                    time: formatMinutes(task.minutes),
+                    pomodoros: task.pomodoros,
+                    sessions: task.sessions,
+                  })}
+                />
+              ))}
+            </Card>
+          )}
+          {review.days.length > 0 && (
+            <Card title={t("review.days")}>
+              {review.days.map((day) => (
+                <Row
+                  key={day.date}
+                  label={`${weekdayLabel(day.date)} ${shortDate(day.date)}`}
+                  value={t("review.dayValue", {
+                    time: formatMinutes(day.minutes),
+                    pomodoros: day.pomodoros,
+                  })}
+                />
+              ))}
+            </Card>
+          )}
           <GroupList title={t("review.projects")} groups={review.projects} />
           <GroupList title={t("review.contexts")} groups={review.contexts} />
+          {review.pairs.length > 0 && (
+            <Card title={t("review.pairs")}>
+              {review.pairs.map((pair) => (
+                <Row
+                  key={`${pair.project ?? ""}|${pair.context ?? ""}`}
+                  label={`${pair.project ?? t("timesheet.unassigned")} × ${pair.context ?? t("timesheet.unassigned")}`}
+                  value={formatMinutes(pair.minutes)}
+                />
+              ))}
+            </Card>
+          )}
           <section className="rounded-2xl bg-surface-container-low p-5">
             <h2 className="font-display mb-3 text-lg font-bold">
               {t("review.completed")}

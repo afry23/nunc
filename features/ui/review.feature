@@ -55,3 +55,35 @@ Feature: Review in the times view
     And I click "Als Markdown exportieren"
     Then the backend received "save_review_markdown"
     And I see "Rückblick gespeichert: /tmp/nunc-review.md"
+
+  @ui @US-RV01
+  Scenario: The review shows pomodoros, techniques, tasks and days
+    Given the review is:
+      """
+      { "pomodoroCount": 3,
+        "modes": [{ "mode": "pomodoro", "sessions": 3, "minutes": 75 },
+                  { "mode": "flowtime", "sessions": 1, "minutes": 40 },
+                  { "mode": "stopwatch", "sessions": 2, "minutes": 90 }],
+        "tasks": [{ "todoId": 1, "text": "Write report +work", "minutes": 100, "pomodoros": 3, "sessions": 4 }],
+        "days": [{ "date": "2026-03-02", "minutes": 65, "pomodoros": 2 }] }
+      """
+    When I open the app at "/times"
+    And I click "Rückblick"
+    Then I see "3 Sessions, 1h 15m"
+    And I see "1 Sessions, 40m"
+    And I see "2 Sessions, 1h 30m"
+    And I see "Write report +work"
+    And I see "1h 40m · 3 Pomodoros · 4 Sessions"
+    And I see "1h 5m · 2 Pomodoros"
+
+  @ui @US-RV01
+  Scenario: Projects and contexts are shown together
+    Given the review is:
+      """
+      { "pairs": [{ "project": "+work", "context": "@desk", "minutes": 60 },
+                  { "project": "+home", "context": null, "minutes": 20 }] }
+      """
+    When I open the app at "/times"
+    And I click "Rückblick"
+    Then I see "+work × @desk"
+    And I see "+home × ohne Zuordnung"

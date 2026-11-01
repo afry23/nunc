@@ -297,6 +297,13 @@ export type DayTimeline = {
 	gaps: TimelineGap[],
 };
 
+/**  Fokuszeit und Pomodoros eines Tages. */
+export type DayTotals = {
+	date: string,
+	minutes: number,
+	pomodoros: number,
+};
+
 export type ExportFormat = "csv" | "json";
 
 /**  Eine beendete Session samt Folgeaktion. */
@@ -330,6 +337,13 @@ export type Labels = {
 
 /**  Sprache der Oberfläche (`system` folgt dem Betriebssystem). */
 export type Language = "system" | "de" | "en";
+
+/**  Abgeschlossene Arbeitssessions und Minuten einer Zeitmess-Technik. */
+export type ModeTotals = {
+	mode: TimerMode,
+	sessions: number,
+	minutes: number,
+};
 
 /**  Kennzahlen je Kalendermonat im Zeitraum. */
 export type MonthlyStats = {
@@ -367,6 +381,16 @@ export type Review = {
 	completedSessions: number,
 	abortedSessions: number,
 	abortRatePercent: number,
+	/**  Abgeschlossene Pomodoro-Arbeitssessions. */
+	pomodoroCount: number,
+	/**  Immer Pomodoro, Flowtime, Stoppuhr (in dieser Reihenfolge). */
+	modes: ModeTotals[],
+	/**  Nur Tage mit Fokuszeit, aufsteigend. */
+	days: DayTotals[],
+	/**  Aufgaben mit Fokuszeit, meiste Zeit zuerst. */
+	tasks: TaskTotals[],
+	/**  Projekt × Kontext, meiste Zeit zuerst; eine Session zählt in jeder Kombination ihrer Tags. */
+	pairs: TagPairMinutes[],
 	projects: GroupMinutes[],
 	contexts: GroupMinutes[],
 	completedTodos: CompletedTodo[],
@@ -533,6 +557,22 @@ export type SyncStatus = {
 
 /**  Der Sync-Zustand hat sich geändert (`idle` · `syncing` · `error`). */
 export type SyncStatusChanged = SyncStatus;
+
+/**  Fokuszeit einer Kombination aus Projekt und Kontext; `None` heißt „ohne“. */
+export type TagPairMinutes = {
+	project: string | null,
+	context: string | null,
+	minutes: number,
+};
+
+/**  Fokuszeit, Pomodoros und Sessions einer Aufgabe. */
+export type TaskTotals = {
+	todoId: number,
+	text: string,
+	minutes: number,
+	pomodoros: number,
+	sessions: number,
+};
 
 /**  Ein Block der Timeline. */
 export type TimelineBlock = {

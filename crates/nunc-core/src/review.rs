@@ -9,7 +9,7 @@ use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::model::{Session, SessionStatus, SessionType, Todo, effective_tags};
+use crate::model::{Session, SessionStatus, SessionType, TimerMode, Todo, effective_tags};
 
 /// Art eines Kalenderzeitraums.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -44,6 +44,44 @@ pub struct CompletedTodo {
     pub text: String,
 }
 
+/// Abgeschlossene Arbeitssessions und Minuten einer Zeitmess-Technik.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ModeTotals {
+    pub mode: TimerMode,
+    pub sessions: u32,
+    pub minutes: u32,
+}
+
+/// Fokuszeit und Pomodoros eines Tages.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DayTotals {
+    pub date: NaiveDate,
+    pub minutes: u32,
+    pub pomodoros: u32,
+}
+
+/// Fokuszeit, Pomodoros und Sessions einer Aufgabe.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskTotals {
+    pub todo_id: i32,
+    pub text: String,
+    pub minutes: u32,
+    pub pomodoros: u32,
+    pub sessions: u32,
+}
+
+/// Fokuszeit einer Kombination aus Projekt und Kontext; `None` heißt „ohne“.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TagPairMinutes {
+    pub project: Option<String>,
+    pub context: Option<String>,
+    pub minutes: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Review {
@@ -54,6 +92,16 @@ pub struct Review {
     pub completed_sessions: u32,
     pub aborted_sessions: u32,
     pub abort_rate_percent: u32,
+    /// Abgeschlossene Pomodoro-Arbeitssessions.
+    pub pomodoro_count: u32,
+    /// Immer Pomodoro, Flowtime, Stoppuhr (in dieser Reihenfolge).
+    pub modes: Vec<ModeTotals>,
+    /// Nur Tage mit Fokuszeit, aufsteigend.
+    pub days: Vec<DayTotals>,
+    /// Aufgaben mit Fokuszeit, meiste Zeit zuerst.
+    pub tasks: Vec<TaskTotals>,
+    /// Projekt × Kontext, meiste Zeit zuerst; eine Session zählt in jeder Kombination ihrer Tags.
+    pub pairs: Vec<TagPairMinutes>,
     pub projects: Vec<GroupMinutes>,
     pub contexts: Vec<GroupMinutes>,
     pub completed_todos: Vec<CompletedTodo>,
@@ -123,6 +171,67 @@ fn group_totals(totals: BTreeMap<Option<String>, u32>) -> Vec<GroupMinutes> {
     groups
 }
 
+const MODES: [TimerMode; 3] = [
+    TimerMode::Pomodoro,
+    TimerMode::Flowtime,
+    TimerMode::Stopwatch,
+];
+
+fn mode_index(mode: TimerMode) -> usize {
+    MODES
+        .iter()
+        .position(|candidate| *candidate == mode)
+        .unwrap_or(0)
+}
+
+/// Die Tags als Schlüssel; ohne Tag genau ein `None`.
+fn tag_keys(tags: &[String]) -> Vec<Option<String>> {
+    if tags.is_empty() {
+        vec![None]
+    } else {
+        tags.iter().cloned().map(Some).collect()
+    }
+}
+
+fn task_totals(tasks: BTreeMap<i32, (u32, u32, u32)>, todos: &[Todo]) -> Vec<TaskTotals> {
+    let mut totals: Vec<TaskTotals> = tasks
+        .into_iter()
+        .filter_map(|(todo_id, (minutes, pomodoros, sessions))| {
+            let todo = todos.iter().find(|todo| todo.id == todo_id)?;
+            Some(TaskTotals {
+                todo_id,
+                text: todo.description.clone(),
+                minutes,
+                pomodoros,
+                sessions,
+            })
+        })
+        .collect();
+    totals.sort_by(|a, b| b.minutes.cmp(&a.minutes).then(a.todo_id.cmp(&b.todo_id)));
+    totals
+}
+
+/// Größte Summe zuerst; bei gleicher Summe nach Projekt, dann Kontext, jeweils „ohne“ zuletzt.
+fn pair_totals(pairs: BTreeMap<(Option<String>, Option<String>), u32>) -> Vec<TagPairMinutes> {
+    let mut totals: Vec<TagPairMinutes> = pairs
+        .into_iter()
+        .map(|((project, context), minutes)| TagPairMinutes {
+            project,
+            context,
+            minutes,
+        })
+        .collect();
+    totals.sort_by(|a, b| {
+        b.minutes
+            .cmp(&a.minutes)
+            .then_with(|| a.project.is_none().cmp(&b.project.is_none()))
+            .then_with(|| a.project.cmp(&b.project))
+            .then_with(|| a.context.is_none().cmp(&b.context.is_none()))
+            .then_with(|| a.context.cmp(&b.context))
+    });
+    totals
+}
+
 fn add_tags(totals: &mut BTreeMap<Option<String>, u32>, tags: &[String], minutes: u32) {
     if tags.is_empty() {
         *totals.entry(None).or_default() += minutes;
@@ -159,6 +268,11 @@ pub fn build_review(
     let previous = previous_period(period);
     let mut projects = BTreeMap::new();
     let mut contexts = BTreeMap::new();
+    let mut pairs: BTreeMap<(Option<String>, Option<String>), u32> = BTreeMap::new();
+    let mut modes: BTreeMap<usize, (u32, u32)> = BTreeMap::new();
+    let mut days: BTreeMap<NaiveDate, (u32, u32)> = BTreeMap::new();
+    let mut tasks: BTreeMap<i32, (u32, u32, u32)> = BTreeMap::new();
+    let mut pomodoro_count = 0u32;
     let (mut completed_sessions, mut aborted_sessions) = (0u32, 0u32);
     for session in sessions.iter().filter(|session| {
         session.session_type == SessionType::Work
@@ -179,6 +293,25 @@ pub fn build_review(
         let minutes = session.actual_min.unwrap_or(0);
         add_tags(&mut projects, project_tags, minutes);
         add_tags(&mut contexts, context_tags, minutes);
+        for project in tag_keys(project_tags) {
+            for context in tag_keys(context_tags) {
+                *pairs.entry((project.clone(), context)).or_default() += minutes;
+            }
+        }
+        let pomodoro = u32::from(session.mode == TimerMode::Pomodoro);
+        pomodoro_count += pomodoro;
+        let mode = modes.entry(mode_index(session.mode)).or_default();
+        mode.0 += 1;
+        mode.1 += minutes;
+        let day = days.entry(local_date(session.started_at)).or_default();
+        day.0 += minutes;
+        day.1 += pomodoro;
+        if let Some(todo) = todo {
+            let task = tasks.entry(todo.id).or_default();
+            task.0 += minutes;
+            task.1 += pomodoro;
+            task.2 += 1;
+        }
     }
 
     let started = completed_sessions + aborted_sessions;
@@ -200,6 +333,29 @@ pub fn build_review(
         abort_rate_percent: (aborted_sessions * 100 + started / 2)
             .checked_div(started)
             .unwrap_or(0),
+        pomodoro_count,
+        modes: MODES
+            .iter()
+            .enumerate()
+            .map(|(index, mode)| {
+                let (sessions, minutes) = modes.get(&index).copied().unwrap_or_default();
+                ModeTotals {
+                    mode: *mode,
+                    sessions,
+                    minutes,
+                }
+            })
+            .collect(),
+        days: days
+            .into_iter()
+            .map(|(date, (minutes, pomodoros))| DayTotals {
+                date,
+                minutes,
+                pomodoros,
+            })
+            .collect(),
+        tasks: task_totals(tasks, todos),
+        pairs: pair_totals(pairs),
         projects: group_totals(projects),
         contexts: group_totals(contexts),
         completed_todos: finished
@@ -237,8 +393,49 @@ pub fn review_markdown(review: &Review) -> String {
         review.aborted_sessions,
         review.abort_rate_percent,
     );
+    markdown.push_str(&format!("- Pomodoros: {}\n", review.pomodoro_count));
+    if review.modes.iter().any(|entry| entry.sessions > 0) {
+        markdown.push_str("\n## Techniques\n\n");
+        for entry in &review.modes {
+            markdown.push_str(&format!(
+                "- {}: {} sessions, {} min\n",
+                entry.mode.as_str(),
+                entry.sessions,
+                entry.minutes
+            ));
+        }
+    }
+    if !review.tasks.is_empty() {
+        markdown.push_str("\n## Tasks\n\n");
+        for task in &review.tasks {
+            markdown.push_str(&format!(
+                "- {}: {} min, {} pomodoros, {} sessions\n",
+                task.text, task.minutes, task.pomodoros, task.sessions
+            ));
+        }
+    }
     group_lines(&mut markdown, "Projects", &review.projects);
     group_lines(&mut markdown, "Contexts", &review.contexts);
+    if !review.pairs.is_empty() {
+        markdown.push_str("\n## Projects and contexts\n\n");
+        for pair in &review.pairs {
+            markdown.push_str(&format!(
+                "- {} × {}: {} min\n",
+                pair.project.as_deref().unwrap_or("(none)"),
+                pair.context.as_deref().unwrap_or("(none)"),
+                pair.minutes
+            ));
+        }
+    }
+    if !review.days.is_empty() {
+        markdown.push_str("\n## Days\n\n");
+        for day in &review.days {
+            markdown.push_str(&format!(
+                "- {}: {} min, {} pomodoros\n",
+                day.date, day.minutes, day.pomodoros
+            ));
+        }
+    }
     if !review.completed_todos.is_empty() {
         markdown.push_str("\n## Completed tasks\n\n");
         for todo in &review.completed_todos {
