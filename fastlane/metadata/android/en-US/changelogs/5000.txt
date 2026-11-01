@@ -1,0 +1,3 @@
+- Track time without a task: stopwatch and entries can carry projects, contexts and a note
+- The time entry dialog offers only open tasks
+- Sync format 6: update all devices
