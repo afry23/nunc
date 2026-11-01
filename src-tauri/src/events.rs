@@ -56,16 +56,6 @@ pub struct SyncStatusChanged(pub SyncStatus);
 #[tauri_specta(event_name = "sync:complete")]
 pub struct SyncComplete(pub SyncResult);
 
-/// Der Todoist-Sync hat den Zustand gewechselt (`idle` · `syncing` · `error`).
-#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
-#[tauri_specta(event_name = "todoist:sync_status")]
-pub struct TodoistSyncStatus(pub SyncStatus);
-
-/// Ein Todoist-Lauf ist gelungen; die Nutzlast sagt, was lokal angekommen ist.
-#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
-#[tauri_specta(event_name = "todoist:sync_complete")]
-pub struct TodoistSyncComplete(pub SyncResult);
-
 /// Die lokale Schnittstelle hat ihren Zustand gewechselt (gestartet, beendet, Fehler; ADR 0013).
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
 #[tauri_specta(event_name = "api:status")]
@@ -96,8 +86,6 @@ mod tests {
         assert_eq!(SyncStart::NAME, "sync:start");
         assert_eq!(SyncStatusChanged::NAME, "sync:status");
         assert_eq!(SyncComplete::NAME, "sync:complete");
-        assert_eq!(TodoistSyncStatus::NAME, "todoist:sync_status");
-        assert_eq!(TodoistSyncComplete::NAME, "todoist:sync_complete");
     }
 
     #[test]

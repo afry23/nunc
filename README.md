@@ -22,7 +22,7 @@ time. nunc does not just measure time; it supports a moment that is lived consci
   counters are lost on export.
 - **Statistics:** day/week/month/year, streaks, breakdown by project/context, export as CSV/JSON.
 - **Backup:** daily on start, rotation, restore from the list or from a `.db` file.
-- **Sync:** WebDAV (all platforms), Google Drive and Todoist (desktop).
+- **Sync:** WebDAV (all platforms).
 - **Local interface** (desktop, off by default): other programs exchange todo.txt lines and query status, see below.
 - **Desktop:** tray icon, mini timer, keyboard shortcuts. **Mobile:** notification when the timer ends, swipe gestures.
 - **Language:** German and English; "System" follows the operating system (Settings → Language).
@@ -57,10 +57,6 @@ Then install the dependencies once:
 ```bash
 npm ci
 ```
-
-No OAuth credentials are needed to build. Google Drive uses the user's own Google client (entered in the settings,
-see [docs/google-drive.md](./docs/google-drive.md)), Todoist the user's personal API token. For development, a fixed
-Google client can be put into `.env` (copy `.env.example`; debug builds only).
 
 ### Desktop (macOS, Windows, Linux)
 
@@ -115,7 +111,7 @@ A signed build or a real device needs an Apple Developer account. Release and si
 | Backups | `<data folder>/backups/` (or a custom folder in Settings) | same | same |
 | Log `nunc.log` | `~/Library/Logs/com.afry.nunc/` | `%LocalAppData%\com.afry.nunc\logs\` | `~/.local/share/com.afry.nunc/logs/` |
 
-On Android and iOS everything lives in the protected app storage. Passwords and tokens (WebDAV, Google, Todoist) are not
+On Android and iOS everything lives in the protected app storage. Passwords and tokens (WebDAV) are not
 stored in the database but in the system keychain (service `nunc`).
 
 ## Backup and restore
@@ -129,17 +125,12 @@ stored in the database but in the system keychain (service `nunc`).
 
 ## Sync
 
-*Settings → Sync*: exactly one provider.
+*Settings → Sync*: WebDAV or no sync.
 
 - **WebDAV:** URL, login (Basic or Digest), remote path; "Test connection". Runs on start, on exit, after changes,
   manually, and when returning from the background (mobile).
-- **Google Drive** (desktop): needs your own Google OAuth client ("Desktop app", see
-  [docs/google-drive.md](./docs/google-drive.md)); sign in via browser, file `nunc/nunc-sync.v2.json` in the app's own
-  Drive folder (scope `drive.file`).
-- **Todoist** (desktop, in addition to the provider): connect with your personal API token (Todoist: Settings →
-  Integrations → Developer); tasks, projects and labels.
-- **Automatic sync** (desktop): while the app stays open, the provider is synced every 5, 15 (default) or 30 minutes,
-  or never (*Settings → Sync*, "Sync automatically every"). Todoist is not part of it. Mobile devices sync when the
+- **Automatic sync** (desktop): while the app stays open, WebDAV is synced every 5, 15 (default) or 30 minutes,
+  or never (*Settings → Sync*, "Sync automatically every"). Mobile devices sync when the
   app returns from or goes to the background instead.
 
 Merging: tasks use "last change wins" (deletion is a tombstone); sessions are only added.

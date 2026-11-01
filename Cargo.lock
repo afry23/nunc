@@ -3241,10 +3241,8 @@ dependencies = [
 name = "nunc-sync"
 version = "0.5.0"
 dependencies = [
- "base64 0.23.1",
  "chrono",
  "cucumber",
- "getrandom 0.4.3",
  "log",
  "md-5",
  "nunc-core",

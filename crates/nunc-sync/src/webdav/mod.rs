@@ -57,7 +57,7 @@ impl WebDavClient {
             .ok()
             .filter(|url| matches!(url.scheme(), "http" | "https") && url.host_str().is_some())
             .ok_or_else(|| SyncError::InvalidUrl(config.url.clone()))?;
-        let http = crate::oauth::http_client()?;
+        let http = crate::http::http_client()?;
         Ok(Self {
             http,
             config,

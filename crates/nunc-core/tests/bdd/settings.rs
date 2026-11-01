@@ -47,24 +47,3 @@ fn invalid(world: &mut DomainWorld, fields: String) {
     let expected: Vec<String> = fields.split_whitespace().map(str::to_owned).collect();
     assert_eq!(actual, expected);
 }
-
-#[then(expr = "the sync provider {string} is {word} on {word}")]
-fn provider_availability(
-    _world: &mut DomainWorld,
-    provider: String,
-    result: String,
-    platform: String,
-) {
-    let provider: nunc_core::model::SyncProvider = provider.parse().expect("unbekannter Anbieter");
-    let mobile = match platform.as_str() {
-        "mobile" => true,
-        "desktop" => false,
-        other => panic!("unbekannte Plattform {other}"),
-    };
-    let expected = match result.as_str() {
-        "available" => true,
-        "unavailable" => false,
-        other => panic!("unbekanntes Ergebnis {other}"),
-    };
-    assert_eq!(provider.is_available(mobile), expected);
-}

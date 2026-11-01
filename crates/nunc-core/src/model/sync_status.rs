@@ -108,38 +108,6 @@ pub struct SyncResult {
     pub conflicted_todos: u32,
 }
 
-/// Zustand der Google-Drive-Verbindung (`get_drive_status`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct DriveStatus {
-    /// Ob ein OAuth-Client für Google eingetragen ist (ADR 0019).
-    pub configured: bool,
-    /// Die eingetragene Client-ID (Anzeige); das Secret verlässt den Tresor nie.
-    pub client_id: Option<String>,
-    pub connected: bool,
-    pub email: Option<String>,
-    /// Link auf den Ordner `nunc` im Drive (erst nach dem ersten Sync bekannt).
-    pub folder_url: Option<String>,
-}
-
-/// Ergebnis der Prüfung nach dem Verbinden: liegt auf Drive Stand, den ein leeres Gerät übernehmen kann?
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct SyncImportInfo {
-    pub available: bool,
-    pub todo_count: u32,
-    pub session_count: u32,
-}
-
-/// Zustand der Todoist-Verbindung (`get_todoist_status`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct TodoistStatus {
-    pub connected: bool,
-    pub email: Option<String>,
-    pub avatar_url: Option<String>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

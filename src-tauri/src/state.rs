@@ -10,12 +10,12 @@ use std::sync::{Arc, Mutex};
 use chrono::NaiveDate;
 use nunc_core::clock::Clock;
 use nunc_core::model::Settings;
-use nunc_platform::{EventSink, Notifier, SecretStore, UrlOpener, to_local_date};
+use nunc_platform::{EventSink, Notifier, SecretStore, to_local_date};
 use nunc_store::{
     BackupResult, LegacyImport, backup_if_needed, device_id, import_legacy_db, open,
     resolve_backup_dir, restore_backup,
 };
-use nunc_sync::{DriveService, SyncCoordinator, TodoistService, Trigger};
+use nunc_sync::{SyncCoordinator, Trigger};
 
 use crate::db::Db;
 use crate::error::AppError;
@@ -47,8 +47,6 @@ pub struct Platform {
     pub clock: Arc<dyn Clock>,
     pub events: Arc<dyn EventSink>,
     pub notifier: Arc<dyn Notifier>,
-    /// Öffnet die Anmeldeseiten im Browser.
-    pub opener: Arc<dyn UrlOpener>,
     pub secrets: Arc<dyn SecretStore>,
     /// Tokio-Laufzeit für Hintergrundaufgaben (Sync).
     pub runtime: tokio::runtime::Handle,
@@ -65,12 +63,6 @@ pub struct AppState {
     /// Tresor für Tokens und Passwörter (Sync).
     pub secrets: Arc<dyn SecretStore>,
     pub sync: Arc<SyncCoordinator>,
-    pub drive: Arc<DriveService>,
-    pub sync_store: Arc<sync_service::DbSyncStore>,
-    /// Todoist: eigener Koordinator, unabhängig vom Sync-Anbieter.
-    pub todoist: Arc<SyncCoordinator>,
-    pub todoist_service: Arc<TodoistService>,
-    pub opener: Arc<dyn UrlOpener>,
     pub runtime: tokio::runtime::Handle,
     shutdown_hooks: Mutex<Vec<ShutdownHook>>,
 }
@@ -85,14 +77,13 @@ impl AppState {
         }
         let db = Arc::new(Db::new(open(&paths.db)?));
         let device_id = db.with(|conn| device_id(conn, || uuid::Uuid::new_v4().to_string()))?;
-        let services = sync_service::coordinator(
+        let sync = sync_service::coordinator(
             db.clone(),
             platform.secrets.clone(),
             platform.clock.clone(),
             platform.events.clone(),
             platform.runtime.clone(),
         )?;
-        let sync = services.coordinator;
         let session_sync = sync.clone();
         let timer = Arc::new(
             TimerService::new(
@@ -115,24 +106,17 @@ impl AppState {
             timer,
             secrets: platform.secrets,
             sync,
-            drive: services.drive,
-            sync_store: services.store,
-            todoist: services.todoist,
-            todoist_service: services.todoist_service,
-            opener: platform.opener,
             runtime: platform.runtime,
             shutdown_hooks: Mutex::new(Vec::new()),
         })
     }
 
-    /// Ein Todo wurde angelegt, geändert, abgehakt oder gelöscht: Sync-Anbieter und Todoist gleichen ab.
+    /// Ein Todo wurde angelegt, geändert, abgehakt oder gelöscht: der Sync-Anbieter gleicht ab.
     pub fn todos_changed(&self) {
         self.sync.trigger(Trigger::TodoChanged);
-        self.todoist.trigger(Trigger::TodoChanged);
     }
 
-    /// Eine Session wurde nachgetragen, bearbeitet oder gelöscht: der Sync-Anbieter gleicht ab (Todoist kennt
-    /// keine Sessions).
+    /// Eine Session wurde nachgetragen, bearbeitet oder gelöscht: der Sync-Anbieter gleicht ab.
     pub fn sessions_changed(&self) {
         self.sync.trigger(Trigger::TodoChanged);
     }
@@ -249,7 +233,6 @@ mod tests {
                     clock: self.clock.clone(),
                     events: self.events.clone(),
                     notifier: Arc::new(RecordingNotifier::new(false)),
-                    opener: Arc::new(nunc_platform::RecordingUrlOpener::default()),
                     secrets: Arc::new(MemorySecretStore::default()),
                     runtime: test_runtime(),
                 },

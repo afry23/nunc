@@ -18,6 +18,5 @@ pub mod timeline;
 pub mod timer;
 pub mod timesheet;
 pub mod todo_query;
-pub mod todoist_mapping;
 pub mod todotxt;
 pub mod todotxt_file;

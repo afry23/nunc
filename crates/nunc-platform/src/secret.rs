@@ -16,7 +16,7 @@ pub enum SecretError {
     Access(#[from] keyring_core::Error),
 }
 
-/// Ablage für Geheimnisse, getrennt nach Dienst (`nunc`) und Konto (`todoist`, `webdav`, …).
+/// Ablage für Geheimnisse, getrennt nach Dienst (`nunc`) und Konto (`webdav`, …).
 pub trait SecretStore: Send + Sync {
     fn get(&self, service: &str, account: &str) -> Result<Option<String>, SecretError>;
     fn set(&self, service: &str, account: &str, secret: &str) -> Result<(), SecretError>;
@@ -183,16 +183,16 @@ mod tests {
     #[test]
     fn memory_store_roundtrip() {
         let store = MemorySecretStore::default();
-        assert_eq!(store.get("nunc", "todoist").unwrap(), None);
-        store.set("nunc", "todoist", "tok-äö").unwrap();
+        assert_eq!(store.get("nunc", "password").unwrap(), None);
+        store.set("nunc", "password", "tok-äö").unwrap();
         assert_eq!(
-            store.get("nunc", "todoist").unwrap().as_deref(),
+            store.get("nunc", "password").unwrap().as_deref(),
             Some("tok-äö")
         );
         assert_eq!(store.get("nunc", "webdav").unwrap(), None);
-        store.delete("nunc", "todoist").unwrap();
-        store.delete("nunc", "todoist").unwrap();
-        assert_eq!(store.get("nunc", "todoist").unwrap(), None);
+        store.delete("nunc", "password").unwrap();
+        store.delete("nunc", "password").unwrap();
+        assert_eq!(store.get("nunc", "password").unwrap(), None);
     }
 
     #[test]

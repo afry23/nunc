@@ -14,14 +14,14 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 - Fachliche Referenz (nicht bindend): `../nunc-go/` (REQUIREMENTS.md, STORIES.md, DESIGN.md, `internal/**/_test.go`).
   Auf die Go-App wird **keine Rücksicht** mehr genommen (kein Parallelbetrieb, kein gemeinsames Sync-Format).
 - **Bestandsdaten:** SQLite-Schema und Migrationen 001–005 bleiben unantastbar (bestehende nunc-Installationen,
-  Backups älterer nunc-Versionen müssen restorebar bleiben). Das Sync-Format ist ein eigenes CRDT-Format
+  Backups älterer nunc-Versionen müssen restorebar bleiben); Migration 013 entfernt die Todoist-/Drive-Reste ([ADR 0024](./docs/adr/0024-nur-webdav-sync.md)). Das Sync-Format ist ein eigenes CRDT-Format
   (`nunc-sync.v2.json`, [ADR 0016](./docs/adr/0016-crdt-sync.md)). Secrets der Go-App werden nicht übernommen.
 
 ## Stack und Layout
 
 | Schicht | Technik |
 |---|---|
-| Shell | Tauri 2 (`src-tauri/`), Plugins: opener (auch für die Google-Anmeldung), notification, dialog, fs, single-instance (Desktop) |
+| Shell | Tauri 2 (`src-tauri/`), Plugins: opener (Links), notification, dialog, fs, single-instance (Desktop) |
 | Backend | Rust, Edition 2024, Cargo-Workspace |
 | DB | SQLite über `rusqlite` (bundled), WAL, Foreign Keys |
 | Typen Rust↔TS | `tauri-specta` → `src/bindings.ts` |
@@ -31,16 +31,15 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 ```
 crates/nunc-core      pure Fachlogik, kein I/O, kein tokio
 crates/nunc-store     rusqlite, Migrationen, Repos, Backup/Restore
-crates/nunc-sync      WebDAV-, Google-Drive- und Todoist-Client (reqwest), OAuth für Google (PKCE, Loopback), Sync-Läufe (CRDT-Merge liegt pur in nunc-core), Steuerung (Koordinator)
+crates/nunc-sync      WebDAV-Client (reqwest), Sync-Läufe (CRDT-Merge liegt pur in nunc-core), Steuerung (Koordinator)
 crates/nunc-api       lokale HTTP-Schnittstelle (127.0.0.1, Token): pures Routing + hyper-Server, Desktop (ADR 0013)
-crates/nunc-platform  Traits + Fakes: Clock, EventSink, Notifier, SecretStore (Keyring), UrlOpener
+crates/nunc-platform  Traits + Fakes: Clock, EventSink, Notifier, SecretStore (Keyring)
 src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)])
   src/state.rs        AppState (DB, TimerService, Tresor), Start, Restore, Shutdown-Hooks
   src/timer_service.rs  Timer-Laufzeit: Transitionen persistieren, Events, Benachrichtigung
-  src/adapters.rs     Tauri-Adapter für EventSink/Notifier/UrlOpener (brauchen AppHandle)
-  src/sync_service.rs Verdrahtung des Syncs: Store-Adapter, Koordinatoren (Sync-Anbieter, Todoist), Ereignisse
+  src/adapters.rs     Tauri-Adapter für EventSink/Notifier (brauchen AppHandle)
+  src/sync_service.rs Verdrahtung des Syncs: Store-Adapter, Koordinator, Ereignisse
   src/api_service.rs  ApiService (Server an/aus, Token im Tresor) und AppBackend (Todos für nunc-api), nur Desktop
-  src/credentials.rs  fester Google-Client nur in Debug-Builds: Umgebung (`NUNC_GOOGLE_*`) → `.env`
   src/commands/       dünne Commands je Bereich, Tests in commands/tests.rs (mock_builder)
 src/                  React-Frontend (src/lib/api.ts = einziger Backend-Zugang)
   src/lib/            reine Hilfen (format, timer, todos, stats, shortcuts, sound), je mit Unit-Test
@@ -94,9 +93,9 @@ undefined/pending Steps (der Rust-Runner bricht bei übersprungenen Steps ab).
 ```bash
 cargo test -p nunc-core --test bdd      # @domain (NUNC_BDD_REPORT=/abs/pfad.json schreibt zusätzlich JSON)
 cargo test -p nunc-store --test bdd     # @integration (Temp-Ordner, echte SQLite-Dateien)
-cargo test -p nunc-sync --test bdd      # @integration @sync (WebDAV-/Google-/Todoist-Server mit Zustand per wiremock, Sync-Steuerung)
+cargo test -p nunc-sync --test bdd      # @integration @sync (WebDAV-Server mit Zustand per wiremock, Sync-Steuerung)
 cargo test -p nunc-api --test bdd       # @api (pures Routing und Server über echten Socket)
-npm run test:bdd                        # @ui (features/ui/*.feature, features/sync, features/todoist)
+npm run test:bdd                        # @ui (features/ui/*.feature, features/sync)
 npm run test:e2e                        # @e2e @desktop, braucht tauri-driver (Linux/Windows)
 npm run test:mobile                     # @e2e @mobile, Maestro-Flows gegen Emulator/Gerät (e2e/mobile/README.md)
 ```
@@ -154,11 +153,8 @@ oder specta-Typen `cargo test -p nunc export_bindings` ausführen und `src/bindi
 - `tauri-plugin-notification` (iOS): `Schedule.at` parst das UTC-Datum als Ortszeit und lehnt es still ab,
   `sendNotification` verschluckt Fehler (ADR 0004). Nicht unverändert verwenden.
 - Android: `USE_EXACT_ALARM` ist nötig, sonst feuern Timer-Notifications Minuten zu spät (ADR 0004).
-- Zugangsdaten: nunc baut **keine** OAuth-Clients ein. Google Drive nutzt den eigenen „Desktop-App“-Client der Nutzer
-  (Einstellungen, Tresor-Konto `google-drive-client`, ADR 0019), Todoist das persönliche API-Token (ADR 0020). Für die
-  Entwicklung liest ein Debug-Build einen festen Google-Client aus Umgebung/`.env` (`.env.example`); er hat Vorrang vor
-  dem eingetragenen. Tokens liegen nur im Tresor (Dienst `nunc`, Konten `google-drive`, `google-drive-client`,
-  `todoist`, `webdav`). Kein Workflow braucht OAuth-Secrets.
+- Zugangsdaten: nur das WebDAV-Passwort, es liegt im Tresor (Dienst `nunc`, Konto `webdav`). Todoist und Google Drive gibt es nicht
+  mehr (ADR 0024); kein Workflow braucht OAuth-Secrets.
 - Keychain-Tests berühren die Login-Keychain und können einen Dialog auslösen; sie sind `#[ignore]` und nutzen nur
   eigene Wegwerf-Einträge. Secrets der Go-App werden nicht übernommen (ADR 0005).
 - Headless-iOS-Simulator: kein `Simulator.app`, `simctl` kann nicht tippen; UI-Interaktion braucht XCUITest oder ein

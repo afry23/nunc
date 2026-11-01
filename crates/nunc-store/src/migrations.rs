@@ -38,6 +38,7 @@ pub const MIGRATIONS: &[Migration] = &[
     migration!(10, "010_manual_is_stopwatch.sql"),
     migration!(11, "011_todo_parent.sql"),
     migration!(12, "012_session_tags.sql"),
+    migration!(13, "013_drop_todoist_drive.sql"),
 ];
 
 /// Wendet alle noch nicht in `schema_migrations` vermerkten Migrationen an.
@@ -132,21 +133,77 @@ mod tests {
         conn.execute("INSERT INTO schema_migrations (version) VALUES (42)", [])
             .unwrap();
         migrate(&mut conn).unwrap();
-        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 13);
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 14);
     }
 
     #[test]
     fn missing_version_below_max_is_still_applied() {
         let mut conn = Connection::open_in_memory().unwrap();
         migrate(&mut conn).unwrap();
-        conn.execute("DROP TABLE todoist_mappings", []).unwrap();
-        conn.execute("DELETE FROM schema_migrations WHERE version = 5", [])
+        conn.execute("DROP TABLE active_timer", []).unwrap();
+        conn.execute("DELETE FROM schema_migrations WHERE version = 6", [])
             .unwrap();
         migrate(&mut conn).unwrap();
         assert_eq!(
             count(
                 &conn,
+                "SELECT COUNT(*) FROM sqlite_master WHERE name = 'active_timer'"
+            ),
+            1
+        );
+    }
+
+    #[test]
+    fn removing_todoist_and_drive_cleans_up_old_data() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        apply(&mut conn, &MIGRATIONS[..12]).unwrap();
+        assert_eq!(
+            count(
+                &conn,
                 "SELECT COUNT(*) FROM sqlite_master WHERE name = 'todoist_mappings'"
+            ),
+            1
+        );
+        for (key, value) in [
+            ("sync_provider", "google_drive"),
+            ("last_synced_at", "x"),
+            ("drive_folder_id", "x"),
+            ("todoist.last_sync_at", "x"),
+            ("sync.webdav.url", "https://dav.example"),
+        ] {
+            conn.execute(
+                "INSERT INTO settings (key, value) VALUES (?1, ?2)",
+                params![key, value],
+            )
+            .unwrap();
+        }
+        migrate(&mut conn).unwrap();
+        assert_eq!(
+            count(
+                &conn,
+                "SELECT COUNT(*) FROM sqlite_master WHERE name = 'todoist_mappings'"
+            ),
+            0
+        );
+        let value: String = conn
+            .query_row(
+                "SELECT value FROM settings WHERE key = 'sync_provider'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(value, "none");
+        assert_eq!(
+            count(
+                &conn,
+                "SELECT COUNT(*) FROM settings WHERE key IN ('last_synced_at', 'drive_folder_id', 'todoist.last_sync_at')"
+            ),
+            0
+        );
+        assert_eq!(
+            count(
+                &conn,
+                "SELECT COUNT(*) FROM settings WHERE key = 'sync.webdav.url'"
             ),
             1
         );

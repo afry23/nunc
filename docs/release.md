@@ -81,8 +81,7 @@ F-Droid lesen sie direkt aus dem Repository.
    Zeichen, Klartext). `versionCode` = Major·1 000 000 + Minor·1 000 + Patch, z. B. 0.4.0 → `4000.txt`.
 2. Den GitHub-Release **veröffentlichen** (nicht nur als Entwurf lassen); IzzyOnDroid holt die APKs je ABI
    (`nunc_<version>_android_arm64-v8a.apk` usw., der Job `android-asset` hängt sie an) von dort, meist innerhalb eines Tages.
-3. Bei geänderten Funktionen `full_description.txt` mitpflegen. Kommen Google Drive oder Todoist auf Android: Anti-Feature
-   `NonFreeNet` bei IzzyOnDroid und F-Droid melden.
+3. Bei geänderten Funktionen `full_description.txt` mitpflegen.
 
 **Einmalig: IzzyOnDroid**
 
@@ -145,8 +144,7 @@ In die Notes des ersten Release mit der Stopwatch aufnehmen:
 
 - [ ] `npm run docs:report` und alle Pflicht-Checks grün (CLAUDE.md)
 - [ ] `tests/nfr/measure-desktop.sh` ([docs/nfr.md](./nfr.md)) auf dem Release-Build
-- [ ] manuell: Google Drive mit eigenem Client („In Produktion“) und Todoist mit persönlichem Token; Sync zwischen zwei
-      Geräten (CRDT, ADR 0016)
+- [ ] manuell: WebDAV-Sync zwischen zwei Geräten (CRDT, ADR 0016)
 - [ ] Release-Notes enthalten den Abschnitt zum Sync-Format (oben), solange es der erste Release mit ADR 0016 ist
 - [ ] manuell: Android- und iOS-Gerät (Timer im Hintergrund, App-Kill, Notification, Restore)
 - [ ] Android-Changelogs in `fastlane/metadata/android/*/changelogs/<versionCode>.txt` (ADR 0021)

@@ -2,7 +2,7 @@
 name = "nunc-sync"
 version.workspace = true
 edition.workspace = true
-description = "Sync-Clients: WebDAV, Google Drive, Todoist"
+description = "Sync-Client: WebDAV"
 license.workspace = true
 
 [dependencies]
@@ -12,8 +12,6 @@ nunc-platform.workspace = true
 reqwest.workspace = true
 tokio = { workspace = true, features = ["net", "io-util"] }
 serde.workspace = true
-base64.workspace = true
-getrandom.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
