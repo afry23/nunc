@@ -102,6 +102,10 @@ export const commands = {
 	updateSession: (id: number, input: SessionInput) => typedError<SessionSaved, AppError>(__TAURI_INVOKE("update_session", { id, input })),
 	/**  Löscht eine Session (Löschmarke, damit der Sync sie weiterträgt). */
 	deleteSession: (id: number) => typedError<null, AppError>(__TAURI_INVOKE("delete_session", { id })),
+	/**  Rückblick für die lokalen Tage `from` bis `to` (inklusive), mit Vergleich zur Vorperiode. */
+	getReview: (from: string, to: string) => typedError<Review, AppError>(__TAURI_INVOKE("get_review", { from, to })),
+	/**  Schreibt den Rückblick als Markdown in eine vom Nutzer gewählte Datei. `None`, wenn der Dialog abgebrochen wurde. */
+	saveReviewMarkdown: (from: string, to: string) => typedError<string | null, AppError>(__TAURI_INVOKE("save_review_markdown", { from, to })),
 	/**  Kennzahlen aus den rohen Sessions (nichts davon ist gespeichert). */
 	getStats: (request: StatsRequest) => typedError<StatsResponse, AppError>(__TAURI_INVOKE("get_stats", { request })),
 	/**  Export der Sessions im Zeitraum als CSV- oder JSON-Text. */
@@ -248,6 +252,12 @@ export type BreakSuggestion = {
 	minutes: number,
 };
 
+/**  Im Zeitraum erledigte Aufgabe. */
+export type CompletedTodo = {
+	completedAt: string,
+	text: string,
+};
+
 /**  Ergebnis des Verbindungstests. */
 export type ConnectionTestResult = {
 	success: boolean,
@@ -287,6 +297,13 @@ export type DayTimeline = {
 	gaps: TimelineGap[],
 };
 
+/**  Fokuszeit und Pomodoros eines Tages. */
+export type DayTotals = {
+	date: string,
+	minutes: number,
+	pomodoros: number,
+};
+
 export type ExportFormat = "csv" | "json";
 
 /**  Eine beendete Session samt Folgeaktion. */
@@ -298,6 +315,12 @@ export type FinishPayload = {
 
 /**  Wonach die Zeilen des Timesheets gruppiert werden. */
 export type GroupBy = "project" | "context" | "todo";
+
+/**  Summe einer Gruppe (`+projekt`, `@kontext`); `None` für Zeit ohne Tag. */
+export type GroupMinutes = {
+	group: string | null,
+	minutes: number,
+};
 
 /**  Alle bekannten Projekte und Kontexte (Vorschläge für die Auswahl), sortiert und ohne Duplikate. */
 export type KnownTags = {
@@ -315,6 +338,13 @@ export type Labels = {
 /**  Sprache der Oberfläche (`system` folgt dem Betriebssystem). */
 export type Language = "system" | "de" | "en";
 
+/**  Abgeschlossene Arbeitssessions und Minuten einer Zeitmess-Technik. */
+export type ModeTotals = {
+	mode: TimerMode,
+	sessions: number,
+	minutes: number,
+};
+
 /**  Kennzahlen je Kalendermonat im Zeitraum. */
 export type MonthlyStats = {
 	year: number,
@@ -331,10 +361,39 @@ export type NotificationStatus = {
 	permission: NotificationPermission,
 };
 
+/**  Zeitraum in lokalen Tagen, beide Grenzen inklusive. */
+export type Period = {
+	from: string,
+	to: string,
+};
+
 /**  Arbeitszeit pro `+project`-Tag. */
 export type ProjectStats = {
 	project: string,
 	workMinutes: number,
+};
+
+export type Review = {
+	period: Period,
+	previousPeriod: Period,
+	focusMin: number,
+	previousFocusMin: number,
+	completedSessions: number,
+	abortedSessions: number,
+	abortRatePercent: number,
+	/**  Abgeschlossene Pomodoro-Arbeitssessions. */
+	pomodoroCount: number,
+	/**  Immer Pomodoro, Flowtime, Stoppuhr (in dieser Reihenfolge). */
+	modes: ModeTotals[],
+	/**  Nur Tage mit Fokuszeit, aufsteigend. */
+	days: DayTotals[],
+	/**  Aufgaben mit Fokuszeit, meiste Zeit zuerst. */
+	tasks: TaskTotals[],
+	/**  Die Tag-Kombinationen der Sessions, wie sie zusammen vorkamen; meiste Zeit zuerst. */
+	combinations: TagCombination[],
+	projects: GroupMinutes[],
+	contexts: GroupMinutes[],
+	completedTodos: CompletedTodo[],
 };
 
 /**  Gespeichertes Arbeits- oder Pausenintervall. */
@@ -498,6 +557,26 @@ export type SyncStatus = {
 
 /**  Der Sync-Zustand hat sich geändert (`idle` · `syncing` · `error`). */
 export type SyncStatusChanged = SyncStatus;
+
+/**
+ *  Fokuszeit der Sessions, die genau dieselben Projekte und Kontexte zusammen trugen
+ *  (z. B. `+foo` mit `@meeting @work`). Die Tags sind sortiert; leer heißt „ohne“.
+ */
+export type TagCombination = {
+	projects: string[],
+	contexts: string[],
+	sessions: number,
+	minutes: number,
+};
+
+/**  Fokuszeit, Pomodoros und Sessions einer Aufgabe. */
+export type TaskTotals = {
+	todoId: number,
+	text: string,
+	minutes: number,
+	pomodoros: number,
+	sessions: number,
+};
 
 /**  Ein Block der Timeline. */
 export type TimelineBlock = {

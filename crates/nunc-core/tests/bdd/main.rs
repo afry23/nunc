@@ -10,6 +10,7 @@ mod backup;
 mod crdt;
 mod export;
 mod properties;
+mod review;
 mod settings;
 mod stats;
 mod timer;
@@ -26,6 +27,7 @@ pub struct DomainWorld {
     backup: backup::State,
     crdt: crdt::State,
     export: export::State,
+    review: review::State,
     settings: settings::State,
     stats: stats::State,
     timer: timer::State,

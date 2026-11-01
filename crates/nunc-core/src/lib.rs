@@ -12,6 +12,7 @@ pub mod hlc;
 pub mod manual_entry;
 pub mod model;
 pub mod position;
+pub mod review;
 pub mod stats;
 pub mod sync_document;
 pub mod timeline;

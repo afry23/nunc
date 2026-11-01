@@ -15,7 +15,9 @@ use tempfile::TempDir;
 
 use crate::state::{AppPaths, AppState, Platform};
 
-use super::{app, backup, notifications, sessions, settings, stats, sync, timer, todos, todotxt};
+use super::{
+    app, backup, notifications, review, sessions, settings, stats, sync, timer, todos, todotxt,
+};
 
 struct Harness {
     _dir: TempDir,
@@ -75,6 +77,7 @@ impl Harness {
                 sessions::create_manual_session,
                 sessions::update_session,
                 sessions::delete_session,
+                review::get_review,
                 stats::get_stats,
                 stats::export_stats,
                 backup::get_backup_status,
@@ -845,6 +848,44 @@ fn a_timesheet_range_is_limited_to_a_year() {
         json!({ "startDate": "2025-10-03", "endDate": "2026-10-04", "groupBy": "project" }),
     );
     assert_eq!(code, "invalid_input");
+}
+
+#[test]
+fn a_review_sums_the_focus_time_and_checks_the_range() {
+    let h = Harness::new();
+    let todo = h.ok("add_todo", json!({ "rawText": "Write report +work" }));
+    h.ok(
+        "create_manual_session",
+        entry(at(7, 0), at(8, 30), todo["id"].as_i64(), ""),
+    );
+    let day = local_day(at(7, 0));
+    let review = h.ok("get_review", json!({ "from": day, "to": day }));
+    assert_eq!(review["focusMin"], 90);
+    assert_eq!(review["completedSessions"], 1);
+    assert_eq!(review["projects"][0]["group"], "+work");
+    assert_eq!(review["previousFocusMin"], 0);
+
+    assert_eq!(
+        h.err_code(
+            "get_review",
+            json!({ "from": "2026-10-05", "to": "2026-10-04" })
+        ),
+        "invalid_input"
+    );
+    assert_eq!(
+        h.err_code(
+            "get_review",
+            json!({ "from": "2025-10-03", "to": "2026-10-04" })
+        ),
+        "invalid_input"
+    );
+    assert!(
+        h.call(
+            "get_review",
+            json!({ "from": "2025-10-04", "to": "2026-10-04" })
+        )
+        .is_ok()
+    );
 }
 
 #[test]

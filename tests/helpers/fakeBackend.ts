@@ -6,6 +6,7 @@ import type {
   ConnectionTestResult,
   GroupBy,
   KnownTags,
+  Review,
   TimelineBlock,
   SyncResult,
   SyncStatus,
@@ -108,6 +109,10 @@ export interface FakeBackend extends BackendMock {
   /** Systemstand der Benachrichtigungs-Berechtigung (mobil); `request_…` entscheidet nach `permissionAnswer`. */
   notificationPermission: "granted" | "denied" | "prompt";
   permissionAnswer: "granted" | "denied";
+  /** Antwort von `get_review` (der Zeitraum wird aus der Anfrage eingesetzt). */
+  review: Review;
+  /** Ergebnis von `save_review_markdown` (`null` = Dialog abgebrochen). */
+  reviewPath: string | null;
   /** Ergebnis von `save_export_to_file` (`null` = Dialog abgebrochen). */
   exportPath: string | null;
   /** Ergebnis von `import_todotxt_file` (`null` = Dialog abgebrochen) und von `save_todotxt_file`. */
@@ -242,6 +247,28 @@ export function createFakeBackend(): FakeBackend {
     restoreFile: null,
     backupDirChoice: null,
     restoreError: null,
+    review: {
+      period: { from: "", to: "" },
+      previousPeriod: { from: "", to: "" },
+      focusMin: 0,
+      previousFocusMin: 0,
+      completedSessions: 0,
+      abortedSessions: 0,
+      abortRatePercent: 0,
+      pomodoroCount: 0,
+      modes: [
+        { mode: "pomodoro", sessions: 0, minutes: 0 },
+        { mode: "flowtime", sessions: 0, minutes: 0 },
+        { mode: "stopwatch", sessions: 0, minutes: 0 },
+      ],
+      days: [],
+      tasks: [],
+      combinations: [],
+      projects: [],
+      contexts: [],
+      completedTodos: [],
+    },
+    reviewPath: null,
     timesheet: {},
     timeline: {},
     sessionError: null,
@@ -533,6 +560,11 @@ export function createFakeBackend(): FakeBackend {
       return null;
     },
     save_export_to_file: () => fake.exportPath,
+    get_review: ({ from, to }: { from: string; to: string }) => ({
+      ...fake.review,
+      period: { from, to },
+    }),
+    save_review_markdown: () => fake.reviewPath,
     get_api_status: () => ({
       running:
         fake.settings.apiEnabled && fake.apiError === null && !fake.apiStarting,
