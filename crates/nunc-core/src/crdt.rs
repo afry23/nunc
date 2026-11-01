@@ -617,8 +617,10 @@ mod tests {
             all.actual_min.clock.wall_ms,
             all.todo.clock.wall_ms,
             all.note.clock.wall_ms,
+            all.project_tags.clock.wall_ms,
+            all.context_tags.clock.wall_ms,
             all.deleted.clock.wall_ms,
         ];
-        assert_eq!(stamps, [MAX_DRIFT_MS; 6]);
+        assert_eq!(stamps, [MAX_DRIFT_MS; 8]);
     }
 }
