@@ -306,6 +306,7 @@ export const de = {
   "review.taskValue": "{time} · {pomodoros} Pomodoros · {sessions} Sessions",
   "review.combinations": "Projekte und Kontexte zusammen",
   "review.combinationValue": "{time} · {sessions} Sessions",
+  "review.notes": "Notizen",
   "review.days": "Tage",
   "review.dayValue": "{time} · {pomodoros} Pomodoros",
   "review.completed": "Erledigte Aufgaben",

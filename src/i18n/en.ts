@@ -307,6 +307,7 @@ export const en: Record<keyof typeof de, string> = {
   "review.taskValue": "{time} · {pomodoros} pomodoros · {sessions} sessions",
   "review.combinations": "Projects and contexts together",
   "review.combinationValue": "{time} · {sessions} sessions",
+  "review.notes": "Notes",
   "review.days": "Days",
   "review.dayValue": "{time} · {pomodoros} pomodoros",
   "review.completed": "Completed tasks",

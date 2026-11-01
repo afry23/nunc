@@ -119,6 +119,31 @@ Feature: Review report
       | +foo     | @work          | 1        | 20      |
 
   @domain @US-RV01
+  Scenario: Session notes are listed under their combination, oldest first
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects | contexts       |
+      | 2026-03-03 09:00 | stopwatch | work | completed | 15      |      | +foo     | @meeting @work |
+      | 2026-03-02 09:00 | stopwatch | work | completed | 45      |      | +foo     | @work @meeting |
+      | 2026-03-02 14:00 | stopwatch | work | completed | 20      |      | +foo     | @work          |
+      | 2026-03-04 09:00 | stopwatch | work | completed | 10      |      | +foo     | @work          |
+      | 2026-03-05 09:00 | stopwatch | work | aborted   | 10      |      | +foo     | @work          |
+    And the session notes:
+      | start            | note              |
+      | 2026-03-03 09:00 | Follow-up         |
+      | 2026-03-02 09:00 |   Weekly planning |
+      | 2026-03-02 14:00 | Review draft      |
+      | 2026-03-04 09:00 |                   |
+      | 2026-03-05 09:00 | Aborted call      |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the combination "+foo @meeting @work" has the notes:
+      | date       | text             |
+      | 2026-03-02 | Weekly planning  |
+      | 2026-03-03 | Follow-up        |
+    And the combination "+foo @work" has the notes:
+      | date       | text         |
+      | 2026-03-02 | Review draft |
+
+  @domain @US-RV01
   Scenario: Combinations come from the todo or from the session's own tags
     Given the sessions:
       | start            | mode      | type | status    | minutes | todo | projects | contexts |
@@ -229,3 +254,19 @@ Feature: Review report
     And the Markdown does not contain "## Projects"
     And the Markdown does not contain "## Tasks"
     And the Markdown does not contain "## Days"
+
+  @domain @US-RV01
+  Scenario: Session notes appear in the Markdown below their combination
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects | contexts       |
+      | 2026-03-02 09:00 | stopwatch | work | completed | 45      |      | +foo     | @work @meeting |
+    And the session notes:
+      | start            | note            |
+      | 2026-03-02 09:00 | Weekly planning |
+    When I build the review from 2026-03-02 to 2026-03-08
+    And I export the review as Markdown
+    Then the Markdown contains:
+      """
+      - +foo @meeting @work: 45 min, 1 sessions
+        - 2026-03-02: Weekly planning
+      """

@@ -81,9 +81,10 @@ Feature: Review in the times view
     Given the review is:
       """
       { "combinations": [
-          { "projects": ["+foo"], "contexts": ["@meeting", "@work"], "sessions": 2, "minutes": 60 },
-          { "projects": ["+foo"], "contexts": ["@work"], "sessions": 1, "minutes": 20 },
-          { "projects": [], "contexts": [], "sessions": 1, "minutes": 5 }] }
+          { "projects": ["+foo"], "contexts": ["@meeting", "@work"], "sessions": 2, "minutes": 60,
+            "notes": [{ "date": "2026-03-02", "text": "Weekly planning" }] },
+          { "projects": ["+foo"], "contexts": ["@work"], "sessions": 1, "minutes": 20, "notes": [] },
+          { "projects": [], "contexts": [], "sessions": 1, "minutes": 5, "notes": [] }] }
       """
     When I open the app at "/times"
     And I click "Rückblick"
@@ -91,4 +92,5 @@ Feature: Review in the times view
     And I see "1h · 2 Sessions"
     And I see "+foo @work"
     And I see "20m · 1 Sessions"
+    And I see "02.03. Weekly planning"
     And I see "ohne Zuordnung"

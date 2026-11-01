@@ -3,7 +3,7 @@
 //! Fokuszeit zählt nur **abgeschlossene** Arbeitssessions; abgebrochene gehen in die Abbruchquote ein.
 //! Ein Tag ist der lokale Kalendertag des Beginns (`local_date` kommt vom Aufrufer).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -82,6 +82,16 @@ pub struct TagCombination {
     pub contexts: Vec<String>,
     pub sessions: u32,
     pub minutes: u32,
+    /// Notizen dieser Sessions, älteste zuerst; Sessions ohne Notiz fehlen.
+    pub notes: Vec<SessionNote>,
+}
+
+/// Notiz einer Session mit dem lokalen Tag ihres Beginns.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionNote {
+    pub date: NaiveDate,
+    pub text: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -204,6 +214,14 @@ fn task_totals(tasks: BTreeMap<i32, (u32, u32, u32)>, todos: &[Todo]) -> Vec<Tas
     totals
 }
 
+/// Summe einer Tag-Kombination während der Berechnung; Notizen mit Beginn zum Sortieren.
+#[derive(Default)]
+struct CombinationSum {
+    sessions: u32,
+    minutes: u32,
+    notes: Vec<(DateTime<Utc>, String)>,
+}
+
 /// Sortierte, eindeutige Tags.
 fn sorted_tags(tags: &[String]) -> Vec<String> {
     let mut tags = tags.to_vec();
@@ -214,18 +232,28 @@ fn sorted_tags(tags: &[String]) -> Vec<String> {
 
 /// Größte Summe zuerst; bei gleicher Summe nach Projekten, dann Kontexten, jeweils „ohne“ zuletzt.
 fn combination_totals(
-    combinations: BTreeMap<(Vec<String>, Vec<String>), (u32, u32)>,
+    combinations: BTreeMap<(Vec<String>, Vec<String>), CombinationSum>,
+    local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
 ) -> Vec<TagCombination> {
     let mut totals: Vec<TagCombination> = combinations
         .into_iter()
-        .map(
-            |((projects, contexts), (sessions, minutes))| TagCombination {
+        .map(|((projects, contexts), mut sum)| {
+            sum.notes.sort();
+            TagCombination {
                 projects,
                 contexts,
-                sessions,
-                minutes,
-            },
-        )
+                sessions: sum.sessions,
+                minutes: sum.minutes,
+                notes: sum
+                    .notes
+                    .into_iter()
+                    .map(|(started_at, text)| SessionNote {
+                        date: local_date(started_at),
+                        text,
+                    })
+                    .collect(),
+            }
+        })
         .collect();
     totals.sort_by(|a, b| {
         b.minutes
@@ -269,12 +297,13 @@ pub fn build_review(
     period: Period,
     sessions: &[Session],
     todos: &[Todo],
+    notes: &HashMap<i32, String>,
     local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
 ) -> Review {
     let previous = previous_period(period);
     let mut projects = BTreeMap::new();
     let mut contexts = BTreeMap::new();
-    let mut combinations: BTreeMap<(Vec<String>, Vec<String>), (u32, u32)> = BTreeMap::new();
+    let mut combinations: BTreeMap<(Vec<String>, Vec<String>), CombinationSum> = BTreeMap::new();
     let mut modes: BTreeMap<usize, (u32, u32)> = BTreeMap::new();
     let mut days: BTreeMap<NaiveDate, (u32, u32)> = BTreeMap::new();
     let mut tasks: BTreeMap<i32, (u32, u32, u32)> = BTreeMap::new();
@@ -302,8 +331,15 @@ pub fn build_review(
         let combination = combinations
             .entry((sorted_tags(project_tags), sorted_tags(context_tags)))
             .or_default();
-        combination.0 += 1;
-        combination.1 += minutes;
+        combination.sessions += 1;
+        combination.minutes += minutes;
+        if let Some(note) = notes.get(&session.id).map(|note| note.trim())
+            && !note.is_empty()
+        {
+            combination
+                .notes
+                .push((session.started_at, note.to_owned()));
+        }
         let pomodoro = u32::from(session.mode == TimerMode::Pomodoro);
         pomodoro_count += pomodoro;
         let mode = modes.entry(mode_index(session.mode)).or_default();
@@ -361,7 +397,7 @@ pub fn build_review(
             })
             .collect(),
         tasks: task_totals(tasks, todos),
-        combinations: combination_totals(combinations),
+        combinations: combination_totals(combinations, local_date),
         projects: group_totals(projects),
         contexts: group_totals(contexts),
         completed_todos: finished
@@ -437,6 +473,9 @@ pub fn review_markdown(review: &Review) -> String {
                 "- {tags}: {} min, {} sessions\n",
                 combination.minutes, combination.sessions
             ));
+            for note in &combination.notes {
+                markdown.push_str(&format!("  - {}: {}\n", note.date, note.text));
+            }
         }
     }
     if !review.days.is_empty() {
