@@ -8,7 +8,7 @@ use nunc_platform::{KeyringSecretStore, SecretStore, SystemClock, UnavailableSec
 use nunc_sync::Trigger;
 use tauri::{App, AppHandle, Manager, RunEvent, Runtime};
 
-use crate::adapters::{TauriEventSink, TauriNotifier, TauriUrlOpener, create_timer_channel};
+use crate::adapters::{TauriEventSink, TauriNotifier, create_timer_channel};
 use crate::error::AppError;
 use crate::state::{AppPaths, AppState, Platform};
 
@@ -28,7 +28,6 @@ pub fn setup<R: Runtime>(app: &App<R>) -> Result<(), Box<dyn std::error::Error>>
     }
     spawn_startup_backup(&handle);
     state.sync.trigger(Trigger::Start);
-    state.todoist.trigger(Trigger::Start);
     match state.db.with(|conn| nunc_store::load_settings(conn)) {
         Ok(settings) => state.apply_sync_interval(&settings),
         Err(error) => log::error!("Sync-Intervall nicht gesetzt: {error}"),
@@ -113,7 +112,6 @@ fn platform<R: Runtime>(handle: &AppHandle<R>) -> Platform {
         clock: Arc::new(SystemClock),
         events: Arc::new(TauriEventSink(handle.clone())),
         notifier: Arc::new(TauriNotifier(handle.clone())),
-        opener: Arc::new(TauriUrlOpener(handle.clone())),
         secrets,
         runtime: tauri::async_runtime::handle().inner().clone(),
     }

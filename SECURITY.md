@@ -23,7 +23,7 @@ Of particular interest:
   authentication bypass, access from a browser or from other hosts, token leakage;
 - handling of secrets (system keychain, [ADR 0005](./docs/adr/0005-secret-store.md)): tokens or passwords in logs,
   database, settings or backups;
-- sync (WebDAV, Google Drive, Todoist) and OAuth flow: credential or data leakage, unsafe handling of remote data;
+- sync (WebDAV): credential or data leakage, unsafe handling of remote data;
 - backup and restore: path traversal, malicious database files;
 - release pipeline: anything that lets an outsider influence signed artifacts.
 

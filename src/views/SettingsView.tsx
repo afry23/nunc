@@ -5,7 +5,6 @@ import { BackupSection } from "../components/BackupSection";
 import { InfoIcon } from "../components/icons";
 import { NotificationHint } from "../components/NotificationHint";
 import { SyncSection } from "../components/SyncSection";
-import { TodoistSection } from "../components/TodoistSection";
 import { Button, SectionLabel, Toggle } from "../components/ui";
 import {
   LANGUAGES,
@@ -18,7 +17,6 @@ import { ratioAnchor, ratioBadge } from "../lib/format";
 import { isMobile } from "../lib/platform";
 import { soundLabel, SOUND_NAMES, playSound } from "../lib/sound";
 import { useSettingsStore } from "../stores/settingsStore";
-import { useTodoistStore } from "../stores/todoistStore";
 import { useUiStore } from "../stores/uiStore";
 
 export function SettingsView() {
@@ -35,7 +33,6 @@ export function SettingsView() {
       <div className="flex min-w-0 max-w-3xl flex-col gap-12 pb-10">
         <SettingsForm key={JSON.stringify(stored)} stored={stored} />
         <SyncSection />
-        {!isMobile() && <TodoistSection />}
         <BackupSection />
         <AboutSection />
       </div>
@@ -48,7 +45,6 @@ type JumpGroup = { title: string; items: { id: string; label: string }[] };
 /** Sprungliste (nur breit): springt zu einem Bereich und markiert den, der gerade im Bild ist. */
 function SectionJumpList() {
   const t = useT();
-  const todoist = useTodoistStore((s) => s.account !== null);
   const mobile = isMobile();
   const groups: JumpGroup[] = [
     {
@@ -73,9 +69,6 @@ function SectionJumpList() {
       title: t("settings.group.data"),
       items: [
         { id: "settings-sync", label: t("sync.title") },
-        ...(mobile || !todoist
-          ? []
-          : [{ id: "settings-todoist", label: t("todoist.title") }]),
         { id: "settings-backup", label: t("backup.title") },
         { id: "settings-about", label: t("about.title") },
       ],

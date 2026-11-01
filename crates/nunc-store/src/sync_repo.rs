@@ -118,11 +118,6 @@ pub fn set_last_sync_at(conn: &Connection, at: DateTime<Utc>) -> Result<(), Stor
     set_setting(conn, LAST_SYNC_KEY, &crate::time::to_text(at))
 }
 
-/// Schlüssel der Go-App für Google Drive.
-const DRIVE_LAST_SYNC_KEY: &str = "last_synced_at";
-const DRIVE_FOLDER_KEY: &str = "drive_folder_id";
-const TODOIST_LAST_SYNC_KEY: &str = "todoist.last_sync_at";
-
 fn time_setting(conn: &Connection, key: &str) -> Result<Option<String>, StoreError> {
     Ok(setting(conn, key)?.filter(|text| !text.is_empty()))
 }
@@ -135,7 +130,6 @@ pub fn last_sync_of(
     match provider {
         SyncProvider::None => Ok(None),
         SyncProvider::Webdav => time_setting(conn, LAST_SYNC_KEY),
-        SyncProvider::GoogleDrive => time_setting(conn, DRIVE_LAST_SYNC_KEY),
     }
 }
 
@@ -148,27 +142,8 @@ pub fn set_last_sync_of(
     let key = match provider {
         SyncProvider::None => return Ok(()),
         SyncProvider::Webdav => LAST_SYNC_KEY,
-        SyncProvider::GoogleDrive => DRIVE_LAST_SYNC_KEY,
     };
     set_setting(conn, key, &crate::time::to_text(at))
-}
-
-/// Kennung des Drive-Ordners `nunc` (für den Link „In Drive öffnen“).
-pub fn drive_folder_id(conn: &Connection) -> Result<Option<String>, StoreError> {
-    time_setting(conn, DRIVE_FOLDER_KEY)
-}
-
-pub fn set_drive_folder_id(conn: &Connection, id: &str) -> Result<(), StoreError> {
-    set_setting(conn, DRIVE_FOLDER_KEY, id)
-}
-
-/// Zeitpunkt des letzten erfolgreichen Todoist-Syncs.
-pub fn todoist_last_sync_at(conn: &Connection) -> Result<Option<String>, StoreError> {
-    time_setting(conn, TODOIST_LAST_SYNC_KEY)
-}
-
-pub fn set_todoist_last_sync_at(conn: &Connection, at: DateTime<Utc>) -> Result<(), StoreError> {
-    set_setting(conn, TODOIST_LAST_SYNC_KEY, &crate::time::to_text(at))
 }
 
 #[cfg(test)]
@@ -265,12 +240,11 @@ mod tests {
         );
     }
     #[test]
-    fn each_provider_keeps_its_own_last_sync_time() {
+    fn the_last_sync_time_of_the_provider_is_kept() {
         let conn = open_in_memory().unwrap();
         let first = at("2026-10-04T09:30:00Z");
         let second = at("2026-10-04T11:00:00Z");
         set_last_sync_of(&conn, SyncProvider::Webdav, first).unwrap();
-        set_last_sync_of(&conn, SyncProvider::GoogleDrive, second).unwrap();
         set_last_sync_of(&conn, SyncProvider::None, second).unwrap();
         assert_eq!(
             last_sync_of(&conn, SyncProvider::Webdav)
@@ -278,26 +252,6 @@ mod tests {
                 .as_deref(),
             Some("2026-10-04T09:30:00Z")
         );
-        assert_eq!(
-            last_sync_of(&conn, SyncProvider::GoogleDrive)
-                .unwrap()
-                .as_deref(),
-            Some("2026-10-04T11:00:00Z")
-        );
         assert_eq!(last_sync_of(&conn, SyncProvider::None).unwrap(), None);
-    }
-
-    #[test]
-    fn the_drive_folder_and_the_todoist_time_are_kept() {
-        let conn = open_in_memory().unwrap();
-        assert_eq!(drive_folder_id(&conn).unwrap(), None);
-        set_drive_folder_id(&conn, "folder-1").unwrap();
-        assert_eq!(drive_folder_id(&conn).unwrap().as_deref(), Some("folder-1"));
-        assert_eq!(todoist_last_sync_at(&conn).unwrap(), None);
-        set_todoist_last_sync_at(&conn, at("2026-10-04T09:30:00Z")).unwrap();
-        assert_eq!(
-            todoist_last_sync_at(&conn).unwrap().as_deref(),
-            Some("2026-10-04T09:30:00Z")
-        );
     }
 }

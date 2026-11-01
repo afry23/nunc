@@ -15,7 +15,6 @@ mod stats;
 mod timer;
 mod timetracking;
 mod todo_query;
-mod todoist;
 mod todotxt;
 mod todotxt_file;
 
@@ -32,7 +31,6 @@ pub struct DomainWorld {
     timer: timer::State,
     timetracking: timetracking::State,
     todo_query: todo_query::State,
-    todoist: todoist::State,
     todotxt: todotxt::State,
     todotxt_file: todotxt_file::State,
 }

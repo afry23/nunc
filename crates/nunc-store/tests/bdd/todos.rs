@@ -266,16 +266,6 @@ fn at_top_level(world: &mut StoreWorld, id: i32) {
     assert_eq!(todo(world, id).parent_id, None);
 }
 
-#[then(expr = "the Todoist sync sees the todos {string}")]
-fn todoist_sees(world: &mut StoreWorld, ids: String) {
-    let seen: Vec<String> = nunc_store::list_local_todos(world.conn())
-        .expect("local todos")
-        .iter()
-        .map(|local| local.todo.id.to_string())
-        .collect();
-    assert_eq!(seen, ids.split_whitespace().collect::<Vec<_>>());
-}
-
 #[then(expr = "the todo {int} is not marked as deleted")]
 fn not_deleted(world: &mut StoreWorld, id: i32) {
     let deleted: i64 = world

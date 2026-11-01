@@ -22,8 +22,8 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.todoist.com https://*.cloudfront.net; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost",
-      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.todoist.com https://*.cloudfront.net; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420 http://localhost:1420"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost",
+      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420 http://localhost:1420"
     }
   },
   "bundle": {
@@ -40,7 +40,7 @@
     "copyright": "© 2026 afry",
     "category": "Productivity",
     "shortDescription": "Pomodoro- und Flowtime-Timer mit todo.txt, Statistik, Backup und Sync",
-    "longDescription": "nunc ist ein Fokus-Timer mit Pomodoro- und Flowtime-Modus. Aufgaben liegen im todo.txt-Format, die Statistik wird aus den einzelnen Sessions berechnet. Datensicherung und Synchronisierung über WebDAV und Google Drive, optional mit Todoist.",
+    "longDescription": "nunc ist ein Fokus-Timer mit Pomodoro- und Flowtime-Modus. Aufgaben liegen im todo.txt-Format, die Statistik wird aus den einzelnen Sessions berechnet. Datensicherung und Synchronisierung über WebDAV.",
     "macOS": {
       "minimumSystemVersion": "11.0",
       "hardenedRuntime": true

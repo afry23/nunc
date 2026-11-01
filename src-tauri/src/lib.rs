@@ -2,7 +2,6 @@ mod adapters;
 #[cfg(desktop)]
 mod api_service;
 mod commands;
-mod credentials;
 mod db;
 mod error;
 mod events;
@@ -76,18 +75,6 @@ fn specta_builder() -> Builder<tauri::Wry> {
             sync::get_sync_status,
             sync::sync_now,
             sync::sync_in_background,
-            sync::get_drive_status,
-            sync::connect_drive,
-            sync::disconnect_drive,
-            sync::set_google_client,
-            sync::clear_google_client,
-            sync::check_sync_import,
-            sync::finish_connect,
-            sync::get_todoist_status,
-            sync::connect_todoist_token,
-            sync::disconnect_todoist,
-            sync::get_todoist_sync_status,
-            sync::todoist_sync_now,
             notifications::get_notification_status::<tauri::Wry>,
             notifications::request_notification_permission::<tauri::Wry>,
         ])
@@ -99,8 +86,6 @@ fn specta_builder() -> Builder<tauri::Wry> {
             events::SyncStart,
             events::SyncStatusChanged,
             events::SyncComplete,
-            events::TodoistSyncStatus,
-            events::TodoistSyncComplete,
             events::ApiStatusChanged,
         ])
         // Dateigrößen liegen weit unter 2^53; `u64` darf daher als `number` exportiert werden.

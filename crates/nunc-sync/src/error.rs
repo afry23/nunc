@@ -1,4 +1,4 @@
-use nunc_platform::{OpenError, SecretError};
+use nunc_platform::SecretError;
 use nunc_store::StoreError;
 
 /// Fehler der Synchronisierung. Die Texte sind für die Anzeige gedacht (deutsch, ohne Technikjargon, soweit
@@ -25,36 +25,6 @@ pub enum SyncError {
     InvalidUrl(String),
     #[error("WebDAV ist nicht vollständig eingerichtet")]
     NotConfigured,
-    /// Es gibt keine gespeicherte Anmeldung (`Google Drive`, `Todoist`).
-    #[error("Nicht mit {0} verbunden")]
-    NotConnected(&'static str),
-    /// Der Dienst lehnt das Token ab und es lässt sich nicht erneuern.
-    #[error("{0}: Anmeldung abgelaufen – bitte neu verbinden")]
-    AuthExpired(&'static str),
-    /// Für Google Drive ist kein eigener OAuth-Client eingetragen (ADR 0019).
-    #[error(
-        "Kein Google-Zugang eingerichtet. Trage Client-ID und Client-Secret in den Einstellungen ein."
-    )]
-    GoogleClientMissing,
-    /// Es gibt noch eine Verbindung, aber keinen eigenen Client (Anmeldung mit dem früher eingebauten Client).
-    #[error(
-        "Google Drive braucht jetzt einen eigenen Zugang – bitte in den Einstellungen einrichten"
-    )]
-    GoogleClientRequired,
-    /// Client-ID oder -Secret unbrauchbar, bereits als Text für die Anzeige.
-    #[error("{0}")]
-    GoogleClientInvalid(&'static str),
-    /// Todoist lehnt das eingegebene persönliche Token ab (oder es ist leer, ADR 0020).
-    #[error("Todoist hat das Token abgelehnt. Bitte prüfe es in den Todoist-Einstellungen.")]
-    TodoistTokenRejected,
-    /// Das gespeicherte Todoist-Token gilt nicht mehr (widerrufen oder alte, abgelaufene OAuth-Anmeldung).
-    #[error("Todoist: Token ungültig – bitte neu eintragen")]
-    TodoistTokenInvalid,
-    /// Fehler beim Anmelden (Browser, Rückruf, Token-Austausch), bereits als Text für die Anzeige.
-    #[error("{0}")]
-    OAuth(String),
-    #[error("{0}")]
-    Open(#[from] OpenError),
     #[error("{0}")]
     Store(#[from] StoreError),
     #[error("{0}")]

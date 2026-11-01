@@ -1,6 +1,6 @@
 # ADR 0019 – Google Drive nur mit eigenem OAuth-Client der Nutzer
 
-- Status: akzeptiert
+- Status: ersetzt durch ADR 0024 (Google Drive entfernt)
 - Datum: 2026-10-11
 - Ersetzt teilweise: ADR 0009 (Abschnitt „Anmeldung“, Zugangsdaten für Google)
 - Referenz: ADR 0005 (SecretStore), `src-tauri/src/credentials.rs`, `crates/nunc-sync/src/drive/mod.rs`

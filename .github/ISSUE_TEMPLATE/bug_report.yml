@@ -63,7 +63,7 @@ body:
         - Tasks (todo.txt)
         - Statistics
         - Backup / restore
-        - Sync (WebDAV, Google Drive, Todoist)
+        - Sync (WebDAV)
         - Local API
         - Notifications
         - Other

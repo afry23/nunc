@@ -34,24 +34,20 @@ Feature: Sync provider selection
       | setting     | value |
       | pomodoroMin | 40    |
 
-  @domain @US-Sync-Provider
-  Scenario Outline: Google Drive is only available on the desktop
-    Then the sync provider "<provider>" is <result> on <platform>
-
-    Examples:
-      | provider     | platform | result      |
-      | none         | desktop  | available   |
-      | none         | mobile   | available   |
-      | webdav       | desktop  | available   |
-      | webdav       | mobile   | available   |
-      | google_drive | desktop  | available   |
-      | google_drive | mobile   | unavailable |
+  @integration @US-Sync-Provider
+  Scenario: A provider that no longer exists falls back to none
+    Given no database exists yet
+    When nunc opens the database
+    And the settings table has "sync_provider" = "google_drive"
+    And I load the settings
+    Then the loaded settings are:
+      | setting      | value |
+      | syncProvider | none  |
 
   @ui @US-Sync-Provider
-  Scenario: The provider can be chosen between none, Google Drive and WebDAV
+  Scenario: The provider can be chosen between none and WebDAV
     When I open the app at "/settings"
-    Then I see the radio group "Sync-Anbieter" with the options "Kein Sync, Google Drive, WebDAV"
-    And the option "Google Drive" is enabled
+    Then I see the radio group "Sync-Anbieter" with the options "Kein Sync, WebDAV"
 
   @ui @US-Sync-Provider
   Scenario: Only one provider can be active

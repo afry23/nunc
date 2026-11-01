@@ -132,10 +132,7 @@ export const commands = {
 	 *  `None`, wenn der Dialog abgebrochen wurde.
 	 */
 	exportBackup: (sourcePath: string) => typedError<string | null, AppError>(__TAURI_INVOKE("export_backup", { sourcePath })),
-	/**
-	 *  Wählt den Sync-Anbieter (exklusiv) und speichert die Wahl sofort. Zugangsdaten der übrigen Anbieter bleiben
-	 *  erhalten, sie werden nur nicht mehr benutzt.
-	 */
+	/**  Wählt den Sync-Anbieter (exklusiv) und speichert die Wahl sofort. Die Zugangsdaten bleiben erhalten. */
 	setSyncProvider: (provider: SyncProvider) => typedError<null, AppError>(__TAURI_INVOKE("set_sync_provider", { provider })),
 	getWebdavConfig: () => typedError<WebDavSettings, AppError>(__TAURI_INVOKE("get_webdav_config")),
 	/**
@@ -162,41 +159,6 @@ export const commands = {
 } | null, AppError>(__TAURI_INVOKE("sync_now")),
 	/**  Die App geht in den Hintergrund (Mobil): ein letzter Sync, bevor das Betriebssystem sie einfriert. */
 	syncInBackground: () => __TAURI_INVOKE<void>("sync_in_background"),
-	/**  Zustand der Google-Drive-Verbindung (ohne Netzwerkzugriff). */
-	getDriveStatus: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("get_drive_status")),
-	/**
-	 *  Meldet im Browser bei Google an (Desktop). Wartet, bis der Browser zurückruft oder die Zeit abläuft; der
-	 *  erste Abgleich folgt, sobald die Oberfläche keinen Import anbietet (`finish_connect`).
-	 */
-	connectDrive: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("connect_drive")),
-	/**  Löscht die Anmeldung lokal; die Sync-Datei im Drive bleibt. */
-	disconnectDrive: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("disconnect_drive")),
-	/**  Trägt den eigenen OAuth-Client für Google ein (ADR 0019). Eine andere Client-ID trennt die Verbindung. */
-	setGoogleClient: (clientId: string, clientSecret: string) => typedError<DriveStatus, AppError>(__TAURI_INVOKE("set_google_client", { clientId, clientSecret })),
-	/**  Entfernt den eigenen OAuth-Client und damit auch die Verbindung. */
-	clearGoogleClient: () => typedError<DriveStatus, AppError>(__TAURI_INVOKE("clear_google_client")),
-	/**  Liegt im Drive Stand, den dieses (leere) Gerät übernehmen kann? */
-	checkSyncImport: () => typedError<SyncImportInfo, AppError>(__TAURI_INVOKE("check_sync_import")),
-	/**  Nach dem Verbinden: der erste Abgleich im Hintergrund (außer die Oberfläche bietet einen Import an). */
-	finishConnect: () => __TAURI_INVOKE<void>("finish_connect"),
-	/**  Zustand der Todoist-Verbindung (ohne Netzwerkzugriff). */
-	getTodoistStatus: () => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("get_todoist_status")),
-	/**
-	 *  Verbindet Todoist mit dem persönlichen API-Token (Desktop, ADR 0020). Danach läuft der erste Abgleich im
-	 *  Hintergrund. Das Token geht nie zurück an die Oberfläche.
-	 */
-	connectTodoistToken: (token: string) => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("connect_todoist_token", { token })),
-	/**  Löscht die Anmeldung lokal; lokale Todos bleiben. */
-	disconnectTodoist: () => typedError<TodoistStatus, AppError>(__TAURI_INVOKE("disconnect_todoist")),
-	/**  Zustand des Todoist-Syncs (für die Statusleiste beim Öffnen; danach kommt `todoist:sync_status`). */
-	getTodoistSyncStatus: () => __TAURI_INVOKE<SyncStatus>("get_todoist_sync_status"),
-	/**  Gleicht jetzt mit Todoist ab und wartet auf das Ergebnis. `None`, wenn Todoist nicht verbunden ist. */
-	todoistSyncNow: () => typedError<{
-	importedTodos: number,
-	importedSessions: number,
-	/**  Lokale Todos, die durch eine neuere Server-Version ersetzt wurden. */
-	conflictedTodos: number,
-} | null, AppError>(__TAURI_INVOKE("todoist_sync_now")),
 	/**  Aktueller Stand, ohne den Nutzer zu fragen. */
 	getNotificationStatus: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("get_notification_status")),
 	/**
@@ -218,8 +180,6 @@ export const events = {
 	timerComplete: makeEvent<TimerComplete>("timer:complete"),
 	timerStopped: makeEvent<TimerStopped>("timer:stopped"),
 	timerTick: makeEvent<TimerTick>("timer:tick"),
-	todoistSyncComplete: makeEvent<TodoistSyncComplete>("todoist:sync_complete"),
-	todoistSyncStatus: makeEvent<TodoistSyncStatus>("todoist:sync_status"),
 };
 
 /* Types */
@@ -325,18 +285,6 @@ export type DayTimeline = {
 	date: string,
 	blocks: TimelineBlock[],
 	gaps: TimelineGap[],
-};
-
-/**  Zustand der Google-Drive-Verbindung (`get_drive_status`). */
-export type DriveStatus = {
-	/**  Ob ein OAuth-Client für Google eingetragen ist (ADR 0019). */
-	configured: boolean,
-	/**  Die eingetragene Client-ID (Anzeige); das Secret verlässt den Tresor nie. */
-	clientId: string | null,
-	connected: boolean,
-	email: string | null,
-	/**  Link auf den Ordner `nunc` im Drive (erst nach dem ersten Sync bekannt). */
-	folderUrl: string | null,
 };
 
 export type ExportFormat = "csv" | "json";
@@ -523,15 +471,8 @@ export type StatsResponse = {
 /**  Ein Sync-Lauf ist gelungen; die Nutzlast sagt, was vom Server übernommen wurde. */
 export type SyncComplete = SyncResult;
 
-/**  Ergebnis der Prüfung nach dem Verbinden: liegt auf Drive Stand, den ein leeres Gerät übernehmen kann? */
-export type SyncImportInfo = {
-	available: boolean,
-	todoCount: number,
-	sessionCount: number,
-};
-
 /**  Aktiver Sync-Provider (exklusiv). */
-export type SyncProvider = "none" | "google_drive" | "webdav";
+export type SyncProvider = "none" | "webdav";
 
 /**  Was ein Sync-Lauf vom Server übernommen hat (`sync:complete`). */
 export type SyncResult = {
@@ -701,19 +642,6 @@ export type TodoStats = {
 	pomodoroCount: number,
 	workMinutes: number,
 };
-
-/**  Zustand der Todoist-Verbindung (`get_todoist_status`). */
-export type TodoistStatus = {
-	connected: boolean,
-	email: string | null,
-	avatarUrl: string | null,
-};
-
-/**  Ein Todoist-Lauf ist gelungen; die Nutzlast sagt, was lokal angekommen ist. */
-export type TodoistSyncComplete = SyncResult;
-
-/**  Der Todoist-Sync hat den Zustand gewechselt (`idle` · `syncing` · `error`). */
-export type TodoistSyncStatus = SyncStatus;
 
 /**  Anmeldeverfahren am WebDAV-Server. */
 export type WebDavAuth = "basic" | "digest";

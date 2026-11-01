@@ -14,7 +14,6 @@ mod sync_repo;
 mod time;
 mod timer_state;
 mod todo_repo;
-mod todoist_repo;
 
 pub use backup::{
     BackupResult, backup_dir_status, backup_if_needed, create_emergency_backup,
@@ -34,17 +33,12 @@ pub use session_repo::{
 };
 pub use settings_repo::{device_id, load_settings, save_settings, set_sync_provider};
 pub use sync_repo::{
-    Applied, drive_folder_id, last_sync_at, last_sync_of, load_webdav_config, save_webdav_config,
-    set_drive_folder_id, set_last_sync_at, set_last_sync_of, set_todoist_last_sync_at,
-    todoist_last_sync_at,
+    Applied, last_sync_at, last_sync_of, load_webdav_config, save_webdav_config, set_last_sync_at,
+    set_last_sync_of,
 };
 pub use timer_state::{load_timer, save_timer};
 pub use todo_repo::{
     TodotxtImport, add_subtask, add_todo, delete_todo, export_todotxt, import_todotxt,
     increment_pomodoro_count, list_all_todos, list_todos, reorder_todos, set_todo_completed,
     set_todo_parent, update_todo,
-};
-pub use todoist_repo::{
-    TodoistApplied, TodoistWrite, add_todoist_mapping, apply_todoist_writes, list_local_todos,
-    list_todoist_mappings, remove_todoist_mappings,
 };

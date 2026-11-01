@@ -22,9 +22,8 @@ Konten müssen neu verbunden werden.
 Die Go-App legt Tokens und Passwörter im Schlüsselspeicher ab. nunc übernimmt sie **bewusst nicht** (ADR 0005) – Konten
 neu verbinden:
 
-1. *Einstellungen → Synchronisierung:* WebDAV (Passwort neu eingeben), Google Drive (Anmeldung im Browser).
-2. *Einstellungen → Todoist:* neu anmelden. Danach gleicht nunc die Aufgaben über die vorhandene Zuordnung ab; es sollten
-   keine Duplikate entstehen.
+1. *Einstellungen → Synchronisierung:* WebDAV (Passwort neu eingeben). Google Drive und Todoist der Go-App gibt es in
+   nunc nicht mehr (ADR 0024).
 
 ## Schritt für Schritt
 
@@ -40,8 +39,7 @@ neu verbinden:
 |---|---|---|
 | Datenordner | `…/nunc/` | `…/com.afry.nunc/` |
 | Standard-Sicherungsordner | `…/nunc/backups` | `…/com.afry.nunc/backups` |
-| Schlüsselspeicher | Eigener Eintrag der Go-App | Dienst `nunc`, Konten `webdav`, `google-drive`, `todoist` |
-| Google Drive Scope | `drive.file` + `userinfo.email` | nur `drive.file` (E-Mail über Drive `about`) |
+| Schlüsselspeicher | Eigener Eintrag der Go-App | Dienst `nunc`, Konto `webdav` |
 | Plattformen | Desktop | Desktop, Android, iOS |
 | Flowtime-Bucket-Modus | vorhanden (`flowtime_rules`) | nicht übernommen (Backlog) |
 | Sprache | Deutsch | Deutsch, Englisch |

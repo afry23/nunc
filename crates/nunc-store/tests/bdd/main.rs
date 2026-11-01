@@ -171,6 +171,10 @@ fn go_tables_unchanged(world: &mut StoreWorld) {
     let before = world.schema_before.clone().expect("kein Ausgangsstand");
     let now = schema(world.conn());
     for (name, sql) in before {
+        // Die Todoist-Anbindung ist entfernt (Migration 013, ADR 0024)
+        if name.contains("todoist") {
+            continue;
+        }
         assert_eq!(now.get(&name), Some(&sql), "{name}");
     }
 }
@@ -301,7 +305,7 @@ fn remaining(world: &mut StoreWorld, seconds: u32, time: String) {
 const FEATURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../features");
 
 /// Nur `@integration`-Szenarien dieses Crates, `@wip` wird übersprungen.
-/// Todoist-/Sync-Szenarien gehören anderen Crates (wiremock) und werden hier nicht erwartet.
+/// Sync-Szenarien gehören anderen Crates (wiremock) und werden hier nicht erwartet.
 fn selected(
     feature: &cucumber::gherkin::Feature,
     _rule: Option<&cucumber::gherkin::Rule>,

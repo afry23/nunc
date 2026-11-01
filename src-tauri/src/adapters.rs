@@ -1,11 +1,10 @@
 //! Tauri-Adapter für die Traits aus `nunc-platform`.
 
 use chrono::{DateTime, Utc};
-use nunc_platform::{EventSink, Notifier, NotifyError, OpenError, UrlOpener};
+use nunc_platform::{EventSink, Notifier, NotifyError};
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Runtime};
 use tauri_plugin_notification::{NotificationBuilder, NotificationExt};
-use tauri_plugin_opener::OpenerExt;
 
 /// Android-Benachrichtigungskanal für das Timer-Ende. Ohne Kanal stellt Android Benachrichtigungen nicht zu.
 #[cfg(target_os = "android")]
@@ -31,18 +30,6 @@ pub fn create_timer_channel<R: Runtime>(handle: &AppHandle<R>) -> Result<(), Not
     {
         let _ = handle;
         Ok(())
-    }
-}
-
-/// Öffnet Adressen im Standardbrowser (`tauri-plugin-opener`).
-pub struct TauriUrlOpener<R: Runtime>(pub AppHandle<R>);
-
-impl<R: Runtime> UrlOpener for TauriUrlOpener<R> {
-    fn open(&self, url: &str) -> Result<(), OpenError> {
-        self.0
-            .opener()
-            .open_url(url, None::<&str>)
-            .map_err(|error| OpenError(error.to_string()))
     }
 }
 

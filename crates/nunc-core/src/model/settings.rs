@@ -8,23 +8,13 @@ use super::{TimerMode, text_enum};
 #[serde(rename_all = "snake_case")]
 pub enum SyncProvider {
     None,
-    GoogleDrive,
     Webdav,
 }
 
 text_enum!(SyncProvider, "SyncProvider", {
     None => "none",
-    GoogleDrive => "google_drive",
     Webdav => "webdav",
 });
-
-impl SyncProvider {
-    /// Ob der Anbieter auf der Plattform wählbar ist. Google Drive braucht auf Mobilgeräten Deep-Links und
-    /// Plattform-Client-IDs (Backlog nach 1.0); dort gibt es nur „kein Sync“ und WebDAV.
-    pub fn is_available(self, mobile: bool) -> bool {
-        !(mobile && self == Self::GoogleDrive)
-    }
-}
 
 /// Sprache der Oberfläche (`system` folgt dem Betriebssystem).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Type)]
@@ -242,25 +232,12 @@ mod tests {
     #[test]
     fn sync_provider_text_values() {
         assert_eq!(SyncProvider::None.as_str(), "none");
-        assert_eq!(SyncProvider::GoogleDrive.as_str(), "google_drive");
         assert_eq!(SyncProvider::Webdav.as_str(), "webdav");
-        for p in [
-            SyncProvider::None,
-            SyncProvider::GoogleDrive,
-            SyncProvider::Webdav,
-        ] {
+        for p in [SyncProvider::None, SyncProvider::Webdav] {
             assert_eq!(p.as_str().parse::<SyncProvider>(), Ok(p));
         }
+        assert!("google_drive".parse::<SyncProvider>().is_err());
         assert!("dropbox".parse::<SyncProvider>().is_err());
-    }
-
-    #[test]
-    fn google_drive_is_not_available_on_mobile() {
-        for provider in [SyncProvider::None, SyncProvider::Webdav] {
-            assert!(provider.is_available(true) && provider.is_available(false));
-        }
-        assert!(SyncProvider::GoogleDrive.is_available(false));
-        assert!(!SyncProvider::GoogleDrive.is_available(true));
     }
 
     #[test]
@@ -324,7 +301,7 @@ mod tests {
     #[test]
     fn roundtrips_through_json() {
         let s = Settings {
-            sync_provider: SyncProvider::GoogleDrive,
+            sync_provider: SyncProvider::Webdav,
             flowtime_ratio: 0.35,
             ..Settings::default()
         };

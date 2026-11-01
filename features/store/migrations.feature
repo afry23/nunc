@@ -7,7 +7,7 @@ Feature: Connection and migrations
     Given no database exists yet
     When nunc opens the database
     Then the migrations 1 to 5 are recorded as applied
-    And the tables "settings, flowtime_rules, todos, sessions, todoist_mappings" exist
+    And the tables "settings, flowtime_rules, todos, sessions" exist
 
   @integration @REQ-compat @desktop
   Scenario: Opening twice applies nothing again

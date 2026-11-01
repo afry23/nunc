@@ -26,6 +26,10 @@ fn go_tables(world: &mut StoreWorld) {
     let nunc = schema(world.conn());
     assert!(go.len() >= 6, "Fixture ohne Schema?");
     for (name, sql) in go {
+        // Die Todoist-Anbindung ist entfernt (Migration 013, ADR 0024)
+        if name.contains("todoist") {
+            continue;
+        }
         assert_eq!(nunc.get(&name), Some(&sql), "{name}");
     }
 }

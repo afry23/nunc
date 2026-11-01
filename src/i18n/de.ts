@@ -18,10 +18,6 @@ export const de = {
   "error.network": "Server nicht erreichbar.",
   "error.unauthorized": "Anmeldung abgelehnt oder abgelaufen.",
   "error.not_connected": "Nicht verbunden.",
-  "error.google_client_missing": "Kein Google-Zugang eingerichtet.",
-  "error.google_client_invalid": "Google-Zugang ungültig.",
-  "error.oauth": "Anmeldung fehlgeschlagen.",
-  "error.browser": "Der Browser konnte nicht geöffnet werden.",
   "error.server": "Der Server meldet einen Fehler.",
   "error.sync_conflict": "Die Daten wurden zwischenzeitlich geändert.",
   "error.sync_file_invalid": "Die Sync-Datei ist ungültig.",
@@ -89,10 +85,6 @@ export const de = {
   "common.error": "Fehler",
   "backup.exported": "Backup exportiert.",
   "backup.restored": "Daten wiederhergestellt.",
-  "sync.import.nothing": "Es gab nichts zu importieren.",
-  "sync.import.failed":
-    "Der Import ist fehlgeschlagen. Die Meldung steht in der Statusleiste.",
-  "todoist.notice": "Todoist: {message}",
   "nav.timer": "Timer",
   "nav.todos": "Aufgaben",
   "nav.times": "Zeiten",
@@ -112,7 +104,7 @@ export const de = {
     "Alle Auswertungen werden aus den einzelnen Sitzungen berechnet. Es gibt Tages-, Wochen- und Monatsansichten. In „Zeiten“ siehst du die Arbeitszeit pro Woche und kannst Einträge nachtragen, bearbeiten und löschen.",
   "help.sync.title": "Synchronisierung",
   "help.sync.body":
-    "In den Einstellungen verbindest du WebDAV oder Google Drive, um Daten zwischen Geräten abzugleichen. Todoist lässt sich auf dem Desktop verbinden. Zugangsdaten liegen im Schlüsselspeicher des Systems.",
+    "In den Einstellungen verbindest du WebDAV, um Daten zwischen Geräten abzugleichen. Zugangsdaten liegen im Schlüsselspeicher des Systems.",
   "help.backup.title": "Backup",
   "help.backup.body":
     "In den Einstellungen sicherst und stellst du deine Daten wieder her. Sicherungen der Go-Version von nunc sind kompatibel.",
@@ -351,7 +343,6 @@ export const de = {
   "backup.confirm.safety":
     "Vorher wird automatisch ein Notfall-Backup angelegt.",
   "sync.provider.none": "Kein Sync",
-  "sync.provider.google_drive": "Google Drive",
   "sync.provider.webdav": "WebDAV",
   "sync.title": "Synchronisierung",
   "sync.providerLabel": "Sync-Anbieter",
@@ -362,60 +353,12 @@ export const de = {
   "sync.upToDate": "Bereits auf dem neuesten Stand.",
   "sync.webdavNotSetUp":
     "WebDAV ist ausgewählt, aber noch nicht eingerichtet. Trage unten die Verbindungsdaten ein, damit synchronisiert werden kann.",
-  "sync.driveNotConnected":
-    "Google Drive ist ausgewählt, aber noch nicht verbunden. Melde dich unten an, damit synchronisiert werden kann.",
   "sync.webdavChoose":
     "Wähle WebDAV als Anbieter, um die Verbindung zu bearbeiten.",
   "sync.switch.title": "Anbieter wechseln?",
   "sync.switch.button": "Anbieter wechseln",
   "sync.switch.body":
     "Die Synchronisierung mit {provider} wird beendet. Die gespeicherten Zugangsdaten bleiben erhalten.",
-  "drive.notConnected": "Nicht verbunden",
-  "drive.client.title": "Google-Zugang",
-  "drive.client.intro":
-    "nunc bringt keinen eigenen Google-Zugang mit. Mit deinem eigenen Client bleiben Zugriff und Kontingent bei dir.",
-  "drive.client.id": "Client-ID",
-  "drive.client.secret": "Client-Secret",
-  "drive.client.current": "Eingetragene Client-ID: {id}",
-  "drive.client.save": "Zugang speichern",
-  "drive.client.remove": "Zugang entfernen",
-  "drive.client.saved": "Google-Zugang gespeichert.",
-  "drive.guide.toggle": "So richtest du einen Google-Zugang ein",
-  "drive.guide.step1": "In der Google Cloud Console ein Projekt anlegen.",
-  "drive.guide.step2":
-    "Unter „APIs und Dienste“ die „Google Drive API“ aktivieren.",
-  "drive.guide.step3":
-    "OAuth-Zustimmungsbildschirm einrichten: Typ „Extern“, App-Name frei wählbar, deine E-Mail-Adresse, Scope „…/auth/drive.file“ hinzufügen.",
-  "drive.guide.step4":
-    "Veröffentlichungsstatus auf „In Produktion“ setzen. Im Status „Testen“ läuft die Anmeldung nach 7 Tagen ab. Für drive.file ist keine Prüfung durch Google nötig.",
-  "drive.guide.step5":
-    "Unter „Anmeldedaten“ eine OAuth-Client-ID vom Typ „Desktop-App“ erstellen und Client-ID und Client-Secret hier eintragen.",
-  "drive.guide.devices":
-    "Nutze auf allen Geräten dieselbe Client-ID, sonst sehen sie die Sync-Datei der anderen nicht.",
-  "drive.guide.alternative":
-    "Ohne Google-Konsole geht es mit WebDAV, z. B. Nextcloud.",
-  "drive.guide.console": "Google Cloud Console öffnen",
-  "drive.waiting": "Warte auf den Browser …",
-  "drive.connect": "Mit Google Drive verbinden",
-  "drive.connectedAs": "Verbunden als {email}",
-  "drive.connected": "Verbunden",
-  "drive.location": "Ablage in Google Drive: nunc/nunc-sync.v2.json",
-  "drive.syncEnabled": "Synchronisierung aktiv",
-  "drive.paused":
-    "Pausiert: Lokale Daten bleiben erhalten. Die Sync-Datei auf Google Drive wird nicht gelöscht.",
-  "drive.open": "In Drive öffnen",
-  "drive.disconnect": "Verbindung trennen",
-  "import.title": "Vorhandene Daten von Google Drive importieren?",
-  "import.offer": "Auf Google Drive liegen {todos} und {sessions}.",
-  "import.todos": "{count} Aufgabe|{count} Aufgaben",
-  "import.sessions": "{count} Session|{count} Sessions",
-  "import.emptyHint":
-    "Mit „Leer starten“ werden die Daten erst beim nächsten Abgleich übernommen.",
-  "import.running": "Import läuft",
-  "import.startEmpty": "Leer starten",
-  "import.import": "Importieren",
-  "import.importing": "Importiere …",
-  "import.done": "Fertig",
   "syncbar.label": "Sync-Status",
   "syncbar.syncing": "Synchronisiere …",
   "syncbar.last": "Zuletzt synchronisiert: {time}",
@@ -423,33 +366,6 @@ export const de = {
   "syncbar.error": "Sync-Fehler: {message}",
   "syncbar.unknown": "unbekannt",
   "syncbar.retry": "Erneut versuchen",
-  "todoist.status.syncing": "⟳ Todoist synchronisiert…",
-  "todoist.status.error": "⚠ Todoist-Sync fehlgeschlagen",
-  "todoist.status.last": "✓ Todoist: {time}",
-  "todoist.status.never": "✓ Todoist: noch nicht synchronisiert",
-  "todoist.statusLabel": "Todoist-Status",
-  "todoist.title": "Todoist",
-  "todoist.notConnected": "Nicht verbunden",
-  "todoist.explain":
-    "Aufgaben werden in beide Richtungen abgeglichen. Sessions und Einstellungen bleiben auf diesem Gerät.",
-  "todoist.token": "API-Token",
-  "todoist.tokenHelp":
-    "Dein persönliches API-Token findest du in Todoist unter Einstellungen → Integrationen → Entwickler.",
-  "todoist.tokenWarning":
-    "Das Token hat vollen Zugriff auf dein Todoist-Konto. nunc speichert es nur im Schlüsselbund dieses Geräts; in Todoist kannst du es jederzeit erneuern.",
-  "todoist.openSettings": "Todoist-Einstellungen öffnen",
-  "todoist.waiting": "Prüfe das Token …",
-  "todoist.connect": "Mit Todoist verbinden",
-  "todoist.avatar": "Avatar",
-  "todoist.connectedAs": "Verbunden als {email}",
-  "todoist.connected": "Verbunden",
-  "todoist.syncing": "Synchronisiere Todoist …",
-  "todoist.syncNow": "Todoist jetzt synchronisieren",
-  "todoist.disconnect": "Todoist trennen",
-  "todoist.disconnectTitle": "Todoist-Verbindung trennen?",
-  "todoist.disconnectConfirm": "Trennen",
-  "todoist.disconnectBody":
-    "Lokale Todos bleiben erhalten, werden aber nicht mehr mit Todoist synchronisiert.",
   "webdav.saved": "WebDAV-Einstellungen gespeichert.",
   "webdav.url": "Server-URL",
   "webdav.urlInvalid": "Die Adresse muss mit http:// oder https:// beginnen.",

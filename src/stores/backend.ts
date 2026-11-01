@@ -1,4 +1,3 @@
-import { t } from "../i18n";
 import { commands, events } from "../lib/api";
 import { isMobile } from "../lib/platform";
 import { changedData, describeSyncResult } from "../lib/sync";
@@ -6,7 +5,6 @@ import { useNotificationStore } from "./notificationStore";
 import { useSettingsStore } from "./settingsStore";
 import { useSyncStore } from "./syncStore";
 import { useTimerStore } from "./timerStore";
-import { useTodoistStore } from "./todoistStore";
 import { useTodoStore } from "./todoStore";
 import { useUiStore } from "./uiStore";
 
@@ -18,7 +16,6 @@ export async function reloadAll(): Promise<void> {
     useTimerStore.getState().refresh(),
     useNotificationStore.getState().refresh(),
     useSyncStore.getState().loadStatus(),
-    useTodoistStore.getState().load(),
   ]);
 }
 
@@ -57,21 +54,6 @@ export async function connectBackend(): Promise<() => void> {
       void useTodoStore.getState().load();
       const message = describeSyncResult(result);
       if (message) useUiStore.getState().notify(message);
-    }),
-    events.todoistSyncStatus.listen((event) => {
-      const status = event.payload;
-      useTodoistStore.getState().setStatus(status);
-      // Fehler erscheinen zusätzlich als Hinweis, der nichts blockiert
-      if (status.state === "error" && status.errorMessage)
-        useUiStore.getState().notify(status.errorMessage, "error");
-    }),
-    events.todoistSyncComplete.listen((event) => {
-      const result = event.payload;
-      if (!changedData(result)) return;
-      void useTodoStore.getState().load();
-      const message = describeSyncResult(result);
-      if (message)
-        useUiStore.getState().notify(t("todoist.notice", { message }));
     }),
   ]);
   // Rückkehr aus dem Hintergrund: Ereignisse sind dort ausgeblieben, der Stand kommt neu aus dem Backend

@@ -1,12 +1,10 @@
-//! Sync-Clients: WebDAV (M6), später Google Drive und Todoist (M7).
+//! Sync-Client: WebDAV (ADR 0008).
 
 mod config;
 mod coordinator;
-mod drive;
 mod engine;
 mod error;
-pub mod oauth;
-mod todoist;
+mod http;
 pub(crate) mod webdav;
 
 pub use config::{
@@ -16,14 +14,7 @@ pub use config::{
 pub use coordinator::{
     RunFuture, RunOutcome, SyncCoordinator, SyncObserver, SyncRunner, Timing, Trigger,
 };
-pub use drive::{
-    CLIENT_ACCOUNT, ChainRunner, DriveClient, DriveConfig, DriveFile, DriveRunner, DriveService,
-    GoogleClient, sync_drive,
-};
 pub use engine::{SyncSetup, SyncStore, WebDavRunner, sync_webdav};
 pub use error::SyncError;
-pub use todoist::{
-    Account, Named, TaskPayload, TodoistClient, TodoistConfig, TodoistRunner, TodoistService,
-    TodoistStore, sync_todoist,
-};
+pub use http::http_client;
 pub use webdav::{Precondition, Remote, SYNC_FILE_NAME, WebDavClient};

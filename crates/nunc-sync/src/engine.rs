@@ -37,8 +37,6 @@ pub trait SyncStore: Send + Sync {
     fn setup(&self) -> Result<SyncSetup, StoreError>;
     /// Merkt sich den Zeitpunkt des letzten erfolgreichen Syncs mit dem Anbieter.
     fn record_sync(&self, provider: SyncProvider, at: DateTime<Utc>) -> Result<(), StoreError>;
-    /// Merkt sich den Drive-Ordner (für den Link „In Drive öffnen“).
-    fn record_drive_folder(&self, id: &str) -> Result<(), StoreError>;
     /// Schreibt den zusammengeführten Stand atomar in die Datenbank.
     fn apply_state(&self, merged: &SyncState) -> Result<Applied, StoreError>;
 }

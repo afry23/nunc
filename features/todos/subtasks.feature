@@ -62,7 +62,3 @@ Feature: Subtasks
       Project
       Other
       """
-
-  @integration @REQ-4.4
-  Scenario: The Todoist sync leaves out subtasks
-    Then the Todoist sync sees the todos "1 4"

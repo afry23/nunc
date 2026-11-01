@@ -16,11 +16,7 @@ use tempfile::TempDir;
 
 mod coord;
 mod dav;
-mod google;
-mod google_steps;
 mod steps;
-mod todoist_server;
-mod todoist_steps;
 
 pub use dav::Dav;
 
@@ -48,46 +44,6 @@ impl TestStore {
     }
 }
 
-impl nunc_sync::TodoistStore for TestStore {
-    fn local_todos(&self) -> Result<Vec<nunc_core::todoist_mapping::LocalTodo>, StoreError> {
-        nunc_store::list_local_todos(&self.conn.lock().unwrap())
-    }
-
-    fn mappings(&self) -> Result<Vec<nunc_core::todoist_mapping::TodoistMapping>, StoreError> {
-        nunc_store::list_todoist_mappings(&self.conn.lock().unwrap())
-    }
-
-    fn add_mapping(
-        &self,
-        todo_id: i32,
-        task_id: &str,
-        at: DateTime<Utc>,
-    ) -> Result<(), StoreError> {
-        nunc_store::add_todoist_mapping(&self.conn.lock().unwrap(), todo_id, task_id, at)
-    }
-
-    fn remove_mappings(&self, task_ids: &[String]) -> Result<(), StoreError> {
-        nunc_store::remove_todoist_mappings(&self.conn.lock().unwrap(), task_ids)
-    }
-
-    fn apply(
-        &self,
-        writes: &[nunc_store::TodoistWrite],
-        today: chrono::NaiveDate,
-        now: DateTime<Utc>,
-    ) -> Result<nunc_store::TodoistApplied, StoreError> {
-        nunc_store::apply_todoist_writes(&mut self.conn.lock().unwrap(), writes, today, now)
-    }
-
-    fn record_sync(&self, at: DateTime<Utc>) -> Result<(), StoreError> {
-        nunc_store::set_todoist_last_sync_at(&self.conn.lock().unwrap(), at)
-    }
-
-    fn new_sync_id(&self) -> String {
-        self.next_id("remote")
-    }
-}
-
 impl SyncStore for TestStore {
     fn local_state(&self) -> Result<nunc_core::crdt::SyncState, StoreError> {
         let conn = self.conn.lock().unwrap();
@@ -106,10 +62,6 @@ impl SyncStore for TestStore {
 
     fn record_sync(&self, provider: SyncProvider, at: DateTime<Utc>) -> Result<(), StoreError> {
         nunc_store::set_last_sync_of(&self.conn.lock().unwrap(), provider, at)
-    }
-
-    fn record_drive_folder(&self, id: &str) -> Result<(), StoreError> {
-        nunc_store::set_drive_folder_id(&self.conn.lock().unwrap(), id)
     }
 
     fn apply_state(
@@ -137,8 +89,6 @@ pub struct SyncWorld {
     pub test_result: Option<ConnectionTestResult>,
     pub config: Option<WebDavConfig>,
     pub coord: coord::State,
-    pub google: google_steps::State,
-    pub todoist: todoist_steps::State,
 }
 
 impl std::fmt::Debug for SyncWorld {
@@ -164,8 +114,6 @@ impl SyncWorld {
             test_result: None,
             config: None,
             coord: coord::State::default(),
-            google: google_steps::State::default(),
-            todoist: todoist_steps::State::default(),
         })
     }
 
@@ -194,7 +142,7 @@ fn selected(
 async fn main() {
     // Der gemeinsame HTTP-Client lädt beim ersten Aufruf den Zertifikatsspeicher (~100 ms); das soll
     // nicht in die engen Zeitfenster einzelner Szenarien fallen.
-    nunc_sync::oauth::http_client().expect("HTTP-Client");
+    nunc_sync::http_client().expect("HTTP-Client");
     SyncWorld::cucumber()
         .fail_on_skipped()
         .filter_run_and_exit(FEATURES, selected)
