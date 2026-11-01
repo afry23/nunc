@@ -809,6 +809,7 @@ fn read_without_parent(world: &mut DomainWorld) {
     world.crdt.merged = Some(SyncState {
         todos: std::collections::BTreeMap::from([(read.sync_id.clone(), read)]),
         sessions: std::collections::BTreeMap::new(),
+        ..SyncState::default()
     });
 }
 

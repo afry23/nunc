@@ -459,7 +459,11 @@ pub fn local_state(
         let session = session_sync::read_session(conn, id)?;
         sessions.insert(session.sync_id.clone(), session);
     }
-    Ok(SyncState { todos, sessions })
+    Ok(SyncState {
+        todos,
+        sessions,
+        ..SyncState::default()
+    })
 }
 
 /// Das Löschkennzeichen als aufgelöster Wert: In der Datenbank steht nur dieser, nicht der rohe Registerwert. Ohne
@@ -701,6 +705,7 @@ mod tests {
         let state = SyncState {
             todos: BTreeMap::from([("t-1".to_owned(), todo)]),
             sessions: BTreeMap::new(),
+            ..SyncState::default()
         };
         assert_eq!(apply_state(&mut conn, &state).unwrap().todos_added, 1);
         let again = apply_state(&mut conn, &state).unwrap();
@@ -720,6 +725,7 @@ mod tests {
         let state = |todos: Vec<TodoCrdt>| SyncState {
             todos: todos.into_iter().map(|t| (t.sync_id.clone(), t)).collect(),
             sessions: BTreeMap::new(),
+            ..SyncState::default()
         };
         apply_state(&mut conn, &state(vec![todo("child", Some("parent"))])).unwrap();
         assert_eq!(crate::list_todos(&conn).unwrap()[0].parent_id, None);
@@ -777,6 +783,7 @@ mod tests {
         SyncState {
             todos: BTreeMap::new(),
             sessions: BTreeMap::from([(session.sync_id.clone(), session)]),
+            ..SyncState::default()
         }
     }
 
