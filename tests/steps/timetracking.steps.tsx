@@ -166,3 +166,46 @@ Then(
     });
   },
 );
+
+// ---------------------------------------------------------------------------------------------
+// Rückblick (ADR 0025)
+
+Given("the review is:", (world: UiWorld, json: string) => {
+  world.fake.review = { ...world.fake.review, ...JSON.parse(String(json)) };
+});
+
+Given("the review is saved to {string}", (world: UiWorld, path: string) => {
+  world.fake.reviewPath = path;
+});
+
+function reviewRanges(world: UiWorld): { from: string; to: string }[] {
+  return world.fake.calls
+    .filter((call) => call.cmd === "get_review")
+    .map((call) => call.args as { from: string; to: string });
+}
+
+Then("the review was requested for a whole month", async (world: UiWorld) => {
+  await waitFor(() => {
+    const last = reviewRanges(world).at(-1);
+    expect(last).toBeDefined();
+    const { from, to } = last as { from: string; to: string };
+    expect(from.endsWith("-01")).toBe(true);
+    expect(from.slice(0, 7)).toBe(to.slice(0, 7));
+    const next = new Date(
+      Number(to.slice(0, 4)),
+      Number(to.slice(5, 7)) - 1,
+      Number(to.slice(8)) + 1,
+    );
+    expect(next.getDate()).toBe(1);
+  });
+});
+
+Then(
+  "the review was requested {int} times for different ranges",
+  async (world: UiWorld, count: number) => {
+    await waitFor(() => {
+      const month = reviewRanges(world).filter((r) => r.from.endsWith("-01"));
+      expect(new Set(month.map((r) => r.from)).size).toBe(count);
+    });
+  },
+);
