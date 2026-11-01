@@ -102,6 +102,10 @@ export const commands = {
 	updateSession: (id: number, input: SessionInput) => typedError<SessionSaved, AppError>(__TAURI_INVOKE("update_session", { id, input })),
 	/**  Löscht eine Session (Löschmarke, damit der Sync sie weiterträgt). */
 	deleteSession: (id: number) => typedError<null, AppError>(__TAURI_INVOKE("delete_session", { id })),
+	/**  Rückblick für die lokalen Tage `from` bis `to` (inklusive), mit Vergleich zur Vorperiode. */
+	getReview: (from: string, to: string) => typedError<Review, AppError>(__TAURI_INVOKE("get_review", { from, to })),
+	/**  Schreibt den Rückblick als Markdown in eine vom Nutzer gewählte Datei. `None`, wenn der Dialog abgebrochen wurde. */
+	saveReviewMarkdown: (from: string, to: string) => typedError<string | null, AppError>(__TAURI_INVOKE("save_review_markdown", { from, to })),
 	/**  Kennzahlen aus den rohen Sessions (nichts davon ist gespeichert). */
 	getStats: (request: StatsRequest) => typedError<StatsResponse, AppError>(__TAURI_INVOKE("get_stats", { request })),
 	/**  Export der Sessions im Zeitraum als CSV- oder JSON-Text. */
@@ -248,6 +252,12 @@ export type BreakSuggestion = {
 	minutes: number,
 };
 
+/**  Im Zeitraum erledigte Aufgabe. */
+export type CompletedTodo = {
+	completedAt: string,
+	text: string,
+};
+
 /**  Ergebnis des Verbindungstests. */
 export type ConnectionTestResult = {
 	success: boolean,
@@ -299,6 +309,12 @@ export type FinishPayload = {
 /**  Wonach die Zeilen des Timesheets gruppiert werden. */
 export type GroupBy = "project" | "context" | "todo";
 
+/**  Summe einer Gruppe (`+projekt`, `@kontext`); `None` für Zeit ohne Tag. */
+export type GroupMinutes = {
+	group: string | null,
+	minutes: number,
+};
+
 /**  Alle bekannten Projekte und Kontexte (Vorschläge für die Auswahl), sortiert und ohne Duplikate. */
 export type KnownTags = {
 	projects: string[],
@@ -331,10 +347,29 @@ export type NotificationStatus = {
 	permission: NotificationPermission,
 };
 
+/**  Zeitraum in lokalen Tagen, beide Grenzen inklusive. */
+export type Period = {
+	from: string,
+	to: string,
+};
+
 /**  Arbeitszeit pro `+project`-Tag. */
 export type ProjectStats = {
 	project: string,
 	workMinutes: number,
+};
+
+export type Review = {
+	period: Period,
+	previousPeriod: Period,
+	focusMin: number,
+	previousFocusMin: number,
+	completedSessions: number,
+	abortedSessions: number,
+	abortRatePercent: number,
+	projects: GroupMinutes[],
+	contexts: GroupMinutes[],
+	completedTodos: CompletedTodo[],
 };
 
 /**  Gespeichertes Arbeits- oder Pausenintervall. */
