@@ -13,6 +13,7 @@ use nunc_core::backup_policy::{BackupFile, backup_file_name, files_to_delete};
 use nunc_core::crdt::{Register, SessionCrdt, SyncState, TodoCrdt};
 use nunc_core::export::{ExportRow, to_csv};
 use nunc_core::hlc::Hlc;
+use nunc_core::journal::{JournalEntry, JournalKind};
 use nunc_core::model::{
     Session, SessionStatus, SessionType, Settings, StatsPeriod, StatsRequest, TimerMode,
 };
@@ -54,6 +55,9 @@ fn property_holds(_world: &mut DomainWorld, name: String, cases: u32) {
         "garbage collection is idempotent and only drops deleted todos" => gc_properties(cases),
         "merging session states is commutative, associative and idempotent" => {
             session_merge_laws(cases)
+        }
+        "merging journal entries is commutative, associative and idempotent" => {
+            journal_merge_laws(cases)
         }
         "streaks follow from the set of days" => streak_invariants(cases),
         "rotation keeps exactly the newest backups" => rotation_keeps_newest(cases),
@@ -692,6 +696,7 @@ fn sync_state() -> impl Strategy<Value = SyncState> {
                 .into_iter()
                 .map(|session| (session.sync_id.clone(), session))
                 .collect(),
+            ..SyncState::default()
         })
 }
 
@@ -714,6 +719,41 @@ fn session_merge_laws(cases: u32) -> Result<(), String> {
                     ..c
                 },
             );
+            prop_assert_eq!(a.merge(&b), b.merge(&a));
+            prop_assert_eq!(a.merge(&b.merge(&c)), a.merge(&b).merge(&c));
+            prop_assert_eq!(a.merge(&a), a.clone());
+            let merged = a.merge(&b);
+            prop_assert_eq!(merged.merge(&b), merged.clone());
+            Ok(())
+        },
+    )
+}
+
+fn journal_entry() -> impl Strategy<Value = JournalEntry> {
+    (
+        prop::sample::select(vec![
+            JournalKind::DayNote,
+            JournalKind::WeekNote,
+            JournalKind::Achievement,
+        ]),
+        register(date_strategy()),
+        register(small_text()),
+        register(prop::bool::ANY),
+    )
+        .prop_map(|(kind, date, text, deleted)| JournalEntry {
+            sync_id: "j".to_owned(),
+            kind,
+            date,
+            text,
+            deleted,
+        })
+}
+
+fn journal_merge_laws(cases: u32) -> Result<(), String> {
+    run(
+        cases,
+        (journal_entry(), journal_entry(), journal_entry()),
+        |(a, b, c)| {
             prop_assert_eq!(a.merge(&b), b.merge(&a));
             prop_assert_eq!(a.merge(&b.merge(&c)), a.merge(&b).merge(&c));
             prop_assert_eq!(a.merge(&a), a.clone());

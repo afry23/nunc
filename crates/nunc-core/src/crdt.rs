@@ -16,6 +16,7 @@ use chrono::{DateTime, NaiveDate, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::hlc::Hlc;
+use crate::journal::JournalEntry;
 use crate::model::SyncSession;
 use crate::todotxt::{ParsedTodo, build_raw_text};
 
@@ -50,7 +51,7 @@ impl<T: Ord + Clone> Register<T> {
         }
     }
 
-    fn capped(&self, now_ms: i64) -> Self {
+    pub(crate) fn capped(&self, now_ms: i64) -> Self {
         Self::new(self.value.clone(), self.clock.capped(now_ms))
     }
 }
@@ -401,6 +402,9 @@ pub struct SyncState {
     pub todos: BTreeMap<String, TodoCrdt>,
     /// Schlüssel ist die `sync_id`.
     pub sessions: BTreeMap<String, SessionCrdt>,
+    /// Tages-/Wochennotizen und Erfolge (ADR 0026); Schlüssel ist die `sync_id`.
+    #[serde(default)]
+    pub journal: BTreeMap<String, JournalEntry>,
 }
 
 impl SyncState {
@@ -421,7 +425,19 @@ impl SyncState {
             };
             sessions.insert(id.clone(), merged);
         }
-        Self { todos, sessions }
+        let mut journal = self.journal.clone();
+        for (id, entry) in &other.journal {
+            let merged = match journal.get(id) {
+                Some(mine) => mine.merge(entry),
+                None => entry.clone(),
+            };
+            journal.insert(id.clone(), merged);
+        }
+        Self {
+            todos,
+            sessions,
+            journal,
+        }
     }
 
     /// Lässt Tombstones weg, die älter als [`TOMBSTONE_TTL_MS`] sind (siehe [`TodoCrdt::is_collectable`] und
@@ -442,6 +458,12 @@ impl SyncState {
                 .filter(|(_, session)| !session.is_collectable(now_ms))
                 .map(|(id, session)| (id.clone(), session.clone()))
                 .collect(),
+            journal: self
+                .journal
+                .iter()
+                .filter(|(_, entry)| !entry.is_collectable(now_ms))
+                .map(|(id, entry)| (id.clone(), entry.clone()))
+                .collect(),
         }
     }
 
@@ -458,6 +480,11 @@ impl SyncState {
                 .sessions
                 .iter()
                 .map(|(id, session)| (id.clone(), session.sanitized(now_ms)))
+                .collect(),
+            journal: self
+                .journal
+                .iter()
+                .map(|(id, entry)| (id.clone(), entry.sanitized(now_ms)))
                 .collect(),
         }
     }
@@ -601,6 +628,7 @@ mod tests {
         let state = SyncState {
             todos: BTreeMap::new(),
             sessions: BTreeMap::from([("gone".to_owned(), gone), ("ahead".to_owned(), ahead)]),
+            ..SyncState::default()
         };
         let collected = state.collect_garbage(TOMBSTONE_TTL_MS + 10);
         assert_eq!(collected.sessions.keys().collect::<Vec<_>>(), ["ahead"]);

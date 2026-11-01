@@ -9,6 +9,7 @@ pub mod crdt;
 pub mod export;
 pub mod flowtime;
 pub mod hlc;
+pub mod journal;
 pub mod manual_entry;
 pub mod model;
 pub mod position;
