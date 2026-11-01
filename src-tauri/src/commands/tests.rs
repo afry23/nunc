@@ -865,6 +865,21 @@ fn a_review_sums_the_focus_time_and_checks_the_range() {
     assert_eq!(review["projects"][0]["group"], "+work");
     assert_eq!(review["previousFocusMin"], 0);
 
+    h.ok(
+        "create_manual_session",
+        labelled_entry(at(4, 0), at(5, 0), &["+foo"], &["@work", "@meeting"]),
+    );
+    let review = h.ok("get_review", json!({ "from": day, "to": day }));
+    let combination = review["combinations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|entry| entry["projects"] == json!(["+foo"]))
+        .unwrap();
+    assert_eq!(combination["contexts"], json!(["@meeting", "@work"]));
+    assert_eq!(combination["notes"][0]["text"], "Weekly");
+    assert_eq!(combination["notes"][0]["date"], day);
+
     assert_eq!(
         h.err_code(
             "get_review",

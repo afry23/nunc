@@ -30,11 +30,22 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value: string;
+  children?: ReactNode;
+}) {
   return (
-    <li className="flex flex-wrap justify-between gap-x-4 tabular-nums">
-      <span className="min-w-0 break-words">{label}</span>
-      <span className="text-on-surface-variant">{value}</span>
+    <li>
+      <div className="flex flex-wrap justify-between gap-x-4 tabular-nums">
+        <span className="min-w-0 break-words">{label}</span>
+        <span className="text-on-surface-variant">{value}</span>
+      </div>
+      {children}
     </li>
   );
 }
@@ -251,7 +262,23 @@ export function ReviewPanel() {
                       time: formatMinutes(entry.minutes),
                       sessions: entry.sessions,
                     })}
-                  />
+                  >
+                    {entry.notes.length > 0 && (
+                      <ul
+                        aria-label={t("review.notes")}
+                        className="mt-1 mb-2 ml-4 flex flex-col gap-0.5 text-on-surface-variant"
+                      >
+                        {entry.notes.map((note, index) => (
+                          <li key={`${note.date}|${index}`}>
+                            <span className="tabular-nums">
+                              {shortDate(note.date)}
+                            </span>{" "}
+                            {note.text}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </Row>
                 );
               })}
             </Card>

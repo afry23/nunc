@@ -428,6 +428,12 @@ export type SessionInput = {
 	contextTags?: string[],
 };
 
+/**  Notiz einer Session mit dem lokalen Tag ihres Beginns. */
+export type SessionNote = {
+	date: string,
+	text: string,
+};
+
 /**  Die gespeicherte Session und die Sessions, die sie überlappt (Warnung, kein Fehler). */
 export type SessionSaved = {
 	session: Session,
@@ -567,6 +573,8 @@ export type TagCombination = {
 	contexts: string[],
 	sessions: number,
 	minutes: number,
+	/**  Notizen dieser Sessions, älteste zuerst; Sessions ohne Notiz fehlen. */
+	notes: SessionNote[],
 };
 
 /**  Fokuszeit, Pomodoros und Sessions einer Aufgabe. */

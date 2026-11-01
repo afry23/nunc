@@ -1,7 +1,9 @@
 //! Steps für `features/stats/review.feature` (Rückblick-Bericht, ADR 0025).
 //! Sessions, Todos und die Zeitzone kommen aus den Steps der Module `stats` und `todo_query`.
 
-use cucumber::{gherkin::Step, then, when};
+use std::collections::HashMap;
+
+use cucumber::{gherkin::Step, given, then, when};
 use nunc_core::review::{
     GroupMinutes, Period, PeriodKind, Review, build_review, period_containing, review_markdown,
 };
@@ -17,6 +19,7 @@ pub struct State {
     review: Option<Review>,
     period: Option<Period>,
     markdown: Option<String>,
+    notes: HashMap<i32, String>,
 }
 
 fn review(world: &DomainWorld) -> &Review {
@@ -32,6 +35,27 @@ fn kind(text: &str) -> PeriodKind {
     }
 }
 
+/// Spalten `start` (UTC) und `note`; vergibt dafür fortlaufende Session-Ids.
+#[given("the session notes:")]
+fn session_notes(world: &mut DomainWorld, step: &Step) {
+    for (index, session) in world.stats.sessions.iter_mut().enumerate() {
+        session.id = i32::try_from(index).expect("Index") + 1;
+    }
+    world.review.notes = crate::stats::rows(step)
+        .into_iter()
+        .map(|row| {
+            let start = crate::stats::instant(&row[0]);
+            let session = world
+                .stats
+                .sessions
+                .iter()
+                .find(|session| session.started_at == start)
+                .expect("keine Session mit diesem Beginn");
+            (session.id, row[1].clone())
+        })
+        .collect();
+}
+
 #[when(expr = "I build the review from {word} to {word}")]
 fn build(world: &mut DomainWorld, from: String, to: String) {
     let local_date = local_date_fn(world);
@@ -43,6 +67,7 @@ fn build(world: &mut DomainWorld, from: String, to: String) {
         period,
         &world.stats.sessions,
         &world.todo_query.todos,
+        &world.review.notes,
         &local_date,
     ));
 }
@@ -219,4 +244,35 @@ fn combinations_are(world: &mut DomainWorld, step: &Step) {
 fn markdown_lacks(world: &mut DomainWorld, text: String) {
     let markdown = world.review.markdown.as_ref().expect("kein Markdown");
     assert!(!markdown.contains(&text), "{text:?} steht in:\n{markdown}");
+}
+
+#[then(expr = "the combination {string} has the notes:")]
+fn combination_notes(world: &mut DomainWorld, tags: String, step: &Step) {
+    let found = review(world)
+        .combinations
+        .iter()
+        .find(|entry| {
+            entry
+                .projects
+                .iter()
+                .chain(&entry.contexts)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(" ")
+                == tags
+        })
+        .unwrap_or_else(|| panic!("keine Kombination {tags}"));
+    let actual: Vec<Vec<String>> = found
+        .notes
+        .iter()
+        .map(|note| vec![note.date.to_string(), note.text.clone()])
+        .collect();
+    assert_eq!(actual, crate::stats::rows(step));
+}
+
+#[then("the Markdown contains:")]
+fn markdown_contains_block(world: &mut DomainWorld, step: &Step) {
+    let text = step.docstring.as_ref().expect("Docstring fehlt").trim();
+    let markdown = world.review.markdown.as_ref().expect("kein Markdown");
+    assert!(markdown.contains(text), "{text:?} fehlt in:\n{markdown}");
 }

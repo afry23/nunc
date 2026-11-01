@@ -1,5 +1,7 @@
 //! Rückblick-Bericht (ADR 0025): Bericht für einen Zeitraum und Markdown-Export.
 
+use std::collections::HashMap;
+
 use chrono::NaiveDate;
 use nunc_core::review::{Review, build_review, review_markdown};
 use nunc_platform::to_local_date;
@@ -25,16 +27,22 @@ fn review_for(state: &AppState, from: NaiveDate, to: NaiveDate) -> Result<Review
             "Der Zeitraum darf höchstens ein Jahr umfassen.",
         ));
     }
-    let (sessions, todos) = state.db.with(|conn| {
+    let (sessions, todos, details) = state.db.with(|conn| {
         Ok::<_, nunc_store::StoreError>((
             nunc_store::list_sessions(conn)?,
             nunc_store::list_all_todos(conn)?,
+            nunc_store::list_session_details(conn)?,
         ))
     })?;
+    let notes: HashMap<i32, String> = details
+        .into_iter()
+        .map(|(id, detail)| (id, detail.note))
+        .collect();
     Ok(build_review(
         nunc_core::review::Period { from, to },
         &sessions,
         &todos,
+        &notes,
         &to_local_date,
     ))
 }
