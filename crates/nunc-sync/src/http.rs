@@ -31,12 +31,11 @@ fn tls_config() -> Result<Arc<rustls::ClientConfig>, String> {
     let mut roots = rustls::RootCertStore::empty();
     roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
     let native = rustls_native_certs::load_native_certs();
-    for error in &native.errors {
-        log::warn!("Systemzertifikate: {error}");
+    if !native.errors.is_empty() {
+        log::warn!("Systemzertifikate: einige konnten nicht geladen werden");
     }
     // Einzelne ungültige Systemzertifikate werden übersprungen (bei Firmen-Stores nicht selten).
-    let (added, ignored) = roots.add_parsable_certificates(native.certs);
-    log::debug!("Systemzertifikate: {added} geladen, {ignored} übersprungen");
+    roots.add_parsable_certificates(native.certs);
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let config = rustls::ClientConfig::builder_with_provider(provider)
         .with_safe_default_protocol_versions()
