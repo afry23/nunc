@@ -73,12 +73,14 @@ pub struct TaskTotals {
     pub sessions: u32,
 }
 
-/// Fokuszeit einer Kombination aus Projekt und Kontext; `None` heißt „ohne“.
+/// Fokuszeit der Sessions, die genau dieselben Projekte und Kontexte zusammen trugen
+/// (z. B. `+foo` mit `@meeting @work`). Die Tags sind sortiert; leer heißt „ohne“.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
-pub struct TagPairMinutes {
-    pub project: Option<String>,
-    pub context: Option<String>,
+pub struct TagCombination {
+    pub projects: Vec<String>,
+    pub contexts: Vec<String>,
+    pub sessions: u32,
     pub minutes: u32,
 }
 
@@ -100,8 +102,8 @@ pub struct Review {
     pub days: Vec<DayTotals>,
     /// Aufgaben mit Fokuszeit, meiste Zeit zuerst.
     pub tasks: Vec<TaskTotals>,
-    /// Projekt × Kontext, meiste Zeit zuerst; eine Session zählt in jeder Kombination ihrer Tags.
-    pub pairs: Vec<TagPairMinutes>,
+    /// Die Tag-Kombinationen der Sessions, wie sie zusammen vorkamen; meiste Zeit zuerst.
+    pub combinations: Vec<TagCombination>,
     pub projects: Vec<GroupMinutes>,
     pub contexts: Vec<GroupMinutes>,
     pub completed_todos: Vec<CompletedTodo>,
@@ -184,15 +186,6 @@ fn mode_index(mode: TimerMode) -> usize {
         .unwrap_or(0)
 }
 
-/// Die Tags als Schlüssel; ohne Tag genau ein `None`.
-fn tag_keys(tags: &[String]) -> Vec<Option<String>> {
-    if tags.is_empty() {
-        vec![None]
-    } else {
-        tags.iter().cloned().map(Some).collect()
-    }
-}
-
 fn task_totals(tasks: BTreeMap<i32, (u32, u32, u32)>, todos: &[Todo]) -> Vec<TaskTotals> {
     let mut totals: Vec<TaskTotals> = tasks
         .into_iter()
@@ -211,23 +204,36 @@ fn task_totals(tasks: BTreeMap<i32, (u32, u32, u32)>, todos: &[Todo]) -> Vec<Tas
     totals
 }
 
-/// Größte Summe zuerst; bei gleicher Summe nach Projekt, dann Kontext, jeweils „ohne“ zuletzt.
-fn pair_totals(pairs: BTreeMap<(Option<String>, Option<String>), u32>) -> Vec<TagPairMinutes> {
-    let mut totals: Vec<TagPairMinutes> = pairs
+/// Sortierte, eindeutige Tags.
+fn sorted_tags(tags: &[String]) -> Vec<String> {
+    let mut tags = tags.to_vec();
+    tags.sort();
+    tags.dedup();
+    tags
+}
+
+/// Größte Summe zuerst; bei gleicher Summe nach Projekten, dann Kontexten, jeweils „ohne“ zuletzt.
+fn combination_totals(
+    combinations: BTreeMap<(Vec<String>, Vec<String>), (u32, u32)>,
+) -> Vec<TagCombination> {
+    let mut totals: Vec<TagCombination> = combinations
         .into_iter()
-        .map(|((project, context), minutes)| TagPairMinutes {
-            project,
-            context,
-            minutes,
-        })
+        .map(
+            |((projects, contexts), (sessions, minutes))| TagCombination {
+                projects,
+                contexts,
+                sessions,
+                minutes,
+            },
+        )
         .collect();
     totals.sort_by(|a, b| {
         b.minutes
             .cmp(&a.minutes)
-            .then_with(|| a.project.is_none().cmp(&b.project.is_none()))
-            .then_with(|| a.project.cmp(&b.project))
-            .then_with(|| a.context.is_none().cmp(&b.context.is_none()))
-            .then_with(|| a.context.cmp(&b.context))
+            .then_with(|| a.projects.is_empty().cmp(&b.projects.is_empty()))
+            .then_with(|| a.projects.cmp(&b.projects))
+            .then_with(|| a.contexts.is_empty().cmp(&b.contexts.is_empty()))
+            .then_with(|| a.contexts.cmp(&b.contexts))
     });
     totals
 }
@@ -268,7 +274,7 @@ pub fn build_review(
     let previous = previous_period(period);
     let mut projects = BTreeMap::new();
     let mut contexts = BTreeMap::new();
-    let mut pairs: BTreeMap<(Option<String>, Option<String>), u32> = BTreeMap::new();
+    let mut combinations: BTreeMap<(Vec<String>, Vec<String>), (u32, u32)> = BTreeMap::new();
     let mut modes: BTreeMap<usize, (u32, u32)> = BTreeMap::new();
     let mut days: BTreeMap<NaiveDate, (u32, u32)> = BTreeMap::new();
     let mut tasks: BTreeMap<i32, (u32, u32, u32)> = BTreeMap::new();
@@ -293,11 +299,11 @@ pub fn build_review(
         let minutes = session.actual_min.unwrap_or(0);
         add_tags(&mut projects, project_tags, minutes);
         add_tags(&mut contexts, context_tags, minutes);
-        for project in tag_keys(project_tags) {
-            for context in tag_keys(context_tags) {
-                *pairs.entry((project.clone(), context)).or_default() += minutes;
-            }
-        }
+        let combination = combinations
+            .entry((sorted_tags(project_tags), sorted_tags(context_tags)))
+            .or_default();
+        combination.0 += 1;
+        combination.1 += minutes;
         let pomodoro = u32::from(session.mode == TimerMode::Pomodoro);
         pomodoro_count += pomodoro;
         let mode = modes.entry(mode_index(session.mode)).or_default();
@@ -355,7 +361,7 @@ pub fn build_review(
             })
             .collect(),
         tasks: task_totals(tasks, todos),
-        pairs: pair_totals(pairs),
+        combinations: combination_totals(combinations),
         projects: group_totals(projects),
         contexts: group_totals(contexts),
         completed_todos: finished
@@ -416,14 +422,20 @@ pub fn review_markdown(review: &Review) -> String {
     }
     group_lines(&mut markdown, "Projects", &review.projects);
     group_lines(&mut markdown, "Contexts", &review.contexts);
-    if !review.pairs.is_empty() {
-        markdown.push_str("\n## Projects and contexts\n\n");
-        for pair in &review.pairs {
+    if !review.combinations.is_empty() {
+        markdown.push_str("\n## Projects and contexts together\n\n");
+        for combination in &review.combinations {
+            let tags = combination
+                .projects
+                .iter()
+                .chain(&combination.contexts)
+                .map(String::as_str)
+                .collect::<Vec<_>>()
+                .join(" ");
+            let tags = if tags.is_empty() { "(none)" } else { &tags };
             markdown.push_str(&format!(
-                "- {} × {}: {} min\n",
-                pair.project.as_deref().unwrap_or("(none)"),
-                pair.context.as_deref().unwrap_or("(none)"),
-                pair.minutes
+                "- {tags}: {} min, {} sessions\n",
+                combination.minutes, combination.sessions
             ));
         }
     }

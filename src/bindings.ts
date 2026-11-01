@@ -389,8 +389,8 @@ export type Review = {
 	days: DayTotals[],
 	/**  Aufgaben mit Fokuszeit, meiste Zeit zuerst. */
 	tasks: TaskTotals[],
-	/**  Projekt × Kontext, meiste Zeit zuerst; eine Session zählt in jeder Kombination ihrer Tags. */
-	pairs: TagPairMinutes[],
+	/**  Die Tag-Kombinationen der Sessions, wie sie zusammen vorkamen; meiste Zeit zuerst. */
+	combinations: TagCombination[],
 	projects: GroupMinutes[],
 	contexts: GroupMinutes[],
 	completedTodos: CompletedTodo[],
@@ -558,10 +558,14 @@ export type SyncStatus = {
 /**  Der Sync-Zustand hat sich geändert (`idle` · `syncing` · `error`). */
 export type SyncStatusChanged = SyncStatus;
 
-/**  Fokuszeit einer Kombination aus Projekt und Kontext; `None` heißt „ohne“. */
-export type TagPairMinutes = {
-	project: string | null,
-	context: string | null,
+/**
+ *  Fokuszeit der Sessions, die genau dieselben Projekte und Kontexte zusammen trugen
+ *  (z. B. `+foo` mit `@meeting @work`). Die Tags sind sortiert; leer heißt „ohne“.
+ */
+export type TagCombination = {
+	projects: string[],
+	contexts: string[],
+	sessions: number,
 	minutes: number,
 };
 

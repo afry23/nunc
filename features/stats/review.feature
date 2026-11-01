@@ -106,28 +106,40 @@ Feature: Review report
       | Plan trip +home          | 25      | 1         | 1        |
 
   @domain @US-RV01
-  Scenario: Projects and contexts are related to each other
+  Scenario: The tags of a session stay together as one combination
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects | contexts       |
+      | 2026-03-02 09:00 | stopwatch | work | completed | 45      |      | +foo     | @work @meeting |
+      | 2026-03-02 10:00 | stopwatch | work | completed | 15      |      | +foo     | @meeting @work |
+      | 2026-03-03 09:00 | stopwatch | work | completed | 20      |      | +foo     | @work          |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review tag combinations are:
+      | projects | contexts       | sessions | minutes |
+      | +foo     | @meeting @work | 2        | 60      |
+      | +foo     | @work          | 1        | 20      |
+
+  @domain @US-RV01
+  Scenario: Combinations come from the todo or from the session's own tags
     Given the sessions:
       | start            | mode      | type | status    | minutes | todo | projects | contexts |
       | 2026-03-02 09:00 | flowtime  | work | completed | 60      | 1    |          |          |
       | 2026-03-02 10:00 | flowtime  | work | completed | 20      | 2    |          |          |
       | 2026-03-02 11:00 | flowtime  | work | completed | 10      | 3    |          |          |
-      | 2026-03-03 09:00 | stopwatch | work | completed | 30      |      | +x +y    | @call    |
+      | 2026-03-03 09:00 | stopwatch | work | completed | 30      |      | +y +x    | @call    |
       | 2026-03-03 10:00 | stopwatch | work | completed | 5       |      |          | @call    |
       | 2026-03-03 11:00 | stopwatch | work | completed | 3       |      |          |          |
     When I build the review from 2026-03-02 to 2026-03-08
-    Then the review project context pairs are:
-      | project | context | minutes |
-      | +work   | @desk   | 60      |
-      | +x      | @call   | 30      |
-      | +y      | @call   | 30      |
-      | +home   | (none)  | 20      |
-      | +work   | (none)  | 10      |
-      | (none)  | @call   | 5       |
-      | (none)  | (none)  | 3       |
+    Then the review tag combinations are:
+      | projects | contexts | sessions | minutes |
+      | +work    | @desk    | 1        | 60      |
+      | +x +y    | @call    | 1        | 30      |
+      | +home    | (none)   | 1        | 20      |
+      | +work    | (none)   | 1        | 10      |
+      | (none)   | @call    | 1        | 5       |
+      | (none)   | (none)   | 1        | 3       |
 
   @domain @US-RV01
-  Scenario: Pairs with equal time are ordered by project, then context, without a tag last
+  Scenario: Combinations with equal time are ordered by projects, then contexts, without a tag last
     Given the sessions:
       | start            | mode      | type | status    | minutes | todo | projects | contexts |
       | 2026-03-02 09:00 | stopwatch | work | completed | 10      |      |          |          |
@@ -136,13 +148,13 @@ Feature: Review report
       | 2026-03-02 12:00 | stopwatch | work | completed | 10      |      | +a       | @z       |
       | 2026-03-02 13:00 | stopwatch | work | completed | 10      |      | +a       | @c       |
     When I build the review from 2026-03-02 to 2026-03-08
-    Then the review project context pairs are:
-      | project | context | minutes |
-      | +a      | @c      | 10      |
-      | +a      | @z      | 10      |
-      | +a      | (none)  | 10      |
-      | (none)  | @b      | 10      |
-      | (none)  | (none)  | 10      |
+    Then the review tag combinations are:
+      | projects | contexts | sessions | minutes |
+      | +a       | @c       | 1        | 10      |
+      | +a       | @z       | 1        | 10      |
+      | +a       | (none)   | 1        | 10      |
+      | (none)   | @b       | 1        | 10      |
+      | (none)   | (none)   | 1        | 10      |
 
   @domain @US-RV01
   Scenario Outline: A period is derived from a day
@@ -197,8 +209,23 @@ Feature: Review report
     And the Markdown contains "+45 min"
     And the Markdown contains "+work"
     And the Markdown contains "Plan trip"
+    And the Markdown contains "## Projects"
+    And the Markdown contains "- +work: 85 min"
+    And the Markdown contains "## Contexts"
+    And the Markdown contains "- @desk: 85 min"
+    And the Markdown contains "## Techniques"
     And the Markdown contains "- Pomodoros: 1"
     And the Markdown contains "- flowtime: 1 sessions, 60 min"
     And the Markdown contains "- Write report +work @desk: 85 min, 1 pomodoros, 2 sessions"
-    And the Markdown contains "- +work × @desk: 85 min"
+    And the Markdown contains "- +work @desk: 85 min, 2 sessions"
     And the Markdown contains "- 2026-03-03: 25 min, 1 pomodoros"
+
+  @domain @US-RV01
+  Scenario: An empty review exports without detail sections
+    When I build the review from 2026-04-01 to 2026-04-07
+    And I export the review as Markdown
+    Then the Markdown contains "- Pomodoros: 0"
+    And the Markdown does not contain "## Techniques"
+    And the Markdown does not contain "## Projects"
+    And the Markdown does not contain "## Tasks"
+    And the Markdown does not contain "## Days"

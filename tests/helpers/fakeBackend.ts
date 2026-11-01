@@ -263,7 +263,7 @@ export function createFakeBackend(): FakeBackend {
       ],
       days: [],
       tasks: [],
-      pairs: [],
+      combinations: [],
       projects: [],
       contexts: [],
       completedTodos: [],

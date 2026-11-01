@@ -191,19 +191,32 @@ fn tasks_are(world: &mut DomainWorld, step: &Step) {
     assert_eq!(actual, crate::stats::rows(step));
 }
 
-#[then("the review project context pairs are:")]
-fn pairs_are(world: &mut DomainWorld, step: &Step) {
-    let name = |value: &Option<String>| value.clone().unwrap_or_else(|| NO_GROUP.to_owned());
+#[then("the review tag combinations are:")]
+fn combinations_are(world: &mut DomainWorld, step: &Step) {
+    let words = |tags: &[String]| {
+        if tags.is_empty() {
+            NO_GROUP.to_owned()
+        } else {
+            tags.join(" ")
+        }
+    };
     let actual: Vec<Vec<String>> = review(world)
-        .pairs
+        .combinations
         .iter()
         .map(|entry| {
             vec![
-                name(&entry.project),
-                name(&entry.context),
+                words(&entry.projects),
+                words(&entry.contexts),
+                entry.sessions.to_string(),
                 entry.minutes.to_string(),
             ]
         })
         .collect();
     assert_eq!(actual, crate::stats::rows(step));
+}
+
+#[then(expr = "the Markdown does not contain {string}")]
+fn markdown_lacks(world: &mut DomainWorld, text: String) {
+    let markdown = world.review.markdown.as_ref().expect("kein Markdown");
+    assert!(!markdown.contains(&text), "{text:?} steht in:\n{markdown}");
 }

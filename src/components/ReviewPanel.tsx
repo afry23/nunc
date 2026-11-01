@@ -235,15 +235,25 @@ export function ReviewPanel() {
           )}
           <GroupList title={t("review.projects")} groups={review.projects} />
           <GroupList title={t("review.contexts")} groups={review.contexts} />
-          {review.pairs.length > 0 && (
-            <Card title={t("review.pairs")}>
-              {review.pairs.map((pair) => (
-                <Row
-                  key={`${pair.project ?? ""}|${pair.context ?? ""}`}
-                  label={`${pair.project ?? t("timesheet.unassigned")} × ${pair.context ?? t("timesheet.unassigned")}`}
-                  value={formatMinutes(pair.minutes)}
-                />
-              ))}
+          {review.combinations.length > 0 && (
+            <Card title={t("review.combinations")}>
+              {review.combinations.map((entry) => {
+                const tags = [...entry.projects, ...entry.contexts];
+                return (
+                  <Row
+                    key={tags.join(" ")}
+                    label={
+                      tags.length === 0
+                        ? t("timesheet.unassigned")
+                        : tags.join(" ")
+                    }
+                    value={t("review.combinationValue", {
+                      time: formatMinutes(entry.minutes),
+                      sessions: entry.sessions,
+                    })}
+                  />
+                );
+              })}
             </Card>
           )}
           <section className="rounded-2xl bg-surface-container-low p-5">

@@ -77,13 +77,18 @@ Feature: Review in the times view
     And I see "1h 5m · 2 Pomodoros"
 
   @ui @US-RV01
-  Scenario: Projects and contexts are shown together
+  Scenario: Projects and contexts are shown as they occurred together
     Given the review is:
       """
-      { "pairs": [{ "project": "+work", "context": "@desk", "minutes": 60 },
-                  { "project": "+home", "context": null, "minutes": 20 }] }
+      { "combinations": [
+          { "projects": ["+foo"], "contexts": ["@meeting", "@work"], "sessions": 2, "minutes": 60 },
+          { "projects": ["+foo"], "contexts": ["@work"], "sessions": 1, "minutes": 20 },
+          { "projects": [], "contexts": [], "sessions": 1, "minutes": 5 }] }
       """
     When I open the app at "/times"
     And I click "Rückblick"
-    Then I see "+work × @desk"
-    And I see "+home × ohne Zuordnung"
+    Then I see "+foo @meeting @work"
+    And I see "1h · 2 Sessions"
+    And I see "+foo @work"
+    And I see "20m · 1 Sessions"
+    And I see "ohne Zuordnung"
