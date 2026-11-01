@@ -105,6 +105,8 @@ export function TimesheetPanel() {
           end: block.end,
           todoId: block.todoId,
           note: block.note,
+          projectTags: block.projectTags,
+          contextTags: block.contextTags,
         },
       }),
     [],

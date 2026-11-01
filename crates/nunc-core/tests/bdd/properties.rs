@@ -513,6 +513,8 @@ fn stats_session_strategy() -> impl Strategy<Value = Session> {
                 actual_min,
                 todo_id,
                 break_min: None,
+                project_tags: Vec::new(),
+                context_tags: Vec::new(),
             },
         )
 }
@@ -644,12 +646,14 @@ fn session_crdt() -> impl Strategy<Value = SessionCrdt> {
             register(prop::option::of(small_text())),
             register(small_text()),
             register(prop::bool::ANY),
+            register(prop::collection::vec(small_text(), 0..3)),
+            register(prop::collection::vec(small_text(), 0..3)),
         ),
     )
         .prop_map(
             |(
                 (sync_id, device, mode, planned, kind),
-                (started_at, ended_at, actual_min, todo, note, deleted),
+                (started_at, ended_at, actual_min, todo, note, deleted, project_tags, context_tags),
             )| SessionCrdt {
                 sync_id: sync_id.to_owned(),
                 device_id: device.to_owned(),
@@ -665,6 +669,8 @@ fn session_crdt() -> impl Strategy<Value = SessionCrdt> {
                 actual_min,
                 todo,
                 note,
+                project_tags,
+                context_tags,
                 deleted,
             },
         )

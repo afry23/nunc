@@ -18,14 +18,26 @@ use crate::crdt_repo::{local_device, next_hlc, observe};
 use crate::sync_repo::sync_session;
 
 /// Felder mit eigenem Stempel.
-const FIELDS: [&str; 6] = [
+const FIELDS: [&str; 8] = [
     "started_at",
     "ended_at",
     "actual_min",
     "todo",
     "note",
+    "project_tags",
+    "context_tags",
     "deleted",
 ];
+
+/// Tags als JSON-Array (Spalten `project_tags`/`context_tags` in `session_meta`).
+pub(crate) fn tags_to_json(tags: &[String]) -> String {
+    serde_json::to_string(tags).unwrap_or_else(|_| "[]".to_owned())
+}
+
+/// Liest das JSON-Array; ein unlesbarer Wert gilt als leer.
+pub(crate) fn tags_from_json(text: &str) -> Vec<String> {
+    serde_json::from_str(text).unwrap_or_default()
+}
 
 /// Spalten von `sessions` in der Reihenfolge, die [`sync_session`] erwartet (Index 0 bis 8).
 const RAW_COLUMNS: &str =
@@ -41,6 +53,8 @@ pub(crate) struct Fields {
     actual_min: u32,
     todo: Option<String>,
     note: String,
+    project_tags: Vec<String>,
+    context_tags: Vec<String>,
     deleted: bool,
 }
 
@@ -60,6 +74,8 @@ impl Fields {
             self.actual_min != before.actual_min,
             self.todo != before.todo,
             self.note != before.note,
+            self.project_tags != before.project_tags,
+            self.context_tags != before.context_tags,
             self.deleted != before.deleted,
         ];
         FIELDS
@@ -74,7 +90,8 @@ pub(crate) fn fields_of(conn: &Connection, id: i64) -> Result<Option<Fields>, St
     Ok(conn
         .query_row(
             "SELECT s.started_at, COALESCE(s.ended_at, ''), COALESCE(s.actual_min, 0), t.sync_id,
-                    COALESCE(m.note, ''), COALESCE(m.deleted, 0)
+                    COALESCE(m.note, ''), COALESCE(m.deleted, 0),
+                    COALESCE(m.project_tags, '[]'), COALESCE(m.context_tags, '[]')
              FROM sessions s
              LEFT JOIN session_meta m ON m.session_id = s.id
              LEFT JOIN todos t ON t.id = s.todo_id
@@ -89,6 +106,8 @@ pub(crate) fn fields_of(conn: &Connection, id: i64) -> Result<Option<Fields>, St
                     actual_min: row.get::<_, i64>(2)?.try_into().unwrap_or(0),
                     todo: todo.filter(|sync_id| !sync_id.is_empty()),
                     note: row.get(4)?,
+                    project_tags: tags_from_json(&row.get::<_, String>(6)?),
+                    context_tags: tags_from_json(&row.get::<_, String>(7)?),
                     deleted: row.get(5)?,
                 })
             },
@@ -189,27 +208,31 @@ pub(crate) fn exportable_ids(conn: &Connection) -> Result<Vec<i64>, StoreError> 
 /// Setzt voraus, dass [`ensure_meta`] gelaufen ist.
 pub(crate) fn read_session(conn: &Connection, id: i64) -> Result<SessionCrdt, StoreError> {
     let device = local_device(conn)?;
-    let (raw, sync_id, origin, todo, note, deleted, kind) = conn.query_row(
-        &format!(
-            "SELECT {RAW_COLUMNS}, m.sync_id, m.origin, t.sync_id, m.note, m.deleted, m.kind
+    let (raw, sync_id, origin, todo, note, deleted, kind, project_tags, context_tags) = conn
+        .query_row(
+            &format!(
+                "SELECT {RAW_COLUMNS}, m.sync_id, m.origin, t.sync_id, m.note, m.deleted, m.kind,
+                    m.project_tags, m.context_tags
              FROM sessions s
              JOIN session_meta m ON m.session_id = s.id
              LEFT JOIN todos t ON t.id = s.todo_id
              WHERE s.id = ?1"
-        ),
-        [id],
-        |row| {
-            Ok((
-                sync_session(row, &device)?,
-                row.get::<_, String>(9)?,
-                row.get::<_, String>(10)?,
-                row.get::<_, Option<String>>(11)?,
-                row.get::<_, String>(12)?,
-                row.get::<_, bool>(13)?,
-                row.get::<_, String>(14)?,
-            ))
-        },
-    )?;
+            ),
+            [id],
+            |row| {
+                Ok((
+                    sync_session(row, &device)?,
+                    row.get::<_, String>(9)?,
+                    row.get::<_, String>(10)?,
+                    row.get::<_, Option<String>>(11)?,
+                    row.get::<_, String>(12)?,
+                    row.get::<_, bool>(13)?,
+                    row.get::<_, String>(14)?,
+                    tags_from_json(&row.get::<_, String>(15)?),
+                    tags_from_json(&row.get::<_, String>(16)?),
+                ))
+            },
+        )?;
     let clocks = clocks_of(conn, id)?;
     let clock = |field: &str| {
         clocks
@@ -225,6 +248,8 @@ pub(crate) fn read_session(conn: &Connection, id: i64) -> Result<SessionCrdt, St
     session.actual_min.clock = clock("actual_min");
     session.todo = Register::new(todo.filter(|sync_id| !sync_id.is_empty()), clock("todo"));
     session.note = Register::new(note, clock("note"));
+    session.project_tags = Register::new(project_tags, clock("project_tags"));
+    session.context_tags = Register::new(context_tags, clock("context_tags"));
     session.deleted = Register::new(deleted, clock("deleted"));
     Ok(session)
 }
@@ -289,8 +314,15 @@ pub(crate) fn write_session_row(
         ],
     )?;
     conn.execute(
-        "UPDATE session_meta SET note = ?1, deleted = ?2 WHERE session_id = ?3",
-        params![session.note.value, session.is_deleted(), id],
+        "UPDATE session_meta SET note = ?1, deleted = ?2, project_tags = ?3, context_tags = ?4
+         WHERE session_id = ?5",
+        params![
+            session.note.value,
+            session.is_deleted(),
+            tags_to_json(&session.project_tags.value),
+            tags_to_json(&session.context_tags.value),
+            id,
+        ],
     )?;
     let clocks = [
         ("started_at", &session.started_at.clock),
@@ -298,6 +330,8 @@ pub(crate) fn write_session_row(
         ("actual_min", &session.actual_min.clock),
         ("todo", &session.todo.clock),
         ("note", &session.note.clock),
+        ("project_tags", &session.project_tags.clock),
+        ("context_tags", &session.context_tags.clock),
         ("deleted", &session.deleted.clock),
     ];
     for (field, clock) in clocks {
@@ -330,6 +364,8 @@ mod tests {
             actual_min: 25,
             todo: None,
             note: String::new(),
+            project_tags: Vec::new(),
+            context_tags: Vec::new(),
             deleted: false,
         }
     }
@@ -372,6 +408,8 @@ mod tests {
                 "note",
                 Fields {
                     note: "x".into(),
+                    project_tags: Vec::new(),
+                    context_tags: Vec::new(),
                     ..self::base()
                 },
             ),

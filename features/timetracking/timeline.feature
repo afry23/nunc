@@ -55,3 +55,11 @@ Feature: Day timeline
       | 2026-03-02 23:45 | 2026-03-03 00:15 | work |      | no       |
     When I build the timeline for 2026-03-03
     Then the timeline has no blocks
+
+  @domain @US-TT04
+  Scenario: A block without a todo carries the own projects and contexts of its session
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects        | contexts |
+      | 2026-03-02 09:00 | stopwatch | work | completed | 45      |      | +meetings +team | @office  |
+    When I build the timeline for 2026-03-02
+    Then the block starting 2026-03-02 09:00 has projects "+meetings +team" and contexts "@office"

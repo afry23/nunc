@@ -131,6 +131,26 @@ Feature: Statistics aggregation
       | todo | pomodoros | minutes |
 
   @domain @REQ-10
+  Scenario: Sessions without a todo count towards their own projects and contexts
+    Given the statistics range is 2025-03-17 to 2025-03-17
+    And the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects        | contexts |
+      | 2025-03-17 09:00 | stopwatch | work | completed | 30      |      | +meetings +team | @office  |
+      | 2025-03-17 10:00 | stopwatch | work | completed | 20      | 1    | +ignored        | @ignored |
+    When I calculate the statistics
+    Then the projects are:
+      | project   | minutes |
+      | +meetings | 30      |
+      | +team     | 30      |
+      | +work     | 20      |
+    And the contexts are:
+      | context | minutes |
+      | @office | 30      |
+      | @desk   | 20      |
+    And the top todos are:
+      | todo | pomodoros | minutes |
+
+  @domain @REQ-10
   Scenario: Average pomodoros per day over 7 and 30 days
     When I calculate the statistics
     Then the average over 7 days is about 0.571

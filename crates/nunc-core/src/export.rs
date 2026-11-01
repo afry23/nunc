@@ -10,7 +10,9 @@ use std::collections::HashMap;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use serde::Serialize;
 
-use crate::model::{Session, SessionStatus, SessionType, StatsRequest, TimerMode, Todo};
+use crate::model::{
+    Session, SessionStatus, SessionType, StatsRequest, TimerMode, Todo, effective_tags,
+};
 
 /// Eine Exportzeile.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -80,6 +82,7 @@ pub fn export_rows(
             let start = to_local(session.started_at);
             let todo = session.todo_id.and_then(|id| todo_by_id.get(&id));
             let detail = details.get(&session.id);
+            let (project_tags, context_tags) = effective_tags(session, todo.copied());
             ExportRow {
                 date: start.date(),
                 start_time: start.time(),
@@ -88,8 +91,8 @@ pub fn export_rows(
                 mode: session.mode,
                 status: session.status,
                 todo_text: todo.map(|t| t.raw_text.clone()).unwrap_or_default(),
-                project_tags: todo.map(|t| t.project_tags.clone()).unwrap_or_default(),
-                context_tags: todo.map(|t| t.context_tags.clone()).unwrap_or_default(),
+                project_tags: project_tags.to_vec(),
+                context_tags: context_tags.to_vec(),
                 session_type: session.session_type,
                 note: detail.map(|d| d.note.clone()).unwrap_or_default(),
                 origin: detail.map_or_else(|| ORIGIN_TIMER.to_owned(), |d| d.origin.clone()),

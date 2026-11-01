@@ -4,11 +4,15 @@ import {
   unwrap,
   type BreakSuggestion,
   type FinishPayload,
+  type KnownTags,
+  type Labels,
   type TimerMode,
   type TimerSnapshot,
 } from "../lib/api";
 import { useNotificationStore } from "./notificationStore";
 import { useUiStore } from "./uiStore";
+
+export const NO_LABELS: Labels = { projectTags: [], contextTags: [], note: "" };
 
 export const IDLE: TimerSnapshot = {
   state: "idle",
@@ -17,6 +21,7 @@ export const IDLE: TimerSnapshot = {
   remaining: 0,
   total: 0,
   todoId: null,
+  labels: NO_LABELS,
 };
 
 /** Wie die letzte Session endete: `completed` (Ablauf bzw. Flowtime-Ende) oder `stopped` (vorzeitig). */
@@ -30,6 +35,12 @@ interface TimerStoreState {
   finish: Finish | null;
   finishSeq: number;
   selectedTodoId: number | null;
+  /** Eingabe für die nächste Session ohne Aufgabe (Projekte, Kontexte, Notiz). */
+  labels: Labels;
+  /** Vorschläge für die Auswahl von Projekten und Kontexten. */
+  knownTags: KnownTags;
+  setLabels: (labels: Labels) => void;
+  loadKnownTags: () => Promise<void>;
   setSnapshot: (snapshot: TimerSnapshot) => void;
   setFinish: (finish: Finish) => void;
   dismissFinish: () => void;
@@ -63,6 +74,16 @@ export const useTimerStore = create<TimerStoreState>((set, get) => {
     finish: null,
     finishSeq: 0,
     selectedTodoId: null,
+    labels: NO_LABELS,
+    knownTags: { projects: [], contexts: [] },
+    setLabels: (labels) => set({ labels }),
+    loadKnownTags: async () => {
+      try {
+        set({ knownTags: await unwrap(commands.getKnownTags()) });
+      } catch (error) {
+        useUiStore.getState().fail(error);
+      }
+    },
     setSnapshot: (snapshot) => set({ snapshot }),
     setFinish: (finish) =>
       set((state) => ({
@@ -86,7 +107,16 @@ export const useTimerStore = create<TimerStoreState>((set, get) => {
     start: async (mode) => {
       set({ finish: null });
       await useNotificationStore.getState().ensureForTimer();
-      await run(() => commands.startTimer(mode, get().selectedTodoId));
+      const { selectedTodoId, labels } = get();
+      // eigene Zuordnung gilt nur ohne Aufgabe und nur für diese Session
+      await run(() =>
+        commands.startTimer(
+          mode,
+          selectedTodoId,
+          selectedTodoId === null ? labels : null,
+        ),
+      );
+      set({ labels: NO_LABELS });
     },
     startBreak: async () => {
       set({ finish: null });

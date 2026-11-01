@@ -57,6 +57,88 @@ pub struct Session {
     pub todo_id: Option<i32>,
     /// Empfohlene bzw. genutzte Pausendauer in Minuten.
     pub break_min: Option<u32>,
+    /// Eigene Projekte (`+name`); zählen nur, wenn die Session kein Todo hat (ADR 0023).
+    #[serde(default)]
+    pub project_tags: Vec<String>,
+    /// Eigene Kontexte (`@name`); zählen nur, wenn die Session kein Todo hat (ADR 0023).
+    #[serde(default)]
+    pub context_tags: Vec<String>,
+}
+
+/// Zuordnung einer Session ohne Todo: eigene Projekte, Kontexte und eine Notiz (ADR 0023).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Labels {
+    pub project_tags: Vec<String>,
+    pub context_tags: Vec<String>,
+    pub note: String,
+}
+
+impl Labels {
+    /// Normalisiert die Tags (`+`/`@`) und trimmt die Notiz.
+    pub fn normalized(&self) -> Self {
+        Self {
+            project_tags: normalize_tags(&self.project_tags, '+'),
+            context_tags: normalize_tags(&self.context_tags, '@'),
+            note: self.note.trim().to_owned(),
+        }
+    }
+}
+
+/// Vereinheitlicht Tags: trimmt, setzt `prefix` voran, wenn er fehlt, verwirft leere Tags (nur Präfix) und Tags
+/// mit Leerraum, entfernt Duplikate und behält die Reihenfolge.
+pub fn normalize_tags<S: AsRef<str>>(raw: &[S], prefix: char) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for tag in raw {
+        let word = tag.as_ref().trim();
+        let name = word.strip_prefix(prefix).unwrap_or(word);
+        if name.is_empty() || name.chars().any(char::is_whitespace) {
+            continue;
+        }
+        let tag = format!("{prefix}{name}");
+        if !out.contains(&tag) {
+            out.push(tag);
+        }
+    }
+    out
+}
+
+/// Alle bekannten Projekte und Kontexte (Vorschläge für die Auswahl), sortiert und ohne Duplikate.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct KnownTags {
+    pub projects: Vec<String>,
+    pub contexts: Vec<String>,
+}
+
+/// Sammelt die Tags aller Todos und aller Sessions.
+pub fn known_tags(sessions: &[Session], todos: &[crate::model::Todo]) -> KnownTags {
+    use std::collections::BTreeSet;
+    let mut projects = BTreeSet::new();
+    let mut contexts = BTreeSet::new();
+    for todo in todos {
+        projects.extend(todo.project_tags.iter().cloned());
+        contexts.extend(todo.context_tags.iter().cloned());
+    }
+    for session in sessions {
+        projects.extend(session.project_tags.iter().cloned());
+        contexts.extend(session.context_tags.iter().cloned());
+    }
+    KnownTags {
+        projects: projects.into_iter().collect(),
+        contexts: contexts.into_iter().collect(),
+    }
+}
+
+/// Projekte und Kontexte, die für eine Session zählen: die des Todos, sonst die eigenen (ADR 0023).
+pub fn effective_tags<'a>(
+    session: &'a Session,
+    todo: Option<&'a crate::model::Todo>,
+) -> (&'a [String], &'a [String]) {
+    match todo {
+        Some(todo) => (&todo.project_tags, &todo.context_tags),
+        None => (&session.project_tags, &session.context_tags),
+    }
 }
 
 #[cfg(test)]
@@ -129,5 +211,91 @@ mod tests {
         let back = serde_json::to_value(&s).unwrap();
         assert_eq!(back["sessionType"], "work");
         assert!(back["endedAt"].is_null());
+    }
+
+    fn session_with(projects: &[&str], contexts: &[&str]) -> Session {
+        Session {
+            id: 1,
+            mode: crate::model::TimerMode::Stopwatch,
+            session_type: SessionType::Work,
+            status: SessionStatus::Completed,
+            started_at: chrono::DateTime::UNIX_EPOCH,
+            ended_at: None,
+            planned_min: None,
+            actual_min: Some(10),
+            todo_id: None,
+            break_min: None,
+            project_tags: projects.iter().map(|t| (*t).to_owned()).collect(),
+            context_tags: contexts.iter().map(|t| (*t).to_owned()).collect(),
+        }
+    }
+
+    fn todo_with(projects: &[&str], contexts: &[&str]) -> crate::model::Todo {
+        crate::model::Todo {
+            id: 1,
+            raw_text: "Task".to_owned(),
+            priority: None,
+            completed: false,
+            completed_at: None,
+            created_at: None,
+            description: "Task".to_owned(),
+            project_tags: projects.iter().map(|t| (*t).to_owned()).collect(),
+            context_tags: contexts.iter().map(|t| (*t).to_owned()).collect(),
+            pomodoro_count: 0,
+            position: 1,
+            parent_id: None,
+        }
+    }
+
+    #[test]
+    fn tags_are_prefixed_trimmed_and_deduplicated() {
+        assert_eq!(
+            normalize_tags(&["meetings", " +meetings ", "+", "", "a b", "team"], '+'),
+            ["+meetings", "+team"]
+        );
+        assert_eq!(normalize_tags(&["office", "@office"], '@'), ["@office"]);
+        assert!(normalize_tags::<&str>(&[], '+').is_empty());
+    }
+
+    #[test]
+    fn labels_are_normalised_and_the_note_is_trimmed() {
+        let labels = Labels {
+            project_tags: vec!["a".to_owned()],
+            context_tags: vec!["b".to_owned()],
+            note: "  Weekly ".to_owned(),
+        };
+        assert_eq!(
+            labels.normalized(),
+            Labels {
+                project_tags: vec!["+a".to_owned()],
+                context_tags: vec!["@b".to_owned()],
+                note: "Weekly".to_owned(),
+            }
+        );
+    }
+
+    #[test]
+    fn a_todo_takes_precedence_over_the_own_tags() {
+        let session = session_with(&["+own"], &["@own"]);
+        let todo = todo_with(&["+work"], &["@desk"]);
+        assert_eq!(
+            effective_tags(&session, Some(&todo)),
+            (&["+work".to_owned()][..], &["@desk".to_owned()][..])
+        );
+        assert_eq!(
+            effective_tags(&session, None),
+            (&["+own".to_owned()][..], &["@own".to_owned()][..])
+        );
+    }
+
+    #[test]
+    fn known_tags_merge_todos_and_sessions_sorted() {
+        let todo = todo_with(&["+work"], &["@desk"]);
+        let known = known_tags(
+            &[session_with(&["+meetings", "+work"], &["@office"])],
+            &[todo],
+        );
+        assert_eq!(known.projects, ["+meetings", "+work"]);
+        assert_eq!(known.contexts, ["@desk", "@office"]);
     }
 }

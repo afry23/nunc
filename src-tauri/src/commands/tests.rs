@@ -72,6 +72,7 @@ impl Harness {
                 timer::get_suggested_break,
                 sessions::get_timesheet,
                 sessions::get_day_timeline,
+                sessions::get_known_tags,
                 sessions::create_manual_session,
                 sessions::update_session,
                 sessions::delete_session,
@@ -596,6 +597,43 @@ fn a_pomodoro_runs_through_events_in_order_and_lands_in_the_stats() {
 }
 
 #[test]
+fn a_stopwatch_without_a_todo_records_its_own_projects_and_contexts() {
+    let h = Harness::new();
+    let started = h.ok(
+        "start_timer",
+        json!({
+            "mode": "stopwatch",
+            "todoId": null,
+            "labels": { "projectTags": ["meetings"], "contextTags": ["@office"], "note": "Weekly" },
+        }),
+    );
+    assert_eq!(started["labels"]["projectTags"], json!(["+meetings"]));
+    h.advance_min(45);
+    h.ok("stop_timer", json!({}));
+    let sessions = h
+        .state()
+        .db
+        .with(|conn| nunc_store::list_sessions(conn))
+        .unwrap();
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0].project_tags, ["+meetings"]);
+    assert_eq!(sessions[0].context_tags, ["@office"]);
+    assert_eq!(sessions[0].actual_min, Some(45));
+    let note: String = h
+        .state()
+        .db
+        .with(|conn| {
+            Ok::<String, nunc_store::StoreError>(conn.query_row(
+                "SELECT note FROM session_meta",
+                [],
+                |r| r.get(0),
+            )?)
+        })
+        .unwrap();
+    assert_eq!(note, "Weekly");
+}
+
+#[test]
 fn stopping_and_breaks_through_commands() {
     let h = Harness::new();
     h.ok("start_timer", json!({ "mode": "flowtime", "todoId": null }));
@@ -718,6 +756,72 @@ fn a_manual_entry_shows_up_in_the_timeline_and_the_timesheet() {
         json!({ "startDate": day, "endDate": day, "groupBy": "todo" }),
     );
     assert_eq!(by_todo["rows"][0]["todoId"], todo["id"]);
+}
+
+fn labelled_entry(
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    projects: &[&str],
+    contexts: &[&str],
+) -> Value {
+    json!({ "input": {
+        "startedAt": start, "endedAt": end, "todoId": null, "note": "Weekly",
+        "projectTags": projects, "contextTags": contexts,
+    } })
+}
+
+#[test]
+fn an_entry_without_a_todo_counts_towards_its_own_projects() {
+    let h = Harness::new();
+    let saved = h.ok(
+        "create_manual_session",
+        labelled_entry(
+            at(7, 0),
+            at(8, 0),
+            &["meetings", "+team", "+team"],
+            &["@office"],
+        ),
+    );
+    assert_eq!(
+        saved["session"]["projectTags"],
+        json!(["+meetings", "+team"])
+    );
+    assert_eq!(saved["session"]["contextTags"], json!(["@office"]));
+    let day = local_day(at(7, 0));
+    let sheet = h.ok(
+        "get_timesheet",
+        json!({ "startDate": day, "endDate": day, "groupBy": "project" }),
+    );
+    assert_eq!(sheet["rows"][0]["group"], "+meetings");
+    assert_eq!(sheet["rows"][1]["group"], "+team");
+    assert_eq!(sheet["total"], 60);
+}
+
+#[test]
+fn own_tags_are_dropped_when_the_entry_has_a_todo() {
+    let h = Harness::new();
+    let todo = h.ok("add_todo", json!({ "rawText": "Write report +work" }));
+    let saved = h.ok(
+        "create_manual_session",
+        json!({ "input": {
+            "startedAt": at(7, 0), "endedAt": at(8, 0), "todoId": todo["id"], "note": "",
+            "projectTags": ["+meetings"], "contextTags": [],
+        } }),
+    );
+    assert_eq!(saved["session"]["projectTags"], json!([]));
+}
+
+#[test]
+fn known_tags_collect_todos_and_sessions() {
+    let h = Harness::new();
+    h.ok("add_todo", json!({ "rawText": "Write report +work @desk" }));
+    h.ok(
+        "create_manual_session",
+        labelled_entry(at(7, 0), at(8, 0), &["+meetings"], &["@office"]),
+    );
+    let tags = h.ok("get_known_tags", json!({}));
+    assert_eq!(tags["projects"], json!(["+meetings", "+work"]));
+    assert_eq!(tags["contexts"], json!(["@desk", "@office"]));
 }
 
 #[test]

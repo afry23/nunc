@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::flowtime::calculate_break_duration;
-use crate::model::{SessionStatus, SessionType, Settings, TimerMode, TimerState};
+use crate::model::{Labels, SessionStatus, SessionType, Settings, TimerMode, TimerState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum TimerError {
@@ -61,6 +61,9 @@ pub struct ActiveSession {
     pub mode: TimerMode,
     pub session_type: SessionType,
     pub todo_id: Option<i32>,
+    /// Eigene Zuordnung, nur ohne Todo (ADR 0023). Fehlt in älteren gespeicherten Timern.
+    #[serde(default)]
+    pub labels: Labels,
     /// Countdown-Ziel in Sekunden; `0` = Stoppuhr (Flowtime-Arbeit).
     pub planned_sec: u32,
     pub started_at: DateTime<Utc>,
@@ -125,6 +128,8 @@ pub struct FinishedSession {
     pub planned_min: Option<u32>,
     pub actual_min: u32,
     pub todo_id: Option<i32>,
+    /// Eigene Zuordnung (leer, sobald ein Todo gesetzt ist).
+    pub labels: Labels,
 }
 
 /// Was nach einer beendeten Session automatisch folgen soll (Einstellungen `auto_start_*`).
@@ -163,6 +168,8 @@ pub struct TimerSnapshot {
     /// Gesamtdauer in Sekunden, `0` bei der Stoppuhr.
     pub total: u32,
     pub todo_id: Option<i32>,
+    /// Eigene Zuordnung der laufenden Session (leer ohne eigene Angaben oder mit Todo).
+    pub labels: Labels,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -217,6 +224,29 @@ impl Timer {
             TimerMode::Flowtime | TimerMode::Stopwatch => 0,
         };
         self.start_planned(now, mode, todo_id, planned_sec)
+    }
+
+    /// Wie [`Timer::start`], zusätzlich mit eigener Zuordnung. Mit Todo wird sie verworfen (ADR 0023).
+    pub fn start_labelled(
+        &mut self,
+        now: DateTime<Utc>,
+        mode: TimerMode,
+        todo_id: Option<i32>,
+        labels: &Labels,
+        settings: &Settings,
+    ) -> Result<(), TimerError> {
+        self.start(now, mode, todo_id, settings)?;
+        self.set_labels(labels);
+        Ok(())
+    }
+
+    /// Setzt die eigene Zuordnung der laufenden Session; mit Todo bleibt sie leer (ADR 0023).
+    pub fn set_labels(&mut self, labels: &Labels) {
+        if let Some(active) = self.active.as_mut()
+            && active.todo_id.is_none()
+        {
+            active.labels = labels.normalized();
+        }
     }
 
     /// Wie [`Timer::start`], aber mit eigener Countdown-Dauer in Sekunden (`0` = Stoppuhr). Nur für Tests der
@@ -345,6 +375,7 @@ impl Timer {
                 remaining: 0,
                 total: 0,
                 todo_id: None,
+                labels: Labels::default(),
             };
         };
         let worked = active.worked_sec(now);
@@ -363,6 +394,7 @@ impl Timer {
             remaining,
             total,
             todo_id: active.todo_id,
+            labels: active.labels.clone(),
         }
     }
 
@@ -385,6 +417,7 @@ impl Timer {
             mode,
             session_type,
             todo_id,
+            labels: Labels::default(),
             planned_sec,
             started_at: now,
             accumulated_ms: 0,
@@ -473,6 +506,7 @@ fn finished(
         planned_min: active.is_countdown().then_some(active.planned_sec / 60),
         actual_min,
         todo_id: active.todo_id,
+        labels: active.labels.clone(),
     }
 }
 
@@ -566,5 +600,18 @@ mod tests {
         assert_eq!(active.planned_sec, 25 * 60);
         assert_eq!(active.started_at, now);
         assert_eq!(timer.state(), TimerState::Running);
+    }
+
+    #[test]
+    fn a_stored_timer_without_labels_still_loads() {
+        let now = Utc.with_ymd_and_hms(2026, 10, 3, 9, 0, 0).unwrap();
+        let mut timer = Timer::default();
+        timer
+            .start(now, TimerMode::Stopwatch, None, &Settings::default())
+            .unwrap();
+        let mut json: serde_json::Value = serde_json::to_value(&timer).unwrap();
+        json["active"].as_object_mut().unwrap().remove("labels");
+        let restored: Timer = serde_json::from_value(json).unwrap();
+        assert_eq!(restored.active().unwrap().labels, Labels::default());
     }
 }

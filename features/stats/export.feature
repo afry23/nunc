@@ -188,3 +188,16 @@ Feature: Session export
   @domain @property @REQ-11
   Scenario: The CSV export can be read back for any text
     Then the property "the CSV export can be read back for any text" holds for 200 random cases
+
+  @domain @REQ-11
+  Scenario: A session without a todo exports its own projects and contexts
+    Given the statistics range is 2025-06-04 to 2025-06-04
+    And the sessions:
+      | start            | end              | mode      | type | status    | minutes | todo | projects        | contexts |
+      | 2025-06-04 10:00 | 2025-06-04 10:45 | stopwatch | work | completed | 45      |      | +meetings +team | @office  |
+    When I export the sessions
+    Then the CSV export is:
+      """
+      date,start_time,end_time,duration_min,mode,status,todo_text,project_tags,context_tags,session_type,note,origin
+      2025-06-04,10:00:00,10:45:00,45,stopwatch,completed,,'+meetings +team,'@office,work,,timer
+      """

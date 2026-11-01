@@ -260,7 +260,7 @@ fn timer_action(state: &AppState, action: &str) -> Result<(), AppError> {
 
 #[cfg(test)]
 mod tests {
-    use nunc_core::model::TimerMode;
+    use nunc_core::model::{Labels, TimerMode};
 
     use super::*;
 
@@ -272,6 +272,7 @@ mod tests {
             remaining,
             total: 1500,
             todo_id: None,
+            labels: Labels::default(),
         }
     }
 

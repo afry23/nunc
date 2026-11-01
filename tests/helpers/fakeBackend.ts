@@ -6,6 +6,7 @@ import type {
   ConnectionTestResult,
   DriveStatus,
   GroupBy,
+  KnownTags,
   TimelineBlock,
   SyncImportInfo,
   SyncResult,
@@ -168,6 +169,8 @@ export interface FakeBackend extends BackendMock {
   timesheet: Partial<Record<GroupBy, TimesheetSeed[]>>;
   /** Blöcke von `get_day_timeline` je lokalem Tag. */
   timeline: Record<string, TimelineBlock[]>;
+  /** Vorschläge, die `get_known_tags` liefert. */
+  knownTags: KnownTags;
   /** Fehler, den `create_manual_session` und `update_session` melden (`null` = Erfolg). */
   sessionError: { code: string; message: string } | null;
   /** Letzte Argumente je Command. */
@@ -182,6 +185,8 @@ type SessionInputArg = {
   endedAt: string;
   todoId: number | null;
   note: string;
+  projectTags?: string[];
+  contextTags?: string[];
 };
 
 function sessionOf(block: TimelineBlock) {
@@ -221,6 +226,7 @@ const IDLE: TimerSnapshot = {
   remaining: 0,
   total: 0,
   todoId: null,
+  labels: { projectTags: [], contextTags: [], note: "" },
 };
 
 /** Zustandsbehaftetes Fake-Backend für `@ui`-Szenarien; unbekannte Commands werfen. */
@@ -257,6 +263,7 @@ export function createFakeBackend(): FakeBackend {
     timesheet: {},
     timeline: {},
     sessionError: null,
+    knownTags: { projects: [], contexts: [] },
     providerError: null,
     drive: {
       configured: true,
@@ -323,6 +330,11 @@ export function createFakeBackend(): FakeBackend {
   const startSnapshot = (
     mode: TimerMode,
     todoId: number | null,
+    labels: TimerSnapshot["labels"] = {
+      projectTags: [],
+      contextTags: [],
+      note: "",
+    },
   ): TimerSnapshot => {
     const total = mode === "pomodoro" ? fake.settings.pomodoroMin * 60 : 0;
     return {
@@ -332,6 +344,10 @@ export function createFakeBackend(): FakeBackend {
       remaining: total,
       total,
       todoId,
+      labels:
+        todoId === null
+          ? labels
+          : { projectTags: [], contextTags: [], note: "" },
     };
   };
 
@@ -451,10 +467,13 @@ export function createFakeBackend(): FakeBackend {
     start_timer: ({
       mode,
       todoId,
+      labels,
     }: {
       mode: TimerMode;
       todoId: number | null;
-    }) => (fake.timer = startSnapshot(mode, todoId)),
+      labels: TimerSnapshot["labels"] | null;
+    }) => (fake.timer = startSnapshot(mode, todoId, labels ?? undefined)),
+    get_known_tags: () => fake.knownTags,
     start_break: () => {
       if (!fake.suggestedBreak)
         fail("no_break_suggested", "keine Pause vorgeschlagen");
@@ -466,6 +485,7 @@ export function createFakeBackend(): FakeBackend {
         remaining: total,
         total,
         todoId: null,
+        labels: { projectTags: [], contextTags: [], note: "" },
       });
     },
     pause_timer: () => (fake.timer = { ...fake.timer, state: "paused" }),
@@ -526,6 +546,8 @@ export function createFakeBackend(): FakeBackend {
         todoId: input.todoId,
         note: input.note,
         origin: "manual",
+        projectTags: input.todoId === null ? (input.projectTags ?? []) : [],
+        contextTags: input.todoId === null ? (input.contextTags ?? []) : [],
         overlaps: false,
       };
       fake.timeline[date] = [...(fake.timeline[date] ?? []), block];
@@ -541,6 +563,8 @@ export function createFakeBackend(): FakeBackend {
             end: input.endedAt,
             todoId: input.todoId,
             note: input.note,
+            projectTags: input.todoId === null ? (input.projectTags ?? []) : [],
+            contextTags: input.todoId === null ? (input.contextTags ?? []) : [],
           });
           return { session: sessionOf(block), overlaps: [] };
         }

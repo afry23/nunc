@@ -62,8 +62,14 @@ const KEYS: Record<string, string> = { Space: " " };
 
 async function press(key: string, target: Element | Document): Promise<void> {
   await act(async () => {
-    fireEvent.keyDown(target, { key: KEYS[key] ?? key });
-    if (key === "Enter" && target instanceof HTMLInputElement && target.form)
+    // wie im Browser löst Enter nur dann das Absenden aus, wenn keydown nicht abgebrochen wurde
+    const notCancelled = fireEvent.keyDown(target, { key: KEYS[key] ?? key });
+    if (
+      notCancelled &&
+      key === "Enter" &&
+      target instanceof HTMLInputElement &&
+      target.form
+    )
       fireEvent.submit(target.form);
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
@@ -122,6 +128,7 @@ function snapshotOf(row: Record<string, string>): TimerSnapshot {
     remaining: Number(row.remaining),
     total: Number(row.total),
     todoId: null,
+    labels: { projectTags: [], contextTags: [], note: "" },
   };
 }
 

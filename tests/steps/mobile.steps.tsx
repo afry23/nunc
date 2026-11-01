@@ -219,6 +219,7 @@ Given(
       remaining: Number(row.remaining),
       total: Number(row.total),
       todoId: null,
+      labels: { projectTags: [], contextTags: [], note: "" },
     };
   },
 );

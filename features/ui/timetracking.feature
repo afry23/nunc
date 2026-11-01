@@ -116,6 +116,23 @@ Feature: Time tracking in the statistics view
     And I see "nachgetragen"
 
   @ui @US-TT03
+  Scenario: I can add an entry without a task for a project and a context
+    When I open the app at "/times"
+    And I click "Eintrag hinzufügen"
+    And I enter "10:00" for today into the field "Beginn"
+    And I enter "11:00" for today into the field "Ende"
+    And I enter "meetings" into the field "Projekt hinzufügen"
+    And I press the key "Enter" in the field "Projekt hinzufügen"
+    And I enter "@office" into the field "Kontext hinzufügen"
+    And I press the key "Enter" in the field "Kontext hinzufügen"
+    And I enter "Weekly" into the field "Notiz"
+    And I click "Speichern"
+    Then the last "create_manual_session" call has "input.projectTags" equal to "+meetings"
+    And the last "create_manual_session" call has "input.contextTags" equal to "@office"
+    And I do not see a dialog
+    And I see "+meetings @office"
+
+  @ui @US-TT03
   Scenario: The task choice offers only open tasks
     Given the todos:
       | rawText      | completed |

@@ -56,3 +56,30 @@ Feature: Stopwatch
     And 5 minutes pass
     And I stop the timer
     Then the recorded session lasted 10 minutes
+
+  @domain @US-B01
+  Scenario: A stopwatch session without a todo carries projects, contexts and a note
+    When I start a stopwatch session with projects "+meetings, +team" contexts "@office" and note "Weekly sync"
+    And 45 minutes pass
+    And I stop the timer
+    Then the recorded session belongs to no todo
+    And the recorded session has projects "+meetings, +team"
+    And the recorded session has contexts "@office"
+    And the recorded session has the note "Weekly sync"
+
+  @domain @US-B01
+  Scenario: Labels are normalised when a session starts
+    When I start a stopwatch session with projects "meetings, +meetings, +, team" contexts " office " and note ""
+    And 5 minutes pass
+    And I stop the timer
+    Then the recorded session has projects "+meetings, +team"
+    And the recorded session has contexts "@office"
+
+  @domain @US-B01
+  Scenario: A session with a todo ignores the labels given at the start
+    When I start a stopwatch session for todo 4 with projects "+meetings" contexts "@office" and note ""
+    And 5 minutes pass
+    And I stop the timer
+    Then the recorded session belongs to todo 4
+    And the recorded session has projects ""
+    And the recorded session has contexts ""

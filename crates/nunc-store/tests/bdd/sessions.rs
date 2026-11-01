@@ -30,6 +30,8 @@ fn start_edit(conn: &Connection) -> (i32, SessionEdit) {
             actual_min: session.actual_min.unwrap_or(0),
             todo_id: session.todo_id,
             note,
+            project_tags: session.project_tags,
+            context_tags: session.context_tags,
         },
     )
 }
@@ -42,6 +44,8 @@ fn add_manual(world: &mut StoreWorld, device: &str, start: &str, end: &str, todo
         ended_at: at(end),
         todo_id,
         note: String::new(),
+        project_tags: Vec::new(),
+        context_tags: Vec::new(),
     };
     let device_id = format!("dev-{}", device.to_lowercase());
     nunc_store::insert_manual(world.crdt.conn(device), &entry, &device_id, at(end))
@@ -52,6 +56,50 @@ fn add_manual(world: &mut StoreWorld, device: &str, start: &str, end: &str, todo
 #[when(expr = "device {word} adds a manual session from {word} to {word}")]
 fn adds_manual(world: &mut StoreWorld, device: String, start: String, end: String) {
     add_manual(world, &device, &start, &end, None);
+}
+
+fn tag_list(text: &str) -> Vec<String> {
+    text.split_whitespace().map(str::to_owned).collect()
+}
+
+#[given(
+    expr = "device {word} adds a manual session from {word} to {word} with projects {string} and contexts {string}"
+)]
+fn adds_manual_labelled(
+    world: &mut StoreWorld,
+    device: String,
+    start: String,
+    end: String,
+    projects: String,
+    contexts: String,
+) {
+    let entry = ManualSession {
+        sync_id: format!("manual-{device}-{start}"),
+        started_at: at(&start),
+        ended_at: at(&end),
+        todo_id: None,
+        note: String::new(),
+        project_tags: tag_list(&projects),
+        context_tags: tag_list(&contexts),
+    };
+    let device_id = format!("dev-{}", device.to_lowercase());
+    nunc_store::insert_manual(world.crdt.conn(&device), &entry, &device_id, at(&end))
+        .expect("manual");
+}
+
+#[when(expr = "device {word} changes the session projects to {string} at {word}")]
+fn changes_projects(world: &mut StoreWorld, device: String, projects: String, time: String) {
+    let conn = world.crdt.conn(&device);
+    let (id, mut edit) = start_edit(conn);
+    edit.project_tags = tag_list(&projects);
+    nunc_store::update_session(conn, id, &edit, at(&time)).expect("update");
+}
+
+#[then(expr = "on device {word} the session has projects {string} and contexts {string}")]
+fn session_labels(world: &mut StoreWorld, device: String, projects: String, contexts: String) {
+    let (_, edit) = start_edit(world.crdt.conn(&device));
+    assert_eq!(edit.project_tags, tag_list(&projects));
+    assert_eq!(edit.context_tags, tag_list(&contexts));
 }
 
 #[given(expr = "device {word} adds a manual session from {word} to {word} for the todo")]
@@ -188,6 +236,46 @@ fn records_stopwatch(world: &mut StoreWorld, device: String, start: String, end:
             at(&start),
             nunc_core::model::TimerMode::Stopwatch,
             None,
+            &settings,
+        )
+        .expect("start");
+    let finish = timer.stop(at(&end), &settings).expect("stop");
+    let device_id = format!("dev-{}", device.to_lowercase());
+    nunc_store::commit_finish(
+        world.crdt.conn(&device),
+        &finish,
+        &device_id,
+        &timer,
+        at(&end),
+    )
+    .expect("commit");
+}
+
+#[given(
+    expr = "device {word} records a stopwatch session from {word} to {word} with projects {string} contexts {string} and note {string}"
+)]
+fn records_labelled_stopwatch(
+    world: &mut StoreWorld,
+    device: String,
+    start: String,
+    end: String,
+    projects: String,
+    contexts: String,
+    note: String,
+) {
+    let settings = nunc_core::model::Settings::default();
+    let mut timer = nunc_core::timer::Timer::default();
+    let labels = nunc_core::model::Labels {
+        project_tags: tag_list(&projects),
+        context_tags: tag_list(&contexts),
+        note,
+    };
+    timer
+        .start_labelled(
+            at(&start),
+            nunc_core::model::TimerMode::Stopwatch,
+            None,
+            &labels,
             &settings,
         )
         .expect("start");

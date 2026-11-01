@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use chrono::{DateTime, Utc};
 use nunc_core::clock::Clock;
-use nunc_core::model::{SessionType, Settings, TimerMode, TimerState};
+use nunc_core::model::{Labels, SessionType, Settings, TimerMode, TimerState};
 use nunc_core::timer::{
     AutoStart, BreakSuggestion, Finish, FinishKind, Timer, TimerError, TimerSnapshot,
 };
@@ -127,12 +127,26 @@ impl TimerService {
     }
 
     pub fn start(&self, mode: TimerMode, todo_id: Option<i32>) -> Result<TimerSnapshot, AppError> {
+        self.start_labelled(mode, todo_id, &Labels::default())
+    }
+
+    /// Wie [`TimerService::start`], mit eigenen Projekten, Kontexten und Notiz für eine Session ohne Todo.
+    pub fn start_labelled(
+        &self,
+        mode: TimerMode,
+        todo_id: Option<i32>,
+        labels: &Labels,
+    ) -> Result<TimerSnapshot, AppError> {
         let fast = self
             .fast_pomodoro_sec
             .filter(|_| mode == TimerMode::Pomodoro);
-        self.transition(|timer, now, settings| match fast {
-            Some(seconds) => timer.start_planned(now, mode, todo_id, seconds),
-            None => timer.start(now, mode, todo_id, settings),
+        self.transition(|timer, now, settings| {
+            match fast {
+                Some(seconds) => timer.start_planned(now, mode, todo_id, seconds),
+                None => timer.start(now, mode, todo_id, settings),
+            }?;
+            timer.set_labels(labels);
+            Ok(())
         })
     }
 

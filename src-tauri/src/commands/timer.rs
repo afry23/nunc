@@ -1,4 +1,4 @@
-use nunc_core::model::TimerMode;
+use nunc_core::model::{Labels, TimerMode};
 use nunc_core::timer::{BreakSuggestion, TimerSnapshot};
 use tauri::State;
 
@@ -12,8 +12,11 @@ pub fn start_timer(
     state: State<'_, AppState>,
     mode: TimerMode,
     todo_id: Option<i32>,
+    labels: Option<Labels>,
 ) -> Result<TimerSnapshot, AppError> {
-    state.timer.start(mode, todo_id)
+    state
+        .timer
+        .start_labelled(mode, todo_id, &labels.unwrap_or_default())
 }
 
 /// Startet die vorgeschlagene Pause.

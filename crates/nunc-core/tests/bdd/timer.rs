@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Duration, NaiveTime, TimeZone, Utc};
 use cucumber::{given, then, when};
-use nunc_core::model::{SessionStatus, SessionType, Settings, TimerMode, TimerState};
+use nunc_core::model::{Labels, SessionStatus, SessionType, Settings, TimerMode, TimerState};
 use nunc_core::timer::{AutoStart, Finish, FinishKind, Timer, TimerError};
 
 use crate::DomainWorld;
@@ -55,6 +55,17 @@ impl State {
 
     fn start(&mut self, mode: TimerMode, todo_id: Option<i32>) {
         let result = self.timer.start(self.now, mode, todo_id, &self.settings);
+        self.record(result);
+    }
+
+    fn start_labelled(&mut self, todo_id: Option<i32>, labels: &Labels) {
+        let result = self.timer.start_labelled(
+            self.now,
+            TimerMode::Stopwatch,
+            todo_id,
+            labels,
+            &self.settings,
+        );
         self.record(result);
     }
 
@@ -185,6 +196,51 @@ fn start_stopwatch(world: &mut DomainWorld) {
 #[when(expr = "I start a stopwatch session for todo {int}")]
 fn start_stopwatch_for_todo(world: &mut DomainWorld, todo: i32) {
     world.timer.start(TimerMode::Stopwatch, Some(todo));
+}
+
+/// `"+a, +b"` → Liste (kommagetrennt, leer = keine).
+fn split_list(text: &str) -> Vec<String> {
+    text.split(',')
+        .map(str::to_owned)
+        .filter(|word| !word.trim().is_empty())
+        .collect()
+}
+
+fn labels(projects: &str, contexts: &str, note: &str) -> Labels {
+    Labels {
+        project_tags: split_list(projects),
+        context_tags: split_list(contexts),
+        note: note.to_owned(),
+    }
+}
+
+#[when(
+    expr = "I start a stopwatch session with projects {string} contexts {string} and note {string}"
+)]
+fn start_stopwatch_labelled(
+    world: &mut DomainWorld,
+    projects: String,
+    contexts: String,
+    note: String,
+) {
+    world
+        .timer
+        .start_labelled(None, &labels(&projects, &contexts, &note));
+}
+
+#[when(
+    expr = "I start a stopwatch session for todo {int} with projects {string} contexts {string} and note {string}"
+)]
+fn start_stopwatch_for_todo_labelled(
+    world: &mut DomainWorld,
+    todo: i32,
+    projects: String,
+    contexts: String,
+    note: String,
+) {
+    world
+        .timer
+        .start_labelled(Some(todo), &labels(&projects, &contexts, &note));
 }
 
 #[when("I start the suggested break")]
@@ -369,6 +425,33 @@ fn recorded_todo(world: &mut DomainWorld, expected: i32) {
 #[then("the recorded session belongs to no todo")]
 fn recorded_no_todo(world: &mut DomainWorld) {
     assert_eq!(world.timer.finish().session.todo_id, None);
+}
+
+#[then(expr = "the recorded session has projects {string}")]
+fn recorded_projects(world: &mut DomainWorld, expected: String) {
+    assert_eq!(
+        world.timer.finish().session.labels.project_tags,
+        split_list(&expected)
+            .iter()
+            .map(|t| t.trim().to_owned())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[then(expr = "the recorded session has contexts {string}")]
+fn recorded_contexts(world: &mut DomainWorld, expected: String) {
+    assert_eq!(
+        world.timer.finish().session.labels.context_tags,
+        split_list(&expected)
+            .iter()
+            .map(|t| t.trim().to_owned())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[then(expr = "the recorded session has the note {string}")]
+fn recorded_note(world: &mut DomainWorld, expected: String) {
+    assert_eq!(world.timer.finish().session.labels.note, expected);
 }
 
 #[then(expr = "the recorded session mode is {word}")]

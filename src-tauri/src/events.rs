@@ -81,7 +81,7 @@ pub fn emit<E: Event + Serialize>(sink: &dyn EventSink, event: &E) {
 
 #[cfg(test)]
 mod tests {
-    use nunc_core::model::SessionType;
+    use nunc_core::model::{Labels, SessionType};
     use nunc_core::model::{TimerMode, TimerState};
     use nunc_platform::RecordingEventSink;
 
@@ -112,6 +112,7 @@ mod tests {
                 remaining: 90,
                 total: 1500,
                 todo_id: Some(3),
+                labels: Labels::default(),
             }),
         );
         let events = sink.events();

@@ -78,6 +78,8 @@ fn session(
         actual_min: minutes,
         todo_id: todo,
         break_min: None,
+        project_tags: Vec::new(),
+        context_tags: Vec::new(),
     }
 }
 
@@ -98,6 +100,11 @@ fn sessions(world: &mut DomainWorld, step: &Step) {
         need("todo"),
     );
     let end = column("end");
+    let (projects_col, contexts_col) = (column("projects"), column("contexts"));
+    let words = |row: &[String], col: Option<usize>| -> Vec<String> {
+        col.map(|i| row[i].split_whitespace().map(str::to_owned).collect())
+            .unwrap_or_default()
+    };
 
     world.stats.sessions = table.rows[1..]
         .iter()
@@ -110,6 +117,8 @@ fn sessions(world: &mut DomainWorld, step: &Step) {
                 row[minutes].parse().ok(),
                 row[todo].parse().ok(),
             );
+            session.project_tags = words(row, projects_col);
+            session.context_tags = words(row, contexts_col);
             session.ended_at = end
                 .map(|i| row[i].as_str())
                 .filter(|text| !text.is_empty())

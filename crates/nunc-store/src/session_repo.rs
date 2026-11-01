@@ -4,18 +4,19 @@
 
 use chrono::{DateTime, Utc};
 use nunc_core::crdt::KIND_STOPWATCH;
-use nunc_core::model::{Session, TimerMode};
+use nunc_core::model::{Labels, Session, TimerMode};
 use nunc_core::timer::{Finish, Timer};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::crdt_repo::atomic;
-use crate::session_sync::{ensure_meta, fields_of, stamp_changes};
+use crate::session_sync::{ensure_meta, fields_of, stamp_changes, tags_from_json, tags_to_json};
 use crate::time::{parse_instant, to_text};
 use crate::{StoreError, increment_pomodoro_count, save_timer};
 
 const COLUMNS: &str =
     "s.id, s.mode, s.session_type, s.status, s.started_at, s.ended_at, s.planned_min,
-                s.actual_min, s.todo_id, s.break_min, COALESCE(m.kind, 'regular')";
+                s.actual_min, s.todo_id, s.break_min, COALESCE(m.kind, 'regular'),
+                COALESCE(m.project_tags, '[]'), COALESCE(m.context_tags, '[]')";
 
 fn corrupt(index: usize, what: &str, text: &str) -> rusqlite::Error {
     rusqlite::Error::FromSqlConversionFailure(
@@ -55,6 +56,8 @@ fn session_from_row(row: &Row<'_>) -> rusqlite::Result<Session> {
         actual_min: minutes(7)?,
         todo_id: row.get(8)?,
         break_min: minutes(9)?,
+        project_tags: tags_from_json(&row.get::<_, String>(11)?),
+        context_tags: tags_from_json(&row.get::<_, String>(12)?),
     })
 }
 
@@ -110,12 +113,27 @@ pub fn commit_finish(
         ],
     )?;
     let id = i32::try_from(tx.last_insert_rowid()).unwrap_or(i32::MAX);
-    if s.mode == TimerMode::Stopwatch {
+    let labelled = s.labels != Labels::default();
+    if s.mode == TimerMode::Stopwatch || labelled {
         ensure_meta(&tx)?;
+    }
+    if s.mode == TimerMode::Stopwatch {
         tx.execute(
             "UPDATE session_meta SET kind = ?1 WHERE session_id = ?2",
             params![KIND_STOPWATCH, id],
         )?;
+    }
+    if labelled {
+        tx.execute(
+            "UPDATE session_meta SET project_tags = ?1, context_tags = ?2, note = ?3 WHERE session_id = ?4",
+            params![
+                tags_to_json(&s.labels.project_tags),
+                tags_to_json(&s.labels.context_tags),
+                s.labels.note,
+                id
+            ],
+        )?;
+        stamp_changes(&tx, id.into(), None, now)?;
     }
     if let Some(todo_id) = finish.increment_todo {
         increment_pomodoro_count(&tx, todo_id)?;
@@ -179,6 +197,9 @@ pub struct ManualSession {
     pub ended_at: DateTime<Utc>,
     pub todo_id: Option<i32>,
     pub note: String,
+    /// Eigene Projekte/Kontexte, nur ohne Todo wirksam (ADR 0023).
+    pub project_tags: Vec<String>,
+    pub context_tags: Vec<String>,
 }
 
 /// Die vollständigen, änderbaren Werte einer Session.
@@ -189,6 +210,8 @@ pub struct SessionEdit {
     pub actual_min: u32,
     pub todo_id: Option<i32>,
     pub note: String,
+    pub project_tags: Vec<String>,
+    pub context_tags: Vec<String>,
 }
 
 /// Minuten zwischen zwei Zeitpunkten (nie negativ).
@@ -222,8 +245,16 @@ pub fn insert_manual(
         )?;
         let id = conn.last_insert_rowid();
         conn.execute(
-            "INSERT INTO session_meta (session_id, sync_id, origin, kind, note) VALUES (?1, ?2, 'manual', ?3, ?4)",
-            params![id, entry.sync_id, KIND_STOPWATCH, entry.note],
+            "INSERT INTO session_meta (session_id, sync_id, origin, kind, note, project_tags, context_tags)
+             VALUES (?1, ?2, 'manual', ?3, ?4, ?5, ?6)",
+            params![
+                id,
+                entry.sync_id,
+                KIND_STOPWATCH,
+                entry.note,
+                tags_to_json(&entry.project_tags),
+                tags_to_json(&entry.context_tags),
+            ],
         )?;
         stamp_changes(conn, id, None, now)?;
         Ok(id)
@@ -254,8 +285,13 @@ pub fn update_session(
             ],
         )?;
         conn.execute(
-            "UPDATE session_meta SET note = ?1 WHERE session_id = ?2",
-            params![edit.note, id],
+            "UPDATE session_meta SET note = ?1, project_tags = ?2, context_tags = ?3 WHERE session_id = ?4",
+            params![
+                edit.note,
+                tags_to_json(&edit.project_tags),
+                tags_to_json(&edit.context_tags),
+                id
+            ],
         )?;
         stamp_changes(conn, id, Some(&before), now)
     })?;
@@ -392,6 +428,8 @@ mod tests {
             ended_at: at(end),
             todo_id: None,
             note: "n".to_owned(),
+            project_tags: Vec::new(),
+            context_tags: Vec::new(),
         }
     }
 
@@ -419,7 +457,7 @@ mod tests {
         let stamped: i64 = conn
             .query_row("SELECT COUNT(*) FROM session_field_clock", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(stamped, 6);
+        assert_eq!(stamped, 8);
     }
 
     #[test]
@@ -498,6 +536,8 @@ mod tests {
             actual_min: 50,
             todo_id: Some(todo.id),
             note: "n".to_owned(),
+            project_tags: Vec::new(),
+            context_tags: Vec::new(),
         };
         let updated = update_session(&conn, session.id, &edit, at("2026-10-04T12:00:00Z")).unwrap();
         assert_eq!(updated.started_at, at("2026-10-04T09:10:00Z"));
@@ -546,6 +586,8 @@ mod tests {
             actual_min: 1,
             todo_id: None,
             note: String::new(),
+            project_tags: Vec::new(),
+            context_tags: Vec::new(),
         };
         let now = at("2026-10-04T12:00:00Z");
         assert!(matches!(
@@ -580,6 +622,8 @@ mod tests {
             actual_min: 30,
             todo_id: None,
             note: String::new(),
+            project_tags: Vec::new(),
+            context_tags: Vec::new(),
         };
         update_session(&conn, 1, &edit, at("2026-10-04T12:00:00Z")).unwrap();
         let sync_id: String = conn
