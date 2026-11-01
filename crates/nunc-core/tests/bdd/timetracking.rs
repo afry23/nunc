@@ -21,7 +21,7 @@ pub struct State {
     entry: Option<Result<Vec<i32>, EntryError>>,
 }
 
-fn local_date_fn(world: &DomainWorld) -> impl Fn(DateTime<Utc>) -> NaiveDate + use<> {
+pub(crate) fn local_date_fn(world: &DomainWorld) -> impl Fn(DateTime<Utc>) -> NaiveDate + use<> {
     let offset = FixedOffset::east_opt(world.stats.offset_hours * 3600).expect("Zeitzone");
     move |time| time.with_timezone(&offset).date_naive()
 }

@@ -38,8 +38,8 @@ Feature: Review report
   Scenario: Completed todos are listed by completion date in the period
     When I build the review from 2026-03-02 to 2026-03-08
     Then the completed todos are:
-      | completed  | text      |
-      | 2026-03-04 | Plan trip |
+      | completed  | text            |
+      | 2026-03-04 | Plan trip +home |
 
   @wip @domain @US-RV01
   Scenario: Time is grouped by project
