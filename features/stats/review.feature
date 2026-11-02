@@ -229,7 +229,7 @@ Feature: Review report
   @domain @US-RV01
   Scenario: The review exports as Markdown
     When I build the review from 2026-03-02 to 2026-03-08
-    And I export the review as Markdown
+    And I export the review as Markdown in English
     Then the Markdown contains "# Review 2026-03-02 – 2026-03-08"
     And the Markdown contains "+45 min"
     And the Markdown contains "+work"
@@ -238,19 +238,19 @@ Feature: Review report
     And the Markdown contains "- +work: 85 min"
     And the Markdown contains "## Contexts"
     And the Markdown contains "- @desk: 85 min"
-    And the Markdown contains "## Techniques"
+    And the Markdown contains "## Timing technique"
     And the Markdown contains "- Pomodoros: 1"
-    And the Markdown contains "- flowtime: 1 sessions, 60 min"
-    And the Markdown contains "- Write report +work @desk: 85 min, 1 pomodoros, 2 sessions"
+    And the Markdown contains "- Flowtime: 1 sessions, 60 min"
+    And the Markdown contains "- Write report +work @desk: 85 min, 1 Pomodoros, 2 sessions"
     And the Markdown contains "- +work @desk: 85 min, 2 sessions"
-    And the Markdown contains "- 2026-03-03: 25 min, 1 pomodoros"
+    And the Markdown contains "- 2026-03-03: 25 min, 1 Pomodoros"
 
   @domain @US-RV01
   Scenario: An empty review exports without detail sections
     When I build the review from 2026-04-01 to 2026-04-07
-    And I export the review as Markdown
+    And I export the review as Markdown in English
     Then the Markdown contains "- Pomodoros: 0"
-    And the Markdown does not contain "## Techniques"
+    And the Markdown does not contain "## Timing technique"
     And the Markdown does not contain "## Projects"
     And the Markdown does not contain "## Tasks"
     And the Markdown does not contain "## Days"
@@ -264,9 +264,30 @@ Feature: Review report
       | start            | note            |
       | 2026-03-02 09:00 | Weekly planning |
     When I build the review from 2026-03-02 to 2026-03-08
-    And I export the review as Markdown
+    And I export the review as Markdown in English
     Then the Markdown contains:
       """
       - +foo @meeting @work: 45 min, 1 sessions
         - 2026-03-02: Weekly planning
       """
+
+  @domain @US-RV01
+  Scenario: The Markdown export follows the language of the app
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects | contexts |
+      | 2026-03-02 09:00 | stopwatch | work | completed | 45      |      | +foo     |          |
+      | 2026-03-02 10:00 | pomodoro  | work | aborted   | 10      |      |          |          |
+    And the session notes:
+      | start            | note            |
+      | 2026-03-02 09:00 | Weekly planning |
+    When I build the review from 2026-03-01 to 2026-03-08
+    And I export the review as Markdown in German
+    Then the Markdown contains "# Rückblick 2026-03-01 – 2026-03-08"
+    And the Markdown contains "- Fokuszeit: 45 Min. (+45 Min. gegenüber 2026-02-21 – 2026-02-28)"
+    And the Markdown contains "- Arbeitssessions: 1 abgeschlossen, 1 abgebrochen (50 % abgebrochen)"
+    And the Markdown contains "## Zeitmessung"
+    And the Markdown contains "- Stoppuhr: 1 Sessions, 45 Min."
+    And the Markdown contains "## Projekte und Kontexte zusammen"
+    And the Markdown contains "- +foo: 45 Min., 1 Sessions"
+    And the Markdown contains "  - 2026-03-02: Weekly planning"
+    And the Markdown does not contain "Focus time"

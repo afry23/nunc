@@ -9,7 +9,9 @@ use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::model::{Session, SessionStatus, SessionType, TimerMode, Todo, effective_tags};
+use crate::model::{
+    Language, Session, SessionStatus, SessionType, TimerMode, Todo, effective_tags,
+};
 
 /// Art eines Kalenderzeitraums.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -410,56 +412,150 @@ pub fn build_review(
     }
 }
 
-fn group_lines(markdown: &mut String, title: &str, groups: &[GroupMinutes]) {
+/// Beschriftungen des Markdown-Exports in einer Sprache.
+struct Texts {
+    title: &'static str,
+    focus_time: &'static str,
+    versus: &'static str,
+    work_sessions: &'static str,
+    completed: &'static str,
+    aborted: &'static str,
+    pomodoros: &'static str,
+    techniques: &'static str,
+    tasks: &'static str,
+    projects: &'static str,
+    contexts: &'static str,
+    together: &'static str,
+    days: &'static str,
+    completed_tasks: &'static str,
+    sessions: &'static str,
+    min: &'static str,
+    none: &'static str,
+    pomodoro: &'static str,
+    flowtime: &'static str,
+    stopwatch: &'static str,
+}
+
+/// `System` hat der Aufrufer schon aufgelöst; hier fällt es auf Deutsch zurück (wie die Oberfläche).
+fn texts(language: Language) -> Texts {
+    match language {
+        Language::En => Texts {
+            title: "Review",
+            focus_time: "Focus time",
+            versus: "vs.",
+            work_sessions: "Work sessions",
+            completed: "completed",
+            aborted: "aborted",
+            pomodoros: "Pomodoros",
+            techniques: "Timing technique",
+            tasks: "Tasks",
+            projects: "Projects",
+            contexts: "Contexts",
+            together: "Projects and contexts together",
+            days: "Days",
+            completed_tasks: "Completed tasks",
+            sessions: "sessions",
+            min: "min",
+            none: "(none)",
+            pomodoro: "Pomodoro",
+            flowtime: "Flowtime",
+            stopwatch: "Stopwatch",
+        },
+        Language::De | Language::System => Texts {
+            title: "Rückblick",
+            focus_time: "Fokuszeit",
+            versus: "gegenüber",
+            work_sessions: "Arbeitssessions",
+            completed: "abgeschlossen",
+            aborted: "abgebrochen",
+            pomodoros: "Pomodoros",
+            techniques: "Zeitmessung",
+            tasks: "Aufgaben",
+            projects: "Projekte",
+            contexts: "Kontexte",
+            together: "Projekte und Kontexte zusammen",
+            days: "Tage",
+            completed_tasks: "Erledigte Aufgaben",
+            sessions: "Sessions",
+            min: "Min.",
+            none: "(ohne Zuordnung)",
+            pomodoro: "Pomodoro",
+            flowtime: "Flowtime",
+            stopwatch: "Stoppuhr",
+        },
+    }
+}
+
+fn group_lines(markdown: &mut String, texts: &Texts, title: &str, groups: &[GroupMinutes]) {
     if groups.is_empty() {
         return;
     }
     markdown.push_str(&format!("\n## {title}\n\n"));
     for entry in groups {
-        let name = entry.group.as_deref().unwrap_or("(none)");
-        markdown.push_str(&format!("- {name}: {} min\n", entry.minutes));
+        let name = entry.group.as_deref().unwrap_or(texts.none);
+        markdown.push_str(&format!("- {name}: {} {}\n", entry.minutes, texts.min));
     }
 }
 
-/// Markdown für die Gesprächsvorbereitung.
-pub fn review_markdown(review: &Review) -> String {
+/// Markdown für die Gesprächsvorbereitung in der Sprache der Oberfläche.
+pub fn review_markdown(review: &Review, language: Language) -> String {
+    let t = texts(language);
     let delta = i64::from(review.focus_min) - i64::from(review.previous_focus_min);
     let mut markdown = format!(
-        "# Review {} – {}\n\n- Focus time: {} min ({delta:+} min vs. {} – {})\n- Work sessions: {} completed, {} aborted ({} % aborted)\n",
+        "# {} {} – {}\n\n- {}: {} {} ({delta:+} {} {} {} – {})\n- {}: {} {}, {} {} ({} % {})\n- {}: {}\n",
+        t.title,
         review.period.from,
         review.period.to,
+        t.focus_time,
         review.focus_min,
+        t.min,
+        t.min,
+        t.versus,
         review.previous_period.from,
         review.previous_period.to,
+        t.work_sessions,
         review.completed_sessions,
+        t.completed,
         review.aborted_sessions,
+        t.aborted,
         review.abort_rate_percent,
+        t.aborted,
+        t.pomodoros,
+        review.pomodoro_count,
     );
-    markdown.push_str(&format!("- Pomodoros: {}\n", review.pomodoro_count));
     if review.modes.iter().any(|entry| entry.sessions > 0) {
-        markdown.push_str("\n## Techniques\n\n");
+        markdown.push_str(&format!("\n## {}\n\n", t.techniques));
         for entry in &review.modes {
+            let name = match entry.mode {
+                TimerMode::Pomodoro => t.pomodoro,
+                TimerMode::Flowtime => t.flowtime,
+                TimerMode::Stopwatch => t.stopwatch,
+            };
             markdown.push_str(&format!(
-                "- {}: {} sessions, {} min\n",
-                entry.mode.as_str(),
-                entry.sessions,
-                entry.minutes
+                "- {name}: {} {}, {} {}\n",
+                entry.sessions, t.sessions, entry.minutes, t.min
             ));
         }
     }
     if !review.tasks.is_empty() {
-        markdown.push_str("\n## Tasks\n\n");
+        markdown.push_str(&format!("\n## {}\n\n", t.tasks));
         for task in &review.tasks {
             markdown.push_str(&format!(
-                "- {}: {} min, {} pomodoros, {} sessions\n",
-                task.text, task.minutes, task.pomodoros, task.sessions
+                "- {}: {} {}, {} {}, {} {}\n",
+                task.text,
+                task.minutes,
+                t.min,
+                task.pomodoros,
+                t.pomodoros,
+                task.sessions,
+                t.sessions
             ));
         }
     }
-    group_lines(&mut markdown, "Projects", &review.projects);
-    group_lines(&mut markdown, "Contexts", &review.contexts);
+    group_lines(&mut markdown, &t, t.projects, &review.projects);
+    group_lines(&mut markdown, &t, t.contexts, &review.contexts);
     if !review.combinations.is_empty() {
-        markdown.push_str("\n## Projects and contexts together\n\n");
+        markdown.push_str(&format!("\n## {}\n\n", t.together));
         for combination in &review.combinations {
             let tags = combination
                 .projects
@@ -468,10 +564,10 @@ pub fn review_markdown(review: &Review) -> String {
                 .map(String::as_str)
                 .collect::<Vec<_>>()
                 .join(" ");
-            let tags = if tags.is_empty() { "(none)" } else { &tags };
+            let tags = if tags.is_empty() { t.none } else { &tags };
             markdown.push_str(&format!(
-                "- {tags}: {} min, {} sessions\n",
-                combination.minutes, combination.sessions
+                "- {tags}: {} {}, {} {}\n",
+                combination.minutes, t.min, combination.sessions, t.sessions
             ));
             for note in &combination.notes {
                 markdown.push_str(&format!("  - {}: {}\n", note.date, note.text));
@@ -479,16 +575,16 @@ pub fn review_markdown(review: &Review) -> String {
         }
     }
     if !review.days.is_empty() {
-        markdown.push_str("\n## Days\n\n");
+        markdown.push_str(&format!("\n## {}\n\n", t.days));
         for day in &review.days {
             markdown.push_str(&format!(
-                "- {}: {} min, {} pomodoros\n",
-                day.date, day.minutes, day.pomodoros
+                "- {}: {} {}, {} {}\n",
+                day.date, day.minutes, t.min, day.pomodoros, t.pomodoros
             ));
         }
     }
     if !review.completed_todos.is_empty() {
-        markdown.push_str("\n## Completed tasks\n\n");
+        markdown.push_str(&format!("\n## {}\n\n", t.completed_tasks));
         for todo in &review.completed_todos {
             markdown.push_str(&format!("- {}: {}\n", todo.completed_at, todo.text));
         }
