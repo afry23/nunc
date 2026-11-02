@@ -4,6 +4,7 @@ mod backup;
 mod connection;
 mod crdt_repo;
 mod error;
+mod journal_repo;
 mod legacy;
 mod migrations;
 mod restore;
@@ -23,6 +24,10 @@ pub use backup::{
 pub use connection::{open, open_in_memory};
 pub use crdt_repo::{apply_state, local_state};
 pub use error::StoreError;
+pub use journal_repo::{
+    add_achievement, delete_achievement, list_journal, save_day_note, save_week_note,
+    update_achievement,
+};
 pub use legacy::{LegacyImport, import_legacy_db, legacy_db_path};
 pub use migrations::{MIGRATIONS, Migration, migrate};
 pub use restore::{restore_backup, validate_backup_file};

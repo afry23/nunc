@@ -35,12 +35,21 @@ impl JournalKind {
             Self::Achievement => "achievement",
         }
     }
+
+    /// Gegenstück zu [`as_str`](Self::as_str); Unbekanntes ist `None`.
+    pub fn parse(text: &str) -> Option<Self> {
+        [Self::DayNote, Self::WeekNote, Self::Achievement]
+            .into_iter()
+            .find(|kind| kind.as_str() == text)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum JournalError {
     #[error("Der Text darf höchstens {MAX_TEXT_CHARS} Zeichen lang sein.")]
     TextTooLong,
+    #[error("Der Text darf nicht leer sein.")]
+    EmptyText,
 }
 
 /// Der Sonntag der Woche (Montag bis Sonntag), die `day` enthält. Unter ihm liegt die Wochennotiz.
@@ -62,6 +71,16 @@ fn note_id(kind: &str, date: NaiveDate) -> String {
     format!("note:{kind}:{date}")
 }
 
+/// Kennung der Tagesnotiz für `date`.
+pub fn day_note_id(date: NaiveDate) -> String {
+    note_id("day", date)
+}
+
+/// Kennung der Wochennotiz der Woche, die `day` enthält (Sonntag als Datum).
+pub fn week_note_id(day: NaiveDate) -> String {
+    note_id("week", week_end(day))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct JournalEntry {
     pub sync_id: String,
@@ -74,25 +93,13 @@ pub struct JournalEntry {
 impl JournalEntry {
     /// Tagesnotiz; alle Felder tragen `clock`. Ein leerer Text ergibt einen gelöschten Eintrag.
     pub fn day_note(date: NaiveDate, text: &str, clock: &Hlc) -> Self {
-        Self::new(
-            note_id("day", date),
-            JournalKind::DayNote,
-            date,
-            text,
-            clock,
-        )
+        Self::new(day_note_id(date), JournalKind::DayNote, date, text, clock)
     }
 
     /// Wochennotiz der Woche, die `day` enthält (abgelegt unter dem Sonntag).
     pub fn week_note(day: NaiveDate, text: &str, clock: &Hlc) -> Self {
         let end = week_end(day);
-        Self::new(
-            note_id("week", end),
-            JournalKind::WeekNote,
-            end,
-            text,
-            clock,
-        )
+        Self::new(week_note_id(day), JournalKind::WeekNote, end, text, clock)
     }
 
     /// Erfolg mit der vom Gerät vergebenen `sync_id` (UUID).
@@ -176,5 +183,35 @@ impl JournalEntry {
             deleted: self.deleted.capped(now_ms),
             ..self.clone()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kinds_are_read_back_from_their_text() {
+        for kind in [
+            JournalKind::DayNote,
+            JournalKind::WeekNote,
+            JournalKind::Achievement,
+        ] {
+            assert_eq!(JournalKind::parse(kind.as_str()), Some(kind));
+        }
+        assert_eq!(JournalKind::parse("note"), None);
+        assert_eq!(JournalKind::parse(""), None);
+    }
+
+    #[test]
+    fn note_ids_follow_from_the_day() {
+        let wednesday = NaiveDate::from_ymd_opt(2026, 3, 4).unwrap();
+        assert_eq!(day_note_id(wednesday), "note:day:2026-03-04");
+        assert_eq!(week_note_id(wednesday), "note:week:2026-03-08");
+        let clock = Hlc::new(1, 0, "d");
+        assert_eq!(
+            JournalEntry::week_note(wednesday, "x", &clock).sync_id,
+            week_note_id(wednesday)
+        );
     }
 }

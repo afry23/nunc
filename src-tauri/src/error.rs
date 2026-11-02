@@ -3,6 +3,7 @@
 
 use std::sync::PoisonError;
 
+use nunc_core::journal::JournalError;
 use nunc_core::manual_entry::EntryError;
 use nunc_core::model::SettingsIssue;
 use nunc_core::timer::TimerError;
@@ -65,7 +66,9 @@ fn store_code(error: &StoreError) -> &'static str {
         StoreError::Json(_) => "state_unreadable",
         StoreError::BackupDir(_) => "backup_dir",
         StoreError::InvalidBackup(_) => "invalid_backup",
-        StoreError::NotFound { .. } => "not_found",
+        StoreError::NotFound { .. } | StoreError::JournalEntryNotFound(_) => "not_found",
+        StoreError::Journal(JournalError::TextTooLong) => "journal_text_too_long",
+        StoreError::Journal(JournalError::EmptyText) => "journal_text_empty",
         StoreError::InvalidParent { .. } => "invalid_parent",
     }
 }
