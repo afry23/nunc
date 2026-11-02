@@ -276,11 +276,10 @@ pub(crate) fn apply_entries(
     merged: &BTreeMap<String, JournalEntry>,
 ) -> Result<(), StoreError> {
     for (sync_id, entry) in merged {
-        match read_entry(conn, sync_id)? {
-            None if entry.is_deleted() => {}
-            Some(local) if local == *entry => {}
-            _ => write_entry(conn, entry)?,
+        if entry.is_deleted() && read_entry(conn, sync_id)?.is_none() {
+            continue;
         }
+        write_entry(conn, entry)?;
     }
     for (sync_id, local) in entries(conn)? {
         if !merged.contains_key(&sync_id) && local.is_deleted() {

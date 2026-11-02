@@ -185,3 +185,33 @@ impl JournalEntry {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn kinds_are_read_back_from_their_text() {
+        for kind in [
+            JournalKind::DayNote,
+            JournalKind::WeekNote,
+            JournalKind::Achievement,
+        ] {
+            assert_eq!(JournalKind::parse(kind.as_str()), Some(kind));
+        }
+        assert_eq!(JournalKind::parse("note"), None);
+        assert_eq!(JournalKind::parse(""), None);
+    }
+
+    #[test]
+    fn note_ids_follow_from_the_day() {
+        let wednesday = NaiveDate::from_ymd_opt(2026, 3, 4).unwrap();
+        assert_eq!(day_note_id(wednesday), "note:day:2026-03-04");
+        assert_eq!(week_note_id(wednesday), "note:week:2026-03-08");
+        let clock = Hlc::new(1, 0, "d");
+        assert_eq!(
+            JournalEntry::week_note(wednesday, "x", &clock).sync_id,
+            week_note_id(wednesday)
+        );
+    }
+}
