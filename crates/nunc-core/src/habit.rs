@@ -440,8 +440,7 @@ fn day_streaks(schedule: &Schedule, done: &BTreeSet<NaiveDate>, today: NaiveDate
         day -= Duration::days(1);
     }
     let (mut run, mut best) = (0, 0);
-    let mut day = first;
-    while day <= today {
+    for day in first.iter_days().take_while(|day| *day <= today) {
         if schedule.is_due_on(day) {
             if done.contains(&day) {
                 run += 1;
@@ -450,7 +449,6 @@ fn day_streaks(schedule: &Schedule, done: &BTreeSet<NaiveDate>, today: NaiveDate
                 run = 0;
             }
         }
-        day += Duration::days(1);
     }
     (current, best)
 }
