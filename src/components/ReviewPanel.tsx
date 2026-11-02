@@ -222,6 +222,28 @@ export function ReviewPanel() {
             today={toIsoDate(today)}
             onChanged={() => setVersion((value) => value + 1)}
           />
+          {review.habits.length > 0 && (
+            <Card title={t("review.habits")}>
+              {review.habits.map((habit) => (
+                <Row
+                  key={habit.id}
+                  label={habit.name}
+                  value={
+                    habit.ratePercent === null
+                      ? t("review.habitValueNone", {
+                          done: habit.doneDays,
+                          due: habit.dueDays,
+                        })
+                      : t("review.habitValue", {
+                          done: habit.doneDays,
+                          due: habit.dueDays,
+                          rate: habit.ratePercent,
+                        })
+                  }
+                />
+              ))}
+            </Card>
+          )}
           <Card title={t("review.modes")}>
             {review.modes.map((entry) => (
               <Row

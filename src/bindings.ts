@@ -502,6 +502,19 @@ export type Review = {
 	contexts: GroupMinutes[],
 	completedTodos: CompletedTodo[],
 	journal: ReviewJournal,
+	/**  Gewohnheiten mit ihrer Quote im Zeitraum, in der Reihenfolge der Eingabe. */
+	habits: ReviewHabit[],
+};
+
+/**  Eine Gewohnheit im Bericht: an wie vielen Tagen des Zeitraums sie fällig war und erledigt wurde. */
+export type ReviewHabit = {
+	id: string,
+	name: string,
+	archived: boolean,
+	dueDays: number,
+	doneDays: number,
+	/**  Quote in Prozent (höchstens 100); `None`, wenn nichts fällig war. */
+	ratePercent: number | null,
 };
 
 /**

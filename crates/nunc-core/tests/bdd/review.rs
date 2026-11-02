@@ -8,8 +8,8 @@ use nunc_core::hlc::Hlc;
 use nunc_core::journal::JournalEntry;
 use nunc_core::model::Language;
 use nunc_core::review::{
-    GroupMinutes, JournalItem, Period, PeriodKind, Review, build_review, period_containing,
-    review_markdown,
+    GroupMinutes, HabitInput, JournalItem, Period, PeriodKind, Review, build_review,
+    period_containing, review_markdown,
 };
 
 use crate::DomainWorld;
@@ -74,6 +74,11 @@ fn build(world: &mut DomainWorld, from: String, to: String) {
         &world.todo_query.todos,
         &world.review.notes,
         &world.review.journal,
+        &HabitInput {
+            habits: &world.habits.habits,
+            logs: &world.habits.ticks,
+            today: world.habits.today.unwrap_or_else(|| day(&to)),
+        },
         &local_date,
     ));
 }
@@ -286,6 +291,24 @@ fn markdown_contains_block(world: &mut DomainWorld, step: &Step) {
     let text = step.docstring.as_ref().expect("Docstring fehlt").trim();
     let markdown = world.review.markdown.as_ref().expect("kein Markdown");
     assert!(markdown.contains(text), "{text:?} fehlt in:\n{markdown}");
+}
+
+#[then(expr = "the review lists the habits {string}")]
+fn review_habits(world: &mut DomainWorld, expected: String) {
+    let lines: Vec<String> = review(world)
+        .habits
+        .iter()
+        .map(|habit| {
+            let rate = habit
+                .rate_percent
+                .map_or_else(String::new, |rate| format!(" ({rate} %)"));
+            format!(
+                "{}: {} / {}{rate}",
+                habit.name, habit.done_days, habit.due_days
+            )
+        })
+        .collect();
+    assert_eq!(lines.join(" | "), expected);
 }
 
 /// Spalten `kind` (`day_note`, `week_note`, `achievement`), `date`, `text` und `deleted` (`yes`/leer).

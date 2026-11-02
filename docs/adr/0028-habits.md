@@ -70,7 +70,11 @@ Schreibvorgänge laufen in einer Transaktion.
 (`serde(default)`). `schema_version` wird **8**; gelesen werden 2 bis 8, geschrieben wird 8 (Begründung wie ADR 0026:
 ältere Clients lehnen v8 ab, statt die Gewohnheiten still zu verwerfen).
 
-**Rückblick:** `Review` bekommt später je Gewohnheit die erledigten Tage im Zeitraum und die Quote (Stufe 4).
+**Rückblick:** `Review.habits` listet je auswertbarer Gewohnheit, die bis zum Ende des Zeitraums angelegt war, die
+**fälligen Tage**, die **erledigten Tage** und die **Quote** (gerundet, höchstens 100 %; `null`, wenn nichts fällig war).
+Gezählt wird von `max(Beginn, Anlage)` bis `min(Ende, heute)`. Fällig sind bei `daily` alle Tage, bei `days` die
+gewählten Wochentage, bei `weekly:N` aufgerundet N Tage je sieben Tage des Zeitraums. Archivierte Gewohnheiten erscheinen
+nur, wenn sie im Zeitraum erledigt wurden. Der Markdown-Export hat einen Abschnitt „Gewohnheiten“ (`Name: erledigt / fällig (Quote)`).
 
 ## Umsetzung in Stufen
 
@@ -82,7 +86,7 @@ Schreibvorgänge laufen in einer Transaktion.
    Stufe. Die Übersicht rechnet `habit_overview` in `nunc-core`; ein Eintrag mit unbekannter Kodierung hat keinen
    `progress`.
 4. UI in zwei Teilen: (a) Ansicht „Gewohnheiten“ (`/habits`: anlegen, ändern, abhaken, archivieren, löschen) und Abschnitt
-   „Gewohnheiten heute“ in „Heute“ – diese Stufe; (b) Rückblick: Quote je Gewohnheit im Zeitraum.
+   „Gewohnheiten heute“ in „Heute“ – diese Stufe; (b) Rückblick: Quote je Gewohnheit im Zeitraum (`Review.habits`, Markdown-Abschnitt, Karte im Rückblick).
 
 ## Verworfene Alternativen
 

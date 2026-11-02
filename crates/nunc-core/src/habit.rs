@@ -562,16 +562,7 @@ pub fn habit_overview(
         .iter()
         .map(|habit| {
             let (schedule, goal) = (habit.schedule(), habit.goal());
-            let done: BTreeSet<NaiveDate> = match &goal {
-                Some(Goal::Minutes { minutes, tag }) => {
-                    minutes_goal_days(sessions, todos, tag, *minutes, local_date)
-                }
-                _ => logs
-                    .iter()
-                    .filter(|log| log.habit == habit.sync_id && log.done.value)
-                    .map(|log| log.day)
-                    .collect(),
-            };
+            let done = done_days(habit, logs, sessions, todos, local_date);
             let progress = match (&schedule, &goal) {
                 (Some(schedule), Some(_)) => Some(habit_progress(schedule, &done, today)),
                 _ => None,
@@ -588,4 +579,78 @@ pub fn habit_overview(
             }
         })
         .collect()
+}
+
+/// Die erledigten Tage einer Gewohnheit: bei Ziel `minutes` aus den Sessions, sonst die gesetzten Haken.
+pub fn done_days(
+    habit: &Habit,
+    logs: &[HabitLog],
+    sessions: &[Session],
+    todos: &[Todo],
+    local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
+) -> BTreeSet<NaiveDate> {
+    match habit.goal() {
+        Some(Goal::Minutes { minutes, tag }) => {
+            minutes_goal_days(sessions, todos, &tag, minutes, local_date)
+        }
+        _ => logs
+            .iter()
+            .filter(|log| log.habit == habit.sync_id && log.done.value)
+            .map(|log| log.day)
+            .collect(),
+    }
+}
+
+/// Eine Gewohnheit über einen Zeitraum: an wie vielen Tagen sie fällig war und an wie vielen sie erledigt wurde.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PeriodCount {
+    pub due_days: u32,
+    pub done_days: u32,
+}
+
+impl PeriodCount {
+    /// Quote in Prozent (gerundet, höchstens 100); `None`, wenn nichts fällig war.
+    pub fn rate_percent(self) -> Option<u32> {
+        if self.due_days == 0 {
+            return None;
+        }
+        let rate = (self.done_days * 100 + self.due_days / 2) / self.due_days;
+        Some(rate.min(100))
+    }
+}
+
+/// Zählt `schedule` und die erledigten Tage `done` von `from` bis `to` (einschließlich). Tage vor `created` und nach
+/// `today` zählen nicht. Bei `weekly:N` gelten N Tage je sieben Tage des Zeitraums (aufgerundet) als fällig.
+pub fn count_period(
+    schedule: &Schedule,
+    done: &BTreeSet<NaiveDate>,
+    created: NaiveDate,
+    from: NaiveDate,
+    to: NaiveDate,
+    today: NaiveDate,
+) -> PeriodCount {
+    let (start, end) = (from.max(created), to.min(today));
+    if start > end {
+        return PeriodCount {
+            due_days: 0,
+            done_days: 0,
+        };
+    }
+    let days = u32::try_from((end - start).num_days() + 1).unwrap_or(u32::MAX);
+    let due_days = match schedule {
+        Schedule::Weekly { per_week } => (u32::from(*per_week) * days).div_ceil(7),
+        other => {
+            let due = start
+                .iter_days()
+                .take_while(|day| *day <= end)
+                .filter(|day| other.is_due_on(*day))
+                .count();
+            u32::try_from(due).unwrap_or(u32::MAX)
+        }
+    };
+    let done_days = u32::try_from(done.range(start..=end).count()).unwrap_or(u32::MAX);
+    PeriodCount {
+        due_days,
+        done_days,
+    }
 }
