@@ -11,11 +11,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::crdt::{Register, SessionCrdt, SyncState, TodoCrdt, session_key};
 use crate::hlc::Hlc;
+use crate::journal::JournalEntry;
 use crate::model::{SyncFile, SyncSession, SyncTodo};
 use crate::todotxt::parse_line;
 
-/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`, ADR 0023: Projekte/Kontexte der Session).
-pub const SCHEMA_VERSION: u32 = 6;
+/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`, ADR 0023: Projekte/Kontexte der Session, ADR 0026: Journal).
+pub const SCHEMA_VERSION: u32 = 7;
 
 /// Älteste Version, die noch gelesen wird: Version 2 kennt Sessions nur als Rohdaten ([`SyncSession`]).
 pub const MIN_SCHEMA_VERSION: u32 = 2;
@@ -48,6 +49,9 @@ pub struct SyncDocument {
     pub todos: Vec<TodoCrdt>,
     #[serde(default)]
     pub sessions: Vec<SessionEntry>,
+    /// Tages-/Wochennotizen und Erfolge (ab Version 7, ADR 0026); ältere Dateien haben keine.
+    #[serde(default)]
+    pub journal: Vec<JournalEntry>,
 }
 
 impl SyncDocument {
@@ -62,6 +66,7 @@ impl SyncDocument {
                 .cloned()
                 .map(|session| SessionEntry::Crdt(Box::new(session)))
                 .collect(),
+            journal: state.journal.values().cloned().collect(),
         }
     }
 
@@ -89,8 +94,11 @@ impl SyncDocument {
                 })
                 .map(|session| (session.sync_id.clone(), session))
                 .collect(),
-            // Das Journal kommt mit dem Format 7 in die Datei (ADR 0026, eigener Schritt)
-            ..SyncState::default()
+            journal: self
+                .journal
+                .into_iter()
+                .map(|entry| (entry.sync_id.clone(), entry))
+                .collect(),
         })
     }
 }
