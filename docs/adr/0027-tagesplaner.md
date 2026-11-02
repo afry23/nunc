@@ -45,8 +45,10 @@ Sessions ohne neue Erfassung möglich.
 ## Umsetzung in Stufen
 
 1. `nunc-core`: Felder und Tagesplan (diese Stufe, mit `features/todos/day_plan.feature`).
-2. Einstellung `day_capacity_min`, Commands `get_day_plan`, `set_todo_plan` (Frist/Plan/Schätzung ändern über die
-   pure Funktion; der Command schreibt die neue Beschreibung über den bestehenden Todo-Weg).
+2. Einstellung `day_capacity_min` (1–1440, nur nunc-Schlüssel in `settings`), Commands `get_day_plan()` (Plan für den
+   lokalen heutigen Tag) und `set_todo_plan(id, due, plan, estimate_min)`. Der Command setzt alle drei Felder auf einmal
+   (`null` entfernt ein Feld) über die pure `apply_plan` und schreibt die neue Zeile über `update_todo`; eine Schätzung
+   außerhalb 1–10080 ist `invalid_input`. Die Oberfläche verbindet die Einträge des Plans über `todoId` mit der Todo-Liste.
 3. UI: Ansicht „Heute“, Felder im Todo-Dialog.
 4. Tagesabschluss.
 

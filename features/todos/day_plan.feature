@@ -116,3 +116,25 @@ Feature: Day plan
       | 2    | completed | 50      |
     When I build the day plan
     Then todo 1 on the plan has spent 35 minutes
+
+  @domain @US-TP01
+  Scenario Outline: The planning of a todo line is replaced as a whole
+    When I apply due "<due>", plan "<plan>" and estimate "<estimate>" to the line "<line>"
+    Then the line reads "<result>"
+
+    Examples:
+      | line                                  | due        | plan       | estimate | result                                              |
+      | (A) 2026-03-01 Report +work           | 2026-03-04 |            | 30       | (A) 2026-03-01 Report +work due:2026-03-04 est:30   |
+      | Report due:2026-03-04 est:30          |            | 2026-03-05 |          | Report plan:2026-03-05                              |
+      | x 2026-03-03 2026-03-01 Report est:30 |            |            |          | x 2026-03-03 2026-03-01 Report                      |
+      | Report                                |            |            |          | Report                                              |
+
+  @domain @US-TP01
+  Scenario Outline: An estimate outside the allowed range is rejected
+    When I apply due "", plan "" and estimate "<estimate>" to the line "Report"
+    Then the planning is rejected
+
+    Examples:
+      | estimate |
+      | 0        |
+      | 10081    |

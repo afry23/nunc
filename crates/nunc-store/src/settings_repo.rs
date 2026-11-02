@@ -130,10 +130,11 @@ fn settings_from_kv(kv: &HashMap<String, String>) -> Settings {
     flag("api_enabled", &mut s.api_enabled);
     number("api_port", &mut s.api_port);
     number("sync_interval_min", &mut s.sync_interval_min);
+    number("day_capacity_min", &mut s.day_capacity_min);
     s
 }
 
-fn kv_from_settings(s: &Settings) -> [(&'static str, String); 23] {
+fn kv_from_settings(s: &Settings) -> [(&'static str, String); 24] {
     [
         ("pomodoro_min", s.pomodoro_min.to_string()),
         ("short_break_min", s.short_break_min.to_string()),
@@ -164,6 +165,7 @@ fn kv_from_settings(s: &Settings) -> [(&'static str, String); 23] {
         ("api_enabled", s.api_enabled.to_string()),
         ("api_port", s.api_port.to_string()),
         ("sync_interval_min", s.sync_interval_min.to_string()),
+        ("day_capacity_min", s.day_capacity_min.to_string()),
     ]
 }
 
@@ -249,6 +251,7 @@ mod tests {
             api_enabled: true,
             api_port: 43000,
             sync_interval_min: 30,
+            day_capacity_min: 90,
         };
         save_settings(&mut conn, &s).unwrap();
         assert_eq!(load_settings(&conn).unwrap(), s);

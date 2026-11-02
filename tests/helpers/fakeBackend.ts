@@ -49,6 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
   apiEnabled: false,
   apiPort: 42820,
   syncIntervalMin: 15,
+  dayCapacityMin: 240,
 };
 
 export const EMPTY_STATS: StatsResponse = {

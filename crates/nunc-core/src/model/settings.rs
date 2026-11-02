@@ -70,6 +70,8 @@ pub struct Settings {
     /// Abstand des automatischen Syncs am Desktop in Minuten; `0` = aus. Erlaubt: [`SYNC_INTERVALS_MIN`].
     /// Die Go-App kennt den Schlüssel nicht und ignoriert ihn.
     pub sync_interval_min: u32,
+    /// Tageskapazität des Tagesplaners in Minuten (1–1440, ADR 0027); die Go-App kennt den Schlüssel nicht.
+    pub day_capacity_min: u32,
 }
 
 /// Erlaubte Werte für [`Settings::sync_interval_min`] (0 = aus).
@@ -127,6 +129,11 @@ impl Settings {
             "syncIntervalMin",
             "0, 5, 15, 30",
         );
+        check(
+            (1..=1440).contains(&self.day_capacity_min),
+            "dayCapacityMin",
+            "1–1440",
+        );
         if issues.is_empty() {
             Ok(())
         } else {
@@ -161,6 +168,7 @@ impl Default for Settings {
             api_enabled: false,
             api_port: 42820,
             sync_interval_min: 15,
+            day_capacity_min: 240,
         }
     }
 }
@@ -267,16 +275,18 @@ mod tests {
             "apiEnabled",
             "apiPort",
             "syncIntervalMin",
+            "dayCapacityMin",
         ] {
             assert!(value.get(key).is_some(), "Schlüssel {key} fehlt");
         }
-        assert_eq!(value.as_object().unwrap().len(), 23);
+        assert_eq!(value.as_object().unwrap().len(), 24);
         assert_eq!(value["activeMode"], "pomodoro");
         assert_eq!(value["syncProvider"], "none");
         assert_eq!(value["language"], "system");
         assert_eq!(value["apiEnabled"], false);
         assert_eq!(value["apiPort"], 42820);
         assert_eq!(value["syncIntervalMin"], 15);
+        assert_eq!(value["dayCapacityMin"], 240);
     }
 
     #[test]

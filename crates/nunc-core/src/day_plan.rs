@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 
 use crate::model::{Session, SessionStatus, SessionType, Todo};
+use crate::todotxt::{build_raw_text, parse_line};
 
 /// Planungsfelder eines Todos.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -134,6 +135,36 @@ fn words(text: &str) -> Vec<(&str, &str)> {
         out.push((&rest[..rest.len() - trimmed.len()], &trimmed[..end]));
         rest = &trimmed[end..];
     }
+}
+
+/// Ungültige Planungsangabe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+pub enum PlanError {
+    #[error("Die Schätzung muss zwischen 1 und {MAX_ESTIMATE_MIN} Minuten liegen.")]
+    InvalidEstimate,
+}
+
+/// Setzt alle drei Planungsfelder einer todo.txt-Zeile auf `fields` (`None` entfernt das Feld). Priorität, Datumsangaben
+/// und der übrige Text bleiben; die Zeile wird kanonisch neu gebaut.
+pub fn apply_plan(raw_text: &str, fields: &PlanFields) -> Result<String, PlanError> {
+    if fields
+        .estimate_min
+        .is_some_and(|minutes| !(1..=MAX_ESTIMATE_MIN).contains(&minutes))
+    {
+        return Err(PlanError::InvalidEstimate);
+    }
+    let mut parsed = parse_line(raw_text);
+    let day = |day: Option<NaiveDate>| day.map(|d| d.format("%Y-%m-%d").to_string());
+    let estimate = fields.estimate_min.map(|m| m.to_string());
+    let mut description = with_field(
+        &parsed.description,
+        PlanKey::Due,
+        day(fields.due).as_deref(),
+    );
+    description = with_field(&description, PlanKey::Plan, day(fields.plan).as_deref());
+    description = with_field(&description, PlanKey::Estimate, estimate.as_deref());
+    parsed.description = description;
+    Ok(build_raw_text(&parsed))
 }
 
 /// Warum ein Todo heute auf dem Plan steht.

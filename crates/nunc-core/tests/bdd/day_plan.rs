@@ -4,7 +4,8 @@ use chrono::{NaiveDate, TimeZone, Utc};
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when};
 use nunc_core::day_plan::{
-    DayPlan, PlanFields, PlanKey, PlanReason, day_plan, plan_fields, with_field,
+    DayPlan, PlanError, PlanFields, PlanKey, PlanReason, apply_plan, day_plan, plan_fields,
+    with_field,
 };
 use nunc_core::model::{Session, SessionStatus, SessionType, TimerMode, Todo};
 
@@ -19,6 +20,7 @@ pub struct State {
     todos: Vec<Todo>,
     sessions: Vec<Session>,
     plan: Option<DayPlan>,
+    line: Option<Result<String, PlanError>>,
 }
 
 fn date(text: &str) -> Option<NaiveDate> {
@@ -186,4 +188,30 @@ fn spent(world: &mut DomainWorld, id: i32, expected: u32) {
         .find(|i| i.todo_id == id)
         .expect("Todo nicht im Plan");
     assert_eq!(item.spent_min, expected);
+}
+
+#[when(expr = "I apply due {string}, plan {string} and estimate {string} to the line {string}")]
+fn apply(world: &mut DomainWorld, due: String, plan: String, estimate: String, line: String) {
+    let fields = PlanFields {
+        due: date_or_empty(&due),
+        plan: date_or_empty(&plan),
+        estimate_min: (!estimate.is_empty()).then(|| estimate.parse().expect("Minuten")),
+    };
+    world.day_plan.line = Some(apply_plan(&line, &fields));
+}
+
+fn date_or_empty(text: &str) -> Option<NaiveDate> {
+    (!text.is_empty()).then(|| NaiveDate::parse_from_str(text, "%Y-%m-%d").expect("Datum"))
+}
+
+#[then(expr = "the line reads {string}")]
+fn line_reads(world: &mut DomainWorld, expected: String) {
+    let line = world.day_plan.line.clone().expect("nichts angewendet");
+    assert_eq!(line, Ok(expected));
+}
+
+#[then("the planning is rejected")]
+fn rejected(world: &mut DomainWorld) {
+    let line = world.day_plan.line.clone().expect("nichts angewendet");
+    assert_eq!(line, Err(PlanError::InvalidEstimate));
 }

@@ -102,6 +102,13 @@ export const commands = {
 	updateSession: (id: number, input: SessionInput) => typedError<SessionSaved, AppError>(__TAURI_INVOKE("update_session", { id, input })),
 	/**  Löscht eine Session (Löschmarke, damit der Sync sie weiterträgt). */
 	deleteSession: (id: number) => typedError<null, AppError>(__TAURI_INVOKE("delete_session", { id })),
+	/**
+	 *  Der Plan für heute (lokaler Tag): überfällige, heute fällige und eingeplante offene Todos mit Schätzung,
+	 *  erfasster Zeit und der Kapazität aus den Einstellungen.
+	 */
+	getDayPlan: () => typedError<DayPlan, AppError>(__TAURI_INVOKE("get_day_plan")),
+	/**  Setzt Frist, Plan-Tag und Schätzung (Minuten) eines Todos; `null` entfernt das jeweilige Feld. */
+	setTodoPlan: (id: number, due: string | null, plan: string | null, estimateMin: number | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_plan", { id, due, plan, estimateMin })),
 	/**  Rückblick für die lokalen Tage `from` bis `to` (inklusive), mit Vergleich zur Vorperiode. */
 	getReview: (from: string, to: string) => typedError<Review, AppError>(__TAURI_INVOKE("get_review", { from, to })),
 	/**  Speichert die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz. */
@@ -299,6 +306,20 @@ export type DailyStats = {
 	stopwatchMinutes: number,
 };
 
+/**  Der Plan für einen Tag. */
+export type DayPlan = {
+	day: string,
+	items: PlanItem[],
+	/**  Summe der Schätzungen aller Einträge in Minuten. */
+	estimateMin: number,
+	/**  Einträge ohne Schätzung. */
+	unestimated: number,
+	/**  Tageskapazität in Minuten (Einstellung). */
+	capacityMin: number,
+	/**  Kapazität minus Schätzung; negativ, wenn der Plan zu voll ist. */
+	remainingMin: number,
+};
+
 export type DayTimeline = {
 	date: string,
 	blocks: TimelineBlock[],
@@ -384,6 +405,25 @@ export type Period = {
 	from: string,
 	to: string,
 };
+
+/**  Ein Todo auf dem Tagesplan. */
+export type PlanItem = {
+	todoId: number,
+	reason: PlanReason,
+	due: string | null,
+	estimateMin: number | null,
+	/**  Bisher erfasste Arbeitszeit am Todo in Minuten (abgeschlossene und abgebrochene Arbeitsintervalle). */
+	spentMin: number,
+};
+
+/**  Warum ein Todo heute auf dem Plan steht. */
+export type PlanReason = 
+/**  Die Frist liegt vor heute. */
+"overdue" | 
+/**  Die Frist ist heute. */
+"due" | 
+/**  Für heute oder einen früheren Tag eingeplant (liegen gebliebene Pläne rutschen auf heute). */
+"planned";
 
 /**  Arbeitszeit pro `+project`-Tag. */
 export type ProjectStats = {
@@ -516,6 +556,8 @@ export type Settings = {
 	 *  Die Go-App kennt den Schlüssel nicht und ignoriert ihn.
 	 */
 	syncIntervalMin: number,
+	/**  Tageskapazität des Tagesplaners in Minuten (1–1440, ADR 0027); die Go-App kennt den Schlüssel nicht. */
+	dayCapacityMin: number,
 };
 
 /**  Sortierrichtung. Fehlende Werte (keine Priorität, kein Datum) stehen in beiden Richtungen zuletzt. */

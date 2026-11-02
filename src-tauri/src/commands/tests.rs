@@ -16,7 +16,8 @@ use tempfile::TempDir;
 use crate::state::{AppPaths, AppState, Platform};
 
 use super::{
-    app, backup, notifications, review, sessions, settings, stats, sync, timer, todos, todotxt,
+    app, backup, notifications, plan, review, sessions, settings, stats, sync, timer, todos,
+    todotxt,
 };
 
 struct Harness {
@@ -77,6 +78,8 @@ impl Harness {
                 sessions::create_manual_session,
                 sessions::update_session,
                 sessions::delete_session,
+                plan::get_day_plan,
+                plan::set_todo_plan,
                 review::get_review,
                 review::save_journal_note,
                 review::add_achievement,
@@ -1144,4 +1147,76 @@ fn changes_through_the_api_reload_the_interface() {
     let backend = crate::api_service::AppBackend(h.app.handle().clone());
     backend.import("Bericht").unwrap();
     assert!(h.events.names().iter().any(|name| name == "app:reload"));
+}
+
+#[test]
+fn the_day_plan_lists_todos_planned_for_today_and_uses_the_capacity() {
+    let h = Harness::new();
+    let today = local_day(at(9, 0));
+    let todo = h.ok("add_todo", json!({ "rawText": "(A) Report +work" }));
+    h.ok("add_todo", json!({ "rawText": "Not planned" }));
+    let id = todo["id"].as_i64().unwrap();
+
+    let planned = h.ok(
+        "set_todo_plan",
+        json!({ "id": id, "due": null, "plan": today, "estimateMin": 45 }),
+    );
+    assert_eq!(
+        planned["rawText"],
+        format!("(A) Report +work plan:{today} est:45")
+    );
+
+    let plan = h.ok("get_day_plan", json!({}));
+    assert_eq!(plan["day"], today);
+    assert_eq!(plan["items"].as_array().unwrap().len(), 1);
+    assert_eq!(plan["items"][0]["todoId"], id);
+    assert_eq!(plan["items"][0]["reason"], "planned");
+    assert_eq!(plan["estimateMin"], 45);
+    assert_eq!(plan["capacityMin"], 240);
+    assert_eq!(plan["remainingMin"], 195);
+
+    let mut settings = h.ok("get_settings", json!({}));
+    settings["dayCapacityMin"] = json!(30);
+    h.ok("save_settings", json!({ "settings": settings }));
+    let plan = h.ok("get_day_plan", json!({}));
+    assert_eq!(plan["remainingMin"], -15);
+}
+
+#[test]
+fn clearing_the_planning_removes_the_fields_and_keeps_the_text() {
+    let h = Harness::new();
+    let todo = h.ok(
+        "add_todo",
+        json!({ "rawText": "Report due:2026-10-05 est:30 +work" }),
+    );
+    let id = todo["id"].as_i64().unwrap();
+    let cleared = h.ok(
+        "set_todo_plan",
+        json!({ "id": id, "due": null, "plan": null, "estimateMin": null }),
+    );
+    assert_eq!(cleared["rawText"], "Report +work");
+    assert_eq!(cleared["description"], "Report +work");
+}
+
+#[test]
+fn an_invalid_estimate_or_an_unknown_todo_is_rejected() {
+    let h = Harness::new();
+    let todo = h.ok("add_todo", json!({ "rawText": "Report" }));
+    let id = todo["id"].as_i64().unwrap();
+    for minutes in [0, 10081] {
+        assert_eq!(
+            h.err_code(
+                "set_todo_plan",
+                json!({ "id": id, "due": null, "plan": null, "estimateMin": minutes }),
+            ),
+            "invalid_input"
+        );
+    }
+    assert_eq!(
+        h.err_code(
+            "set_todo_plan",
+            json!({ "id": 999, "due": null, "plan": null, "estimateMin": null }),
+        ),
+        "not_found"
+    );
 }
