@@ -13,12 +13,14 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import {
   CheckIcon,
   CloseIcon,
   DownloadIcon,
   PlusIcon,
+  SunIcon,
   UploadIcon,
 } from "../components/icons";
 import { FilterMenu } from "../components/FilterMenu";
@@ -151,6 +153,15 @@ export function TodoView() {
           <p className="text-on-surface-variant">{t("todos.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/today"
+            aria-label={t("today.open")}
+            title={t("today.open")}
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-surface-container-high px-4 font-semibold hover:bg-surface-bright max-sm:size-11 max-sm:justify-center max-sm:px-0"
+          >
+            <SunIcon />
+            <span className="max-sm:hidden">{t("today.open")}</span>
+          </Link>
           <ActionButton icon={<UploadIcon />} onClick={() => void importFile()}>
             {t("todos.import")}
           </ActionButton>

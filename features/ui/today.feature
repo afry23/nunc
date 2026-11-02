@@ -1,0 +1,149 @@
+Feature: Today
+  Source: ADR 0027
+  The day plan lists the open todos that are overdue, due today or planned for today, and compares their
+  estimates with the daily capacity.
+
+  @ui @US-TP01
+  Scenario: The plan shows each entry with its reason and the capacity
+    Given the todos:
+      | rawText                            |
+      | Bericht due:2026-03-02 est:30      |
+      | Steuer due:2026-03-04              |
+      | Einkaufen plan:2026-03-04 est:60   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | overdue | 30       | 15    |
+      | 2    | due     |          | 0     |
+      | 3    | planned | 60       | 0     |
+    When I open the app at "/today"
+    Then I see the heading "Heute"
+    And I see "Überfällig"
+    And I see "Heute fällig"
+    And I see "Eingeplant"
+    And I see "Geplant: 1h 30m von 4h"
+    And I see "Noch 2h 30m frei"
+    And I see "1 ohne Schätzung"
+    And I see "15m erfasst"
+
+  @ui @US-TP01
+  Scenario: An overfull plan shows how much is too much
+    Given the todos:
+      | rawText                          |
+      | Gross plan:2026-03-04 est:90     |
+    And the day plan for 2026-03-04 has a capacity of 60 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned | 90       | 0     |
+    When I open the app at "/today"
+    Then I see "30m zu viel"
+
+  @ui @US-TP01
+  Scenario: An empty plan explains how to plan something
+    Given the day plan for 2026-03-04 has a capacity of 240 minutes
+    When I open the app at "/today"
+    Then I see "Für heute ist nichts geplant."
+
+  @ui @US-TP01
+  Scenario: Set the estimate of an entry
+    Given the todos:
+      | rawText                   |
+      | Bericht plan:2026-03-04   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 0     |
+    When I open the app at "/today"
+    And I enter "45" into the field "Schätzung (min): Bericht"
+    And I leave the field "Schätzung (min): Bericht"
+    Then the backend received "set_todo_estimate" with:
+      """
+      { "id": 1, "estimateMin": 45 }
+      """
+
+  @ui @US-TP01
+  Scenario: Move a planned entry to tomorrow
+    Given the todos:
+      | rawText                   |
+      | Bericht plan:2026-03-04   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 0     |
+    When I open the app at "/today"
+    And I click "Auf morgen verschieben: Bericht"
+    Then the backend received "plan_todo" with:
+      """
+      { "id": 1, "day": "2026-03-05" }
+      """
+
+  @ui @US-TP01
+  Scenario: Take a planned entry off the plan
+    Given the todos:
+      | rawText                   |
+      | Bericht plan:2026-03-04   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 0     |
+    When I open the app at "/today"
+    And I click "Vom Plan nehmen: Bericht"
+    Then the backend received "plan_todo" with:
+      """
+      { "id": 1, "day": null }
+      """
+
+  @ui @US-TP01
+  Scenario: An overdue entry can only be moved by changing its due date
+    Given the todos:
+      | rawText                 |
+      | Bericht due:2026-03-02  |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | overdue |          | 0     |
+    When I open the app at "/today"
+    Then I see "Überfällig"
+    And I do not see the button "Auf morgen verschieben: Bericht"
+    And I do not see the button "Vom Plan nehmen: Bericht"
+
+  @ui @US-TP01
+  Scenario: Check off an entry of the plan
+    Given the todos:
+      | rawText                   |
+      | Bericht plan:2026-03-04   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 0     |
+    When I open the app at "/today"
+    And I check "Erledigt: Bericht"
+    Then the backend received "set_todo_completed" with:
+      """
+      { "id": 1, "completed": true }
+      """
+
+  @ui @US-TP01
+  Scenario: Plan a todo for today from the list
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/todos"
+    And I click "Für heute einplanen: Bericht"
+    Then the backend received "plan_todo" with "id" equal to "1"
+
+  @ui @US-TP01
+  Scenario: The list leads to the day plan
+    When I open the app at "/todos"
+    And I click "Heute"
+    Then I see the heading "Heute"
+
+  @ui @US-TP01
+  Scenario: The daily capacity is set in the settings
+    When I open the app at "/settings"
+    And I enter "180" into the field "Tageskapazität"
+    And I click "Speichern"
+    Then the backend received "save_settings" with:
+      """
+      { "settings": { "dayCapacityMin": 180 } }
+      """

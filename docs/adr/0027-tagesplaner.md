@@ -46,10 +46,15 @@ Sessions ohne neue Erfassung möglich.
 
 1. `nunc-core`: Felder und Tagesplan (diese Stufe, mit `features/todos/day_plan.feature`).
 2. Einstellung `day_capacity_min` (1–1440, nur nunc-Schlüssel in `settings`), Commands `get_day_plan()` (Plan für den
-   lokalen heutigen Tag) und `set_todo_plan(id, due, plan, estimate_min)`. Der Command setzt alle drei Felder auf einmal
-   (`null` entfernt ein Feld) über die pure `apply_plan` und schreibt die neue Zeile über `update_todo`; eine Schätzung
-   außerhalb 1–10080 ist `invalid_input`. Die Oberfläche verbindet die Einträge des Plans über `todoId` mit der Todo-Liste.
-3. UI: Ansicht „Heute“, Felder im Todo-Dialog.
+   lokalen heutigen Tag), `plan_todo(id, day)` (Plan-Tag setzen oder mit `null` entfernen) und
+   `set_todo_estimate(id, minutes)`. Jeder Command ändert genau ein Feld über die pure `apply_plan` und lässt Frist und
+   übrige Felder stehen; die Zeile geht über `update_todo`. Eine Schätzung außerhalb 1–10080 ist `invalid_input`. Die
+   Frist ändert man im Text der Aufgabe (`due:`). Die Oberfläche verbindet die Einträge des Plans über `todoId` mit der Todo-Liste.
+3. UI: Ansicht „Heute“ (`/today`, erreichbar über „Heute“ in der Aufgabenliste), Kapazität in den Einstellungen, Schnellaktion
+   „Für heute einplanen“ an jeder offenen Aufgabe. Die Ansicht zeigt Schätzung, erfasste Zeit und Grund je Eintrag;
+   „Auf morgen verschieben“ und „Vom Plan nehmen“ gibt es nur für eingeplante Einträge (überfällige und heute fällige
+   ändert man über `due:`). Frist und Plan-Tag trägt man im Text der Aufgabe ein (`due:`, `plan:`); Titel blenden die
+   Planungsfelder aus.
 4. Tagesabschluss.
 
 ## Verworfene Alternativen

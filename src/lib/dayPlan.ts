@@ -1,0 +1,28 @@
+import type { DayPlan, PlanItem, Todo } from "./api";
+import { addDays, parseIsoDate, toIsoDate } from "./format";
+
+/** Der Tag nach `day` (`YYYY-MM-DD`). */
+export function nextDay(day: string): string {
+  return toIsoDate(addDays(parseIsoDate(day), 1));
+}
+
+/** Ein Eintrag des Tagesplans samt seinem Todo. */
+export type PlanRow = { item: PlanItem; todo: Todo };
+
+/** Verbindet die Einträge mit der Todo-Liste; Einträge, deren Todo (noch) fehlt, entfallen. */
+export function planRows(plan: DayPlan, todos: readonly Todo[]): PlanRow[] {
+  const byId = new Map(todos.map((todo) => [todo.id, todo]));
+  return plan.items.flatMap((item) => {
+    const todo = byId.get(item.todoId);
+    return todo ? [{ item, todo }] : [];
+  });
+}
+
+/** Füllstand des Kapazitätsbalkens in Prozent, auf 0–100 begrenzt. */
+export function fillPercent(estimateMin: number, capacityMin: number): number {
+  if (capacityMin <= 0) return estimateMin > 0 ? 100 : 0;
+  return Math.min(
+    100,
+    Math.max(0, Math.round((estimateMin / capacityMin) * 100)),
+  );
+}

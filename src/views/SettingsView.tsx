@@ -52,6 +52,7 @@ function SectionJumpList() {
       items: [
         { id: "settings-pomodoro", label: t("settings.pomodoro") },
         { id: "settings-flowtime", label: t("settings.flowtime") },
+        { id: "settings-dayplan", label: t("settings.dayplan") },
       ],
     },
     {
@@ -262,6 +263,18 @@ function SettingsForm({ stored }: { stored: Settings }) {
             onChange={(v) => set("flowtimeMinFlowStateMin", v)}
           />
         </Card>
+      </Section>
+
+      <Section id="settings-dayplan" title={t("settings.dayplan")}>
+        <NumberCard
+          label={t("settings.dayplan.capacity")}
+          unit={t("settings.unit.min")}
+          hint={t("settings.dayplan.capacityHint")}
+          min={1}
+          max={1440}
+          value={draft.dayCapacityMin}
+          onChange={(v) => set("dayCapacityMin", v)}
+        />
       </Section>
 
       <Section id="settings-sound" title={t("settings.sound")}>

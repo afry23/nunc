@@ -4,6 +4,7 @@ import type {
   BackupInfo,
   BackupStatus,
   ConnectionTestResult,
+  DayPlan,
   GroupBy,
   KnownTags,
   Review,
@@ -110,6 +111,8 @@ export interface FakeBackend extends BackendMock {
   /** Systemstand der Benachrichtigungs-Berechtigung (mobil); `request_…` entscheidet nach `permissionAnswer`. */
   notificationPermission: "granted" | "denied" | "prompt";
   permissionAnswer: "granted" | "denied";
+  /** Antwort von `get_day_plan`. */
+  dayPlan: DayPlan;
   /** Antwort von `get_review` (der Zeitraum wird aus der Anfrage eingesetzt). */
   review: Review;
   /** Ergebnis von `save_review_markdown` (`null` = Dialog abgebrochen). */
@@ -248,6 +251,14 @@ export function createFakeBackend(): FakeBackend {
     restoreFile: null,
     backupDirChoice: null,
     restoreError: null,
+    dayPlan: {
+      day: toIsoDate(new Date()),
+      items: [],
+      estimateMin: 0,
+      unestimated: 0,
+      capacityMin: 240,
+      remainingMin: 240,
+    },
     review: {
       period: { from: "", to: "" },
       previousPeriod: { from: "", to: "" },
@@ -562,6 +573,10 @@ export function createFakeBackend(): FakeBackend {
       return null;
     },
     save_export_to_file: () => fake.exportPath,
+    get_day_plan: () => fake.dayPlan,
+    plan_todo: ({ id }: { id: number; day: string | null }) => find(id),
+    set_todo_estimate: ({ id }: { id: number; estimateMin: number | null }) =>
+      find(id),
     get_review: ({ from, to }: { from: string; to: string }) => ({
       ...fake.review,
       period: { from, to },

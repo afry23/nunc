@@ -535,3 +535,41 @@ Then(
     );
   },
 );
+
+// ---------------------------------------------------------------------------------------------
+// Tagesplaner (ADR 0027)
+
+Given(
+  "the day plan for {word} has a capacity of {int} minutes",
+  (world: UiWorld, day: string, capacity: number) => {
+    world.fake.dayPlan = { ...world.fake.dayPlan, day, capacityMin: capacity };
+  },
+);
+
+/** Spalten: `todo` (Id), `reason`, `estimate` (leer = keine), `spent`. Summen leiten sich aus den Zeilen ab. */
+Given("the day plan lists:", (world: UiWorld, table: DataTable) => {
+  const items = table.hashes().map((row) => ({
+    todoId: Number(row.todo),
+    reason: row.reason as "overdue" | "due" | "planned",
+    due: null,
+    estimateMin: row.estimate ? Number(row.estimate) : null,
+    spentMin: Number(row.spent ?? 0),
+  }));
+  const estimateMin = items.reduce((sum, i) => sum + (i.estimateMin ?? 0), 0);
+  const { capacityMin } = world.fake.dayPlan;
+  world.fake.dayPlan = {
+    ...world.fake.dayPlan,
+    items,
+    estimateMin,
+    unestimated: items.filter((i) => i.estimateMin === null).length,
+    remainingMin: capacityMin - estimateMin,
+  };
+});
+
+When("I leave the field {string}", async (_world: UiWorld, label: string) => {
+  const field = await screen.findByLabelText(label);
+  await act(async () => {
+    fireEvent.blur(field);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+});
