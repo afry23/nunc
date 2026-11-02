@@ -99,12 +99,11 @@ impl Schedule {
                 .map(|d| d.parse::<u8>().ok())
                 .collect::<Option<Vec<u8>>>()?;
             Self::Days { days }
-        } else if let Some(count) = text.strip_prefix("weekly:") {
+        } else {
+            let count = text.strip_prefix("weekly:")?;
             Self::Weekly {
                 per_week: count.parse().ok()?,
             }
-        } else {
-            return None;
         };
         // nur die kanonische Form gilt: `days:3,1` oder `weekly:03` lesen sich nicht
         let checked = schedule.checked().ok()?;
