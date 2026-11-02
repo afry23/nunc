@@ -77,7 +77,10 @@ Schreibvorgänge laufen in einer Transaktion.
 1. `nunc-core`: Typen, Kodierung, Validierung, CRDT-Merge, Auswertung, `SyncState`/`SyncDocument` (Format 8) – diese Stufe.
 2. `nunc-store`: Migration 015, Repo, Anbindung an `local_state`/`apply_state` und damit an den Sync-Lauf – diese Stufe
    (es gibt noch keine Commands, also noch keine Möglichkeit, Gewohnheiten anzulegen).
-3. Commands (`list_habits`, `save_habit`, `archive_habit`, `delete_habit`, `set_habit_done`, `get_habit_overview`).
+3. Commands `get_habit_overview` (alle Gewohnheiten mit Stand, Serien und den zuletzt erledigten Tagen; ersetzt ein
+   eigenes `list_habits`), `save_habit` (anlegen oder ändern), `archive_habit`, `delete_habit`, `set_habit_done` – diese
+   Stufe. Die Übersicht rechnet `habit_overview` in `nunc-core`; ein Eintrag mit unbekannter Kodierung hat keinen
+   `progress`.
 4. UI (Ansicht „Gewohnheiten“, Abschnitt in „Heute“) und Rückblick.
 
 ## Verworfene Alternativen

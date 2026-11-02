@@ -44,7 +44,11 @@ pub fn validate_name(name: &str) -> Result<String, HabitError> {
 
 /// Wann eine Gewohnheit fällig ist.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
-#[serde(tag = "kind", rename_all = "snake_case")]
+#[serde(
+    tag = "kind",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
 pub enum Schedule {
     /// Jeden Tag.
     Daily,
@@ -519,5 +523,69 @@ pub fn minutes_goal_days(
         .into_iter()
         .filter(|(_, total)| *total >= minutes)
         .map(|(day, _)| day)
+        .collect()
+}
+
+/// Wie viele Tage (einschließlich heute) die Übersicht als zuletzt erledigte Tage mitliefert.
+pub const RECENT_DAYS: i64 = 35;
+
+/// Eine Gewohnheit in der Übersicht: Angaben, Stand und die zuletzt erledigten Tage.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct HabitItem {
+    pub id: String,
+    pub name: String,
+    pub created: NaiveDate,
+    pub archived: bool,
+    /// `None`, wenn die Kodierung unbekannt ist (neuere App).
+    pub schedule: Option<Schedule>,
+    /// `None`, wenn die Kodierung unbekannt ist (neuere App).
+    pub goal: Option<Goal>,
+    /// `None`, wenn Rhythmus oder Ziel nicht auswertbar sind.
+    pub progress: Option<HabitProgress>,
+    /// Erledigte Tage der letzten [`RECENT_DAYS`] Tage, aufsteigend.
+    pub recent: Vec<NaiveDate>,
+}
+
+/// Übersicht über `habits` (Reihenfolge bleibt) am Tag `today`. `logs` sind die Haken aller Gewohnheiten; bei Ziel
+/// `check` zählen die gesetzten, bei Ziel `minutes` die Tage aus `sessions` und `todos`.
+pub fn habit_overview(
+    habits: &[Habit],
+    logs: &[HabitLog],
+    sessions: &[Session],
+    todos: &[Todo],
+    today: NaiveDate,
+    local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
+) -> Vec<HabitItem> {
+    let recent_from = today - Duration::days(RECENT_DAYS - 1);
+    habits
+        .iter()
+        .map(|habit| {
+            let (schedule, goal) = (habit.schedule(), habit.goal());
+            let done: BTreeSet<NaiveDate> = match &goal {
+                Some(Goal::Minutes { minutes, tag }) => {
+                    minutes_goal_days(sessions, todos, tag, *minutes, local_date)
+                }
+                _ => logs
+                    .iter()
+                    .filter(|log| log.habit == habit.sync_id && log.done.value)
+                    .map(|log| log.day)
+                    .collect(),
+            };
+            let progress = match (&schedule, &goal) {
+                (Some(schedule), Some(_)) => Some(habit_progress(schedule, &done, today)),
+                _ => None,
+            };
+            HabitItem {
+                id: habit.sync_id.clone(),
+                name: habit.name.value.clone(),
+                created: habit.created,
+                archived: habit.archived.value,
+                schedule,
+                goal,
+                progress,
+                recent: done.range(recent_from..=today).copied().collect(),
+            }
+        })
         .collect()
 }

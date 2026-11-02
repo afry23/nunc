@@ -111,6 +111,16 @@ export const commands = {
 	planTodo: (id: number, day: string | null) => typedError<Todo, AppError>(__TAURI_INVOKE("plan_todo", { id, day })),
 	/**  Setzt die Schätzung (Minuten, 1–10080); `null` entfernt sie. Frist und Plan-Tag bleiben. */
 	setTodoEstimate: (id: number, estimateMin: number | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_estimate", { id, estimateMin })),
+	/**  Alle Gewohnheiten (auch archivierte) mit Stand für heute (lokaler Tag), Serien und den zuletzt erledigten Tagen. */
+	getHabitOverview: () => typedError<HabitItem[], AppError>(__TAURI_INVOKE("get_habit_overview")),
+	/**  Legt eine Gewohnheit an (`id` leer) oder ändert Name, Rhythmus und Ziel der Gewohnheit `id`. Liefert die Kennung. */
+	saveHabit: (id: string | null, name: string, schedule: Schedule, goal: Goal) => typedError<string, AppError>(__TAURI_INVOKE("save_habit", { id, name, schedule, goal })),
+	/**  Blendet eine Gewohnheit aus (`archived`) oder wieder ein; der Verlauf bleibt. */
+	archiveHabit: (id: string, archived: boolean) => typedError<null, AppError>(__TAURI_INVOKE("archive_habit", { id, archived })),
+	/**  Löscht eine Gewohnheit samt ihren Haken. */
+	deleteHabit: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_habit", { id })),
+	/**  Setzt oder entfernt den Haken der Gewohnheit `id` für `day`. Nur Gewohnheiten mit Ziel „abhaken“ haben Haken. */
+	setHabitDone: (id: string, day: string, done: boolean) => typedError<null, AppError>(__TAURI_INVOKE("set_habit_done", { id, day, done })),
 	/**  Rückblick für die lokalen Tage `from` bis `to` (inklusive), mit Vergleich zur Vorperiode. */
 	getReview: (from: string, to: string) => typedError<Review, AppError>(__TAURI_INVOKE("get_review", { from, to })),
 	/**  Speichert die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz. */
@@ -344,6 +354,13 @@ export type FinishPayload = {
 	suggestedBreak: BreakSuggestion | null,
 };
 
+/**  Woran eine Gewohnheit erkannt wird, dass sie erledigt ist. */
+export type Goal = 
+/**  Von Hand abhaken. */
+{ kind: "check" } | 
+/**  Automatisch: mindestens `minutes` Arbeitszeit am Tag mit dem Tag `tag` (`+projekt` oder `@kontext`). */
+{ kind: "minutes"; minutes: number; tag: string };
+
 /**  Wonach die Zeilen des Timesheets gruppiert werden. */
 export type GroupBy = "project" | "context" | "todo";
 
@@ -351,6 +368,36 @@ export type GroupBy = "project" | "context" | "todo";
 export type GroupMinutes = {
 	group: string | null,
 	minutes: number,
+};
+
+/**  Eine Gewohnheit in der Übersicht: Angaben, Stand und die zuletzt erledigten Tage. */
+export type HabitItem = {
+	id: string,
+	name: string,
+	created: string,
+	archived: boolean,
+	/**  `None`, wenn die Kodierung unbekannt ist (neuere App). */
+	schedule: Schedule | null,
+	/**  `None`, wenn die Kodierung unbekannt ist (neuere App). */
+	goal: Goal | null,
+	/**  `None`, wenn Rhythmus oder Ziel nicht auswertbar sind. */
+	progress: HabitProgress | null,
+	/**  Erledigte Tage der letzten [`RECENT_DAYS`] Tage, aufsteigend. */
+	recent: string[],
+};
+
+/**  Stand einer Gewohnheit am Tag `today`. */
+export type HabitProgress = {
+	doneToday: boolean,
+	/**  Heute noch zu tun: fällig und nicht erledigt (beim Wochenziel: Wochenziel noch nicht erreicht). */
+	openToday: boolean,
+	currentStreak: number,
+	bestStreak: number,
+	unit: StreakUnit,
+	/**  Erledigte Tage in der laufenden Woche (Montag bis Sonntag). */
+	weekDone: number,
+	/**  Ziel der Woche: Anzahl fälliger Tage bzw. das Wochenziel. */
+	weekTarget: number,
 };
 
 /**  Ein Journal-Eintrag im Bericht. `date` ist bei Wochennotizen der Sonntag der Woche. */
@@ -466,6 +513,15 @@ export type ReviewJournal = {
 	weekNotes: JournalItem[],
 	dayNotes: JournalItem[],
 };
+
+/**  Wann eine Gewohnheit fällig ist. */
+export type Schedule = 
+/**  Jeden Tag. */
+{ kind: "daily" } | 
+/**  Nur an diesen Wochentagen, 1 = Montag … 7 = Sonntag. */
+{ kind: "days"; days: number[] } | 
+/**  So viele Tage pro Woche (1–7), beliebige Tage; die Woche läuft Montag bis Sonntag. */
+{ kind: "weekly"; perWeek: number };
 
 /**  Gespeichertes Arbeits- oder Pausenintervall. */
 export type Session = {
@@ -605,6 +661,9 @@ export type StatsResponse = {
 	currentStreak: number,
 	longestStreak: number,
 };
+
+/**  Einheit der Serie. */
+export type StreakUnit = "days" | "weeks";
 
 /**  Ein Sync-Lauf ist gelungen; die Nutzlast sagt, was vom Server übernommen wurde. */
 export type SyncComplete = SyncResult;

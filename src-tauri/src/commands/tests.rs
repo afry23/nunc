@@ -16,8 +16,8 @@ use tempfile::TempDir;
 use crate::state::{AppPaths, AppState, Platform};
 
 use super::{
-    app, backup, notifications, plan, review, sessions, settings, stats, sync, timer, todos,
-    todotxt,
+    app, backup, habits, notifications, plan, review, sessions, settings, stats, sync, timer,
+    todos, todotxt,
 };
 
 struct Harness {
@@ -81,6 +81,11 @@ impl Harness {
                 plan::get_day_plan,
                 plan::plan_todo,
                 plan::set_todo_estimate,
+                habits::get_habit_overview,
+                habits::save_habit,
+                habits::archive_habit,
+                habits::delete_habit,
+                habits::set_habit_done,
                 review::get_review,
                 review::save_journal_note,
                 review::add_achievement,
@@ -1221,4 +1226,165 @@ fn an_invalid_estimate_or_an_unknown_todo_is_rejected() {
         h.err_code("plan_todo", json!({ "id": 999, "day": null })),
         "not_found"
     );
+}
+
+#[test]
+fn a_habit_is_created_ticked_and_shows_its_streak() {
+    let h = Harness::new();
+    let today = local_day(at(9, 0));
+    let id = h
+        .ok(
+            "save_habit",
+            json!({
+                "id": null,
+                "name": "  Read  ",
+                "schedule": { "kind": "daily" },
+                "goal": { "kind": "check" },
+            }),
+        )
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    h.ok(
+        "set_habit_done",
+        json!({ "id": id, "day": today, "done": true }),
+    );
+    let overview = h.ok("get_habit_overview", json!({}));
+    let item = &overview[0];
+    assert_eq!(item["id"], id);
+    assert_eq!(item["name"], "Read");
+    assert_eq!(item["progress"]["doneToday"], true);
+    assert_eq!(item["progress"]["currentStreak"], 1);
+    assert_eq!(item["recent"], json!([today]));
+
+    h.ok(
+        "set_habit_done",
+        json!({ "id": id, "day": today, "done": false }),
+    );
+    let overview = h.ok("get_habit_overview", json!({}));
+    assert_eq!(overview[0]["progress"]["doneToday"], false);
+    assert_eq!(overview[0]["recent"], json!([]));
+}
+
+#[test]
+fn a_habit_can_be_changed_archived_and_deleted() {
+    let h = Harness::new();
+    let id = h
+        .ok(
+            "save_habit",
+            json!({
+                "id": null,
+                "name": "Run",
+                "schedule": { "kind": "weekly", "perWeek": 3 },
+                "goal": { "kind": "check" },
+            }),
+        )
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let same = h.ok(
+        "save_habit",
+        json!({
+            "id": id,
+            "name": "Run far",
+            "schedule": { "kind": "days", "days": [3, 1] },
+            "goal": { "kind": "minutes", "minutes": 30, "tag": "@sport" },
+        }),
+    );
+    assert_eq!(same, id);
+    let item = h.ok("get_habit_overview", json!({}))[0].clone();
+    assert_eq!(item["name"], "Run far");
+    assert_eq!(item["schedule"], json!({ "kind": "days", "days": [1, 3] }));
+    assert_eq!(
+        item["goal"],
+        json!({ "kind": "minutes", "minutes": 30, "tag": "@sport" })
+    );
+
+    h.ok("archive_habit", json!({ "id": id, "archived": true }));
+    assert_eq!(h.ok("get_habit_overview", json!({}))[0]["archived"], true);
+
+    h.ok("delete_habit", json!({ "id": id }));
+    assert_eq!(h.ok("get_habit_overview", json!({})), json!([]));
+}
+
+#[test]
+fn invalid_or_unknown_habits_are_rejected() {
+    let h = Harness::new();
+    let create = |name: &str, schedule: Value, goal: Value| {
+        h.err_code(
+            "save_habit",
+            json!({ "id": null, "name": name, "schedule": schedule, "goal": goal }),
+        )
+    };
+    let (daily, check) = (json!({ "kind": "daily" }), json!({ "kind": "check" }));
+    assert_eq!(create(" ", daily.clone(), check.clone()), "invalid_input");
+    assert_eq!(
+        create(
+            "Run",
+            json!({ "kind": "weekly", "perWeek": 8 }),
+            check.clone()
+        ),
+        "invalid_input"
+    );
+    assert_eq!(
+        create(
+            "Run",
+            daily.clone(),
+            json!({ "kind": "minutes", "minutes": 0, "tag": "+work" })
+        ),
+        "invalid_input"
+    );
+    assert_eq!(
+        h.err_code(
+            "save_habit",
+            json!({ "id": "nope", "name": "Run", "schedule": daily, "goal": check }),
+        ),
+        "not_found"
+    );
+    assert_eq!(
+        h.err_code("delete_habit", json!({ "id": "nope" })),
+        "not_found"
+    );
+    assert_eq!(
+        h.err_code("archive_habit", json!({ "id": "nope", "archived": true })),
+        "not_found"
+    );
+    assert_eq!(h.ok("get_habit_overview", json!({})), json!([]));
+}
+
+#[test]
+fn a_habit_with_a_minutes_goal_cannot_be_ticked_and_follows_the_sessions() {
+    let h = Harness::new();
+    let today = local_day(at(9, 0));
+    let id = h
+        .ok(
+            "save_habit",
+            json!({
+                "id": null,
+                "name": "Deep work",
+                "schedule": { "kind": "daily" },
+                "goal": { "kind": "minutes", "minutes": 25, "tag": "+work" },
+            }),
+        )
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert_eq!(
+        h.err_code(
+            "set_habit_done",
+            json!({ "id": id, "day": today, "done": true })
+        ),
+        "invalid_input"
+    );
+
+    let todo = h.ok("add_todo", json!({ "rawText": "Report +work" }));
+    h.ok(
+        "start_timer",
+        json!({ "mode": "pomodoro", "todoId": todo["id"] }),
+    );
+    h.advance_min(25);
+    h.ok("get_timer_tick", json!({}));
+    let item = h.ok("get_habit_overview", json!({}))[0].clone();
+    assert_eq!(item["progress"]["doneToday"], true);
 }
