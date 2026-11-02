@@ -9,6 +9,7 @@ use cucumber::{World, WriterExt as _, given, then, when, writer};
 mod backup;
 mod crdt;
 mod export;
+mod journal;
 mod properties;
 mod review;
 mod settings;
@@ -27,6 +28,7 @@ pub struct DomainWorld {
     backup: backup::State,
     crdt: crdt::State,
     export: export::State,
+    journal: journal::State,
     review: review::State,
     settings: settings::State,
     stats: stats::State,

@@ -89,6 +89,8 @@ impl SyncDocument {
                 })
                 .map(|session| (session.sync_id.clone(), session))
                 .collect(),
+            // Das Journal kommt mit dem Format 7 in die Datei (ADR 0026, eigener Schritt)
+            ..SyncState::default()
         })
     }
 }
@@ -174,6 +176,7 @@ impl SyncState {
                 .map(SessionCrdt::from_legacy)
                 .map(|session| (session.sync_id.clone(), session))
                 .collect(),
+            ..Self::default()
         }
     }
 }
