@@ -51,3 +51,16 @@ export function deltaText(
   if (delta === 0) return `±${formatMinutes(0)}`;
   return `${delta > 0 ? "+" : "−"}${formatMinutes(Math.abs(delta))}`;
 }
+
+/** Ab Freitag ist Zeit für den Wochenrückblick (ADR 0026). */
+export function isWeekReviewTime(today: Date): boolean {
+  const day = today.getDay();
+  return day === 0 || day >= 5;
+}
+
+/** `day` auf den Zeitraum `from` bis `to` begrenzen (ISO-Tage lassen sich als Text vergleichen). */
+export function clampDay(day: string, from: string, to: string): string {
+  if (day < from) return from;
+  if (day > to) return to;
+  return day;
+}

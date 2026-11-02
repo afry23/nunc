@@ -9,15 +9,22 @@ import {
   type GroupMinutes,
   type Review,
 } from "../lib/api";
-import { formatMinutes, shortDate, weekdayLabel } from "../lib/format";
+import {
+  formatMinutes,
+  shortDate,
+  toIsoDate,
+  weekdayLabel,
+} from "../lib/format";
 import {
   REVIEW_KINDS,
   deltaText,
+  isWeekReviewTime,
   rangeLabel,
   reviewRange,
   type ReviewKind,
 } from "../lib/review";
 import { useUiStore } from "../stores/uiStore";
+import { ReviewJournal } from "./ReviewJournal";
 
 type Loaded = { review: Review } | { error: string };
 
@@ -88,6 +95,7 @@ export function ReviewPanel() {
   const [today] = useState(() => new Date());
   const { from, to } = reviewRange(kind, today, periodsAgo);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,7 +110,7 @@ export function ReviewPanel() {
     return () => {
       cancelled = true;
     };
-  }, [from, to]);
+  }, [from, to, version]);
 
   const exportMarkdown = async (): Promise<void> => {
     try {
@@ -205,6 +213,15 @@ export function ReviewPanel() {
               })}
             </p>
           </section>
+          <ReviewJournal
+            review={review}
+            isWeek={kind === "week"}
+            weekHint={
+              kind === "week" && periodsAgo === 0 && isWeekReviewTime(today)
+            }
+            today={toIsoDate(today)}
+            onChanged={() => setVersion((value) => value + 1)}
+          />
           <Card title={t("review.modes")}>
             {review.modes.map((entry) => (
               <Row
