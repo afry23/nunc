@@ -1,0 +1,5 @@
+- Habit-Tracker: Gewohnheiten abhaken oder aus den Sessions berechnen, mit Serien und Wochenziel
+- Tagesplaner "Heute" mit Schätzungen und Tageskapazität
+- Rückblick für Woche, Monat und Quartal mit Notizen, Erfolgen und Markdown-Export
+- Todoist und Google Drive entfallen, Sync nur noch über WebDAV
+- Sync-Format 8: alle Geräte aktualisieren
