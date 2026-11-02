@@ -59,9 +59,12 @@ zählt aber nichts, und der Wert wird beim Zurückschreiben nicht verändert.
   (`Days`/`Weeks`) liefert die Auswertung mit.
 - `week_done` / `week_target`: erledigte Tage in der laufenden Woche und, bei `weekly:N`, das Ziel N.
 
-**Store:** additive Migration `015_habits.sql`: `habits(id, sync_id UNIQUE, created, name, schedule, goal, archived,
-deleted)`, `habit_field_clock(habit_id, field, hlc…)`, `habit_logs(sync_id PK, habit_sync_id, day, done)` mit
-`habit_log_clock`. Mehrschrittige Schreibvorgänge in einer Transaktion.
+**Store:** additive Migration `015_habits.sql`: `habits(sync_id PK, created, name, schedule, goal, archived, deleted)` mit
+`habit_field_clock(sync_id, field, hlc…)` (wie beim Journal) und `habit_logs(sync_id PK, habit, day, done, hlc_ms,
+hlc_counter, hlc_device)`; der einzige Stempel eines Hakens steht in der Zeile selbst. Haken haben keinen Fremdschlüssel:
+der Sync-Lauf entfernt Haken, die der zusammengeführte Stand nicht mehr enthält, wenn sie entfernt sind oder ihre
+Gewohnheit fehlt. Haken gibt es nur bei Ziel `check`; `set_habit_done` lehnt andere Gewohnheiten ab. Mehrschrittige
+Schreibvorgänge laufen in einer Transaktion.
 
 **Sync:** `SyncState.habits` und `SyncState.habit_logs`; in der Datei die Listen `habits` und `habit_logs`
 (`serde(default)`). `schema_version` wird **8**; gelesen werden 2 bis 8, geschrieben wird 8 (Begründung wie ADR 0026:
@@ -72,8 +75,8 @@ deleted)`, `habit_field_clock(habit_id, field, hlc…)`, `habit_logs(sync_id PK,
 ## Umsetzung in Stufen
 
 1. `nunc-core`: Typen, Kodierung, Validierung, CRDT-Merge, Auswertung, `SyncState`/`SyncDocument` (Format 8) – diese Stufe.
-2. `nunc-store` und `nunc-sync`: Migration 015, Repo, Anbindung an den Sync-Lauf (bis dahin enthält der Zustand aus der
-   Datenbank keine Gewohnheiten; es gibt auch noch keine Möglichkeit, welche anzulegen).
+2. `nunc-store`: Migration 015, Repo, Anbindung an `local_state`/`apply_state` und damit an den Sync-Lauf – diese Stufe
+   (es gibt noch keine Commands, also noch keine Möglichkeit, Gewohnheiten anzulegen).
 3. Commands (`list_habits`, `save_habit`, `archive_habit`, `delete_habit`, `set_habit_done`, `get_habit_overview`).
 4. UI (Ansicht „Gewohnheiten“, Abschnitt in „Heute“) und Rückblick.
 

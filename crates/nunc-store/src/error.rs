@@ -15,6 +15,12 @@ pub enum StoreError {
     NotFound { entity: &'static str, id: i32 },
     #[error("Journal-Eintrag {0} nicht gefunden")]
     JournalEntryNotFound(String),
+    #[error("Gewohnheit {0} nicht gefunden")]
+    HabitNotFound(String),
+    #[error("Für diese Gewohnheit gibt es keine Haken (sie wird aus den Sessions berechnet).")]
+    NotCheckable,
+    #[error(transparent)]
+    Habit(#[from] nunc_core::habit::HabitError),
     #[error(transparent)]
     Journal(#[from] nunc_core::journal::JournalError),
     #[error("Todo {id} kann nicht unter Todo {parent} stehen")]
