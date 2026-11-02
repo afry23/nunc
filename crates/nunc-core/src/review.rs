@@ -9,6 +9,7 @@ use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
+use crate::journal::{JournalEntry, JournalKind};
 use crate::model::{
     Language, Session, SessionStatus, SessionType, TimerMode, Todo, effective_tags,
 };
@@ -96,6 +97,25 @@ pub struct SessionNote {
     pub text: String,
 }
 
+/// Ein Journal-Eintrag im Bericht. `date` ist bei Wochennotizen der Sonntag der Woche.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct JournalItem {
+    pub id: String,
+    pub date: NaiveDate,
+    pub text: String,
+}
+
+/// Die Journal-Einträge des Zeitraums, jeweils nach Datum. Wochennotizen zählen für den Zeitraum, in dem ihre
+/// Woche endet (ADR 0026).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewJournal {
+    pub achievements: Vec<JournalItem>,
+    pub week_notes: Vec<JournalItem>,
+    pub day_notes: Vec<JournalItem>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Review {
@@ -119,6 +139,7 @@ pub struct Review {
     pub projects: Vec<GroupMinutes>,
     pub contexts: Vec<GroupMinutes>,
     pub completed_todos: Vec<CompletedTodo>,
+    pub journal: ReviewJournal,
 }
 
 /// Erster Tag des Monats `month0` (0 = Januar), auch über Jahresgrenzen hinweg (`month0` darf negativ sein).
@@ -294,12 +315,36 @@ fn focus_minutes(
         .sum()
 }
 
+/// Die geltenden Journal-Einträge des Zeitraums, nach Art getrennt und nach Datum (dann Kennung) sortiert.
+fn review_journal(period: Period, entries: &[JournalEntry]) -> ReviewJournal {
+    let mut journal = ReviewJournal::default();
+    let mut live: Vec<&JournalEntry> = entries
+        .iter()
+        .filter(|entry| !entry.is_deleted() && contains(period, entry.date.value))
+        .collect();
+    live.sort_by(|a, b| (a.date.value, &a.sync_id).cmp(&(b.date.value, &b.sync_id)));
+    for entry in live {
+        let item = JournalItem {
+            id: entry.sync_id.clone(),
+            date: entry.date.value,
+            text: entry.text.value.clone(),
+        };
+        match entry.kind {
+            JournalKind::Achievement => journal.achievements.push(item),
+            JournalKind::WeekNote => journal.week_notes.push(item),
+            JournalKind::DayNote => journal.day_notes.push(item),
+        }
+    }
+    journal
+}
+
 /// Berechnet den Bericht; die Vorperiode ist der vorherige Kalendermonat/-quartal bzw. der Zeitraum gleicher Länge davor.
 pub fn build_review(
     period: Period,
     sessions: &[Session],
     todos: &[Todo],
     notes: &HashMap<i32, String>,
+    journal: &[JournalEntry],
     local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
 ) -> Review {
     let previous = previous_period(period);
@@ -402,6 +447,7 @@ pub fn build_review(
         combinations: combination_totals(combinations, local_date),
         projects: group_totals(projects),
         contexts: group_totals(contexts),
+        journal: review_journal(period, journal),
         completed_todos: finished
             .into_iter()
             .map(|(todo, completed_at)| CompletedTodo {
@@ -428,6 +474,9 @@ struct Texts {
     together: &'static str,
     days: &'static str,
     completed_tasks: &'static str,
+    achievements: &'static str,
+    week_notes: &'static str,
+    day_notes: &'static str,
     sessions: &'static str,
     min: &'static str,
     none: &'static str,
@@ -454,6 +503,9 @@ fn texts(language: Language) -> Texts {
             together: "Projects and contexts together",
             days: "Days",
             completed_tasks: "Completed tasks",
+            achievements: "Achievements",
+            week_notes: "Week review",
+            day_notes: "Day notes",
             sessions: "sessions",
             min: "min",
             none: "(none)",
@@ -476,6 +528,9 @@ fn texts(language: Language) -> Texts {
             together: "Projekte und Kontexte zusammen",
             days: "Tage",
             completed_tasks: "Erledigte Aufgaben",
+            achievements: "Erfolge",
+            week_notes: "Wochenrückblick",
+            day_notes: "Tagesnotizen",
             sessions: "Sessions",
             min: "Min.",
             none: "(ohne Zuordnung)",
@@ -494,6 +549,18 @@ fn group_lines(markdown: &mut String, texts: &Texts, title: &str, groups: &[Grou
     for entry in groups {
         let name = entry.group.as_deref().unwrap_or(texts.none);
         markdown.push_str(&format!("- {name}: {} {}\n", entry.minutes, texts.min));
+    }
+}
+
+/// Abschnitt mit einem Eintrag je Zeile; weitere Zeilen eines Textes werden eingerückt, damit die Liste heil bleibt.
+fn journal_lines(markdown: &mut String, title: &str, items: &[JournalItem]) {
+    if items.is_empty() {
+        return;
+    }
+    markdown.push_str(&format!("\n## {title}\n\n"));
+    for item in items {
+        let text = item.text.replace('\n', "\n  ");
+        markdown.push_str(&format!("- {}: {text}\n", item.date));
     }
 }
 
@@ -523,6 +590,9 @@ pub fn review_markdown(review: &Review, language: Language) -> String {
         t.pomodoros,
         review.pomodoro_count,
     );
+    journal_lines(&mut markdown, t.achievements, &review.journal.achievements);
+    journal_lines(&mut markdown, t.week_notes, &review.journal.week_notes);
+    journal_lines(&mut markdown, t.day_notes, &review.journal.day_notes);
     if review.modes.iter().any(|entry| entry.sessions > 0) {
         markdown.push_str(&format!("\n## {}\n\n", t.techniques));
         for entry in &review.modes {

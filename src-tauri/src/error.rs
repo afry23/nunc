@@ -69,6 +69,7 @@ fn store_code(error: &StoreError) -> &'static str {
         StoreError::NotFound { .. } | StoreError::JournalEntryNotFound(_) => "not_found",
         StoreError::Journal(JournalError::TextTooLong) => "journal_text_too_long",
         StoreError::Journal(JournalError::EmptyText) => "journal_text_empty",
+        StoreError::Journal(JournalError::NotANote) => "invalid_input",
         StoreError::InvalidParent { .. } => "invalid_parent",
     }
 }

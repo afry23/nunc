@@ -104,6 +104,14 @@ export const commands = {
 	deleteSession: (id: number) => typedError<null, AppError>(__TAURI_INVOKE("delete_session", { id })),
 	/**  Rückblick für die lokalen Tage `from` bis `to` (inklusive), mit Vergleich zur Vorperiode. */
 	getReview: (from: string, to: string) => typedError<Review, AppError>(__TAURI_INVOKE("get_review", { from, to })),
+	/**  Speichert die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz. */
+	saveJournalNote: (kind: JournalKind, date: string, text: string) => typedError<null, AppError>(__TAURI_INVOKE("save_journal_note", { kind, date, text })),
+	/**  Legt einen Erfolg für `date` an und liefert seine Kennung. */
+	addAchievement: (date: string, text: string) => typedError<string, AppError>(__TAURI_INVOKE("add_achievement", { date, text })),
+	/**  Ändert Tag und Text eines Erfolgs. */
+	updateAchievement: (id: string, date: string, text: string) => typedError<null, AppError>(__TAURI_INVOKE("update_achievement", { id, date, text })),
+	/**  Löscht einen Erfolg. */
+	deleteAchievement: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("delete_achievement", { id })),
 	/**  Schreibt den Rückblick als Markdown in eine vom Nutzer gewählte Datei, in der Sprache der Oberfläche (`system` gilt als Deutsch). `None`, wenn der Dialog abgebrochen wurde. */
 	saveReviewMarkdown: (from: string, to: string, language: Language) => typedError<string | null, AppError>(__TAURI_INVOKE("save_review_markdown", { from, to, language })),
 	/**  Kennzahlen aus den rohen Sessions (nichts davon ist gespeichert). */
@@ -322,6 +330,16 @@ export type GroupMinutes = {
 	minutes: number,
 };
 
+/**  Ein Journal-Eintrag im Bericht. `date` ist bei Wochennotizen der Sonntag der Woche. */
+export type JournalItem = {
+	id: string,
+	date: string,
+	text: string,
+};
+
+/**  Art eines Journal-Eintrags. */
+export type JournalKind = "day_note" | "week_note" | "achievement";
+
 /**  Alle bekannten Projekte und Kontexte (Vorschläge für die Auswahl), sortiert und ohne Duplikate. */
 export type KnownTags = {
 	projects: string[],
@@ -394,6 +412,17 @@ export type Review = {
 	projects: GroupMinutes[],
 	contexts: GroupMinutes[],
 	completedTodos: CompletedTodo[],
+	journal: ReviewJournal,
+};
+
+/**
+ *  Die Journal-Einträge des Zeitraums, jeweils nach Datum. Wochennotizen zählen für den Zeitraum, in dem ihre
+ *  Woche endet (ADR 0026).
+ */
+export type ReviewJournal = {
+	achievements: JournalItem[],
+	weekNotes: JournalItem[],
+	dayNotes: JournalItem[],
 };
 
 /**  Gespeichertes Arbeits- oder Pausenintervall. */

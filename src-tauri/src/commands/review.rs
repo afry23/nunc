@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use chrono::NaiveDate;
+use nunc_core::journal::JournalKind;
 use nunc_core::model::Language;
 use nunc_core::review::{Review, build_review, review_markdown};
 use nunc_platform::to_local_date;
@@ -28,11 +29,12 @@ fn review_for(state: &AppState, from: NaiveDate, to: NaiveDate) -> Result<Review
             "Der Zeitraum darf höchstens ein Jahr umfassen.",
         ));
     }
-    let (sessions, todos, details) = state.db.with(|conn| {
+    let (sessions, todos, details, journal) = state.db.with(|conn| {
         Ok::<_, nunc_store::StoreError>((
             nunc_store::list_sessions(conn)?,
             nunc_store::list_all_todos(conn)?,
             nunc_store::list_session_details(conn)?,
+            nunc_store::list_journal(conn, from, to)?,
         ))
     })?;
     let notes: HashMap<i32, String> = details
@@ -44,6 +46,7 @@ fn review_for(state: &AppState, from: NaiveDate, to: NaiveDate) -> Result<Review
         &sessions,
         &todos,
         &notes,
+        &journal,
         &to_local_date,
     ))
 }
@@ -86,4 +89,65 @@ pub async fn save_review_markdown<R: Runtime>(
     };
     write_file(&app, target, content.as_bytes())?;
     Ok(Some(path))
+}
+
+/// Speichert die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz.
+#[tauri::command]
+#[specta::specta]
+pub fn save_journal_note(
+    state: State<'_, AppState>,
+    kind: JournalKind,
+    date: NaiveDate,
+    text: String,
+) -> Result<(), AppError> {
+    let now = state.clock.now();
+    state.db.with(|conn| match kind {
+        JournalKind::DayNote => nunc_store::save_day_note(conn, date, &text, now),
+        JournalKind::WeekNote => nunc_store::save_week_note(conn, date, &text, now),
+        JournalKind::Achievement => Err(nunc_core::journal::JournalError::NotANote.into()),
+    })?;
+    Ok(())
+}
+
+/// Legt einen Erfolg für `date` an und liefert seine Kennung.
+#[tauri::command]
+#[specta::specta]
+pub fn add_achievement(
+    state: State<'_, AppState>,
+    date: NaiveDate,
+    text: String,
+) -> Result<String, AppError> {
+    let now = state.clock.now();
+    let sync_id = uuid::Uuid::new_v4().to_string();
+    state
+        .db
+        .with(|conn| nunc_store::add_achievement(conn, &sync_id, date, &text, now))?;
+    Ok(sync_id)
+}
+
+/// Ändert Tag und Text eines Erfolgs.
+#[tauri::command]
+#[specta::specta]
+pub fn update_achievement(
+    state: State<'_, AppState>,
+    id: String,
+    date: NaiveDate,
+    text: String,
+) -> Result<(), AppError> {
+    let now = state.clock.now();
+    state
+        .db
+        .with(|conn| nunc_store::update_achievement(conn, &id, date, &text, now))?;
+    Ok(())
+}
+
+/// Löscht einen Erfolg.
+#[tauri::command]
+#[specta::specta]
+pub fn delete_achievement(state: State<'_, AppState>, id: String) -> Result<(), AppError> {
+    let now = state.clock.now();
+    state
+        .db
+        .with(|conn| nunc_store::delete_achievement(conn, &id, now))?;
+    Ok(())
 }
