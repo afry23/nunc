@@ -81,7 +81,8 @@ Schreibvorgänge laufen in einer Transaktion.
    eigenes `list_habits`), `save_habit` (anlegen oder ändern), `archive_habit`, `delete_habit`, `set_habit_done` – diese
    Stufe. Die Übersicht rechnet `habit_overview` in `nunc-core`; ein Eintrag mit unbekannter Kodierung hat keinen
    `progress`.
-4. UI (Ansicht „Gewohnheiten“, Abschnitt in „Heute“) und Rückblick.
+4. UI in zwei Teilen: (a) Ansicht „Gewohnheiten“ (`/habits`: anlegen, ändern, abhaken, archivieren, löschen) und Abschnitt
+   „Gewohnheiten heute“ in „Heute“ – diese Stufe; (b) Rückblick: Quote je Gewohnheit im Zeitraum.
 
 ## Verworfene Alternativen
 
