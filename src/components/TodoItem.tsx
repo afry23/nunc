@@ -9,6 +9,8 @@ import {
   titleOf,
   type TreeRow,
 } from "../lib/todos";
+import { toIsoDate } from "../lib/format";
+import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
 import {
   CheckIcon,
@@ -19,6 +21,7 @@ import {
   GripIcon,
   PencilIcon,
   PlusIcon,
+  SunIcon,
   TrashIcon,
 } from "./icons";
 import { IconButton } from "./ui";
@@ -271,6 +274,18 @@ export function TodoItem({
                 <ChevronLeftIcon />
               </IconButton>
             </>
+          )}
+          {!todo.completed && (
+            <IconButton
+              label={t("todos.item.planToday", { title })}
+              onClick={() =>
+                void usePlanStore
+                  .getState()
+                  .planTodo(todo.id, toIsoDate(new Date()))
+              }
+            >
+              <SunIcon />
+            </IconButton>
           )}
           <IconButton
             label={t("todos.item.addSub", { title })}

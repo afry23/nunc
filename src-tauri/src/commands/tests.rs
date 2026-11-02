@@ -79,7 +79,8 @@ impl Harness {
                 sessions::update_session,
                 sessions::delete_session,
                 plan::get_day_plan,
-                plan::set_todo_plan,
+                plan::plan_todo,
+                plan::set_todo_estimate,
                 review::get_review,
                 review::save_journal_note,
                 review::add_achievement,
@@ -1157,13 +1158,11 @@ fn the_day_plan_lists_todos_planned_for_today_and_uses_the_capacity() {
     h.ok("add_todo", json!({ "rawText": "Not planned" }));
     let id = todo["id"].as_i64().unwrap();
 
-    let planned = h.ok(
-        "set_todo_plan",
-        json!({ "id": id, "due": null, "plan": today, "estimateMin": 45 }),
-    );
+    h.ok("set_todo_estimate", json!({ "id": id, "estimateMin": 45 }));
+    let planned = h.ok("plan_todo", json!({ "id": id, "day": today }));
     assert_eq!(
         planned["rawText"],
-        format!("(A) Report +work plan:{today} est:45")
+        format!("(A) Report +work est:45 plan:{today}")
     );
 
     let plan = h.ok("get_day_plan", json!({}));
@@ -1187,15 +1186,21 @@ fn clearing_the_planning_removes_the_fields_and_keeps_the_text() {
     let h = Harness::new();
     let todo = h.ok(
         "add_todo",
-        json!({ "rawText": "Report due:2026-10-05 est:30 +work" }),
+        json!({ "rawText": "Report due:2026-10-05 plan:2026-10-04 est:30 +work" }),
     );
     let id = todo["id"].as_i64().unwrap();
-    let cleared = h.ok(
-        "set_todo_plan",
-        json!({ "id": id, "due": null, "plan": null, "estimateMin": null }),
+    let moved = h.ok("plan_todo", json!({ "id": id, "day": "2026-10-06" }));
+    assert_eq!(
+        moved["rawText"],
+        "Report due:2026-10-05 plan:2026-10-06 est:30 +work"
     );
-    assert_eq!(cleared["rawText"], "Report +work");
-    assert_eq!(cleared["description"], "Report +work");
+    let unplanned = h.ok("plan_todo", json!({ "id": id, "day": null }));
+    assert_eq!(unplanned["rawText"], "Report due:2026-10-05 est:30 +work");
+    let cleared = h.ok(
+        "set_todo_estimate",
+        json!({ "id": id, "estimateMin": null }),
+    );
+    assert_eq!(cleared["rawText"], "Report due:2026-10-05 +work");
 }
 
 #[test]
@@ -1206,17 +1211,14 @@ fn an_invalid_estimate_or_an_unknown_todo_is_rejected() {
     for minutes in [0, 10081] {
         assert_eq!(
             h.err_code(
-                "set_todo_plan",
-                json!({ "id": id, "due": null, "plan": null, "estimateMin": minutes }),
+                "set_todo_estimate",
+                json!({ "id": id, "estimateMin": minutes }),
             ),
             "invalid_input"
         );
     }
     assert_eq!(
-        h.err_code(
-            "set_todo_plan",
-            json!({ "id": 999, "due": null, "plan": null, "estimateMin": null }),
-        ),
+        h.err_code("plan_todo", json!({ "id": 999, "day": null })),
         "not_found"
     );
 }

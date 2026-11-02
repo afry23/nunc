@@ -52,6 +52,18 @@ describe("titleOf", () => {
   it("drops tags", () => {
     expect(titleOf({ description: "Bericht +work @desk" })).toBe("Bericht");
   });
+  it("drops the planning fields of the day planner", () => {
+    expect(
+      titleOf({
+        description: "Bericht due:2026-03-04 plan:2026-03-02 est:45 +work",
+      }),
+    ).toBe("Bericht");
+  });
+  it("keeps words that only look like planning fields", () => {
+    expect(titleOf({ description: "Bericht due:morgen est:10m" })).toBe(
+      "Bericht due:morgen est:10m",
+    );
+  });
   it("falls back to the description when only tags remain", () => {
     expect(titleOf({ description: "+work" })).toBe("+work");
   });

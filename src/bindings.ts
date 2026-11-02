@@ -107,8 +107,10 @@ export const commands = {
 	 *  erfasster Zeit und der Kapazität aus den Einstellungen.
 	 */
 	getDayPlan: () => typedError<DayPlan, AppError>(__TAURI_INVOKE("get_day_plan")),
-	/**  Setzt Frist, Plan-Tag und Schätzung (Minuten) eines Todos; `null` entfernt das jeweilige Feld. */
-	setTodoPlan: (id: number, due: string | null, plan: string | null, estimateMin: number | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_plan", { id, due, plan, estimateMin })),
+	/**  Plant das Todo für den Tag `day` ein; `null` nimmt es vom Plan. Frist und Schätzung bleiben. */
+	planTodo: (id: number, day: string | null) => typedError<Todo, AppError>(__TAURI_INVOKE("plan_todo", { id, day })),
+	/**  Setzt die Schätzung (Minuten, 1–10080); `null` entfernt sie. Frist und Plan-Tag bleiben. */
+	setTodoEstimate: (id: number, estimateMin: number | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_estimate", { id, estimateMin })),
 	/**  Rückblick für die lokalen Tage `from` bis `to` (inklusive), mit Vergleich zur Vorperiode. */
 	getReview: (from: string, to: string) => typedError<Review, AppError>(__TAURI_INVOKE("get_review", { from, to })),
 	/**  Speichert die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz. */

@@ -26,13 +26,18 @@ export function splitSegments(description: string): Segment[] {
     }, []);
 }
 
-/** Beschreibung ohne Tags für die Anzeige im Titel (z. B. Auswahlliste); Tags bleiben im Rohtext. */
+/** Planungsfelder des Tagesplaners (`due:`, `plan:`, `est:`, ADR 0027); nur zum Ausblenden im Titel. */
+const PLAN_WORD = /^(?:(?:due|plan):\d{4}-\d{2}-\d{2}|est:\d+)$/;
+
+/** Beschreibung ohne Tags und Planungsfelder für die Anzeige im Titel (z. B. Auswahlliste); sie bleiben im Rohtext. */
 export function titleOf(todo: Pick<Todo, "description">): string {
   const words = todo.description
     .split(/\s+/)
     .filter(
       (w) =>
-        w !== "" && !(w.length > 1 && (w.startsWith("+") || w.startsWith("@"))),
+        w !== "" &&
+        !(w.length > 1 && (w.startsWith("+") || w.startsWith("@"))) &&
+        !PLAN_WORD.test(w),
     );
   return words.join(" ") || todo.description.trim();
 }
