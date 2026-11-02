@@ -4,6 +4,7 @@ mod backup;
 mod connection;
 mod crdt_repo;
 mod error;
+mod habit_repo;
 mod journal_repo;
 mod legacy;
 mod migrations;
@@ -24,6 +25,10 @@ pub use backup::{
 pub use connection::{open, open_in_memory};
 pub use crdt_repo::{apply_state, local_state};
 pub use error::StoreError;
+pub use habit_repo::{
+    create_habit, delete_habit, list_habit_logs, list_habits, set_habit_archived, set_habit_done,
+    update_habit,
+};
 pub use journal_repo::{
     add_achievement, delete_achievement, list_journal, save_day_note, save_week_note,
     update_achievement,

@@ -66,7 +66,10 @@ fn store_code(error: &StoreError) -> &'static str {
         StoreError::Json(_) => "state_unreadable",
         StoreError::BackupDir(_) => "backup_dir",
         StoreError::InvalidBackup(_) => "invalid_backup",
-        StoreError::NotFound { .. } | StoreError::JournalEntryNotFound(_) => "not_found",
+        StoreError::NotFound { .. }
+        | StoreError::JournalEntryNotFound(_)
+        | StoreError::HabitNotFound(_) => "not_found",
+        StoreError::Habit(_) | StoreError::NotCheckable => "invalid_input",
         StoreError::Journal(JournalError::TextTooLong) => "journal_text_too_long",
         StoreError::Journal(JournalError::EmptyText) => "journal_text_empty",
         StoreError::Journal(JournalError::NotANote) => "invalid_input",
