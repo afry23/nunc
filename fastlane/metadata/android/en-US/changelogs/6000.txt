@@ -1,0 +1,5 @@
+- Habit tracker: tick habits off or calculate them from your sessions, with streaks and weekly goals
+- "Today" day planner with estimates and daily capacity
+- Review for week, month and quarter with notes, achievements and Markdown export
+- Todoist and Google Drive are gone, sync is WebDAV only
+- Sync format 8: update all devices
