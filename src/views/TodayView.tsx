@@ -5,12 +5,15 @@ import {
   ChevronLeftIcon,
   CloseIcon,
 } from "../components/icons";
+import { HabitRow } from "../components/HabitRow";
 import { IconButton } from "../components/ui";
 import { useT } from "../i18n";
 import type { PlanReason } from "../lib/api";
 import { fillPercent, nextDay, planRows } from "../lib/dayPlan";
 import { formatMinutes, shortDate, weekdayLabel } from "../lib/format";
+import { todayHabits } from "../lib/habits";
 import { titleOf } from "../lib/todos";
+import { useHabitStore } from "../stores/habitStore";
 import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
 
@@ -33,6 +36,7 @@ export function TodayView() {
     void usePlanStore.getState().load();
   }, [all]);
 
+  const habits = todayHabits(useHabitStore((s) => s.items));
   const rows = plan ? planRows(plan, all) : [];
   const over = plan !== null && plan.remainingMin < 0;
   const day = plan?.day ?? "";
@@ -53,13 +57,21 @@ export function TodayView() {
               : t("today.subtitle")}
           </p>
         </div>
-        <Link
-          to="/todos"
-          className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
-        >
-          <ChevronLeftIcon />
-          {t("today.back")}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/habits"
+            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
+          >
+            {t("habits.open")}
+          </Link>
+          <Link
+            to="/todos"
+            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
+          >
+            <ChevronLeftIcon />
+            {t("today.back")}
+          </Link>
+        </div>
       </header>
 
       {plan && (
@@ -194,6 +206,22 @@ export function TodayView() {
             );
           })}
         </ul>
+      )}
+
+      {habits.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="label-md text-on-surface-variant">
+            {t("habits.today.title")}
+          </h2>
+          <ul
+            aria-label={t("habits.today.title")}
+            className="flex flex-col gap-3"
+          >
+            {habits.map((item) => (
+              <HabitRow key={item.id} item={item} />
+            ))}
+          </ul>
+        </div>
       )}
     </section>
   );

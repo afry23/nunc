@@ -7,6 +7,7 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { AppShell } from "./components/AppShell";
+import { HabitsView } from "./views/HabitsView";
 import { HelpView } from "./views/HelpView";
 import { MiniTimerView } from "./views/MiniTimerView";
 import { SettingsView } from "./views/SettingsView";
@@ -39,6 +40,11 @@ const routeTree = rootRoute.addChildren([
       getParentRoute: () => shellRoute,
       path: "/today",
       component: TodayView,
+    }),
+    createRoute({
+      getParentRoute: () => shellRoute,
+      path: "/habits",
+      component: HabitsView,
     }),
     createRoute({
       getParentRoute: () => shellRoute,
