@@ -11,9 +11,9 @@ use crate::DomainWorld;
 
 #[derive(Debug, Default)]
 pub struct State {
-    a: SyncState,
-    b: SyncState,
-    merged: SyncState,
+    pub(crate) a: SyncState,
+    pub(crate) b: SyncState,
+    pub(crate) merged: SyncState,
 }
 
 fn date(text: &str) -> NaiveDate {
@@ -21,7 +21,7 @@ fn date(text: &str) -> NaiveDate {
 }
 
 impl State {
-    fn side(&mut self, device: &str) -> &mut SyncState {
+    pub(crate) fn side(&mut self, device: &str) -> &mut SyncState {
         match device {
             "A" => &mut self.a,
             "B" => &mut self.b,

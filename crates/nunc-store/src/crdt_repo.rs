@@ -463,6 +463,9 @@ pub fn local_state(
         todos,
         sessions,
         journal: crate::journal_repo::entries(conn)?,
+        // Gewohnheiten (ADR 0028) kommen mit der Tabelle in der nächsten Stufe
+        habits: BTreeMap::new(),
+        habit_logs: BTreeMap::new(),
     })
 }
 

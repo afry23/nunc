@@ -10,6 +10,7 @@ mod backup;
 mod crdt;
 mod day_plan;
 mod export;
+mod habits;
 mod journal;
 mod properties;
 mod review;
@@ -30,6 +31,7 @@ pub struct DomainWorld {
     crdt: crdt::State,
     day_plan: day_plan::State,
     export: export::State,
+    habits: habits::State,
     journal: journal::State,
     review: review::State,
     settings: settings::State,

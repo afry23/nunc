@@ -9,6 +9,7 @@ pub mod crdt;
 pub mod day_plan;
 pub mod export;
 pub mod flowtime;
+pub mod habit;
 pub mod hlc;
 pub mod journal;
 pub mod manual_entry;
