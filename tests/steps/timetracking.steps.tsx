@@ -209,3 +209,68 @@ Then(
     });
   },
 );
+
+// ---------------------------------------------------------------------------------------------
+// Journal im Rückblick (ADR 0026)
+
+/** Klickt den Button `name` im Abschnitt mit der Überschrift `heading` (gleiche Knöpfe gibt es in mehreren). */
+When(
+  "I click {string} in the section {string}",
+  async (_world: UiWorld, name: string, heading: string) => {
+    const title = await screen.findByRole("heading", { name: heading });
+    const section = title.closest("section") as HTMLElement;
+    await act(async () => {
+      fireEvent.click(within(section).getByRole("button", { name }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  },
+);
+
+Then(
+  "the backend received {string} with {string} equal to {string}",
+  async (world: UiWorld, cmd: string, key: string, value: string) => {
+    await waitFor(() =>
+      expect(String(world.fake.last(cmd)?.[key])).toBe(value),
+    );
+  },
+);
+
+function sectionOf(heading: string): HTMLElement {
+  return screen
+    .getByRole("heading", { name: heading })
+    .closest("section") as HTMLElement;
+}
+
+Then(
+  "the button {string} in the section {string} is disabled",
+  async (_world: UiWorld, name: string, heading: string) => {
+    await screen.findByRole("heading", { name: heading });
+    expect(
+      within(sectionOf(heading)).getByRole("button", { name }),
+    ).toHaveProperty("disabled", true);
+  },
+);
+
+Then("a field holds {string}", async (_world: UiWorld, text: string) => {
+  await waitFor(() =>
+    expect(
+      screen
+        .getAllByRole("textbox")
+        .map((field) => (field as HTMLTextAreaElement).value),
+    ).toContain(text),
+  );
+});
+
+Then("no field holds {string}", async (_world: UiWorld, text: string) => {
+  await waitFor(() =>
+    expect(
+      screen
+        .getAllByRole("textbox")
+        .map((field) => (field as HTMLTextAreaElement).value),
+    ).not.toContain(text),
+  );
+});
+
+Then("I do not see the field {string}", (_world: UiWorld, label: string) => {
+  expect(screen.queryByLabelText(label)).toBeNull();
+});

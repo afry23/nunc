@@ -80,3 +80,12 @@ Sessions existieren (ein Todo kann gelöscht werden, ein Erfolg bleibt) und übe
   Format 7 → Commands und Review-Anteil → Oberfläche und Markdown.
 - Offen: Erinnerung an den Wochenrückblick (Notification), Tags an Erfolgen, Suche über alle Einträge. Der MCP-Server
   (später) bekommt das Journal nur lesend.
+
+## Abweichungen bei der Umsetzung
+
+- `journal_entries` hat `sync_id` als Primärschlüssel (keine zusätzliche Integer-Id), `journal_field_clock` verweist
+  darauf; die Tabellen halten die rohen Registerwerte, ob ein Eintrag gilt, folgt aus den Stempeln.
+- Ein eigener Command `get_journal` entfällt: `get_review` liefert das Journal des Zeitraums (`Review.journal`).
+- Die Oberfläche (`ReviewJournal`) liegt im Rückblick: Wochenrückblick (nur in der Wochenansicht bearbeitbar, ab Freitag
+  der aktuellen Woche mit Hinweis), Erfolge und Tagesnotizen. Eine neue Tagesnotiz für einen Tag, der schon eine hat,
+  ersetzt deren Text (die Notiz eines Tages ist eindeutig).

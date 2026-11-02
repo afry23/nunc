@@ -566,6 +566,48 @@ export function createFakeBackend(): FakeBackend {
       period: { from, to },
     }),
     save_review_markdown: () => fake.reviewPath,
+    save_journal_note: ({
+      kind,
+      date,
+      text,
+    }: {
+      kind: "day_note" | "week_note";
+      date: string;
+      text: string;
+    }) => {
+      const key = kind === "week_note" ? "weekNotes" : "dayNotes";
+      const others = fake.review.journal[key].filter(
+        (item) => item.date !== date,
+      );
+      fake.review.journal[key] = text.trim()
+        ? [...others, { id: `${kind}:${date}`, date, text: text.trim() }]
+        : others;
+      return null;
+    },
+    add_achievement: ({ date, text }: { date: string; text: string }) => {
+      const id = `a-${fake.review.journal.achievements.length + 1}`;
+      fake.review.journal.achievements.push({ id, date, text });
+      return id;
+    },
+    update_achievement: ({
+      id,
+      date,
+      text,
+    }: {
+      id: string;
+      date: string;
+      text: string;
+    }) => {
+      fake.review.journal.achievements = fake.review.journal.achievements.map(
+        (item) => (item.id === id ? { id, date, text } : item),
+      );
+      return null;
+    },
+    delete_achievement: ({ id }: { id: string }) => {
+      fake.review.journal.achievements =
+        fake.review.journal.achievements.filter((item) => item.id !== id);
+      return null;
+    },
     get_api_status: () => ({
       running:
         fake.settings.apiEnabled && fake.apiError === null && !fake.apiStarting,

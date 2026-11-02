@@ -94,3 +94,78 @@ Feature: Review in the times view
     And I see "20m · 1 Sessions"
     And I see "02.03. Weekly planning"
     And I see "ohne Zuordnung"
+
+  @ui @US-RV02
+  Scenario: The week review is written into the review of a week
+    When I open the app at "/times"
+    And I click "Rückblick"
+    And I enter "Good week" into the field "Wochenrückblick"
+    And I click "Speichern" in the section "Wochenrückblick"
+    Then the backend received "save_journal_note"
+    And the backend received "save_journal_note" with "kind" equal to "week_note"
+    And the backend received "save_journal_note" with "text" equal to "Good week"
+    And a field holds "Good week"
+
+  @ui @US-RV02
+  Scenario: Saving is only possible after the text changed
+    When I open the app at "/times"
+    And I click "Rückblick"
+    Then the button "Speichern" in the section "Wochenrückblick" is disabled
+
+  @ui @US-RV02
+  Scenario: An achievement can be added, changed and deleted
+    When I open the app at "/times"
+    And I click "Rückblick"
+    Then I see "Noch keine Erfolge in diesem Zeitraum."
+    When I enter "Released the beta" into the field "Neuer Erfolg"
+    And I click "Hinzufügen" in the section "Erfolge"
+    Then the backend received "add_achievement"
+    And I see "Released the beta"
+    When I click "Bearbeiten"
+    And I enter "Released the beta 1.0" into the field "Text"
+    And I click "Speichern" in the section "Erfolge"
+    Then the backend received "update_achievement"
+    And I see "Released the beta 1.0"
+    When I click "Löschen"
+    Then the backend received "delete_achievement"
+    And I see "Noch keine Erfolge in diesem Zeitraum."
+
+  @ui @US-RV02
+  Scenario: Adding an achievement needs a text
+    When I open the app at "/times"
+    And I click "Rückblick"
+    Then the button "Hinzufügen" in the section "Erfolge" is disabled
+
+  @ui @US-RV02
+  Scenario: Day notes are listed and can be added and emptied
+    Given the review is:
+      """
+      { "journal": { "achievements": [], "weekNotes": [],
+        "dayNotes": [{ "id": "note:day:2026-03-02", "date": "2026-03-02", "text": "Calm day" }] } }
+      """
+    When I open the app at "/times"
+    And I click "Rückblick"
+    Then a field holds "Calm day"
+    When I enter "" into the field "Tagesnotizen 02.03."
+    And I click "Speichern" in the section "Tagesnotizen"
+    Then the backend received "save_journal_note" with "kind" equal to "day_note"
+    And the backend received "save_journal_note" with "text" equal to ""
+    And I see "Noch keine Tagesnotizen in diesem Zeitraum."
+    When I enter "New note" into the field "Neue Tagesnotiz"
+    And I click "Hinzufügen" in the section "Tagesnotizen"
+    Then a field holds "New note"
+
+  @ui @US-RV02
+  Scenario: A month review shows the week reviews of the month read-only
+    Given the review is:
+      """
+      { "journal": { "achievements": [], "dayNotes": [],
+        "weekNotes": [{ "id": "note:week:2026-03-08", "date": "2026-03-08", "text": "Good week" }] } }
+      """
+    When I open the app at "/times"
+    And I click "Rückblick"
+    And I click "Monat"
+    Then I see "Wochenrückblicke"
+    And I see "Good week"
+    And I do not see the field "Wochenrückblick"
+
