@@ -59,6 +59,20 @@ Feature: Settings
       | 10      | the settings are invalid because of "syncIntervalMin" |
       | 60      | the settings are invalid because of "syncIntervalMin" |
 
+  @domain @US-TP01
+  Scenario Outline: The daily capacity is between one minute and one day
+    Given the setting "dayCapacityMin" is "<minutes>"
+    When I validate the settings
+    Then <result>
+
+    Examples:
+      | minutes | result                                                |
+      | 1       | the settings are valid                                |
+      | 240     | the settings are valid                                |
+      | 1440    | the settings are valid                                |
+      | 0       | the settings are invalid because of "dayCapacityMin"  |
+      | 1441    | the settings are invalid because of "dayCapacityMin"  |
+
   @domain @REQ-5
   Scenario: Break lengths and the long break interval may be zero
     Given the setting "shortBreakMin" is "0"
@@ -98,6 +112,7 @@ Feature: Settings
       | apiEnabled              | false    |
       | apiPort                 | 42820    |
       | syncIntervalMin         | 15       |
+      | dayCapacityMin          | 240      |
 
   @integration @REQ-5.4
   Scenario: A language that is not offered falls back to the system language
@@ -143,6 +158,17 @@ Feature: Settings
     Then the settings table contains:
       | key               | value |
       | sync_interval_min | 30    |
+
+  @integration @US-TP01
+  Scenario: The daily capacity is persisted
+    Given no database exists yet
+    When nunc opens the database
+    And I load the settings
+    And I set "dayCapacityMin" to "90"
+    And I save the settings
+    Then the settings table contains:
+      | key              | value |
+      | day_capacity_min | 90    |
 
   @integration @REQ-5
   Scenario: Saved settings are returned again
