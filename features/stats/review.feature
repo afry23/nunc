@@ -368,3 +368,85 @@ Feature: Review report
     And the Markdown does not contain "Week review"
     And the Markdown does not contain "Day notes"
 
+
+  @domain @US-HB05
+  Scenario: The review lists the habits with their quota in the period
+    Given the habit day is 2026-03-08
+    And the habits:
+      | id | name  | schedule | goal  | archived |
+      | h1 | Read  | daily    | check | no       |
+      | h2 | Run   | weekly:3 | check | no       |
+    And the ticks:
+      | habit | day        | done |
+      | h1    | 2026-03-02 | yes  |
+      | h1    | 2026-03-03 | yes  |
+      | h1    | 2026-03-05 | yes  |
+      | h1    | 2026-03-06 | no   |
+      | h2    | 2026-03-04 | yes  |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review lists the habits "Read: 3 / 7 (43 %) | Run: 1 / 3 (33 %)"
+
+  @domain @US-HB05
+  Scenario: Habits that cannot be evaluated or are archived without ticks are left out
+    Given the habit day is 2026-03-08
+    And the habits:
+      | id | name    | schedule | goal  | archived |
+      | h1 | Read    | daily    | check | no       |
+      | h3 | Newer   | moon:1   | check | no       |
+      | h4 | Old     | daily    | check | yes      |
+      | h5 | Past    | daily    | check | yes      |
+    And the ticks:
+      | habit | day        | done |
+      | h5    | 2026-03-04 | yes  |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review lists the habits "Read: 0 / 7 (0 %) | Past: 1 / 7 (14 %)"
+
+  @domain @US-HB05
+  Scenario: A habit that is created later than the period ends is left out
+    Given the habit day is 2026-03-20
+    And the habits:
+      | id | name  | schedule | goal  | archived |
+      | h1 | Read  | daily    | check | no       |
+    When I build the review from 2026-02-02 to 2026-02-08
+    Then the review lists the habits ""
+
+  @domain @US-HB05
+  Scenario: A habit without due days in the period has no quota
+    Given the habit day is 2026-03-08
+    And the habits:
+      | id | name | schedule | goal  | archived |
+      | h1 | Read | daily    | check | no       |
+    When I build the review from 2026-03-09 to 2026-03-15
+    Then the review lists the habits "Read: 0 / 0"
+
+  @domain @US-HB05
+  Scenario: The Markdown export lists the habits with their quota
+    Given the habit day is 2026-03-08
+    And the habits:
+      | id | name | schedule | goal  | archived |
+      | h1 | Read | daily    | check | no       |
+      | h2 | Idle | daily    | check | no       |
+    And the ticks:
+      | habit | day        | done |
+      | h1    | 2026-03-02 | yes  |
+      | h1    | 2026-03-03 | yes  |
+    When I build the review from 2026-03-09 to 2026-03-15
+    And I export the review as Markdown in English
+    Then the Markdown contains "- Read: 0 / 0"
+    When I build the review from 2026-03-02 to 2026-03-08
+    And I export the review as Markdown in English
+    Then the Markdown contains:
+      """
+      ## Habits
+
+      - Read: 2 / 7 (29 %)
+      - Idle: 0 / 7 (0 %)
+      """
+    When I export the review as Markdown in German
+    Then the Markdown contains "## Gewohnheiten"
+
+  @domain @US-HB05
+  Scenario: Habit sections are left out when there are no habits
+    When I build the review from 2026-03-02 to 2026-03-08
+    And I export the review as Markdown in English
+    Then the Markdown does not contain "Habits"

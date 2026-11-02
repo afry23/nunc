@@ -6,8 +6,8 @@ use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when};
 use nunc_core::habit::{
-    Goal, Habit, HabitError, HabitItem, HabitLog, HabitProgress, Schedule, StreakUnit,
-    habit_overview, habit_progress, log_id, minutes_goal_days, validate_name,
+    Goal, Habit, HabitError, HabitItem, HabitLog, HabitProgress, PeriodCount, Schedule, StreakUnit,
+    count_period, habit_overview, habit_progress, log_id, minutes_goal_days, validate_name,
 };
 use nunc_core::hlc::Hlc;
 use nunc_core::model::{Session, SessionStatus, SessionType, TimerMode, Todo};
@@ -24,10 +24,11 @@ pub struct State {
     todos: Vec<Todo>,
     sessions: Vec<Session>,
     days: BTreeSet<NaiveDate>,
-    today: Option<NaiveDate>,
-    habits: Vec<Habit>,
-    ticks: Vec<HabitLog>,
+    pub(crate) today: Option<NaiveDate>,
+    pub(crate) habits: Vec<Habit>,
+    pub(crate) ticks: Vec<HabitLog>,
     overview: Vec<HabitItem>,
+    period: Option<PeriodCount>,
 }
 
 impl State {
@@ -232,6 +233,39 @@ fn days_are(world: &mut DomainWorld, days: String) {
 #[then("there are no days")]
 fn no_days(world: &mut DomainWorld) {
     assert!(world.habits.days.is_empty());
+}
+
+// ---- Quote im Zeitraum ----
+
+#[when(expr = "I count the period from {word} to {word} on {word} for a habit created on {word}")]
+fn count(world: &mut DomainWorld, from: String, to: String, today: String, created: String) {
+    let state = &mut world.habits;
+    let schedule = state.schedule.clone().expect("kein Rhythmus");
+    state.period = Some(count_period(
+        &schedule,
+        &state.done,
+        date(&created),
+        date(&from),
+        date(&to),
+        date(&today),
+    ));
+}
+
+#[then(expr = "the habit was due on {int} days and done on {int} days")]
+fn period_counts(world: &mut DomainWorld, due: u32, done: u32) {
+    let counted = world.habits.period.expect("nicht gezählt");
+    assert_eq!((counted.due_days, counted.done_days), (due, done));
+}
+
+#[then(expr = "the quota is {word}")]
+fn period_rate(world: &mut DomainWorld, rate: String) {
+    let actual = world
+        .habits
+        .period
+        .expect("nicht gezählt")
+        .rate_percent()
+        .map_or_else(|| "none".to_owned(), |rate| rate.to_string());
+    assert_eq!(actual, rate);
 }
 
 // ---- Übersicht ----

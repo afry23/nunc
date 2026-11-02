@@ -1388,3 +1388,38 @@ fn a_habit_with_a_minutes_goal_cannot_be_ticked_and_follows_the_sessions() {
     let item = h.ok("get_habit_overview", json!({}))[0].clone();
     assert_eq!(item["progress"]["doneToday"], true);
 }
+
+#[test]
+fn the_review_lists_the_habits_with_their_quota() {
+    let h = Harness::new();
+    let today = local_day(at(9, 0));
+    let id = h
+        .ok(
+            "save_habit",
+            json!({
+                "id": null,
+                "name": "Read",
+                "schedule": { "kind": "daily" },
+                "goal": { "kind": "check" },
+            }),
+        )
+        .as_str()
+        .unwrap()
+        .to_owned();
+    h.ok(
+        "set_habit_done",
+        json!({ "id": id, "day": today, "done": true }),
+    );
+    let review = h.ok("get_review", json!({ "from": today, "to": today }));
+    assert_eq!(
+        review["habits"],
+        json!([{
+            "id": id,
+            "name": "Read",
+            "archived": false,
+            "dueDays": 1,
+            "doneDays": 1,
+            "ratePercent": 100,
+        }])
+    );
+}

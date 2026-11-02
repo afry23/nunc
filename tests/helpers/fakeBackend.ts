@@ -284,6 +284,7 @@ export function createFakeBackend(): FakeBackend {
       contexts: [],
       completedTodos: [],
       journal: { achievements: [], weekNotes: [], dayNotes: [] },
+      habits: [],
     },
     reviewPath: null,
     timesheet: {},
