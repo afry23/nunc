@@ -12,7 +12,9 @@ pub struct State {
     a: Option<Connection>,
     b: Option<Connection>,
     ids: u32,
-    last_exchange: Applied,
+    pub(crate) last_exchange: Applied,
+    /// Fehlermeldung des letzten Journal-Schreibvorgangs (leer: kein Fehler).
+    pub(crate) journal_error: Option<String>,
 }
 
 fn today() -> NaiveDate {
@@ -46,6 +48,12 @@ impl State {
 
     /// Beide Geräte tauschen ihren Stand und spielen das Ergebnis ein.
     fn exchange(&mut self) -> Applied {
+        self.exchange_at(at("12:00:00").timestamp_millis())
+    }
+
+    /// Wie [`exchange`](Self::exchange) zum Zeitpunkt `now` (Millisekunden); danach räumt die Müllabfuhr auf wie
+    /// im Sync-Lauf.
+    pub(crate) fn exchange_at(&mut self, now: i64) -> Applied {
         let mut ids = self.ids;
         let mut new_id = || {
             ids += 1;
@@ -54,9 +62,8 @@ impl State {
         let state_a = nunc_store::local_state(self.conn("A"), &mut new_id).expect("state A");
         let state_b = nunc_store::local_state(self.conn("B"), &mut new_id).expect("state B");
         self.ids = ids;
-        let now = at("12:00:00").timestamp_millis();
-        let for_a = state_a.merge_remote(&state_b, now);
-        let for_b = state_b.merge_remote(&state_a, now);
+        let for_a = state_a.merge_remote(&state_b, now).collect_garbage(now);
+        let for_b = state_b.merge_remote(&state_a, now).collect_garbage(now);
         let on_a = nunc_store::apply_state(self.conn("A"), &for_a).expect("apply A");
         let on_b = nunc_store::apply_state(self.conn("B"), &for_b).expect("apply B");
         Applied {

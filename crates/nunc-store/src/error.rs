@@ -13,6 +13,10 @@ pub enum StoreError {
     InvalidBackup(String),
     #[error("{entity} {id} nicht gefunden")]
     NotFound { entity: &'static str, id: i32 },
+    #[error("Journal-Eintrag {0} nicht gefunden")]
+    JournalEntryNotFound(String),
+    #[error(transparent)]
+    Journal(#[from] nunc_core::journal::JournalError),
     #[error("Todo {id} kann nicht unter Todo {parent} stehen")]
     InvalidParent { id: i32, parent: i32 },
     #[error("Migration {version} fehlgeschlagen: {source}")]

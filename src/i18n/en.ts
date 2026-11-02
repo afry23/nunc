@@ -16,6 +16,8 @@ export const en: Record<keyof typeof de, string> = {
   "error.invalid_backup": "This is not a valid nunc backup.",
   "error.not_found": "Not found.",
   "error.invalid_parent": "The todo cannot be placed under this todo.",
+  "error.journal_text_too_long": "The text must not exceed 4000 characters.",
+  "error.journal_text_empty": "The text must not be empty.",
   "error.network": "Server cannot be reached.",
   "error.unauthorized": "Sign-in was rejected or has expired.",
   "error.not_connected": "Not connected.",

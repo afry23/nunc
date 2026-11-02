@@ -15,6 +15,9 @@ export const de = {
   "error.not_found": "Nicht gefunden.",
   "error.invalid_parent":
     "Das Todo kann nicht unter dieses Todo gestellt werden.",
+  "error.journal_text_too_long":
+    "Der Text darf höchstens 4000 Zeichen lang sein.",
+  "error.journal_text_empty": "Der Text darf nicht leer sein.",
   "error.network": "Server nicht erreichbar.",
   "error.unauthorized": "Anmeldung abgelehnt oder abgelaufen.",
   "error.not_connected": "Nicht verbunden.",

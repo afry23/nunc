@@ -16,6 +16,7 @@ use tempfile::TempDir;
 mod backup;
 mod compat;
 mod crdt;
+mod journal;
 mod legacy;
 mod sessions;
 mod settings;

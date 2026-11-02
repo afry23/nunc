@@ -39,6 +39,7 @@ pub const MIGRATIONS: &[Migration] = &[
     migration!(11, "011_todo_parent.sql"),
     migration!(12, "012_session_tags.sql"),
     migration!(13, "013_drop_todoist_drive.sql"),
+    migration!(14, "014_journal.sql"),
 ];
 
 /// Wendet alle noch nicht in `schema_migrations` vermerkten Migrationen an.
@@ -133,7 +134,7 @@ mod tests {
         conn.execute("INSERT INTO schema_migrations (version) VALUES (42)", [])
             .unwrap();
         migrate(&mut conn).unwrap();
-        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 14);
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 15);
     }
 
     #[test]

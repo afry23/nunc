@@ -462,7 +462,7 @@ pub fn local_state(
     Ok(SyncState {
         todos,
         sessions,
-        ..SyncState::default()
+        journal: crate::journal_repo::entries(conn)?,
     })
 }
 
@@ -593,6 +593,7 @@ pub fn apply_state(conn: &mut Connection, merged: &SyncState) -> Result<Applied,
             }
         }
     }
+    crate::journal_repo::apply_entries(&tx, &merged.journal)?;
     renumber_positions(&tx)?;
     tx.commit()?;
     Ok(applied)

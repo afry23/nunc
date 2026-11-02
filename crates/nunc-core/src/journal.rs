@@ -35,12 +35,21 @@ impl JournalKind {
             Self::Achievement => "achievement",
         }
     }
+
+    /// Gegenstück zu [`as_str`](Self::as_str); Unbekanntes ist `None`.
+    pub fn parse(text: &str) -> Option<Self> {
+        [Self::DayNote, Self::WeekNote, Self::Achievement]
+            .into_iter()
+            .find(|kind| kind.as_str() == text)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum JournalError {
     #[error("Der Text darf höchstens {MAX_TEXT_CHARS} Zeichen lang sein.")]
     TextTooLong,
+    #[error("Der Text darf nicht leer sein.")]
+    EmptyText,
 }
 
 /// Der Sonntag der Woche (Montag bis Sonntag), die `day` enthält. Unter ihm liegt die Wochennotiz.
@@ -62,6 +71,16 @@ fn note_id(kind: &str, date: NaiveDate) -> String {
     format!("note:{kind}:{date}")
 }
 
+/// Kennung der Tagesnotiz für `date`.
+pub fn day_note_id(date: NaiveDate) -> String {
+    note_id("day", date)
+}
+
+/// Kennung der Wochennotiz der Woche, die `day` enthält (Sonntag als Datum).
+pub fn week_note_id(day: NaiveDate) -> String {
+    note_id("week", week_end(day))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct JournalEntry {
     pub sync_id: String,
@@ -74,25 +93,13 @@ pub struct JournalEntry {
 impl JournalEntry {
     /// Tagesnotiz; alle Felder tragen `clock`. Ein leerer Text ergibt einen gelöschten Eintrag.
     pub fn day_note(date: NaiveDate, text: &str, clock: &Hlc) -> Self {
-        Self::new(
-            note_id("day", date),
-            JournalKind::DayNote,
-            date,
-            text,
-            clock,
-        )
+        Self::new(day_note_id(date), JournalKind::DayNote, date, text, clock)
     }
 
     /// Wochennotiz der Woche, die `day` enthält (abgelegt unter dem Sonntag).
     pub fn week_note(day: NaiveDate, text: &str, clock: &Hlc) -> Self {
         let end = week_end(day);
-        Self::new(
-            note_id("week", end),
-            JournalKind::WeekNote,
-            end,
-            text,
-            clock,
-        )
+        Self::new(week_note_id(day), JournalKind::WeekNote, end, text, clock)
     }
 
     /// Erfolg mit der vom Gerät vergebenen `sync_id` (UUID).
