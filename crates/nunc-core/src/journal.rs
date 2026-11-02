@@ -50,6 +50,8 @@ pub enum JournalError {
     TextTooLong,
     #[error("Der Text darf nicht leer sein.")]
     EmptyText,
+    #[error("Erfolge werden über eigene Befehle gespeichert.")]
+    NotANote,
 }
 
 /// Der Sonntag der Woche (Montag bis Sonntag), die `day` enthält. Unter ihm liegt die Wochennotiz.

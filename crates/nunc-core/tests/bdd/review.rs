@@ -4,9 +4,12 @@
 use std::collections::HashMap;
 
 use cucumber::{gherkin::Step, given, then, when};
+use nunc_core::hlc::Hlc;
+use nunc_core::journal::JournalEntry;
 use nunc_core::model::Language;
 use nunc_core::review::{
-    GroupMinutes, Period, PeriodKind, Review, build_review, period_containing, review_markdown,
+    GroupMinutes, JournalItem, Period, PeriodKind, Review, build_review, period_containing,
+    review_markdown,
 };
 
 use crate::DomainWorld;
@@ -21,6 +24,7 @@ pub struct State {
     period: Option<Period>,
     markdown: Option<String>,
     notes: HashMap<i32, String>,
+    journal: Vec<JournalEntry>,
 }
 
 fn review(world: &DomainWorld) -> &Review {
@@ -69,6 +73,7 @@ fn build(world: &mut DomainWorld, from: String, to: String) {
         &world.stats.sessions,
         &world.todo_query.todos,
         &world.review.notes,
+        &world.review.journal,
         &local_date,
     ));
 }
@@ -281,4 +286,43 @@ fn markdown_contains_block(world: &mut DomainWorld, step: &Step) {
     let text = step.docstring.as_ref().expect("Docstring fehlt").trim();
     let markdown = world.review.markdown.as_ref().expect("kein Markdown");
     assert!(markdown.contains(text), "{text:?} fehlt in:\n{markdown}");
+}
+
+/// Spalten `kind` (`day_note`, `week_note`, `achievement`), `date`, `text` und `deleted` (`yes`/leer).
+#[given("the journal entries:")]
+fn journal_entries(world: &mut DomainWorld, step: &Step) {
+    let clock = Hlc::new(1_000, 0, "d");
+    for (index, row) in crate::stats::rows(step).into_iter().enumerate() {
+        let date = day(&row[1]);
+        let mut entry = match row[0].as_str() {
+            "day_note" => JournalEntry::day_note(date, &row[2], &clock),
+            "week_note" => JournalEntry::week_note(date, &row[2], &clock),
+            "achievement" => JournalEntry::achievement(format!("a-{index}"), date, &row[2], &clock),
+            other => panic!("unbekannte Art {other}"),
+        };
+        if row[3] == "yes" {
+            entry.delete(Hlc::new(2_000, 0, "d"));
+        }
+        world.review.journal.push(entry);
+    }
+}
+
+fn lines(items: &[JournalItem]) -> String {
+    items
+        .iter()
+        .map(|item| format!("{}: {}", item.date, item.text))
+        .collect::<Vec<_>>()
+        .join(" | ")
+}
+
+#[then(expr = "the review {word} are {string}")]
+fn journal_lists(world: &mut DomainWorld, group: String, expected: String) {
+    let journal = &review(world).journal;
+    let items = match group.as_str() {
+        "achievements" => &journal.achievements,
+        "week_notes" => &journal.week_notes,
+        "day_notes" => &journal.day_notes,
+        other => panic!("unbekannte Gruppe {other}"),
+    };
+    assert_eq!(lines(items), expected);
 }

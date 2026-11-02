@@ -78,6 +78,10 @@ impl Harness {
                 sessions::update_session,
                 sessions::delete_session,
                 review::get_review,
+                review::save_journal_note,
+                review::add_achievement,
+                review::update_achievement,
+                review::delete_achievement,
                 stats::get_stats,
                 stats::export_stats,
                 backup::get_backup_status,
@@ -848,6 +852,64 @@ fn a_timesheet_range_is_limited_to_a_year() {
         json!({ "startDate": "2025-10-03", "endDate": "2026-10-04", "groupBy": "project" }),
     );
     assert_eq!(code, "invalid_input");
+}
+
+/// Der Sonntag der Woche von `day` (`YYYY-MM-DD`).
+fn week_end(day: &str) -> String {
+    let date: chrono::NaiveDate = day.parse().unwrap();
+    nunc_core::journal::week_end(date).to_string()
+}
+
+#[test]
+fn the_review_carries_notes_and_achievements_of_the_journal() {
+    let h = Harness::new();
+    let day = local_day(at(7, 0));
+    h.ok(
+        "save_journal_note",
+        json!({ "kind": "day_note", "date": day, "text": "Calm day" }),
+    );
+    h.ok(
+        "save_journal_note",
+        json!({ "kind": "week_note", "date": day, "text": "Good week" }),
+    );
+    let id = h.ok("add_achievement", json!({ "date": day, "text": "Shipped" }));
+    let review = h.ok("get_review", json!({ "from": day, "to": week_end(&day) }));
+    assert_eq!(review["journal"]["dayNotes"][0]["text"], "Calm day");
+    assert_eq!(review["journal"]["weekNotes"][0]["text"], "Good week");
+    assert_eq!(review["journal"]["achievements"][0]["text"], "Shipped");
+    assert_eq!(review["journal"]["achievements"][0]["id"], id);
+
+    h.ok(
+        "update_achievement",
+        json!({ "id": id, "date": day, "text": "Shipped v1" }),
+    );
+    h.ok(
+        "save_journal_note",
+        json!({ "kind": "day_note", "date": day, "text": "" }),
+    );
+    let review = h.ok("get_review", json!({ "from": day, "to": week_end(&day) }));
+    assert_eq!(review["journal"]["achievements"][0]["text"], "Shipped v1");
+    assert_eq!(review["journal"]["dayNotes"], json!([]));
+
+    h.ok("delete_achievement", json!({ "id": id }));
+    let review = h.ok("get_review", json!({ "from": day, "to": week_end(&day) }));
+    assert_eq!(review["journal"]["achievements"], json!([]));
+
+    assert_eq!(
+        h.err_code("delete_achievement", json!({ "id": "missing" })),
+        "not_found"
+    );
+    assert_eq!(
+        h.err_code("add_achievement", json!({ "date": day, "text": "  " })),
+        "journal_text_empty"
+    );
+    assert_eq!(
+        h.err_code(
+            "save_journal_note",
+            json!({ "kind": "achievement", "date": day, "text": "x" })
+        ),
+        "invalid_input"
+    );
 }
 
 #[test]

@@ -291,3 +291,80 @@ Feature: Review report
     And the Markdown contains "- +foo: 45 Min., 1 Sessions"
     And the Markdown contains "  - 2026-03-02: Weekly planning"
     And the Markdown does not contain "Focus time"
+
+  @domain @US-RV02
+  Scenario: The review lists achievements, week notes and day notes of the period
+    Given the journal entries:
+      | kind        | date       | text              | deleted |
+      | achievement | 2026-03-05 | Shipped the beta  |         |
+      | achievement | 2026-03-03 | Fixed the sync    |         |
+      | achievement | 2026-02-27 | Before the period |         |
+      | achievement | 2026-03-04 | Taken back        | yes     |
+      | week_note   | 2026-03-04 | Good week         |         |
+      | week_note   | 2026-02-25 | Previous week     |         |
+      | day_note    | 2026-03-06 | Long Friday       |         |
+      | day_note    | 2026-03-09 | After the period  |         |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review achievements are "2026-03-03: Fixed the sync | 2026-03-05: Shipped the beta"
+    And the review week_notes are "2026-03-08: Good week"
+    And the review day_notes are "2026-03-06: Long Friday"
+
+  @domain @US-RV02
+  Scenario: A month review shows the week notes of weeks that end in the month
+    Given the journal entries:
+      | kind      | date       | text            | deleted |
+      | week_note | 2026-03-04 | Week ending 8th |         |
+      | week_note | 2026-03-30 | Week ending 5th |         |
+    When I build the review from 2026-03-01 to 2026-03-31
+    Then the review week_notes are "2026-03-08: Week ending 8th"
+
+  @domain @US-RV02
+  Scenario: The Markdown export has sections for achievements, week review and day notes
+    Given the journal entries:
+      | kind        | date       | text                | deleted |
+      | achievement | 2026-03-05 | Shipped the beta    |         |
+      | week_note   | 2026-03-04 | Good week\nBusy one |         |
+      | day_note    | 2026-03-06 | Long Friday         |         |
+    When I build the review from 2026-03-02 to 2026-03-08
+    And I export the review as Markdown in English
+    Then the Markdown contains:
+      """
+      ## Achievements
+
+      - 2026-03-05: Shipped the beta
+      """
+    And the Markdown contains:
+      """
+      ## Week review
+
+      - 2026-03-08: Good week
+        Busy one
+      """
+    And the Markdown contains:
+      """
+      ## Day notes
+
+      - 2026-03-06: Long Friday
+      """
+
+  @domain @US-RV02
+  Scenario: The Markdown export uses German headings for the journal
+    Given the journal entries:
+      | kind        | date       | text             | deleted |
+      | achievement | 2026-03-05 | Shipped the beta |         |
+      | week_note   | 2026-03-04 | Good week        |         |
+      | day_note    | 2026-03-06 | Long Friday      |         |
+    When I build the review from 2026-03-02 to 2026-03-08
+    And I export the review as Markdown in German
+    Then the Markdown contains "## Erfolge"
+    And the Markdown contains "## Wochenrückblick"
+    And the Markdown contains "## Tagesnotizen"
+
+  @domain @US-RV02
+  Scenario: Journal sections are left out when there are no entries
+    When I build the review from 2026-03-02 to 2026-03-08
+    And I export the review as Markdown in English
+    Then the Markdown does not contain "Achievements"
+    And the Markdown does not contain "Week review"
+    And the Markdown does not contain "Day notes"
+
