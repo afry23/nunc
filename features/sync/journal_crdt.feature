@@ -160,3 +160,18 @@ Feature: Journal CRDT
   @domain @property @US-RV02
   Scenario: Journal entries merge like a CRDT for random states
     Then the property "merging journal entries is commutative, associative and idempotent" holds for 300 random cases
+
+  @domain @US-RV02
+  Scenario: The journal survives writing and reading the sync file
+    Given device A writes the day note "Calm day" for 2026-03-02 at 1000
+    And device A writes the week note "Good week" for 2026-03-04 at 2000
+    When the journal of device A is written to a sync file and read back
+    Then the merged state has 2 journal entries
+    And the merged entry "note:day:2026-03-02" reads "Calm day"
+    And the merged entry "note:week:2026-03-08" reads "Good week"
+
+  @domain @US-RV02
+  Scenario: A version 6 sync file without a journal is still read
+    When a version 6 sync file without a journal is read
+    Then the merged state has 0 journal entries
+
