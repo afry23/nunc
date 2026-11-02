@@ -6,8 +6,8 @@ use chrono::{NaiveDate, NaiveDateTime, TimeZone, Utc};
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when};
 use nunc_core::habit::{
-    Goal, Habit, HabitError, HabitLog, HabitProgress, Schedule, StreakUnit, habit_progress, log_id,
-    minutes_goal_days, validate_name,
+    Goal, Habit, HabitError, HabitItem, HabitLog, HabitProgress, Schedule, StreakUnit,
+    habit_overview, habit_progress, log_id, minutes_goal_days, validate_name,
 };
 use nunc_core::hlc::Hlc;
 use nunc_core::model::{Session, SessionStatus, SessionType, TimerMode, Todo};
@@ -24,6 +24,10 @@ pub struct State {
     todos: Vec<Todo>,
     sessions: Vec<Session>,
     days: BTreeSet<NaiveDate>,
+    today: Option<NaiveDate>,
+    habits: Vec<Habit>,
+    ticks: Vec<HabitLog>,
+    overview: Vec<HabitItem>,
 }
 
 impl State {
@@ -228,6 +232,126 @@ fn days_are(world: &mut DomainWorld, days: String) {
 #[then("there are no days")]
 fn no_days(world: &mut DomainWorld) {
     assert!(world.habits.days.is_empty());
+}
+
+// ---- Übersicht ----
+
+#[given(expr = "the habit day is {word}")]
+fn today_is(world: &mut DomainWorld, today: String) {
+    world.habits.today = Some(date(&today));
+}
+
+fn stamp() -> Hlc {
+    Hlc::new(1, 0, "dev")
+}
+
+/// Spalten: `id`, `name`, `schedule`, `goal` (rohe Kodierung), `archived` (yes/no).
+#[given("the habits:")]
+fn overview_habits(world: &mut DomainWorld, step: &Step) {
+    let table = step.table.as_ref().expect("Tabelle fehlt");
+    world.habits.habits = table.rows[1..]
+        .iter()
+        .map(|row| {
+            let mut habit = Habit::new(
+                &row[0],
+                date("2026-03-01"),
+                &row[1],
+                &Schedule::Daily,
+                &Goal::Check,
+                &stamp(),
+            );
+            // roh gesetzt, damit auch Kodierungen einer neueren App vorkommen können
+            habit.schedule.value.clone_from(&row[2]);
+            habit.goal.value.clone_from(&row[3]);
+            habit.archived.value = row[4] == "yes";
+            habit
+        })
+        .collect();
+}
+
+/// Spalten: `habit`, `day`, `done` (yes/no).
+#[given("the ticks:")]
+fn overview_ticks(world: &mut DomainWorld, step: &Step) {
+    let table = step.table.as_ref().expect("Tabelle fehlt");
+    world.habits.ticks = table.rows[1..]
+        .iter()
+        .map(|row| HabitLog::new(&row[0], date(&row[1]), row[2] == "yes", &stamp()))
+        .collect();
+}
+
+#[when("I take the habit overview")]
+fn take_overview(world: &mut DomainWorld) {
+    let state = &mut world.habits;
+    state.overview = habit_overview(
+        &state.habits,
+        &state.ticks,
+        &state.sessions,
+        &state.todos,
+        state.today.expect("kein heute"),
+        &|time| time.date_naive(),
+    );
+}
+
+fn item<'a>(world: &'a DomainWorld, id: &str) -> &'a HabitItem {
+    world
+        .habits
+        .overview
+        .iter()
+        .find(|item| item.id == id)
+        .unwrap_or_else(|| panic!("{id} fehlt in der Übersicht"))
+}
+
+#[then(expr = "the overview lists {string}")]
+fn overview_lists(world: &mut DomainWorld, expected: String) {
+    let names: Vec<String> = world
+        .habits
+        .overview
+        .iter()
+        .map(|item| {
+            if item.archived {
+                format!("{} (archived)", item.name)
+            } else {
+                item.name.clone()
+            }
+        })
+        .collect();
+    assert_eq!(names.join(" | "), expected);
+}
+
+#[then(expr = "the overview of {string} is {word} today with a streak of {int}")]
+fn overview_state(world: &mut DomainWorld, id: String, state: String, streak: u32) {
+    let progress = item(world, &id)
+        .progress
+        .as_ref()
+        .expect("nicht auswertbar");
+    let actual = if progress.done_today {
+        "done"
+    } else if progress.open_today {
+        "open"
+    } else {
+        "idle"
+    };
+    assert_eq!((actual, progress.current_streak), (state.as_str(), streak));
+}
+
+#[then(expr = "the overview of {string} has the recent days {string}")]
+fn overview_recent(world: &mut DomainWorld, id: String, days: String) {
+    let expected: Vec<NaiveDate> = days
+        .split(',')
+        .filter(|d| !d.is_empty())
+        .map(date)
+        .collect();
+    assert_eq!(item(world, &id).recent, expected);
+}
+
+#[then(expr = "the overview of {string} can be evaluated")]
+fn overview_evaluable(world: &mut DomainWorld, id: String) {
+    assert!(item(world, &id).progress.is_some());
+}
+
+#[then(expr = "the overview of {string} cannot be evaluated")]
+fn overview_not_evaluable(world: &mut DomainWorld, id: String) {
+    assert!(item(world, &id).progress.is_none());
 }
 
 // ---- CRDT ----
