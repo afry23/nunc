@@ -5,6 +5,7 @@ use cucumber::{given, then, when};
 use nunc_core::crdt::SyncState;
 use nunc_core::hlc::Hlc;
 use nunc_core::journal::{JournalEntry, JournalKind, MAX_TEXT_CHARS, validate_text, week_end};
+use nunc_core::sync_document::SyncDocument;
 
 use crate::DomainWorld;
 
@@ -60,6 +61,7 @@ fn week_ends(_world: &mut DomainWorld, day: String, sunday: String) {
     assert_eq!(week_end(date(&day)), date(&sunday));
 }
 
+#[given(expr = "device {word} writes the day note {string} for {word} at {int}")]
 #[when(expr = "device {word} writes the day note {string} for {word} at {int}")]
 fn write_day_note(world: &mut DomainWorld, device: String, text: String, day: String, at: i64) {
     let day = date(&day);
@@ -73,6 +75,7 @@ fn write_day_note(world: &mut DomainWorld, device: String, text: String, day: St
     );
 }
 
+#[given(expr = "device {word} writes the week note {string} for {word} at {int}")]
 #[when(expr = "device {word} writes the week note {string} for {word} at {int}")]
 fn write_week_note(world: &mut DomainWorld, device: String, text: String, day: String, at: i64) {
     let day = date(&day);
@@ -245,4 +248,23 @@ fn kind_text(_world: &mut DomainWorld, kind: String, stored: String) {
         other => panic!("unbekannte Art {other}"),
     };
     assert_eq!(kind.as_str(), stored);
+}
+
+#[when("the journal of device A is written to a sync file and read back")]
+fn file_roundtrip(world: &mut DomainWorld) {
+    let state = &mut world.journal;
+    let document = SyncDocument::from_state(
+        &state.a,
+        chrono::DateTime::from_timestamp_millis(0).expect("Zeit"),
+    );
+    let json = serde_json::to_string(&document).expect("json");
+    let read: SyncDocument = serde_json::from_str(&json).expect("lesen");
+    state.merged = read.into_state().expect("Zustand");
+}
+
+#[when("a version 6 sync file without a journal is read")]
+fn old_file(world: &mut DomainWorld) {
+    let json = serde_json::json!({ "schema_version": 6, "synced_at": "2026-03-01T12:00:00Z" });
+    let document: SyncDocument = serde_json::from_value(json).expect("lesen");
+    world.journal.merged = document.into_state().expect("Zustand");
 }
