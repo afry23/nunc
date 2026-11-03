@@ -3,7 +3,7 @@ use cucumber::{given, then, when};
 use nunc_core::crdt::SyncState;
 use nunc_core::model::{SyncFile, SyncTodo, WebDavAuth, WebDavConfig};
 use nunc_core::sync_document::SyncDocument;
-use nunc_sync::{WebDavClient, load_credentials, save_webdav, sync_webdav};
+use nunc_sync::{WebDavClient, load_credentials, save_webdav, sync_webdav_cached};
 
 use crate::SyncWorld;
 use crate::dav::{Auth, Dav, FILE_NAME, LEGACY_FILE_NAME};
@@ -255,6 +255,7 @@ fn go_fixture(world: &mut SyncWorld) {
 }
 
 #[given(expr = "the local todos {string}")]
+#[when(expr = "the local todos {string}")]
 fn local_todos(world: &mut SyncWorld, texts: String) {
     let conn = world.store.conn.lock().unwrap();
     for text in texts.split(',').map(str::trim) {
@@ -299,6 +300,7 @@ fn rename_local_todo(world: &mut SyncWorld, text: String, new_text: String) {
 /// Der lokale Stand als Datei auf dem Server, in der das Todo `text` ein anderes Gerät eine Stunde später
 /// abgehakt hat.
 #[given(expr = "another device has completed the todo {string} on the server")]
+#[when(expr = "another device has completed the todo {string} on the server")]
 fn other_device_completed(world: &mut SyncWorld, text: String) {
     let now = nunc_core::clock::Clock::now(&*world.clock);
     let mut state = {
@@ -554,7 +556,7 @@ async fn run_sync(world: &mut SyncWorld, user: &str, password: &str, auth: WebDa
         .as_ref()
         .and_then(|dav| dav.with(|state| state.files.get(&path).map(|(b, _)| b.clone())));
     world.outcome = Some(match WebDavClient::new(config, password.to_owned()) {
-        Ok(client) => sync_webdav(&client, &*world.store, &*world.clock).await,
+        Ok(client) => sync_webdav_cached(&client, &*world.store, &*world.clock, &world.cache).await,
         Err(error) => Err(error),
     });
 }
@@ -804,4 +806,44 @@ fn no_condition(world: &mut SyncWorld) {
 #[then(expr = "the server received {int} uploads")]
 fn upload_count(world: &mut SyncWorld, count: usize) {
     assert_eq!(uploads(world).len(), count);
+}
+
+#[given("the server does not answer conditional downloads with 304")]
+fn server_ignores_conditions(world: &mut SyncWorld) {
+    world.dav().with(|state| state.honor_if_none_match = false);
+}
+
+#[given("the server does not report the ETag after an upload")]
+fn server_silent_on_put(world: &mut SyncWorld) {
+    world.dav().with(|state| state.etag_on_put = false);
+}
+
+#[when("the local database is replaced by an empty one")]
+fn replace_database(world: &mut SyncWorld) {
+    let store = crate::TestStore::new(nunc_store::open_in_memory().unwrap());
+    // Der Zähler beginnt neu: eine ID überspringen, damit neue Todos nicht die `sync_id` der alten erhalten
+    store.next_id("skipped");
+    world.store = std::sync::Arc::new(store);
+}
+
+fn last_download_status(world: &SyncWorld) -> u16 {
+    world.dav().with(|state| {
+        state
+            .log
+            .iter()
+            .rev()
+            .find(|entry| entry.method == "GET" && entry.path.ends_with(FILE_NAME))
+            .expect("kein Download der Sync-Datei")
+            .status
+    })
+}
+
+#[then("the last download of the sync file was answered with 304")]
+fn last_download_not_modified(world: &mut SyncWorld) {
+    assert_eq!(last_download_status(world), 304);
+}
+
+#[then("the last download of the sync file transferred the whole file")]
+fn last_download_whole(world: &mut SyncWorld) {
+    assert_eq!(last_download_status(world), 200);
 }

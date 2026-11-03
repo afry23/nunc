@@ -32,6 +32,10 @@ pub struct DavState {
     pub files: BTreeMap<String, (Vec<u8>, u32)>,
     pub auth: Auth,
     pub etags: bool,
+    /// Beantwortet `If-None-Match` beim Laden mit `304`.
+    pub honor_if_none_match: bool,
+    /// Nennt den ETag im Ergebnis des Hochladens.
+    pub etag_on_put: bool,
     /// Antwortet auf jede Anfrage mit diesem Status.
     pub fail_all: Option<u16>,
     /// Inhalte, die ein anderes Gerät vor dem nächsten Upload schreibt (nacheinander verbraucht).
@@ -51,6 +55,8 @@ impl Default for DavState {
             files: BTreeMap::new(),
             auth: Auth::None,
             etags: true,
+            honor_if_none_match: true,
+            etag_on_put: true,
             fail_all: None,
             interfere: Vec::new(),
             interfere_always: false,
@@ -283,6 +289,13 @@ fn handle(state: &mut DavState, request: &Request, method: &str, path: &str) -> 
             }
         }
         "GET" => match state.files.get(path) {
+            Some(_)
+                if state.etags
+                    && state.honor_if_none_match
+                    && header(request, "if-none-match") == state.etag(path) =>
+            {
+                Reply::new(304)
+            }
             Some((body, _)) => {
                 let mut reply = Reply::new(200);
                 reply.body = body.clone();
@@ -324,5 +337,9 @@ fn put(state: &mut DavState, request: &Request, path: &str) -> Reply {
     }
     let created = existing.is_none();
     state.put(path, request.body.clone());
-    Reply::new(if created { 201 } else { 204 })
+    let reply = Reply::new(if created { 201 } else { 204 });
+    match state.etag(path) {
+        Some(etag) if state.etags && state.etag_on_put => reply.header("ETag", etag),
+        _ => reply,
+    }
 }

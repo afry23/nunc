@@ -389,6 +389,93 @@ Feature: WebDAV sync
     Then the sync fails with "Die Sync-Datei wurde auf dem Server gleichzeitig geändert"
     And the server received 3 uploads
   @integration @sync @US-Sync-02-WebDAV
+  Scenario: A second sync without changes transfers nothing
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    And I sync
+    Then the sync succeeds
+    And the last download of the sync file was answered with 304
+    And the server received 1 uploads
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A local change after a sync is uploaded
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    And I rename the local todo "Task" to "Task 2"
+    And I sync
+    Then the sync succeeds
+    And the last download of the sync file transferred the whole file
+    And the server received 2 uploads
+    And the sync file on the server has the todos "Task 2"
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A change on the server after a sync is downloaded
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the local todos "Buy milk"
+    When I sync
+    And another device has completed the todo "Buy milk" on the server
+    And I sync
+    Then the sync succeeds
+    And the last download of the sync file transferred the whole file
+    And the local todos are "x 2026-10-04 Buy milk"
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A server that ignores conditional downloads still works and uploads nothing new
+    Given a WebDAV server with the folder "/nunc/"
+    And the server does not answer conditional downloads with 304
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    And I sync
+    Then the sync succeeds
+    And the last download of the sync file transferred the whole file
+    And the server received 1 uploads
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A server that hides the new ETag after an upload is asked once more before it is skipped
+    Given a WebDAV server with the folder "/nunc/"
+    And the server does not report the ETag after an upload
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    And I sync
+    Then the last download of the sync file transferred the whole file
+    When I sync
+    Then the last download of the sync file was answered with 304
+    And the server received 1 uploads
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A replaced local database is merged and never overwrites the server file
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    And the local database is replaced by an empty one
+    And the local todos "Other"
+    And I sync
+    Then the sync succeeds
+    And the last download of the sync file transferred the whole file
+    And the sync file on the server has 2 todos and 0 sessions
+    And the local todos include "Task"
+
+  @integration @sync @US-Sync-02-WebDAV
+  Scenario: A known ETag is not trusted on another server
+    Given a WebDAV server with the folder "/nunc/"
+    And no database exists yet
+    And the local todos "Task"
+    When I sync
+    Given a WebDAV server with the folder "/nunc/" holding a sync file of format 9
+    When I sync
+    Then the sync succeeds
+    And the last download of the sync file transferred the whole file
+    And the sync file on the server has the todo "Task"
+
+  @integration @sync @US-Sync-02-WebDAV
   Scenario: Concurrent sync calls are serialized
     Given a sync coordinator whose runs take 80 ms
     When 3 syncs are requested at the same time

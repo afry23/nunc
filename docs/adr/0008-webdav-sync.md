@@ -14,7 +14,7 @@ bindend: Go-App und nunc müssen abwechselnd gegen denselben Server arbeiten kö
 
 **Aufteilung.** Die Merge-Regeln sind pur in `nunc-core::sync_merge` (M1). `nunc-store::sync_repo` liest den lokalen
 Stand als `SyncFile` und spielt fremde Änderungen **in einer Transaktion** ein (Go: zwei). `nunc-sync` besitzt den
-WebDAV-Client, den Sync-Lauf (`sync_webdav`) und die Steuerung (`SyncCoordinator`). Die Datenbank sieht `nunc-sync`
+WebDAV-Client, den Sync-Lauf (`sync_webdav_cached`, ADR 0030) und die Steuerung (`SyncCoordinator`). Die Datenbank sieht `nunc-sync`
 nur über das Trait `SyncStore`, damit nie eine Sperre über einen Netzwerkzugriff hinweg gehalten wird; `src-tauri`
 implementiert es über `Db`.
 
