@@ -1,0 +1,1 @@
+- Fix: the app no longer freezes when the timer is stopped from the mini timer window (macOS)
