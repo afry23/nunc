@@ -1,0 +1,4 @@
+- Close the day: write a day note and close the day in "Today"
+- Save a completed todo as an achievement from the todo list
+- Sync file is compressed and much smaller; nothing is transferred when nothing changed
+- Sync format 9: update all devices
