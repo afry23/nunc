@@ -14,6 +14,7 @@ import {
   mergeOrder,
   moveItem,
   outdentParent,
+  titleOf,
 } from "../lib/todos";
 import { useUiStore } from "./uiStore";
 
@@ -54,6 +55,8 @@ interface TodoStoreState {
   outdent: (id: number) => Promise<void>;
   remove: (id: number) => Promise<void>;
   toggle: (id: number) => Promise<void>;
+  /** Merkt das erledigte Todo als Erfolg des Tages `day` im Journal; zeigt eine Bestätigung. */
+  markAchievement: (id: number, day: string) => Promise<void>;
   /** Verschiebt ein Todo in der sichtbaren Reihenfolge um `delta` Plätze (nur bei manueller Sortierung). */
   move: (id: number, delta: number) => Promise<void>;
   /** Setzt die sichtbare Reihenfolge neu (Drag & Drop). */
@@ -202,6 +205,13 @@ export const useTodoStore = create<TodoStoreState>((set, get) => {
         if (!todo) return;
         await unwrap(commands.setTodoCompleted(id, !todo.completed));
         await reload();
+      }),
+    markAchievement: (id, day) =>
+      guard(async () => {
+        const todo = get().all.find((t) => t.id === id);
+        if (!todo) return;
+        await unwrap(commands.addAchievement(day, titleOf(todo)));
+        useUiStore.getState().notify(t("todos.achievement.saved"));
       }),
     move: (id, delta) =>
       guard(async () => {

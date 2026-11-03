@@ -521,6 +521,8 @@ export const en: Record<keyof typeof de, string> = {
   "today.postpone": "Move to tomorrow: {title}",
   "today.unplan": "Remove from plan: {title}",
   "todos.item.planToday": "Plan for today: {title}",
+  "todos.item.achievement": "Save as achievement: {title}",
+  "todos.achievement.saved": "Saved as an achievement in the review.",
   "settings.dayplan": "Day planner",
   "settings.dayplan.capacity": "Daily capacity",
   "settings.dayplan.capacityHint":

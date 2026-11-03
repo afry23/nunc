@@ -21,6 +21,7 @@ import {
   GripIcon,
   PencilIcon,
   PlusIcon,
+  StarIcon,
   SunIcon,
   TrashIcon,
 } from "./icons";
@@ -285,6 +286,18 @@ export function TodoItem({
               }
             >
               <SunIcon />
+            </IconButton>
+          )}
+          {todo.completed && (
+            <IconButton
+              label={t("todos.item.achievement", { title })}
+              onClick={() =>
+                void useTodoStore
+                  .getState()
+                  .markAchievement(todo.id, toIsoDate(new Date()))
+              }
+            >
+              <StarIcon />
             </IconButton>
           )}
           <IconButton

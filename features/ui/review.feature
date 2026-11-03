@@ -131,6 +131,26 @@ Feature: Review in the times view
     And I see "Noch keine Erfolge in diesem Zeitraum."
 
   @ui @US-RV02
+  Scenario: A completed todo is saved as an achievement from the list
+    Given the todos:
+      | rawText                   | completed |
+      | x 2026-03-03 Report +work | true      |
+      | Open task                 | false     |
+    When I open the app at "/todos"
+    And I click "Erledigte anzeigen (1)"
+    And I click "Als Erfolg merken: Report"
+    Then the backend received "add_achievement" with "text" equal to "Report"
+    And I see "Als Erfolg im Rückblick gemerkt."
+
+  @ui @US-RV02
+  Scenario: An open todo cannot be saved as an achievement
+    Given the todos:
+      | rawText   |
+      | Open task |
+    When I open the app at "/todos"
+    Then I do not see the button "Als Erfolg merken: Open task"
+
+  @ui @US-RV02
   Scenario: Adding an achievement needs a text
     When I open the app at "/times"
     And I click "Rückblick"

@@ -523,6 +523,8 @@ export const de = {
   "today.postpone": "Auf morgen verschieben: {title}",
   "today.unplan": "Vom Plan nehmen: {title}",
   "todos.item.planToday": "Für heute einplanen: {title}",
+  "todos.item.achievement": "Als Erfolg merken: {title}",
+  "todos.achievement.saved": "Als Erfolg im Rückblick gemerkt.",
   "settings.dayplan": "Tagesplaner",
   "settings.dayplan.capacity": "Tageskapazität",
   "settings.dayplan.capacityHint":
