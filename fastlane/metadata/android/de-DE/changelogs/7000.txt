@@ -1,0 +1,4 @@
+- Tagesabschluss: Tagesnotiz schreiben und den Tag in "Heute" abschließen
+- Erledigte Todos lassen sich in der Todo-Liste als Erfolg speichern
+- Sync-Datei komprimiert und deutlich kleiner; im Leerlauf wird nichts mehr übertragen
+- Sync-Format 9: alle Geräte aktualisieren
