@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DayPlan, Todo } from "./api";
-import { fillPercent, nextDay, planRows } from "./dayPlan";
+import { closeSummary, fillPercent, nextDay, planRows } from "./dayPlan";
 
 const todo = (id: number): Todo => ({
   id,
@@ -65,4 +65,20 @@ describe("fillPercent", () => {
   ])("%i of %i -> %i", (estimate, capacity, expected) =>
     expect(fillPercent(estimate, capacity)).toBe(expected),
   );
+});
+
+describe("closeSummary", () => {
+  it("counts planned entries apart from those with a due date", () => {
+    const base = plan([1, 2, 3, 4]);
+    const reasons = ["overdue", "due", "planned", "planned"] as const;
+    const mixed = {
+      ...base,
+      items: base.items.map((item, index) => ({
+        ...item,
+        reason: reasons[index],
+      })),
+    };
+    expect(closeSummary(mixed)).toEqual({ planned: 2, fixed: 2 });
+    expect(closeSummary(plan([]))).toEqual({ planned: 0, fixed: 0 });
+  });
 });

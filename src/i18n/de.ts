@@ -576,4 +576,18 @@ export const de = {
   "habits.form.minutes": "Minuten pro Tag",
   "habits.form.tag": "Tag (+projekt oder @kontext)",
   "habits.form.save": "Speichern",
+  "today.note": "Tagesnotiz",
+  "today.noteHint": "Die Notiz erscheint im Rückblick.",
+  "today.noteSave": "Notiz speichern",
+  "today.close": "Tag abschließen",
+  "today.close.title": "Tag abschließen?",
+  "today.close.summary": "{planned} eingeplante Aufgaben, {fixed} mit Frist.",
+  "today.close.action": "Eingeplante Aufgaben",
+  "today.close.postpone": "Auf morgen verschieben",
+  "today.close.unplan": "Vom Plan nehmen",
+  "today.close.keep": "Unverändert lassen",
+  "today.close.fixedHint":
+    "Aufgaben mit Frist bleiben auf dem Plan, bis sie erledigt sind oder ihre Frist sich ändert.",
+  "today.close.note": "Notiz zum Tag",
+  "today.close.confirm": "Abschließen",
 } as const satisfies Record<string, string>;

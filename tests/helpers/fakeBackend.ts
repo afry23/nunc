@@ -579,6 +579,22 @@ export function createFakeBackend(): FakeBackend {
     },
     save_export_to_file: () => fake.exportPath,
     get_day_plan: () => fake.dayPlan,
+    get_day_note: ({ date }: { date: string }) =>
+      fake.review.journal.dayNotes.find((item) => item.date === date)?.text ??
+      "",
+    close_day: ({ note }: { action: string; note: string | null }) => {
+      if (note !== null) {
+        const date = fake.dayPlan.day;
+        const others = fake.review.journal.dayNotes.filter(
+          (item) => item.date !== date,
+        );
+        fake.review.journal.dayNotes = note.trim()
+          ? [...others, { id: `day_note:${date}`, date, text: note.trim() }]
+          : others;
+      }
+      return fake.dayPlan.items.filter((item) => item.reason === "planned")
+        .length;
+    },
     get_habit_overview: () => fake.habits,
     save_habit: ({ id }: { id: string | null }) => id ?? "h-new",
     archive_habit: () => null,

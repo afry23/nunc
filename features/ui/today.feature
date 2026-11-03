@@ -147,3 +147,79 @@ Feature: Today
       """
       { "settings": { "dayCapacityMin": 180 } }
       """
+
+  @ui @US-TP02
+  Scenario: The day note is shown and can be saved
+    Given the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the review is:
+      """
+      { "journal": { "achievements": [], "weekNotes": [],
+        "dayNotes": [{ "id": "n", "date": "2026-03-04", "text": "Calm day" }] } }
+      """
+    When I open the app at "/today"
+    Then the field "Tagesnotiz" has the value "Calm day"
+    And the button "Notiz speichern" is disabled
+    When I enter "Calm day, good focus" into the field "Tagesnotiz"
+    And I click "Notiz speichern"
+    Then the backend received "save_journal_note" with:
+      """
+      { "kind": "day_note", "date": "2026-03-04", "text": "Calm day, good focus" }
+      """
+
+  @ui @US-TP02
+  Scenario: Closing the day moves the planned tasks to tomorrow by default
+    Given the todos:
+      | rawText                           |
+      | Einkaufen plan:2026-03-04         |
+      | Bericht due:2026-03-04            |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 0     |
+      | 2    | due     |          | 0     |
+    When I open the app at "/today"
+    And I click "Tag abschließen"
+    Then I see a dialog with the text "1 eingeplante Aufgaben, 1 mit Frist."
+    And I see a dialog with the text "Aufgaben mit Frist bleiben auf dem Plan"
+    When I click "Abschließen"
+    Then the backend received "close_day" with:
+      """
+      { "action": "postpone", "note": null }
+      """
+    And I do not see a dialog
+
+  @ui @US-TP02
+  Scenario: The planned tasks can be taken off the plan and a note can be added
+    Given the todos:
+      | rawText                    |
+      | Einkaufen plan:2026-03-04  |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 0     |
+    When I open the app at "/today"
+    And I click "Tag abschließen"
+    And I click "Vom Plan nehmen"
+    And I enter "Too much planned" into the field "Notiz zum Tag"
+    And I click "Abschließen"
+    Then the backend received "close_day" with:
+      """
+      { "action": "unplan", "note": "Too much planned" }
+      """
+
+  @ui @US-TP02
+  Scenario: Cancelling the dialog changes nothing
+    Given the day plan for 2026-03-04 has a capacity of 240 minutes
+    When I open the app at "/today"
+    And I click "Tag abschließen"
+    And I click "Abbrechen"
+    Then I do not see a dialog
+    And the backend did not receive "close_day"
+
+  @ui @US-TP02
+  Scenario: Without planned tasks the dialog offers only the note
+    Given the day plan for 2026-03-04 has a capacity of 240 minutes
+    When I open the app at "/today"
+    And I click "Tag abschließen"
+    Then I see a dialog with the text "0 eingeplante Aufgaben, 0 mit Frist."
+    And I do not see the button "Unverändert lassen"
