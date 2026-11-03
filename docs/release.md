@@ -140,11 +140,29 @@ In die Notes des ersten Release mit der Stopwatch aufnehmen:
 - Downgrade: Eine beim Wechsel auf eine ältere Version laufende Stoppuhr geht verloren (der gespeicherte Timer ist
   nicht lesbar); aufgezeichnete Sessions bleiben erhalten.
 
+## Release-Notes: Sync-Format 9 (ADR 0029, 0030)
+
+In die Notes des ersten Release mit der komprimierten Sync-Datei aufnehmen:
+
+- Die Sync-Datei `nunc-sync.v2.json` ist jetzt **komprimiert** (gzip, `schema_version` 9) und deutlich kleiner; der Sync
+  überträgt sie im Leerlauf gar nicht mehr, wenn sich nichts geändert hat. Das spart Datenvolumen und Akku, besonders
+  mobil und bei langer Nutzung.
+- **Alle Geräte aktualisieren.** Ältere Versionen können die neue Datei nicht lesen: Sie melden „Sync-Datei nicht lesbar“
+  und synchronisieren nicht mehr, bis sie aktualisiert sind. Sie überschreiben die Datei dabei nicht, es geht kein Stand
+  verloren; die Daten auf dem jeweiligen Gerät bleiben unverändert.
+- Der erste Sync nach dem Update liest die bisherige Datei (Format 2 bis 8) und schreibt sie einmalig im neuen Format.
+  Danach bleibt das Gerät mit einer älteren Version vom Sync ausgeschlossen, bis es aktualisiert ist.
+- Die Datei ist nicht mehr von Hand lesbar. Zum Ansehen: `gunzip -c nunc-sync.v2.json | less` (oder `zcat`).
+- WebDAV-Server müssen nichts Neues können. Unterstützt der Server `If-None-Match` (`304`), entfällt der Download im
+  Leerlauf; andernfalls läuft der Sync wie bisher vollständig.
+
 ## Checkliste vor dem Tag
 
 - [ ] `npm run docs:report` und alle Pflicht-Checks grün (CLAUDE.md)
 - [ ] `tests/nfr/measure-desktop.sh` ([docs/nfr.md](./nfr.md)) auf dem Release-Build
 - [ ] manuell: WebDAV-Sync zwischen zwei Geräten (CRDT, ADR 0016)
 - [ ] Release-Notes enthalten den Abschnitt zum Sync-Format (oben), solange es der erste Release mit ADR 0016 ist
+- [ ] Release-Notes enthalten den Abschnitt „Sync-Format 9“, solange es der erste Release mit ADR 0029 ist
+- [ ] manuell: WebDAV-Server antwortet auf `If-None-Match` mit `304` und nennt in der `PUT`-Antwort einen zum `GET` passenden ETag (ADR 0030)
 - [ ] manuell: Android- und iOS-Gerät (Timer im Hintergrund, App-Kill, Notification, Restore)
 - [ ] Android-Changelogs in `fastlane/metadata/android/*/changelogs/<versionCode>.txt` (ADR 0021)
