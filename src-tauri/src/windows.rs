@@ -18,6 +18,9 @@ pub const MINI: &str = "mini";
 const MINI_SIZE: (f64, f64) = (264.0, 310.0);
 const MINI_MIN_SIZE: (f64, f64) = (160.0, 230.0);
 
+/// Serialisiert die Erzeugung des Mini-Timers (siehe `show_mini`).
+static MINI_CREATE: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Route der Oberfläche für den Mini-Timer (M4-10).
 const MINI_ROUTE: &str = "mini";
 
@@ -79,6 +82,11 @@ fn open_mini<R: Runtime>(app: &AppHandle<R>) {
 
 /// Zeigt den Mini-Timer (wird beim ersten Mal erzeugt) und versteckt das Hauptfenster.
 fn show_mini<R: Runtime>(app: &AppHandle<R>) {
+    // Prüfen und Bauen als Einheit: mehrere Auslöser (Schließen, Minimieren, Tray) dürfen nicht gleichzeitig
+    // „Fenster fehlt“ sehen und je ein natives Fenster erzeugen.
+    let _guard = MINI_CREATE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let mini = match app.get_webview_window(MINI) {
         Some(window) => window,
         None => {
@@ -116,7 +124,11 @@ fn check_minimized_later<R: Runtime>(app: &AppHandle<R>) {
         let minimized = main_window(&app)
             .and_then(|window| window.is_minimized().ok())
             .unwrap_or(false);
-        if minimized && timer_active(&app) {
+        let mini_visible = app
+            .get_webview_window(MINI)
+            .and_then(|window| window.is_visible().ok())
+            .unwrap_or(false);
+        if minimized && !mini_visible && timer_active(&app) {
             show_mini(&app);
         }
     });
@@ -165,5 +177,27 @@ mod tests {
         assert!(wants_mini(TimerState::Running));
         assert!(wants_mini(TimerState::Paused));
         assert!(!wants_mini(TimerState::Idle));
+    }
+
+    #[test]
+    fn concurrent_requests_create_one_mini_timer() {
+        use tauri::test::{mock_builder, mock_context, noop_assets};
+
+        let app = mock_builder().build(mock_context(noop_assets())).unwrap();
+        let threads: Vec<_> = (0..8)
+            .map(|_| {
+                let handle = app.handle().clone();
+                std::thread::spawn(move || show_mini(&handle))
+            })
+            .collect();
+        for thread in threads {
+            thread.join().unwrap();
+        }
+        let minis = app
+            .webview_windows()
+            .keys()
+            .filter(|label| label.as_str() == MINI)
+            .count();
+        assert_eq!(minis, 1);
     }
 }
