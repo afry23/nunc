@@ -81,12 +81,14 @@ impl Harness {
                 plan::get_day_plan,
                 plan::plan_todo,
                 plan::set_todo_estimate,
+                plan::close_day,
                 habits::get_habit_overview,
                 habits::save_habit,
                 habits::archive_habit,
                 habits::delete_habit,
                 habits::set_habit_done,
                 review::get_review,
+                review::get_day_note,
                 review::save_journal_note,
                 review::add_achievement,
                 review::update_achievement,
@@ -1422,4 +1424,110 @@ fn the_review_lists_the_habits_with_their_quota() {
             "ratePercent": 100,
         }])
     );
+}
+
+#[test]
+fn closing_the_day_moves_the_planned_todos_and_saves_the_note() {
+    let h = Harness::new();
+    let today = local_day(at(9, 0));
+    let tomorrow = local_day(at(9, 0) + Duration::days(1));
+    let a = h.ok(
+        "add_todo",
+        json!({ "rawText": format!("Write plan:{today}") }),
+    );
+    let b = h.ok(
+        "add_todo",
+        json!({ "rawText": format!("Late due:{today}") }),
+    );
+    h.ok("add_todo", json!({ "rawText": "Backlog" }));
+
+    let moved = h.ok(
+        "close_day",
+        json!({ "action": "postpone", "note": "Calm day" }),
+    );
+    assert_eq!(moved, 1);
+    let todos = h.ok("get_todos", json!({}));
+    let text = |id: &Value| {
+        todos
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|todo| todo["id"] == id["id"])
+            .unwrap()["rawText"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    };
+    assert_eq!(text(&a), format!("Write plan:{tomorrow}"));
+    assert_eq!(text(&b), format!("Late due:{today}"));
+
+    assert_eq!(h.ok("get_day_note", json!({ "date": today })), "Calm day");
+    let review = h.ok("get_review", json!({ "from": today, "to": today }));
+    assert_eq!(review["journal"]["dayNotes"][0]["text"], "Calm day");
+    // morgen ist der Eintrag wieder auf dem Plan, heute nicht mehr
+    let plan = h.ok("get_day_plan", json!({}));
+    assert_eq!(plan["items"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn closing_the_day_can_unplan_or_keep_the_planned_todos() {
+    let h = Harness::new();
+    let today = local_day(at(9, 0));
+    h.ok(
+        "add_todo",
+        json!({ "rawText": format!("Write plan:{today}") }),
+    );
+
+    assert_eq!(
+        h.ok("close_day", json!({ "action": "keep", "note": null })),
+        0
+    );
+    assert_eq!(h.ok("get_day_note", json!({ "date": today })), "");
+    assert_eq!(
+        h.ok("get_day_plan", json!({}))["items"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+
+    assert_eq!(
+        h.ok("close_day", json!({ "action": "unplan", "note": null })),
+        1
+    );
+    let todos = h.ok("get_todos", json!({}));
+    assert_eq!(todos[0]["rawText"], "Write");
+    assert_eq!(h.ok("get_day_plan", json!({}))["items"], json!([]));
+}
+
+#[test]
+fn closing_the_day_changes_nothing_when_the_note_is_rejected() {
+    let h = Harness::new();
+    let today = local_day(at(9, 0));
+    h.ok(
+        "add_todo",
+        json!({ "rawText": format!("Write plan:{today}") }),
+    );
+    let too_long = "x".repeat(4001);
+
+    assert_eq!(
+        h.err_code("close_day", json!({ "action": "unplan", "note": too_long })),
+        "journal_text_too_long"
+    );
+    let todos = h.ok("get_todos", json!({}));
+    assert_eq!(todos[0]["rawText"], format!("Write plan:{today}"));
+    assert_eq!(h.ok("get_day_note", json!({ "date": today })), "");
+}
+
+#[test]
+fn an_empty_note_deletes_the_day_note() {
+    let h = Harness::new();
+    let today = local_day(at(9, 0));
+    h.ok(
+        "save_journal_note",
+        json!({ "kind": "day_note", "date": today, "text": "Old" }),
+    );
+    assert_eq!(h.ok("get_day_note", json!({ "date": today })), "Old");
+    h.ok("close_day", json!({ "action": "keep", "note": "  " }));
+    assert_eq!(h.ok("get_day_note", json!({ "date": today })), "");
 }

@@ -4,8 +4,8 @@ use chrono::{NaiveDate, TimeZone, Utc};
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when};
 use nunc_core::day_plan::{
-    DayPlan, PlanError, PlanFields, PlanKey, PlanReason, apply_plan, day_plan, plan_fields,
-    with_field,
+    CloseAction, DayPlan, PlanError, PlanFields, PlanKey, PlanReason, apply_plan, closing_changes,
+    day_plan, plan_fields, with_field,
 };
 use nunc_core::model::{Session, SessionStatus, SessionType, TimerMode, Todo};
 
@@ -21,6 +21,7 @@ pub struct State {
     sessions: Vec<Session>,
     plan: Option<DayPlan>,
     line: Option<Result<String, PlanError>>,
+    changes: Vec<(i32, Option<NaiveDate>)>,
 }
 
 fn date(text: &str) -> Option<NaiveDate> {
@@ -214,4 +215,29 @@ fn line_reads(world: &mut DomainWorld, expected: String) {
 fn rejected(world: &mut DomainWorld) {
     let line = world.day_plan.line.clone().expect("nichts angewendet");
     assert_eq!(line, Err(PlanError::InvalidEstimate));
+}
+
+#[when(expr = "I close the day with the action {string}")]
+fn close(world: &mut DomainWorld, action: String) {
+    let action = match action.as_str() {
+        "postpone" => CloseAction::Postpone,
+        "unplan" => CloseAction::Unplan,
+        "keep" => CloseAction::Keep,
+        other => panic!("unbekannte Aktion {other}"),
+    };
+    world.day_plan.changes = closing_changes(plan(world), action);
+}
+
+#[then(expr = "the closing changes are {string}")]
+fn closing(world: &mut DomainWorld, expected: String) {
+    let actual: Vec<String> = world
+        .day_plan
+        .changes
+        .iter()
+        .map(|(id, day)| {
+            let day = day.map_or_else(|| "none".to_owned(), |day| day.to_string());
+            format!("{id} -> {day}")
+        })
+        .collect();
+    assert_eq!(actual.join(", "), expected);
 }
