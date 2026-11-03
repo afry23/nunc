@@ -130,14 +130,35 @@ Feature: CRDT sync
     Then the state is unchanged
 
   @domain @REQ-SYNC
+  Scenario: The sync file is compressed
+    Given a todo "a" on both devices
+    And device A completes the todo
+    When the state of device A is written to a sync file and read back
+    Then the written file is compressed and smaller than the plain JSON
+
+  @domain @REQ-SYNC
+  Scenario: A plain JSON sync file of an older version is still read
+    Given a todo "a" on both devices
+    And device A completes the todo
+    When the state of device A is written as plain indented JSON and read back
+    Then the state is unchanged
+
+  @domain @REQ-SYNC
+  Scenario: Stamps written as objects by an older version are still read
+    Given a todo "a" on both devices
+    And device A completes the todo
+    When the state of device A is written with stamps as objects and read back
+    Then the state is unchanged
+
+  @domain @REQ-SYNC
   Scenario Outline: A sync file of another format is refused
     When a sync file of format <format> is read
-    Then reading fails with "Die Sync-Datei hat das Format <format>, diese Version versteht 2 bis 8. Bitte nunc aktualisieren."
+    Then reading fails with "Die Sync-Datei hat das Format <format>, diese Version versteht 2 bis 9. Bitte nunc aktualisieren."
 
     Examples:
       | format |
       | 1      |
-      | 9      |
+      | 10     |
 
   @domain @REQ-SYNC
   Scenario: A session is the same however its start is written

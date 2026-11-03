@@ -36,6 +36,10 @@ pub struct State {
     session_id: String,
     read_states: Vec<SyncState>,
     written_version: Option<u32>,
+    /// Bytes einer geschriebenen Sync-Datei (gzip oder Klartext)
+    file_bytes: Option<Vec<u8>>,
+    /// Länge desselben Dokuments als eingerücktes Klartext-JSON
+    plain_len: Option<usize>,
 }
 
 fn device_id(device: &str) -> String {
@@ -527,8 +531,64 @@ fn document_roundtrip(world: &mut DomainWorld) {
         &state.a,
         chrono::DateTime::from_timestamp_millis(NOW_MS).unwrap(),
     );
-    let json = serde_json::to_string_pretty(&document).unwrap();
-    let read: SyncDocument = serde_json::from_str(&json).unwrap();
+    let bytes = document.encode().unwrap();
+    let read = SyncDocument::decode(&bytes).unwrap();
+    state.plain_len = Some(serde_json::to_string_pretty(&document).unwrap().len());
+    state.file_bytes = Some(bytes);
+    state.document_state = Some(read.into_state().unwrap());
+}
+
+#[then("the written file is compressed and smaller than the plain JSON")]
+fn file_is_compressed(world: &mut DomainWorld) {
+    let bytes = world.crdt.file_bytes.as_ref().expect("Datei geschrieben");
+    assert_eq!(bytes[..2], [0x1f, 0x8b]);
+    assert!(bytes.len() < world.crdt.plain_len.expect("Klartext gemessen"));
+}
+
+#[when("the state of device A is written as plain indented JSON and read back")]
+fn plain_roundtrip(world: &mut DomainWorld) {
+    let state = &mut world.crdt;
+    let document = SyncDocument::from_state(
+        &state.a,
+        chrono::DateTime::from_timestamp_millis(NOW_MS).unwrap(),
+    );
+    let json = serde_json::to_vec_pretty(&document).unwrap();
+    let read = SyncDocument::decode(&json).unwrap();
+    state.document_state = Some(read.into_state().unwrap());
+}
+
+#[when("the state of device A is written with stamps as objects and read back")]
+fn object_stamp_roundtrip(world: &mut DomainWorld) {
+    let state = &mut world.crdt;
+    let document = SyncDocument::from_state(
+        &state.a,
+        chrono::DateTime::from_timestamp_millis(NOW_MS).unwrap(),
+    );
+    fn expand(value: &mut serde_json::Value) {
+        use serde_json::Value;
+        match value {
+            Value::Object(map) => map.values_mut().for_each(expand),
+            Value::Array(items) => {
+                if let [
+                    Value::Number(wall),
+                    Value::Number(counter),
+                    Value::String(device),
+                ] = items.as_slice()
+                {
+                    *value = serde_json::json!({
+                        "wall_ms": wall, "counter": counter, "device_id": device
+                    });
+                } else {
+                    items.iter_mut().for_each(expand);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut json = serde_json::to_value(&document).unwrap();
+    expand(&mut json);
+    assert!(json.to_string().contains("\"wall_ms\""));
+    let read = SyncDocument::decode(&serde_json::to_vec(&json).unwrap()).unwrap();
     state.document_state = Some(read.into_state().unwrap());
 }
 

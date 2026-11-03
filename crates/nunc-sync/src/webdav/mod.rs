@@ -291,7 +291,7 @@ impl WebDavClient {
         let Some((bytes, etag)) = self.fetch(&self.file_url()).await? else {
             return Ok(None);
         };
-        let file = serde_json::from_slice(&bytes)
+        let file = SyncDocument::decode(&bytes)
             .map_err(|error| SyncError::InvalidFile(error.to_string()))?;
         Ok(Some(Remote { file, etag }))
     }
@@ -306,15 +306,16 @@ impl WebDavClient {
             .map_err(|error| SyncError::InvalidFile(error.to_string()))
     }
 
-    /// Schreibt die Sync-Datei (eingerückt, damit sie sich lesen und vergleichen lässt).
+    /// Schreibt die Sync-Datei (kompaktes JSON, gzip-komprimiert, ADR 0029).
     pub async fn upload(
         &self,
         file: &SyncDocument,
         precondition: &Precondition,
     ) -> Result<(), SyncError> {
-        let body = serde_json::to_vec_pretty(file)
+        let body = file
+            .encode()
             .map_err(|error| SyncError::InvalidFile(error.to_string()))?;
-        let mut headers = vec![("Content-Type", "application/json".to_owned())];
+        let mut headers = vec![("Content-Type", "application/gzip".to_owned())];
         match precondition {
             Precondition::Match(etag) => headers.push(("If-Match", etag.clone())),
             Precondition::NoneExists => headers.push(("If-None-Match", "*".to_owned())),
