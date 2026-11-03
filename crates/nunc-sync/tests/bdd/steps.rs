@@ -212,7 +212,7 @@ fn file_with_extra_todo(world: &SyncWorld, text: &str) -> Vec<u8> {
 
 /// Die Datei (Format v2) plus ein Todo eines weiteren Geräts.
 pub fn with_extra_todo(current: &[u8], text: &str) -> Vec<u8> {
-    let document: SyncDocument = serde_json::from_slice(current).unwrap();
+    let document = SyncDocument::decode(current).unwrap();
     let synced_at = document.synced_at;
     let state = document.into_state().unwrap();
     let id = format!("c-{}", state.todos.len() + 1);
@@ -693,7 +693,7 @@ fn server_file(world: &SyncWorld) -> SyncDocument {
         .dav()
         .with(|state| state.files.get(&path).map(|(body, _)| body.clone()))
         .expect("keine Sync-Datei auf dem Server");
-    serde_json::from_slice(&bytes).expect("Sync-Datei auf dem Server")
+    SyncDocument::decode(&bytes).expect("Sync-Datei auf dem Server")
 }
 
 #[then(expr = "the sync file on the server has the todos {string}")]
@@ -728,6 +728,16 @@ fn server_counts(world: &mut SyncWorld, todos: usize, sessions: usize) {
 #[then(expr = "the sync file on the server has format {int}")]
 fn server_format(world: &mut SyncWorld, format: u32) {
     assert_eq!(server_file(world).schema_version, format);
+}
+
+#[then("the sync file on the server is compressed")]
+fn server_compressed(world: &mut SyncWorld) {
+    let path = format!("{}{FILE_NAME}", world.remote_path);
+    let bytes = world
+        .dav()
+        .with(|state| state.files.get(&path).map(|(body, _)| body.clone()))
+        .expect("keine Sync-Datei auf dem Server");
+    assert_eq!(bytes[..2], [0x1f, 0x8b]);
 }
 
 #[then("the sync file on the server is unchanged")]

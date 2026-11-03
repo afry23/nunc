@@ -5,8 +5,12 @@
 //! (wie die Bestandsdaten in Migration 007), die Reihenfolge wird aus `position` abgeleitet.
 
 use std::collections::BTreeMap;
+use std::io::{Read, Write};
 
 use chrono::{DateTime, NaiveDate, Utc};
+use flate2::Compression;
+use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
 use serde::{Deserialize, Serialize};
 
 use crate::crdt::{Register, SessionCrdt, SyncState, TodoCrdt, session_key};
@@ -16,8 +20,8 @@ use crate::journal::JournalEntry;
 use crate::model::{SyncFile, SyncSession, SyncTodo};
 use crate::todotxt::parse_line;
 
-/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`, ADR 0023: Projekte/Kontexte der Session, ADR 0026: Journal, ADR 0028: Gewohnheiten).
-pub const SCHEMA_VERSION: u32 = 8;
+/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`, ADR 0023: Projekte/Kontexte der Session, ADR 0026: Journal, ADR 0028: Gewohnheiten, ADR 0029: kompakte Stempel und gzip).
+pub const SCHEMA_VERSION: u32 = 9;
 
 /// Älteste Version, die noch gelesen wird: Version 2 kennt Sessions nur als Rohdaten ([`SyncSession`]).
 pub const MIN_SCHEMA_VERSION: u32 = 2;
@@ -31,7 +35,15 @@ pub enum DocumentError {
         "Die Sync-Datei hat das Format {found}, diese Version versteht {MIN_SCHEMA_VERSION} bis {SCHEMA_VERSION}. Bitte nunc aktualisieren."
     )]
     UnsupportedVersion { found: u32 },
+    #[error("Die Sync-Datei ist beschädigt: {0}")]
+    Invalid(String),
 }
+
+/// Die ersten Bytes jeder gzip-Datei.
+const GZIP_MAGIC: [u8; 2] = [0x1f, 0x8b];
+
+/// Obergrenze der entpackten Größe (Schutz vor Zip-Bomben auf dem Server).
+const MAX_DECODED_BYTES: u64 = 512 * 1024 * 1024;
 
 /// Eine Session in der Datei: Version 3 schreibt [`SessionCrdt`], Version 2 die Rohdaten.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -77,6 +89,35 @@ impl SyncDocument {
             habits: state.habits.values().cloned().collect(),
             habit_logs: state.habit_logs.values().cloned().collect(),
         }
+    }
+
+    /// Die Bytes für den Server: kompaktes JSON, gzip-komprimiert (ADR 0029).
+    pub fn encode(&self) -> Result<Vec<u8>, DocumentError> {
+        let json =
+            serde_json::to_vec(self).map_err(|error| DocumentError::Invalid(error.to_string()))?;
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder
+            .write_all(&json)
+            .and_then(|()| encoder.finish())
+            .map_err(|error| DocumentError::Invalid(error.to_string()))
+    }
+
+    /// Liest die Bytes vom Server: gzip (ab Format 9) oder unkomprimiertes JSON (Format 2 bis 8).
+    pub fn decode(bytes: &[u8]) -> Result<Self, DocumentError> {
+        if bytes.starts_with(&GZIP_MAGIC) {
+            let mut json = Vec::new();
+            GzDecoder::new(bytes)
+                .take(MAX_DECODED_BYTES + 1)
+                .read_to_end(&mut json)
+                .map_err(|error| DocumentError::Invalid(error.to_string()))?;
+            if json.len() as u64 > MAX_DECODED_BYTES {
+                return Err(DocumentError::Invalid("entpackt zu groß".to_owned()));
+            }
+            serde_json::from_slice(&json)
+        } else {
+            serde_json::from_slice(bytes)
+        }
+        .map_err(|error| DocumentError::Invalid(error.to_string()))
     }
 
     /// Der Zustand aus der Datei (Version 2 und 3); eine andere Version ist ein Fehler (neuere Dateien nicht raten).

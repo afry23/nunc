@@ -11,6 +11,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 chrono.workspace = true
 specta.workspace = true
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
 
 [dev-dependencies]
 proptest.workspace = true
