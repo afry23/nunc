@@ -427,3 +427,56 @@ fn a_fast_pomodoro_runs_for_the_given_seconds_and_is_booked() {
     let sessions = h.sessions();
     assert_eq!(sessions.last().unwrap().status, SessionStatus::Completed);
 }
+
+/// Meldet beim Senden, ob der Timer-Lock frei war (Listener wie der Tray dürfen nie unter dem Lock laufen).
+struct LockProbeSink {
+    service: std::sync::OnceLock<Arc<TimerService>>,
+    free: Mutex<Vec<bool>>,
+}
+
+impl EventSink for LockProbeSink {
+    fn emit(&self, _event: &str, _payload: serde_json::Value) {
+        let free = self.service.get().is_none_or(|s| s.timer_is_unlocked());
+        self.free.lock().unwrap().push(free);
+    }
+}
+
+#[test]
+fn events_leave_after_the_timer_lock_is_released() {
+    let db = Arc::new(Db::new(open_in_memory().unwrap()));
+    let clock = Arc::new(ManualClock::new(start_time()));
+    let probe = Arc::new(LockProbeSink {
+        service: std::sync::OnceLock::new(),
+        free: Mutex::new(Vec::new()),
+    });
+    let service = Arc::new(
+        TimerService::new(
+            db,
+            clock.clone(),
+            probe.clone(),
+            Arc::new(RecordingNotifier::new(false)),
+            "dev-1".to_owned(),
+        )
+        .unwrap(),
+    );
+    probe.service.set(service.clone()).ok();
+
+    service.start(TimerMode::Pomodoro, None).unwrap();
+    clock.advance(Duration::minutes(1));
+    service.tick().unwrap();
+    service.snapshot().unwrap();
+    service.pause().unwrap();
+    service.resume().unwrap();
+    service.stop().unwrap(); // sendet timer:stopped und timer:tick
+    service.start(TimerMode::Pomodoro, None).unwrap();
+    clock.advance(Duration::minutes(30));
+    service.tick().unwrap(); // Ende: timer:complete
+    service.recover().unwrap();
+
+    let free = probe.free.lock().unwrap();
+    assert!(free.len() >= 8, "zu wenige Ereignisse: {}", free.len());
+    assert!(
+        free.iter().all(|f| *f),
+        "Ereignis unter Timer-Lock: {free:?}"
+    );
+}

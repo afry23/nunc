@@ -18,7 +18,7 @@ use nunc_store::{commit_finish, load_settings, load_timer, save_timer};
 
 use crate::db::Db;
 use crate::error::AppError;
-use crate::events::{self, FinishPayload, TimerComplete, TimerStopped, TimerTick};
+use crate::events::{FinishPayload, TimerComplete, TimerStopped, TimerTick};
 
 /// Kennung der geplanten Benachrichtigung zum Timer-Ende (es gibt höchstens eine).
 pub const NOTIFICATION_ID: i32 = 1;
@@ -75,6 +75,22 @@ impl TimerService {
         Ok(self.timer.lock()?)
     }
 
+    /// Führt `action` mit gesperrtem Timer aus. Ereignisse und Session-Hook laufen erst **nach** dem Freigeben
+    /// des Locks: Listener (z. B. Tray) warten unter macOS auf den Main-Thread, der selbst am Timer-Lock hängen
+    /// kann (Deadlock beim Stoppen).
+    fn locked<T>(
+        &self,
+        action: impl FnOnce(&mut Timer, &mut Outbox) -> Result<T, AppError>,
+    ) -> Result<T, AppError> {
+        let mut outbox = Outbox::default();
+        let result = match self.lock() {
+            Ok(mut timer) => action(&mut timer, &mut outbox),
+            Err(error) => Err(error),
+        };
+        outbox.send(&*self.events, self.on_session_saved.as_deref());
+        result
+    }
+
     fn settings(&self) -> Result<Settings, AppError> {
         self.db.with(|conn| load_settings(conn))
     }
@@ -83,43 +99,46 @@ impl TimerService {
     /// rechnerischen Ende verbucht (ohne Sofort-Benachrichtigung – der Nutzer hat die Zeit nicht live erlebt),
     /// ein laufender bekommt seine Benachrichtigung neu. Sendet immer einen `timer:tick`.
     pub fn recover(&self) -> Result<TimerSnapshot, AppError> {
-        let mut timer = self.lock()?;
-        let now = self.clock.now();
-        let settings = self.settings()?;
-        self.settle(&mut timer, now, &settings, false)?;
-        self.sync_notification(&timer, &settings);
-        let snapshot = timer.snapshot(now);
-        events::emit(&*self.events, &TimerTick(snapshot.clone()));
-        Ok(snapshot)
+        self.locked(|timer, outbox| {
+            let now = self.clock.now();
+            let settings = self.settings()?;
+            self.settle(timer, now, &settings, false, outbox)?;
+            self.sync_notification(timer, &settings);
+            let snapshot = timer.snapshot(now);
+            outbox.push(&TimerTick(snapshot.clone()));
+            Ok(snapshot)
+        })
     }
 
     /// Aktueller Stand (verbucht vorher einen inzwischen abgelaufenen Countdown), z. B. beim Zurückkehren aus
     /// dem Hintergrund oder beim Öffnen der Oberfläche.
     pub fn snapshot(&self) -> Result<TimerSnapshot, AppError> {
-        let mut timer = self.lock()?;
-        let now = self.clock.now();
-        let settings = self.settings()?;
-        if self.settle(&mut timer, now, &settings, true)? {
-            self.sync_notification(&timer, &settings);
-            events::emit(&*self.events, &TimerTick(timer.snapshot(now)));
-        }
-        Ok(timer.snapshot(now))
+        self.locked(|timer, outbox| {
+            let now = self.clock.now();
+            let settings = self.settings()?;
+            if self.settle(timer, now, &settings, true, outbox)? {
+                self.sync_notification(timer, &settings);
+                outbox.push(&TimerTick(timer.snapshot(now)));
+            }
+            Ok(timer.snapshot(now))
+        })
     }
 
     /// Sekundentakt der Anzeige: verbucht ein Ende und sendet `timer:tick`, solange der Timer läuft.
     pub fn tick(&self) -> Result<(), AppError> {
-        let mut timer = self.lock()?;
-        let now = self.clock.now();
-        let settings = self.settings()?;
-        let concluded = self.settle(&mut timer, now, &settings, true)?;
-        if concluded {
-            self.sync_notification(&timer, &settings);
-        }
-        let snapshot = timer.snapshot(now);
-        if concluded || snapshot.state == TimerState::Running {
-            events::emit(&*self.events, &TimerTick(snapshot));
-        }
-        Ok(())
+        self.locked(|timer, outbox| {
+            let now = self.clock.now();
+            let settings = self.settings()?;
+            let concluded = self.settle(timer, now, &settings, true, outbox)?;
+            if concluded {
+                self.sync_notification(timer, &settings);
+            }
+            let snapshot = timer.snapshot(now);
+            if concluded || snapshot.state == TimerState::Running {
+                outbox.push(&TimerTick(snapshot));
+            }
+            Ok(())
+        })
     }
 
     pub fn suggested_break(&self) -> Result<Option<BreakSuggestion>, AppError> {
@@ -164,23 +183,24 @@ impl TimerService {
 
     /// Beendet die Session vorzeitig und verbucht sie.
     pub fn stop(&self) -> Result<TimerSnapshot, AppError> {
-        let mut timer = self.lock()?;
-        let now = self.clock.now();
-        let settings = self.settings()?;
-        self.settle(&mut timer, now, &settings, true)?;
-        let before = timer.clone();
-        let result = timer
-            .stop(now, &settings)
-            .map_err(AppError::from)
-            .and_then(|finish| self.conclude(&mut timer, finish, now, &settings, false));
-        if let Err(error) = result {
-            *timer = before;
-            return Err(error);
-        }
-        self.sync_notification(&timer, &settings);
-        let snapshot = timer.snapshot(now);
-        events::emit(&*self.events, &TimerTick(snapshot.clone()));
-        Ok(snapshot)
+        self.locked(|timer, outbox| {
+            let now = self.clock.now();
+            let settings = self.settings()?;
+            self.settle(timer, now, &settings, true, outbox)?;
+            let before = timer.clone();
+            let result = timer
+                .stop(now, &settings)
+                .map_err(AppError::from)
+                .and_then(|finish| self.conclude(timer, finish, now, &settings, false, outbox));
+            if let Err(error) = result {
+                *timer = before;
+                return Err(error);
+            }
+            self.sync_notification(timer, &settings);
+            let snapshot = timer.snapshot(now);
+            outbox.push(&TimerTick(snapshot.clone()));
+            Ok(snapshot)
+        })
     }
 
     /// Führt `action` aus, solange der Timer gesperrt ist (Datenbank-Austausch beim Restore), und lädt den
@@ -203,22 +223,23 @@ impl TimerService {
         &self,
         action: impl FnOnce(&mut Timer, DateTime<Utc>, &Settings) -> Result<(), TimerError>,
     ) -> Result<TimerSnapshot, AppError> {
-        let mut timer = self.lock()?;
-        let now = self.clock.now();
-        let settings = self.settings()?;
-        self.settle(&mut timer, now, &settings, true)?;
-        let before = timer.clone();
-        let persisted = action(&mut timer, now, &settings)
-            .map_err(AppError::from)
-            .and_then(|()| self.db.with(|conn| save_timer(conn, &timer, now)));
-        if let Err(error) = persisted {
-            *timer = before;
-            return Err(error);
-        }
-        self.sync_notification(&timer, &settings);
-        let snapshot = timer.snapshot(now);
-        events::emit(&*self.events, &TimerTick(snapshot.clone()));
-        Ok(snapshot)
+        self.locked(|timer, outbox| {
+            let now = self.clock.now();
+            let settings = self.settings()?;
+            self.settle(timer, now, &settings, true, outbox)?;
+            let before = timer.clone();
+            let persisted = action(timer, now, &settings)
+                .map_err(AppError::from)
+                .and_then(|()| self.db.with(|conn| save_timer(conn, timer, now)));
+            if let Err(error) = persisted {
+                *timer = before;
+                return Err(error);
+            }
+            self.sync_notification(timer, &settings);
+            let snapshot = timer.snapshot(now);
+            outbox.push(&TimerTick(snapshot.clone()));
+            Ok(snapshot)
+        })
     }
 
     /// Verbucht einen abgelaufenen Countdown. `true`, wenn eine Session endete.
@@ -228,12 +249,13 @@ impl TimerService {
         now: DateTime<Utc>,
         settings: &Settings,
         notify: bool,
+        outbox: &mut Outbox,
     ) -> Result<bool, AppError> {
         let before = timer.clone();
         let Some(finish) = timer.tick(now, settings) else {
             return Ok(false);
         };
-        if let Err(error) = self.conclude(timer, finish, now, settings, notify) {
+        if let Err(error) = self.conclude(timer, finish, now, settings, notify, outbox) {
             *timer = before;
             return Err(error);
         }
@@ -250,20 +272,19 @@ impl TimerService {
         now: DateTime<Utc>,
         settings: &Settings,
         notify: bool,
+        outbox: &mut Outbox,
     ) -> Result<(), AppError> {
         let session = self
             .db
             .with(|conn| commit_finish(conn, &finish, &self.device_id, timer, now))?;
-        if let Some(hook) = &self.on_session_saved {
-            hook();
-        }
+        outbox.session_saved = true;
         let payload = FinishPayload {
             session,
             suggested_break: finish.suggested_break,
         };
         match finish.kind {
-            FinishKind::Completed => events::emit(&*self.events, &TimerComplete(payload)),
-            FinishKind::Stopped => events::emit(&*self.events, &TimerStopped(payload)),
+            FinishKind::Completed => outbox.push(&TimerComplete(payload)),
+            FinishKind::Stopped => outbox.push(&TimerStopped(payload)),
         }
 
         // Ohne geplante Benachrichtigung (Desktop) meldet der Prozess das Ende selbst.
@@ -315,6 +336,33 @@ impl TimerService {
     }
 }
 
+/// Ereignisse und Hook-Aufruf, die erst nach dem Freigeben des Timer-Locks hinausgehen (Reihenfolge bleibt).
+#[derive(Default)]
+struct Outbox {
+    events: Vec<(&'static str, serde_json::Value)>,
+    session_saved: bool,
+}
+
+impl Outbox {
+    fn push<E: tauri_specta::Event + serde::Serialize>(&mut self, event: &E) {
+        match serde_json::to_value(event) {
+            Ok(payload) => self.events.push((E::NAME, payload)),
+            Err(error) => log::error!("Ereignis {} nicht serialisierbar: {error}", E::NAME),
+        }
+    }
+
+    fn send(self, sink: &dyn EventSink, hook: Option<&(dyn Fn() + Send + Sync)>) {
+        if self.session_saved
+            && let Some(hook) = hook
+        {
+            hook();
+        }
+        for (name, payload) in self.events {
+            sink.emit(name, payload);
+        }
+    }
+}
+
 /// Titel und Text der Benachrichtigung zum Ende einer Session.
 fn end_message(session_type: SessionType) -> (&'static str, &'static str) {
     match session_type {
@@ -322,6 +370,14 @@ fn end_message(session_type: SessionType) -> (&'static str, &'static str) {
         SessionType::ShortBreak | SessionType::LongBreak => {
             ("Pause vorbei", "Weiter geht's mit der nächsten Runde.")
         }
+    }
+}
+
+#[cfg(test)]
+impl TimerService {
+    /// Test: ist der Timer-Lock gerade frei?
+    fn timer_is_unlocked(&self) -> bool {
+        self.timer.try_lock().is_ok()
     }
 }
 
