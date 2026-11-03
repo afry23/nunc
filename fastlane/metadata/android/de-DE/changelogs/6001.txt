@@ -1,0 +1,1 @@
+- Fix: Die App hängt nicht mehr, wenn der Timer im Mini-Timer-Fenster gestoppt wird (macOS)
