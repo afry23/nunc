@@ -42,8 +42,8 @@ pub enum DocumentError {
 /// Die ersten Bytes jeder gzip-Datei.
 const GZIP_MAGIC: [u8; 2] = [0x1f, 0x8b];
 
-/// Obergrenze der entpackten Größe (Schutz vor Zip-Bomben auf dem Server).
-const MAX_DECODED_BYTES: u64 = 512 * 1024 * 1024;
+/// Obergrenze der entpackten Größe in Bytes (512 MiB; Schutz vor Zip-Bomben auf dem Server).
+const MAX_DECODED_BYTES: usize = 536_870_912;
 
 /// Eine Session in der Datei: Version 3 schreibt [`SessionCrdt`], Version 2 die Rohdaten.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -104,13 +104,18 @@ impl SyncDocument {
 
     /// Liest die Bytes vom Server: gzip (ab Format 9) oder unkomprimiertes JSON (Format 2 bis 8).
     pub fn decode(bytes: &[u8]) -> Result<Self, DocumentError> {
+        Self::decode_limited(bytes, MAX_DECODED_BYTES)
+    }
+
+    /// Wie [`decode`](Self::decode) mit einer Obergrenze für die entpackte Größe (genau `max_decoded` Bytes sind erlaubt).
+    fn decode_limited(bytes: &[u8], max_decoded: usize) -> Result<Self, DocumentError> {
         if bytes.starts_with(&GZIP_MAGIC) {
             let mut json = Vec::new();
             GzDecoder::new(bytes)
-                .take(MAX_DECODED_BYTES + 1)
+                .take(max_decoded as u64 + 1)
                 .read_to_end(&mut json)
                 .map_err(|error| DocumentError::Invalid(error.to_string()))?;
-            if json.len() as u64 > MAX_DECODED_BYTES {
+            if json.len() > max_decoded {
                 return Err(DocumentError::Invalid("entpackt zu groß".to_owned()));
             }
             serde_json::from_slice(&json)
@@ -247,5 +252,34 @@ impl SyncState {
                 .collect(),
             ..Self::default()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn document() -> SyncDocument {
+        SyncDocument::from_state(&SyncState::default(), DateTime::UNIX_EPOCH)
+    }
+
+    #[test]
+    fn the_limit_is_512_mib() {
+        assert_eq!(MAX_DECODED_BYTES, 512 * 1024 * 1024);
+    }
+
+    #[test]
+    fn a_file_exactly_at_the_limit_is_read_and_one_byte_more_is_refused() {
+        let document = document();
+        let bytes = document.encode().unwrap();
+        let size = serde_json::to_vec(&document).unwrap().len();
+        assert_eq!(
+            SyncDocument::decode_limited(&bytes, size).unwrap(),
+            document
+        );
+        assert_eq!(
+            SyncDocument::decode_limited(&bytes, size - 1),
+            Err(DocumentError::Invalid("entpackt zu groß".to_owned()))
+        );
     }
 }
