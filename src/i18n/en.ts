@@ -573,4 +573,18 @@ export const en: Record<keyof typeof de, string> = {
   "habits.form.minutes": "Minutes per day",
   "habits.form.tag": "Tag (+project or @context)",
   "habits.form.save": "Save",
+  "today.note": "Day note",
+  "today.noteHint": "The note appears in the review.",
+  "today.noteSave": "Save note",
+  "today.close": "Close the day",
+  "today.close.title": "Close the day?",
+  "today.close.summary": "{planned} planned tasks, {fixed} with a due date.",
+  "today.close.action": "Planned tasks",
+  "today.close.postpone": "Move to tomorrow",
+  "today.close.unplan": "Take off the plan",
+  "today.close.keep": "Leave as is",
+  "today.close.fixedHint":
+    "Tasks with a due date stay on the plan until they are done or their due date changes.",
+  "today.close.note": "Note for the day",
+  "today.close.confirm": "Close",
 };

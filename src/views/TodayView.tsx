@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronRightIcon,
   ChevronLeftIcon,
   CloseIcon,
 } from "../components/icons";
+import { CloseDayDialog } from "../components/CloseDayDialog";
+import { DayNote } from "../components/DayNote";
 import { HabitRow } from "../components/HabitRow";
 import { IconButton } from "../components/ui";
 import { useT } from "../i18n";
@@ -36,10 +38,18 @@ export function TodayView() {
     void usePlanStore.getState().load();
   }, [all]);
 
+  const note = usePlanStore((s) => s.note);
+  const [closing, setClosing] = useState(false);
   const habits = todayHabits(useHabitStore((s) => s.items));
+  const day = plan?.day ?? "";
+
+  // die Notiz gehört zum Tag des Plans; das Feld folgt der gespeicherten Fassung
+  useEffect(() => {
+    if (day) void usePlanStore.getState().loadNote(day);
+  }, [day]);
+
   const rows = plan ? planRows(plan, all) : [];
   const over = plan !== null && plan.remainingMin < 0;
-  const day = plan?.day ?? "";
 
   return (
     <section
@@ -222,6 +232,27 @@ export function TodayView() {
             ))}
           </ul>
         </div>
+      )}
+
+      {plan && (
+        // neuer Schlüssel bei jeder gespeicherten Fassung: das Feld beginnt wieder mit ihr
+        <DayNote
+          key={`${day}|${note}`}
+          note={note}
+          onSave={(text) => void usePlanStore.getState().saveNote(day, text)}
+          onClose={() => setClosing(true)}
+        />
+      )}
+      {plan && closing && (
+        <CloseDayDialog
+          plan={plan}
+          note={note}
+          onCancel={() => setClosing(false)}
+          onClose={async (action, text) => {
+            if (await usePlanStore.getState().closeDay(day, action, text))
+              setClosing(false);
+          }}
+        />
       )}
     </section>
   );

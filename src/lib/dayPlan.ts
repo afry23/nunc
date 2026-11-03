@@ -26,3 +26,12 @@ export function fillPercent(estimateMin: number, capacityMin: number): number {
     Math.max(0, Math.round((estimateMin / capacityMin) * 100)),
   );
 }
+
+/** Was der Tagesabschluss vorfindet: eingeplante Einträge (die er ändern kann) und solche mit Frist (die er nicht anfasst). */
+export function closeSummary(plan: DayPlan): {
+  planned: number;
+  fixed: number;
+} {
+  const planned = plan.items.filter((item) => item.reason === "planned").length;
+  return { planned, fixed: plan.items.length - planned };
+}
