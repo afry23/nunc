@@ -111,6 +111,12 @@ export const commands = {
 	planTodo: (id: number, day: string | null) => typedError<Todo, AppError>(__TAURI_INVOKE("plan_todo", { id, day })),
 	/**  Setzt die Schätzung (Minuten, 1–10080); `null` entfernt sie. Frist und Plan-Tag bleiben. */
 	setTodoEstimate: (id: number, estimateMin: number | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_estimate", { id, estimateMin })),
+	/**
+	 *  Tagesabschluss (ADR 0027): behandelt die noch eingeplanten Einträge von heute nach `action` und speichert die
+	 *  Tagesnotiz, wenn `note` gesetzt ist (ein leerer Text löscht sie). Alles oder nichts. Liefert, wie viele Einträge
+	 *  sich geändert haben.
+	 */
+	closeDay: (action: CloseAction, note: string | null) => typedError<number, AppError>(__TAURI_INVOKE("close_day", { action, note })),
 	/**  Alle Gewohnheiten (auch archivierte) mit Stand für heute (lokaler Tag), Serien und den zuletzt erledigten Tagen. */
 	getHabitOverview: () => typedError<HabitItem[], AppError>(__TAURI_INVOKE("get_habit_overview")),
 	/**  Legt eine Gewohnheit an (`id` leer) oder ändert Name, Rhythmus und Ziel der Gewohnheit `id`. Liefert die Kennung. */
@@ -123,6 +129,8 @@ export const commands = {
 	setHabitDone: (id: string, day: string, done: boolean) => typedError<null, AppError>(__TAURI_INVOKE("set_habit_done", { id, day, done })),
 	/**  Rückblick für die lokalen Tage `from` bis `to` (inklusive), mit Vergleich zur Vorperiode. */
 	getReview: (from: string, to: string) => typedError<Review, AppError>(__TAURI_INVOKE("get_review", { from, to })),
+	/**  Text der Tagesnotiz für `date`; leer, wenn es keine gibt. */
+	getDayNote: (date: string) => typedError<string, AppError>(__TAURI_INVOKE("get_day_note", { date })),
 	/**  Speichert die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz. */
 	saveJournalNote: (kind: JournalKind, date: string, text: string) => typedError<null, AppError>(__TAURI_INVOKE("save_journal_note", { kind, date, text })),
 	/**  Legt einen Erfolg für `date` an und liefert seine Kennung. */
@@ -278,6 +286,15 @@ export type BreakSuggestion = {
 	sessionType: SessionType,
 	minutes: number,
 };
+
+/**  Was der Tagesabschluss mit den noch offenen, eingeplanten Einträgen tut. */
+export type CloseAction = 
+/**  Auf den nächsten Tag verschieben (`plan:` morgen). */
+"postpone" | 
+/**  Vom Plan nehmen (`plan:` entfernen). */
+"unplan" | 
+/**  Nichts ändern: die Einträge rutschen von selbst auf den nächsten Tag. */
+"keep";
 
 /**  Im Zeitraum erledigte Aufgabe. */
 export type CompletedTodo = {

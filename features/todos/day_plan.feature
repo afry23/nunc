@@ -138,3 +138,39 @@ Feature: Day plan
       | estimate |
       | 0        |
       | 10081    |
+
+  @domain @US-TP02
+  Scenario Outline: Closing the day changes only the planned entries
+    Given today is 2026-03-04 and the capacity is 240 minutes
+    And the open todos
+      | id | priority | position | description                       |
+      | 1  |          | 1        | Planned today plan:2026-03-04     |
+      | 2  |          | 2        | Late report due:2026-03-02        |
+      | 3  |          | 3        | Due today due:2026-03-04          |
+      | 6  |          | 6        | Rolled over plan:2026-03-02       |
+    When I build the day plan
+    And I close the day with the action "<action>"
+    Then the closing changes are "<changes>"
+
+    Examples:
+      | action   | changes                           |
+      | postpone | 1 -> 2026-03-05, 6 -> 2026-03-05  |
+      | unplan   | 1 -> none, 6 -> none              |
+      | keep     |                                   |
+
+  @domain @US-TP02
+  Scenario: Closing an empty day changes nothing
+    Given today is 2026-03-04 and the capacity is 240 minutes
+    When I build the day plan
+    And I close the day with the action "postpone"
+    Then the closing changes are ""
+
+  @domain @US-TP02
+  Scenario: Postponing at the end of a month moves to the first of the next
+    Given today is 2026-02-28 and the capacity is 240 minutes
+    And the open todos
+      | id | priority | position | description               |
+      | 1  |          | 1        | Planned plan:2026-02-28   |
+    When I build the day plan
+    And I close the day with the action "postpone"
+    Then the closing changes are "1 -> 2026-03-01"

@@ -39,8 +39,11 @@ Sessions ohne neue Erfassung möglich.
   (`spent_min`: Arbeitsintervalle abgeschlossen oder abgebrochen, nicht übersprungen).
 - **Tageskapazität** ist eine Einstellung (`day_capacity_min`, Standard 240 = vier Stunden Fokuszeit), keine
   abgeleitete Größe.
-- **Tagesabschluss** (spätere Stufe): offene Einträge verschieben (`plan:` auf morgen), verwerfen (`plan:` entfernen)
-  oder erledigen, dazu die Tagesnotiz aus dem Journal (ADR 0026).
+- **Tagesabschluss:** Die noch **eingeplanten** Einträge von heute werden auf morgen verschoben (`plan:` morgen),
+  vom Plan genommen (`plan:` entfernt) oder bleiben (rutschen von selbst auf den nächsten Tag); erledigt wird wie
+  sonst per Haken. Überfällige und heute fällige Einträge hängen an ihrer Frist (`due:`) und bleiben unberührt.
+  `closing_changes(plan, action)` liefert pur die Änderungen. Dazu gehört die **Tagesnotiz** (ADR 0026): Sie lässt sich
+  in „Heute“ jederzeit schreiben und steht automatisch im Rückblick.
 
 ## Umsetzung in Stufen
 
@@ -55,7 +58,9 @@ Sessions ohne neue Erfassung möglich.
    „Auf morgen verschieben“ und „Vom Plan nehmen“ gibt es nur für eingeplante Einträge (überfällige und heute fällige
    ändert man über `due:`). Frist und Plan-Tag trägt man im Text der Aufgabe ein (`due:`, `plan:`); Titel blenden die
    Planungsfelder aus.
-4. Tagesabschluss.
+4. Tagesabschluss: Core `CloseAction`/`closing_changes`; Commands `close_day(action, note)` (alles oder nichts in einem
+   Sicherungspunkt: Einträge verschieben/abnehmen und Tagesnotiz speichern; liefert die Zahl geänderter Einträge) und
+   `get_day_note(date)`; UI: Notiz und Dialog „Tag abschließen“ in „Heute“ (eigener PR).
 
 ## Verworfene Alternativen
 

@@ -99,6 +99,20 @@ pub async fn save_review_markdown<R: Runtime>(
     Ok(Some(path))
 }
 
+/// Text der Tagesnotiz für `date`; leer, wenn es keine gibt.
+#[tauri::command]
+#[specta::specta]
+pub fn get_day_note(state: State<'_, AppState>, date: NaiveDate) -> Result<String, AppError> {
+    let entries = state
+        .db
+        .with(|conn| nunc_store::list_journal(conn, date, date))?;
+    Ok(entries
+        .into_iter()
+        .find(|entry| entry.kind == JournalKind::DayNote)
+        .map(|entry| entry.text.value)
+        .unwrap_or_default())
+}
+
 /// Speichert die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz.
 #[tauri::command]
 #[specta::specta]

@@ -110,22 +110,34 @@ pub(crate) fn fields_of(conn: &Connection, id: i64) -> Result<Option<Fields>, St
         .optional()?)
 }
 
-/// Führt `body` in einem Sicherungspunkt aus (verschachtelbar, auch innerhalb einer Transaktion).
+/// Führt `body` in einem Sicherungspunkt aus (verschachtelbar, auch innerhalb einer Transaktion): bei einem Fehler
+/// bleibt von allem, was `body` geschrieben hat, nichts übrig. Wie [`atomic`], aber mit eigenem Fehlertyp.
+pub fn atomically<T, E: From<StoreError>>(
+    conn: &Connection,
+    body: impl FnOnce() -> Result<T, E>,
+) -> Result<T, E> {
+    conn.execute_batch("SAVEPOINT nunc_crdt")
+        .map_err(StoreError::from)?;
+    match body() {
+        Ok(value) => {
+            conn.execute_batch("RELEASE nunc_crdt")
+                .map_err(StoreError::from)?;
+            Ok(value)
+        }
+        Err(error) => {
+            conn.execute_batch("ROLLBACK TO nunc_crdt; RELEASE nunc_crdt")
+                .map_err(StoreError::from)?;
+            Err(error)
+        }
+    }
+}
+
+/// [`atomically`] mit [`StoreError`].
 pub(crate) fn atomic<T>(
     conn: &Connection,
     body: impl FnOnce() -> Result<T, StoreError>,
 ) -> Result<T, StoreError> {
-    conn.execute_batch("SAVEPOINT nunc_crdt")?;
-    match body() {
-        Ok(value) => {
-            conn.execute_batch("RELEASE nunc_crdt")?;
-            Ok(value)
-        }
-        Err(error) => {
-            conn.execute_batch("ROLLBACK TO nunc_crdt; RELEASE nunc_crdt")?;
-            Err(error)
-        }
-    }
+    atomically(conn, body)
 }
 
 pub(crate) fn local_device(conn: &Connection) -> Result<String, StoreError> {

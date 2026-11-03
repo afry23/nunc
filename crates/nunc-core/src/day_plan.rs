@@ -284,3 +284,31 @@ pub fn day_plan(
         remaining_min: i64::from(capacity_min) - i64::from(estimate_min),
     }
 }
+
+/// Was der Tagesabschluss mit den noch offenen, eingeplanten Einträgen tut.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum CloseAction {
+    /// Auf den nächsten Tag verschieben (`plan:` morgen).
+    Postpone,
+    /// Vom Plan nehmen (`plan:` entfernen).
+    Unplan,
+    /// Nichts ändern: die Einträge rutschen von selbst auf den nächsten Tag.
+    Keep,
+}
+
+/// Neuer Plan-Tag je Todo für den Tagesabschluss: `(todo_id, Some(Tag))` setzt `plan:`, `(todo_id, None)` entfernt es.
+/// Nur **eingeplante** Einträge ändern sich; überfällige und heute fällige hängen an ihrer Frist (`due:`), die der
+/// Abschluss nicht anfasst.
+pub fn closing_changes(plan: &DayPlan, action: CloseAction) -> Vec<(i32, Option<NaiveDate>)> {
+    let new_day = match action {
+        CloseAction::Keep => return Vec::new(),
+        CloseAction::Postpone => plan.day.succ_opt(),
+        CloseAction::Unplan => None,
+    };
+    plan.items
+        .iter()
+        .filter(|item| item.reason == PlanReason::Planned)
+        .map(|item| (item.todo_id, new_day))
+        .collect()
+}
