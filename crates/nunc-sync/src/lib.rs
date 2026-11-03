@@ -14,7 +14,7 @@ pub use config::{
 pub use coordinator::{
     RunFuture, RunOutcome, SyncCoordinator, SyncObserver, SyncRunner, Timing, Trigger,
 };
-pub use engine::{SyncSetup, SyncStore, WebDavRunner, sync_webdav};
+pub use engine::{SyncCache, SyncSetup, SyncStore, WebDavRunner, sync_webdav_cached};
 pub use error::SyncError;
 pub use http::http_client;
-pub use webdav::{Precondition, Remote, SYNC_FILE_NAME, WebDavClient};
+pub use webdav::{Download, Precondition, Remote, SYNC_FILE_NAME, WebDavClient};

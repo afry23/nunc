@@ -89,6 +89,8 @@ pub struct SyncWorld {
     pub test_result: Option<ConnectionTestResult>,
     pub config: Option<WebDavConfig>,
     pub coord: coord::State,
+    /// Gedächtnis zwischen den Läufen eines Szenarios (ADR 0030)
+    pub cache: nunc_sync::SyncCache,
 }
 
 impl std::fmt::Debug for SyncWorld {
@@ -103,6 +105,7 @@ impl SyncWorld {
             dir: tempfile::tempdir().expect("Temp-Ordner"),
             store: Arc::new(TestStore::new(nunc_store::open_in_memory().unwrap())),
             secrets: MemorySecretStore::default(),
+            cache: nunc_sync::SyncCache::default(),
             clock: Arc::new(ManualClock::new(
                 Utc.with_ymd_and_hms(2026, 10, 4, 9, 0, 0).unwrap(),
             )),

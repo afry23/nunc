@@ -35,6 +35,22 @@ pub enum Precondition {
     None,
 }
 
+/// Antwort auf das bedingte Laden der Sync-Datei.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Download {
+    /// Der Server hat die Datei nicht (erster Sync).
+    Missing,
+    /// Unverändert seit dem angegebenen ETag (`304`), es wurde nichts übertragen.
+    NotModified,
+    Changed(Remote),
+}
+
+enum Fetched {
+    Missing,
+    NotModified,
+    Body(Vec<u8>, Option<String>),
+}
+
 /// Die Datei vom Server samt ETag.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Remote {
@@ -262,17 +278,24 @@ impl WebDavClient {
         Ok(())
     }
 
-    /// Lädt eine Datei samt ETag; `None`, wenn es sie nicht gibt.
-    async fn fetch(&self, url: &str) -> Result<Option<(Vec<u8>, Option<String>)>, SyncError> {
-        let response = self.send("GET", url, &[], None).await?;
+    /// Lädt eine Datei samt ETag. Mit `if_none_match` fragt der Server nach Änderungen; sonst `Missing` bei 404.
+    async fn fetch(&self, url: &str, if_none_match: Option<&str>) -> Result<Fetched, SyncError> {
+        let headers: Vec<(&str, String)> = if_none_match
+            .map(|etag| ("If-None-Match", etag.to_owned()))
+            .into_iter()
+            .collect();
+        let response = self.send("GET", url, &headers, None).await?;
         let status = response.status();
         if status == StatusCode::NOT_FOUND {
-            return Ok(None);
+            return Ok(Fetched::Missing);
+        }
+        if status == StatusCode::NOT_MODIFIED && if_none_match.is_some() {
+            return Ok(Fetched::NotModified);
         }
         if !status.is_success() {
             return self
                 .check(&response, "Herunterladen der Sync-Datei")
-                .map(|()| None);
+                .map(|()| Fetched::Missing);
         }
         let etag = response
             .headers()
@@ -283,22 +306,34 @@ impl WebDavClient {
             .bytes()
             .await
             .map_err(|error| SyncError::Transport(describe_transport_error(&error)))?;
-        Ok(Some((bytes.to_vec(), etag)))
+        Ok(Fetched::Body(bytes.to_vec(), etag))
     }
 
-    /// Lädt die Sync-Datei; `None`, wenn es sie noch nicht gibt (erster Sync).
-    pub async fn download(&self) -> Result<Option<Remote>, SyncError> {
-        let Some((bytes, etag)) = self.fetch(&self.file_url()).await? else {
-            return Ok(None);
-        };
-        let file = SyncDocument::decode(&bytes)
-            .map_err(|error| SyncError::InvalidFile(error.to_string()))?;
-        Ok(Some(Remote { file, etag }))
+    /// Lädt die Sync-Datei nur, wenn ihr ETag nicht `known_etag` ist (ADR 0030). Ein Server, der die Bedingung
+    /// ignoriert, antwortet mit der ganzen Datei; das ist der gewohnte Weg.
+    pub async fn download_if_changed(
+        &self,
+        known_etag: Option<&str>,
+    ) -> Result<Download, SyncError> {
+        match self.fetch(&self.file_url(), known_etag).await? {
+            Fetched::Missing => Ok(Download::Missing),
+            Fetched::NotModified => Ok(Download::NotModified),
+            Fetched::Body(bytes, etag) => {
+                let file = SyncDocument::decode(&bytes)
+                    .map_err(|error| SyncError::InvalidFile(error.to_string()))?;
+                Ok(Download::Changed(Remote { file, etag }))
+            }
+        }
+    }
+
+    /// Adresse der Sync-Datei; unterscheidet Server und Pfad (für den Abgleich gemerkter ETags).
+    pub fn file_location(&self) -> String {
+        self.file_url()
     }
 
     /// Lädt die alte Sync-Datei `nunc-sync.json` (Format vor ADR 0016) für den einmaligen Import.
     pub async fn download_legacy(&self) -> Result<Option<SyncFile>, SyncError> {
-        let Some((bytes, _)) = self.fetch(&self.legacy_file_url()).await? else {
+        let Fetched::Body(bytes, _) = self.fetch(&self.legacy_file_url(), None).await? else {
             return Ok(None);
         };
         serde_json::from_slice(&bytes)
@@ -311,7 +346,7 @@ impl WebDavClient {
         &self,
         file: &SyncDocument,
         precondition: &Precondition,
-    ) -> Result<(), SyncError> {
+    ) -> Result<Option<String>, SyncError> {
         let body = file
             .encode()
             .map_err(|error| SyncError::InvalidFile(error.to_string()))?;
@@ -326,12 +361,18 @@ impl WebDavClient {
             .await?;
         let status = response.status();
         if status.is_success() {
-            return Ok(());
+            // Nicht jeder Server nennt den neuen ETag; dann holt der nächste Lauf die Datei einmal ganz
+            return Ok(response
+                .headers()
+                .get(header::ETAG)
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_owned));
         }
         if status == StatusCode::PRECONDITION_FAILED {
             return Err(SyncError::Conflict);
         }
         self.check(&response, "Hochladen der Sync-Datei")
+            .map(|()| None)
     }
 }
 
