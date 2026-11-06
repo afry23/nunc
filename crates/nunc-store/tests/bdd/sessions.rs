@@ -116,6 +116,13 @@ fn changes_note(world: &mut StoreWorld, device: String, note: String, time: Stri
     nunc_store::update_session(conn, id, &edit, at(&time)).expect("update");
 }
 
+#[when(expr = "device {word} sets only the session note to {string} at {word}")]
+fn sets_only_note(world: &mut StoreWorld, device: String, note: String, time: String) {
+    let conn = world.crdt.conn(&device);
+    let (id, _) = start_edit(conn);
+    nunc_store::set_session_note(conn, id, &note, at(&time)).expect("note");
+}
+
 #[when(expr = "device {word} changes the session minutes to {int} at {word}")]
 fn changes_minutes(world: &mut StoreWorld, device: String, minutes: u32, time: String) {
     let conn = world.crdt.conn(&device);

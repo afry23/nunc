@@ -74,6 +74,9 @@ impl Harness {
                 timer::get_suggested_break,
                 sessions::get_timesheet,
                 sessions::get_day_timeline,
+                sessions::get_task_time,
+                sessions::get_session_note,
+                sessions::set_session_note,
                 sessions::get_known_tags,
                 sessions::create_manual_session,
                 sessions::update_session,
@@ -796,6 +799,51 @@ fn invalid_manual_entries_are_rejected_with_stable_codes() {
         .with(|conn| nunc_store::list_sessions(conn))
         .unwrap();
     assert!(sessions.is_empty());
+}
+
+#[test]
+fn the_time_of_a_task_lists_its_entries_with_notes() {
+    let h = Harness::new();
+    let todo = h.ok("add_todo", json!({ "rawText": "Write report +work" }));
+    let id = todo["id"].as_i64();
+    h.ok(
+        "create_manual_session",
+        entry(at(7, 0), at(8, 30), id, "kickoff"),
+    );
+    h.ok(
+        "create_manual_session",
+        entry(at(5, 0), at(5, 30), None, "other"),
+    );
+    let time = h.ok("get_task_time", json!({ "todoId": id }));
+    assert_eq!(time["totalMin"], 90);
+    assert_eq!(time["entries"].as_array().unwrap().len(), 1);
+    assert_eq!(time["entries"][0]["note"], "kickoff");
+    assert_eq!(time["entries"][0]["minutes"], 90);
+}
+
+#[test]
+fn the_note_of_a_session_can_be_read_and_replaced() {
+    let h = Harness::new();
+    let saved = h.ok(
+        "create_manual_session",
+        entry(at(6, 0), at(7, 0), None, "old"),
+    );
+    let id = saved["session"]["id"].as_i64().unwrap();
+    assert_eq!(h.ok("get_session_note", json!({ "id": id })), "old");
+    h.ok(
+        "set_session_note",
+        json!({ "id": id, "note": "  next: call Sam  " }),
+    );
+    assert_eq!(
+        h.ok("get_session_note", json!({ "id": id })),
+        "next: call Sam"
+    );
+    let time = h.ok("get_day_timeline", json!({ "date": local_day(at(6, 0)) }));
+    assert_eq!(time["blocks"][0]["end"], saved["session"]["endedAt"]);
+    assert_eq!(
+        h.err_code("set_session_note", json!({ "id": 999, "note": "x" })),
+        "not_found"
+    );
 }
 
 #[test]

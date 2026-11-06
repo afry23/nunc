@@ -36,10 +36,12 @@ export const NAV_ITEMS: {
 /** Die vier Hauptbereiche; Einstellungen und Hilfe stehen mobil im Menü der Kopfzeile. */
 export const MAIN_ITEMS = NAV_ITEMS.slice(0, 4);
 
-/** Seitenleiste ab 768 px Breite; einklappbar auf reine Icons (Beschriftung bleibt für Screenreader und Tooltip). */
-export function Sidebar() {
-  const collapsed = useUiStore((s) => s.sidebarCollapsed);
+/** Seitenleiste ab 600 px Breite (bis 1023 px als Leiste); einklappbar auf reine Icons (Beschriftung bleibt für Screenreader und Tooltip). */
+export function Sidebar({ rail = false }: { rail?: boolean }) {
+  const stored = useUiStore((s) => s.sidebarCollapsed);
   const toggle = useUiStore((s) => s.toggleSidebar);
+  // als Leiste (600 bis 1023 px) ist sie immer eingeklappt und hat keinen Umschalter
+  const collapsed = rail || stored;
   const t = useT();
   const label = collapsed ? t("nav.expand") : t("nav.collapse");
 
@@ -80,25 +82,27 @@ export function Sidebar() {
           </span>
         </Link>
       ))}
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label={label}
-        aria-expanded={!collapsed}
-        title={label}
-        className={`mt-auto flex min-h-12 items-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface ${
-          collapsed ? "justify-center" : "gap-3 px-3 font-semibold"
-        }`}
-      >
-        <SidebarIcon />
-        {!collapsed && <span>{t("nav.collapseShort")}</span>}
-      </button>
+      {!rail && (
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={label}
+          aria-expanded={!collapsed}
+          title={label}
+          className={`mt-auto flex min-h-12 items-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface ${
+            collapsed ? "justify-center" : "gap-3 px-3 font-semibold"
+          }`}
+        >
+          <SidebarIcon />
+          {!collapsed && <span>{t("nav.collapseShort")}</span>}
+        </button>
+      )}
     </nav>
   );
 }
 
 /**
- * Tab-Leiste unter 768 px Breite (Touch-Ziele ≥ 44 px, Safe-Area unten).
+ * Tab-Leiste unter 600 px Breite (Touch-Ziele ≥ 44 px, Safe-Area unten).
  *
  * Mobil gilt ein Zurück-Stapel mit „Heute“ als Startseite: Ein Tab ersetzt den vorigen statt sich
  * aufzustapeln, und „Heute“ geht einen Schritt zurück. So führt die Zurück-Taste (Android) vom Tab zuerst
@@ -145,7 +149,7 @@ export function BottomTabs() {
   );
 }
 
-/** Kopfzeile unter 768 px: Menü mit den selteneren Zielen (Einstellungen, Hilfe). */
+/** Kopfzeile unter 600 px: Menü mit den selteneren Zielen (Einstellungen, Hilfe). */
 export function ShellMenu() {
   const t = useT();
   const navigate = useNavigate();

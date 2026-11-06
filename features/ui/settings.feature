@@ -26,6 +26,16 @@ Feature: Settings view
       { "settings": { "autoStartBreaks": true, "autoStartNextPomodoro": true } }
       """
 
+  @ui @US-UM07
+  Scenario: Asking for the result of a session can be switched off
+    When I open the app at "/settings"
+    And I switch off "Nach einer Session nach dem Ergebnis fragen"
+    And I click "Speichern"
+    Then the backend received "save_settings" with:
+      """
+      { "settings": { "askSessionResult": false } }
+      """
+
   @ui @REQ-5.2
   Scenario: Flowtime ratio and minimum flow state can be changed
     When I open the app at "/settings"

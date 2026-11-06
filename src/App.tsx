@@ -14,7 +14,10 @@ function App({ history }: { history?: RouterHistory }) {
     useUiStore.getState().restorePrefs();
     let disconnect: (() => void) | undefined;
     let cancelled = false;
-    connectBackend()
+    connectBackend((route) => {
+      // das Mini-Fenster bleibt beim Timer; nur das Hauptfenster folgt
+      if (!isMini) void router.navigate({ to: route });
+    })
       .then((unlisten) => {
         if (cancelled) unlisten();
         else disconnect = unlisten;
@@ -24,7 +27,7 @@ function App({ history }: { history?: RouterHistory }) {
       cancelled = true;
       disconnect?.();
     };
-  }, []);
+  }, [router, isMini]);
 
   return (
     <>

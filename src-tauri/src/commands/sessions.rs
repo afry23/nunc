@@ -1,8 +1,11 @@
 //! Zeiterfassung (ADR 0017): Timesheet, Tages-Timeline sowie Nachtragen, Bearbeiten und Löschen von Sessions.
 
+use std::collections::HashMap;
+
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use nunc_core::manual_entry::validate_entry;
 use nunc_core::model::{KnownTags, Session, known_tags, normalize_tags};
+use nunc_core::task_time::{TaskTime, task_time};
 use nunc_core::timeline::{DayTimeline, day_timeline};
 use nunc_core::timesheet::{GroupBy, Timesheet, timesheet};
 use nunc_platform::to_local_date;
@@ -104,6 +107,48 @@ pub fn get_day_timeline(
         }
     }
     Ok(timeline)
+}
+
+/// Die Zeiteinträge einer Aufgabe (abgeschlossene Arbeitssessions, neueste zuerst) samt Summe.
+#[tauri::command]
+#[specta::specta]
+pub fn get_task_time(state: State<'_, AppState>, todo_id: i32) -> Result<TaskTime, AppError> {
+    let (sessions, details) = state.db.with(|conn| {
+        Ok::<_, nunc_store::StoreError>((
+            nunc_store::list_sessions(conn)?,
+            nunc_store::list_session_details(conn)?,
+        ))
+    })?;
+    let notes: HashMap<i32, String> = details
+        .into_iter()
+        .map(|(id, detail)| (id, detail.note))
+        .collect();
+    Ok(task_time(&sessions, todo_id, &notes))
+}
+
+/// Die Notiz einer Session (leer, wenn es keine gibt).
+#[tauri::command]
+#[specta::specta]
+pub fn get_session_note(state: State<'_, AppState>, id: i32) -> Result<String, AppError> {
+    let details = state
+        .db
+        .with(|conn| nunc_store::list_session_details(conn))?;
+    Ok(details
+        .get(&id)
+        .map(|detail| detail.note.clone())
+        .unwrap_or_default())
+}
+
+/// Setzt nur die Notiz einer Session (z. B. Ergebnis und nächste Schritte beim Stoppen).
+#[tauri::command]
+#[specta::specta]
+pub fn set_session_note(state: State<'_, AppState>, id: i32, note: String) -> Result<(), AppError> {
+    let now = state.clock.now();
+    state
+        .db
+        .with(|conn| nunc_store::set_session_note(conn, id, note.trim(), now))?;
+    state.sessions_changed();
+    Ok(())
 }
 
 /// Alle bekannten Projekte und Kontexte (Todos und Sessions) als Vorschläge für die Auswahl.

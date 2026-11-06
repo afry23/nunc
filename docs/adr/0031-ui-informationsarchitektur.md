@@ -54,6 +54,22 @@ Vier gleichrangige Hauptbereiche, auf Desktop (Seitenleiste) und Android (untere
   Arbeitsblöcke des Tages, Pausen zählen nicht, Überlappungen einmal). Die Zahl wird aus den Sessions berechnet, nicht
   gespeichert.
 
+### Folgearbeiten nach E6
+
+- **Ergebnis / nächste Schritte:** Nach einer beendeten Arbeitssession (Ablauf oder Stopp, mindestens eine Minute) fragt
+  `SessionEndDialog` optional nach einer Notiz. Sie wird mit `set_session_note` nur als Notiz der Session gespeichert
+  (eigener Stempel, Dauer und Zuordnung bleiben); eine vorhandene Notiz wird vorbelegt. Escape und „Überspringen“
+  speichern nichts. Die Einstellung `ask_session_result` (Standard an, Abschnitt „Session-Ende“) schaltet das Feld ab; eine
+  empfohlene Pause erscheint weiterhin.
+- **Mini-Timer:** „Zur App“ öffnet das Hauptfenster auf `/focus` (Ereignis `app:navigate`, nur die Hauptfenster folgen).
+- **Aufgabendetails:** `get_task_time` liefert die abgeschlossenen Arbeitssessions einer Aufgabe, neueste zuerst, mit
+  Summe und Notiz (pur in `nunc_core::task_time`).
+- **Rückblick:** erledigte Aufgaben tragen ihre erfasste Zeit im Zeitraum (`CompletedTodo.minutes`, auch im Markdown);
+  der Tagesfokus erscheint als „Fokus der Tage“ (`ReviewJournal.day_focus`, ADR 0032 nimmt „nicht im Rückblick“ zurück).
+- **Navigation nach Breite:** unter 600 px Tab-Leiste, 600 bis 1023 px schmale Leiste mit Icons (immer eingeklappt, kein
+  Umschalter, unabhängig von der gespeicherten Wahl), ab 1024 px die einklappbare Seitenleiste. Die zweispaltigen
+  Layouts der Ansichten gelten weiterhin ab 768 px (`useIsWide`).
+
 ## Folgen
 
 - Kein Backend- und kein Schema-Eingriff in dieser Stufe.

@@ -8,6 +8,7 @@ import type {
   GroupBy,
   KnownTags,
   Review,
+  TaskTime,
   TimelineBlock,
   SyncResult,
   SyncStatus,
@@ -51,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   apiPort: 42820,
   syncIntervalMin: 15,
   dayCapacityMin: 240,
+  askSessionResult: true,
 };
 
 export const EMPTY_STATS: StatsResponse = {
@@ -160,6 +162,10 @@ export interface FakeBackend extends BackendMock {
   timesheet: Partial<Record<GroupBy, TimesheetSeed[]>>;
   /** Tagesfokus je Tag (`get_day_focus`). */
   focus: Record<string, string>;
+  /** Notizen je Session-Id (`get_session_note`). */
+  sessionNotes: Record<number, string>;
+  /** Antwort von `get_task_time` je Todo-Id. */
+  taskTime: Record<number, TaskTime>;
   /** Blöcke von `get_day_timeline` je lokalem Tag. */
   timeline: Record<string, TimelineBlock[]>;
   /** Vorschläge, die `get_known_tags` liefert. */
@@ -281,10 +287,12 @@ export function createFakeBackend(): FakeBackend {
       projects: [],
       contexts: [],
       completedTodos: [],
-      journal: { achievements: [], weekNotes: [], dayNotes: [] },
+      journal: { achievements: [], weekNotes: [], dayNotes: [], dayFocus: [] },
     },
     reviewPath: null,
     timesheet: {},
+    sessionNotes: {},
+    taskTime: {},
     timeline: {},
     focus: {},
     sessionError: null,
@@ -528,6 +536,13 @@ export function createFakeBackend(): FakeBackend {
         total: dayTotals.reduce((sum, m) => sum + m, 0),
       };
     },
+    get_session_note: ({ id }: { id: number }) => fake.sessionNotes[id] ?? "",
+    set_session_note: ({ id, note }: { id: number; note: string }) => {
+      fake.sessionNotes[id] = note;
+      return null;
+    },
+    get_task_time: ({ todoId }: { todoId: number }) =>
+      fake.taskTime[todoId] ?? { todoId, totalMin: 0, entries: [] },
     get_day_timeline: ({ date }: { date: string }) => ({
       date,
       blocks: fake.timeline[date] ?? [],

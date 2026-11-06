@@ -47,6 +47,8 @@ pub struct GroupMinutes {
 pub struct CompletedTodo {
     pub completed_at: NaiveDate,
     pub text: String,
+    /// Erfasste Arbeitszeit an der Aufgabe im Zeitraum.
+    pub minutes: u32,
 }
 
 /// Abgeschlossene Arbeitssessions und Minuten einer Zeitmess-Technik.
@@ -116,6 +118,8 @@ pub struct ReviewJournal {
     pub achievements: Vec<JournalItem>,
     pub week_notes: Vec<JournalItem>,
     pub day_notes: Vec<JournalItem>,
+    /// Der Fokus der Tage (ADR 0032), jeweils der Vorsatz des Morgens.
+    pub day_focus: Vec<JournalItem>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -335,8 +339,7 @@ fn review_journal(period: Period, entries: &[JournalEntry]) -> ReviewJournal {
             JournalKind::Achievement => journal.achievements.push(item),
             JournalKind::WeekNote => journal.week_notes.push(item),
             JournalKind::DayNote => journal.day_notes.push(item),
-            // der Fokus eines Tages gehört zur Planung, nicht in den Rückblick (ADR 0032)
-            JournalKind::DayFocus => {}
+            JournalKind::DayFocus => journal.day_focus.push(item),
         }
     }
     journal
@@ -416,6 +419,11 @@ pub fn build_review(
         .collect();
     finished.sort_by_key(|(todo, date)| (*date, todo.position, todo.id));
 
+    let tasks_minutes: HashMap<i32, u32> = tasks
+        .iter()
+        .map(|(id, (minutes, _, _))| (*id, *minutes))
+        .collect();
+
     Review {
         period,
         previous_period: previous,
@@ -457,6 +465,7 @@ pub fn build_review(
             .map(|(todo, completed_at)| CompletedTodo {
                 completed_at,
                 text: todo.description.clone(),
+                minutes: tasks_minutes.get(&todo.id).copied().unwrap_or_default(),
             })
             .collect(),
     }
@@ -481,6 +490,7 @@ struct Texts {
     achievements: &'static str,
     week_notes: &'static str,
     day_notes: &'static str,
+    day_focus: &'static str,
     sessions: &'static str,
     min: &'static str,
     none: &'static str,
@@ -510,6 +520,7 @@ fn texts(language: Language) -> Texts {
             achievements: "Achievements",
             week_notes: "Week review",
             day_notes: "Day notes",
+            day_focus: "Day focus",
             sessions: "sessions",
             min: "min",
             none: "(none)",
@@ -535,6 +546,7 @@ fn texts(language: Language) -> Texts {
             achievements: "Erfolge",
             week_notes: "Wochenrückblick",
             day_notes: "Tagesnotizen",
+            day_focus: "Tagesfokus",
             sessions: "Sessions",
             min: "Min.",
             none: "(ohne Zuordnung)",
@@ -596,6 +608,7 @@ pub fn review_markdown(review: &Review, language: Language) -> String {
     );
     journal_lines(&mut markdown, t.achievements, &review.journal.achievements);
     journal_lines(&mut markdown, t.week_notes, &review.journal.week_notes);
+    journal_lines(&mut markdown, t.day_focus, &review.journal.day_focus);
     journal_lines(&mut markdown, t.day_notes, &review.journal.day_notes);
     if review.modes.iter().any(|entry| entry.sessions > 0) {
         markdown.push_str(&format!("\n## {}\n\n", t.techniques));
@@ -660,7 +673,12 @@ pub fn review_markdown(review: &Review, language: Language) -> String {
     if !review.completed_todos.is_empty() {
         markdown.push_str(&format!("\n## {}\n\n", t.completed_tasks));
         for todo in &review.completed_todos {
-            markdown.push_str(&format!("- {}: {}\n", todo.completed_at, todo.text));
+            let time = if todo.minutes > 0 {
+                format!(" ({} {})", todo.minutes, t.min)
+            } else {
+                String::new()
+            };
+            markdown.push_str(&format!("- {}: {}{time}\n", todo.completed_at, todo.text));
         }
     }
     markdown

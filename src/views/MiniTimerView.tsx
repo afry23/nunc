@@ -39,7 +39,10 @@ export function MiniTimerView() {
           <Button onClick={() => void stop()}>{t("timer.stop")}</Button>
         )}
       </div>
-      <Button variant="ghost" onClick={() => void commands.showMainWindow()}>
+      <Button
+        variant="ghost"
+        onClick={() => void commands.showMainWindow("/focus")}
+      >
         {t("mini.toApp")}
       </Button>
     </main>

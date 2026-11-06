@@ -155,6 +155,15 @@ Given(
 );
 
 When(
+  "the backend asks the app to open {string}",
+  async (_world: UiWorld, route: string) => {
+    await act(async () => {
+      await emit("app:navigate", route);
+    });
+  },
+);
+
+When(
   "the backend reports a finished {string} session with a suggested break of {int} minutes",
   async (_world: UiWorld, mode: string, minutes: number) => {
     await act(async () => {
@@ -168,6 +177,29 @@ When(
           endedAt: "2026-10-04T09:25:00Z",
           plannedMin: mode === "pomodoro" ? 25 : null,
           actualMin: 25,
+          todoId: null,
+          breakMin: null,
+        },
+        suggestedBreak: { sessionType: "short_break", minutes },
+      });
+    });
+  },
+);
+
+When(
+  "the backend reports a finished {string} session of {int} minutes with a suggested break of {int} minutes",
+  async (_world: UiWorld, mode: string, actual: number, minutes: number) => {
+    await act(async () => {
+      await emit("timer:complete", {
+        session: {
+          id: 1,
+          mode,
+          sessionType: "work",
+          status: "completed",
+          startedAt: "2026-10-04T09:00:00Z",
+          endedAt: "2026-10-04T09:00:20Z",
+          plannedMin: null,
+          actualMin: actual,
           todoId: null,
           breakMin: null,
         },
@@ -310,6 +342,10 @@ Then(
 
 Given("the sidebar was collapsed earlier", () => {
   localStorage.setItem("nunc.sidebarCollapsed", "1");
+});
+
+Given("the sidebar was expanded earlier", () => {
+  localStorage.setItem("nunc.sidebarCollapsed", "0");
 });
 
 Then("the sidebar is collapsed", async () => {
@@ -633,6 +669,32 @@ Given("the day plan lists:", (world: UiWorld, table: DataTable) => {
     remainingMin: capacityMin - estimateMin,
   };
 });
+
+Given(
+  "the session {int} has the note {string}",
+  (world: UiWorld, id: number, note: string) => {
+    world.fake.sessionNotes[id] = note;
+  },
+);
+
+/** Spalten `start` (ISO), `minutes`, `mode` und `note`. */
+Given(
+  "the time entries of todo {int} are:",
+  (world: UiWorld, todoId: number, table: DataTable) => {
+    const entries = table.hashes().map((row, index) => ({
+      sessionId: index + 1,
+      startedAt: row.start,
+      minutes: Number(row.minutes),
+      mode: row.mode as TimerMode,
+      note: row.note ?? "",
+    }));
+    world.fake.taskTime[todoId] = {
+      todoId,
+      totalMin: entries.reduce((sum, entry) => sum + entry.minutes, 0),
+      entries,
+    };
+  },
+);
 
 When("I leave the field {string}", async (_world: UiWorld, label: string) => {
   const field = await screen.findByLabelText(label);

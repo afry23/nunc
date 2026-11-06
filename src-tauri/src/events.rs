@@ -41,6 +41,11 @@ pub struct TimerStopped(pub FinishPayload);
 #[tauri_specta(event_name = "app:reload")]
 pub struct AppReload;
 
+/// Das Hauptfenster soll zu dieser Adresse wechseln (z. B. vom Mini-Timer zum Fokus).
+#[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
+#[tauri_specta(event_name = "app:navigate")]
+pub struct AppNavigate(pub String);
+
 /// Ein Sync-Lauf beginnt.
 #[derive(Debug, Clone, Serialize, Deserialize, Type, Event)]
 #[tauri_specta(event_name = "sync:start")]
@@ -83,6 +88,7 @@ mod tests {
         assert_eq!(TimerComplete::NAME, "timer:complete");
         assert_eq!(TimerStopped::NAME, "timer:stopped");
         assert_eq!(AppReload::NAME, "app:reload");
+        assert_eq!(AppNavigate::NAME, "app:navigate");
         assert_eq!(SyncStart::NAME, "sync:start");
         assert_eq!(SyncStatusChanged::NAME, "sync:status");
         assert_eq!(SyncComplete::NAME, "sync:complete");

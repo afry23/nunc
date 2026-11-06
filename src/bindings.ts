@@ -13,8 +13,11 @@ export const commands = {
 	getApiToken: () => typedError<string, AppError>(__TAURI_INVOKE("get_api_token")),
 	/**  Erzeugt ein neues Token; das alte gilt sofort nicht mehr. */
 	regenerateApiToken: () => typedError<string, AppError>(__TAURI_INVOKE("regenerate_api_token")),
-	/**  Holt das Hauptfenster nach vorn und versteckt den Mini-Timer (Desktop; mobil ohne Wirkung). */
-	showMainWindow: () => __TAURI_INVOKE<void>("show_main_window"),
+	/**
+	 *  Holt das Hauptfenster nach vorn und versteckt den Mini-Timer (Desktop; mobil ohne Wirkung). Mit `route`
+	 *  wechselt das Hauptfenster zusätzlich zu dieser Adresse.
+	 */
+	showMainWindow: (route: string | null) => __TAURI_INVOKE<void>("show_main_window", { route }),
 	getSettings: () => typedError<Settings, AppError>(__TAURI_INVOKE("get_settings")),
 	/**
 	 *  Speichert die Einstellungen nach Prüfung der Wertebereiche. `lastBackupDate` gehört dem Backup-Dienst,
@@ -94,6 +97,12 @@ export const commands = {
 	getTimesheet: (startDate: string, endDate: string, groupBy: GroupBy) => typedError<Timesheet, AppError>(__TAURI_INVOKE("get_timesheet", { startDate, endDate, groupBy })),
 	/**  Die Sessions eines lokalen Tages als Blöcke, mit Notiz und Herkunft. */
 	getDayTimeline: (date: string) => typedError<DayTimeline, AppError>(__TAURI_INVOKE("get_day_timeline", { date })),
+	/**  Die Zeiteinträge einer Aufgabe (abgeschlossene Arbeitssessions, neueste zuerst) samt Summe. */
+	getTaskTime: (todoId: number) => typedError<TaskTime, AppError>(__TAURI_INVOKE("get_task_time", { todoId })),
+	/**  Die Notiz einer Session (leer, wenn es keine gibt). */
+	getSessionNote: (id: number) => typedError<string, AppError>(__TAURI_INVOKE("get_session_note", { id })),
+	/**  Setzt nur die Notiz einer Session (z. B. Ergebnis und nächste Schritte beim Stoppen). */
+	setSessionNote: (id: number, note: string) => typedError<null, AppError>(__TAURI_INVOKE("set_session_note", { id, note })),
 	/**  Alle bekannten Projekte und Kontexte (Todos und Sessions) als Vorschläge für die Auswahl. */
 	getKnownTags: () => typedError<KnownTags, AppError>(__TAURI_INVOKE("get_known_tags")),
 	/**  Trägt eine Arbeitssession nach. */
@@ -204,6 +213,7 @@ export const commands = {
 /** Events */
 export const events = {
 	apiStatus: makeEvent<ApiStatusChanged>("api:status"),
+	appNavigate: makeEvent<AppNavigate>("app:navigate"),
 	appReload: makeEvent<AppReload>("app:reload"),
 	syncComplete: makeEvent<SyncComplete>("sync:complete"),
 	syncStart: makeEvent<SyncStart>("sync:start"),
@@ -236,6 +246,9 @@ export type AppInfo = {
 	name: string,
 	version: string,
 };
+
+/**  Das Hauptfenster soll zu dieser Adresse wechseln (z. B. vom Mini-Timer zum Fokus). */
+export type AppNavigate = string;
 
 /**  Datenbank wurde ausgetauscht (Restore): alle Stores neu laden. */
 export type AppReload = null;
@@ -292,6 +305,8 @@ export type CloseAction =
 export type CompletedTodo = {
 	completedAt: string,
 	text: string,
+	/**  Erfasste Arbeitszeit an der Aufgabe im Zeitraum. */
+	minutes: number,
 };
 
 /**  Ergebnis des Verbindungstests. */
@@ -486,6 +501,8 @@ export type ReviewJournal = {
 	achievements: JournalItem[],
 	weekNotes: JournalItem[],
 	dayNotes: JournalItem[],
+	/**  Der Fokus der Tage (ADR 0032), jeweils der Vorsatz des Morgens. */
+	dayFocus: JournalItem[],
 };
 
 /**  Gespeichertes Arbeits- oder Pausenintervall. */
@@ -581,6 +598,11 @@ export type Settings = {
 	syncIntervalMin: number,
 	/**  Tageskapazität des Tagesplaners in Minuten (1–1440, ADR 0027); die Go-App kennt den Schlüssel nicht. */
 	dayCapacityMin: number,
+	/**
+	 *  Fragt nach dem Ende einer Arbeitssession optional nach Ergebnis und nächsten Schritten; die Go-App
+	 *  kennt den Schlüssel nicht.
+	 */
+	askSessionResult: boolean,
 };
 
 /**  Sortierrichtung. Fehlende Werte (keine Priorität, kein Datum) stehen in beiden Richtungen zuletzt. */
@@ -669,6 +691,23 @@ export type TagCombination = {
 	minutes: number,
 	/**  Notizen dieser Sessions, älteste zuerst; Sessions ohne Notiz fehlen. */
 	notes: SessionNote[],
+};
+
+/**  Ein Zeiteintrag an einer Aufgabe. */
+export type TaskEntry = {
+	sessionId: number,
+	startedAt: string,
+	minutes: number,
+	mode: TimerMode,
+	/**  Notiz der Session, leer ohne. */
+	note: string,
+};
+
+/**  Alle Zeiteinträge einer Aufgabe und ihre Summe. */
+export type TaskTime = {
+	todoId: number,
+	totalMin: number,
+	entries: TaskEntry[],
 };
 
 /**  Fokuszeit, Pomodoros und Sessions einer Aufgabe. */

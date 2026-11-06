@@ -11,6 +11,7 @@ use nunc_core::review::{
     GroupMinutes, JournalItem, Period, PeriodKind, Review, build_review, period_containing,
     review_markdown,
 };
+use nunc_core::task_time::{TaskTime, task_time};
 
 use crate::DomainWorld;
 use crate::stats::day;
@@ -25,6 +26,7 @@ pub struct State {
     markdown: Option<String>,
     notes: HashMap<i32, String>,
     journal: Vec<JournalEntry>,
+    task_time: Option<TaskTime>,
 }
 
 fn review(world: &DomainWorld) -> &Review {
@@ -142,7 +144,13 @@ fn completed_todos(world: &mut DomainWorld, step: &Step) {
     let actual: Vec<Vec<String>> = review(world)
         .completed_todos
         .iter()
-        .map(|todo| vec![todo.completed_at.to_string(), todo.text.clone()])
+        .map(|todo| {
+            vec![
+                todo.completed_at.to_string(),
+                todo.text.clone(),
+                todo.minutes.to_string(),
+            ]
+        })
         .collect();
     assert_eq!(actual, crate::stats::rows(step));
 }
@@ -296,6 +304,7 @@ fn journal_entries(world: &mut DomainWorld, step: &Step) {
         let date = day(&row[1]);
         let mut entry = match row[0].as_str() {
             "day_note" => JournalEntry::day_note(date, &row[2], &clock),
+            "day_focus" => JournalEntry::day_focus(date, &row[2], &clock),
             "week_note" => JournalEntry::week_note(date, &row[2], &clock),
             "achievement" => JournalEntry::achievement(format!("a-{index}"), date, &row[2], &clock),
             other => panic!("unbekannte Art {other}"),
@@ -322,7 +331,40 @@ fn journal_lists(world: &mut DomainWorld, group: String, expected: String) {
         "achievements" => &journal.achievements,
         "week_notes" => &journal.week_notes,
         "day_notes" => &journal.day_notes,
+        "day_focus" => &journal.day_focus,
         other => panic!("unbekannte Gruppe {other}"),
     };
     assert_eq!(lines(items), expected);
+}
+
+#[when(expr = "I list the time entries of todo {int}")]
+fn list_task_time(world: &mut DomainWorld, todo_id: i32) {
+    world.review.task_time = Some(task_time(
+        &world.stats.sessions,
+        todo_id,
+        &world.review.notes,
+    ));
+}
+
+#[then(expr = "the total time is {int} minutes")]
+fn task_time_total(world: &mut DomainWorld, expected: u32) {
+    let time = world.review.task_time.as_ref().expect("keine Zeiteinträge");
+    assert_eq!(time.total_min, expected);
+}
+
+#[then("the time entries are:")]
+fn task_time_entries(world: &mut DomainWorld, step: &Step) {
+    let time = world.review.task_time.as_ref().expect("keine Zeiteinträge");
+    let actual: Vec<Vec<String>> = time
+        .entries
+        .iter()
+        .map(|entry| {
+            vec![
+                entry.started_at.format("%Y-%m-%d %H:%M").to_string(),
+                entry.minutes.to_string(),
+                entry.note.clone(),
+            ]
+        })
+        .collect();
+    assert_eq!(actual, crate::stats::rows(step));
 }

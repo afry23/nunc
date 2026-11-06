@@ -44,12 +44,13 @@ fn settings_keys(world: &mut StoreWorld) {
             .collect()
     };
     // Schlüssel, die nur nunc kennt: die Go-App liest `settings` in eine Map und ignoriert sie
-    const NUNC_ONLY: [&str; 5] = [
+    const NUNC_ONLY: [&str; 6] = [
         "language",
         "api_enabled",
         "api_port",
         "sync_interval_min",
         "day_capacity_min",
+        "ask_session_result",
     ];
     let unknown: Vec<_> = keys(world.conn())
         .difference(&keys(&fixture()))

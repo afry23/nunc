@@ -18,12 +18,21 @@ pub fn app_info() -> AppInfo {
     }
 }
 
-/// Holt das Hauptfenster nach vorn und versteckt den Mini-Timer (Desktop; mobil ohne Wirkung).
+/// Holt das Hauptfenster nach vorn und versteckt den Mini-Timer (Desktop; mobil ohne Wirkung). Mit `route`
+/// wechselt das Hauptfenster zusätzlich zu dieser Adresse.
 #[tauri::command]
 #[specta::specta]
-pub fn show_main_window<R: tauri::Runtime>(app: tauri::AppHandle<R>) {
+pub fn show_main_window<R: tauri::Runtime>(app: tauri::AppHandle<R>, route: Option<String>) {
     #[cfg(desktop)]
-    crate::windows::show_main(&app);
+    {
+        crate::windows::show_main(&app);
+        if let Some(route) = route.filter(|route| route.starts_with('/')) {
+            use tauri_specta::Event;
+            if let Err(error) = crate::events::AppNavigate(route).emit(&app) {
+                log::warn!("Navigation nicht gesendet: {error}");
+            }
+        }
+    }
     #[cfg(mobile)]
-    let _ = app;
+    let _ = (app, route);
 }

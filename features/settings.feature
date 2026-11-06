@@ -113,6 +113,7 @@ Feature: Settings
       | apiPort                 | 42820    |
       | syncIntervalMin         | 15       |
       | dayCapacityMin          | 240      |
+      | askSessionResult        | true     |
 
   @integration @REQ-5.4
   Scenario: A language that is not offered falls back to the system language
@@ -169,6 +170,17 @@ Feature: Settings
     Then the settings table contains:
       | key              | value |
       | day_capacity_min | 90    |
+
+  @integration @US-UM07
+  Scenario: Asking for the result of a session is persisted
+    Given no database exists yet
+    When nunc opens the database
+    And I load the settings
+    And I set "askSessionResult" to "false"
+    And I save the settings
+    Then the settings table contains:
+      | key                | value |
+      | ask_session_result | false |
 
   @integration @REQ-5
   Scenario: Saved settings are returned again

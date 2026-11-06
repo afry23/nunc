@@ -34,7 +34,16 @@ Feature: Navigation
     Then the ring shows "12:34"
     And I do not see a navigation
     When I click "Zur App"
-    Then the backend received "show_main_window"
+    Then the backend received "show_main_window" with:
+      """
+      { "route": "/focus" }
+      """
+
+  @ui @REQ-8 @desktop
+  Scenario: The main window follows a navigation request of the backend
+    When I open the app
+    And the backend asks the app to open "/log"
+    Then I see the heading "Verlauf"
 
   @ui @REQ-8 @mobile
   Scenario: The back button navigates instead of closing the app

@@ -287,6 +287,31 @@ Feature: Todo list
     And I see "+work"
     And the todo list shows "(A) Bericht +work @office, Einkaufen"
 
+  @ui @US-UM03
+  Scenario: The details list the time entries of the task with their total
+    Given the todos:
+      | rawText |
+      | Bericht |
+    And the time entries of todo 1 are:
+      | start                | minutes | mode      | note       |
+      | 2026-03-03T09:00:00Z | 25      | pomodoro  |            |
+      | 2026-03-02T09:00:00Z | 90      | stopwatch | Kickoff    |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    Then I see "Zeiteinträge"
+    And I see "Gesamt: 1h 55m"
+    And I see "Kickoff"
+    And I see "1h 30m"
+
+  @ui @US-UM03
+  Scenario: A task without time says so
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    Then I see "Noch keine Zeit erfasst."
+
   @ui @US-UM03 @mobile
   Scenario: On a phone the details replace the list and back returns to it with the filter
     Given the platform is "mobile"

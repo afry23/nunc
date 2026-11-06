@@ -17,9 +17,20 @@ export function useMediaQuery(query: string, fallback = true): boolean {
   );
 }
 
-/** Ab 768 px Breite gibt es die Seitenleiste, darunter die Tab-Leiste. */
+/** Ab 768 px Breite nutzen die Ansichten ihre zweispaltigen Layouts (Navigation: siehe [`useNavMode`]). */
 export function useIsWide(): boolean {
   return useMediaQuery("(min-width: 768px)");
+}
+
+/**
+ * Navigation nach Breite: `tabs` (unter 600 px, Tab-Leiste), `rail` (600 bis 1023 px, schmale Leiste mit Icons) und
+ * `sidebar` (ab 1024 px, einklappbare Seitenleiste).
+ */
+export function useNavMode(): "tabs" | "rail" | "sidebar" {
+  const medium = useMediaQuery("(min-width: 600px)");
+  const expanded = useMediaQuery("(min-width: 1024px)");
+  if (expanded) return "sidebar";
+  return medium ? "rail" : "tabs";
 }
 
 /** Innenmaße des Fensters, aktualisiert beim Ändern der Größe. */

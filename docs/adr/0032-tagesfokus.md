@@ -17,7 +17,7 @@ ist dafür zu groß, sie ist der Raum für den Tagesabschluss.
   gewinnt). Ein leerer Text löscht den Fokus, ein späterer Text stellt ihn wieder her – wie bei den Notizen.
 - **Grenze:** Die Oberfläche begrenzt den Fokus auf 200 Zeichen; das Backend prüft wie bei allen Journal-Texten
   auf 4000.
-- **Nicht im Rückblick:** `build_review` ignoriert die Art. Der Fokus gehört zur Planung des Tages, nicht zu den
+- **Im Rückblick (seit den Folgearbeiten zu ADR 0031):** `build_review` führt die Fokus-Einträge des Zeitraums als `day_focus`. Ursprünglich: `build_review` ignorierte die Art. Der Fokus gehört zur Planung des Tages, nicht zu den
   Ergebnissen eines Zeitraums.
 - **Store:** Migration `016_journal_day_focus.sql`. SQLite kann ein `CHECK` nicht ändern, deshalb wird
   `journal_entries` neu gebaut (Daten und Stempel bleiben erhalten; die Stempel werden gesichert, weil ein
