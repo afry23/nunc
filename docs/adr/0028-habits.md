@@ -1,6 +1,6 @@
 # ADR 0028 – Habit-Tracker
 
-- Status: vorgeschlagen
+- Status: ersetzt durch ADR 0033
 - Datum: 2026-11-02
 - Ergänzt: ADR 0016 (CRDT-Sync), ADR 0017 (Sessions als CRDT), ADR 0023 (Projekte/Kontexte je Session), ADR 0026 (Journal), ADR 0027 (Tagesplaner)
 

@@ -153,12 +153,12 @@ Feature: CRDT sync
   @domain @REQ-SYNC
   Scenario Outline: A sync file of another format is refused
     When a sync file of format <format> is read
-    Then reading fails with "Die Sync-Datei hat das Format <format>, diese Version versteht 2 bis 10. Bitte nunc aktualisieren."
+    Then reading fails with "Die Sync-Datei hat das Format <format>, diese Version versteht 2 bis 11. Bitte nunc aktualisieren."
 
     Examples:
       | format |
       | 1      |
-      | 11     |
+      | 12     |
 
   @domain @REQ-SYNC
   Scenario: A session is the same however its start is written

@@ -12,7 +12,6 @@ import { ActionMenu } from "../components/ActionMenu";
 import { DayFocus } from "../components/DayFocus";
 import { DayNote } from "../components/DayNote";
 import { FreeActivityDialog } from "../components/FreeActivityDialog";
-import { HabitRow } from "../components/HabitRow";
 import { ActionButton, IconButton, Segmented } from "../components/ui";
 import { DayLogCard } from "../components/DayLog";
 import { useIsWide } from "../hooks/useMediaQuery";
@@ -20,9 +19,7 @@ import { useT } from "../i18n";
 import type { PlanReason } from "../lib/api";
 import { fillPercent, nextDay, planRows } from "../lib/dayPlan";
 import { formatMinutes, shortDate, weekdayLabel } from "../lib/format";
-import { todayHabits } from "../lib/habits";
 import { titleOf } from "../lib/todos";
-import { useHabitStore } from "../stores/habitStore";
 import { useTimerStore } from "../stores/timerStore";
 import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
@@ -56,7 +53,6 @@ export function TodayView() {
   const wide = useIsWide();
   const [part, setPart] = useState<TodayPart>("plan");
   const navigate = useNavigate();
-  const habits = todayHabits(useHabitStore((s) => s.items));
   const day = plan?.day ?? "";
 
   // die Notiz gehört zum Tag des Plans; das Feld folgt der gespeicherten Fassung
@@ -253,22 +249,6 @@ export function TodayView() {
           })}
         </ul>
       )}
-
-      {habits.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="label-md text-on-surface-variant">
-            {t("habits.today.title")}
-          </h2>
-          <ul
-            aria-label={t("habits.today.title")}
-            className="flex flex-col gap-3"
-          >
-            {habits.map((item) => (
-              <HabitRow key={item.id} item={item} />
-            ))}
-          </ul>
-        </div>
-      )}
     </>
   );
   const notesPart = (
@@ -312,12 +292,6 @@ export function TodayView() {
               },
             ]}
           />
-          <Link
-            to="/habits"
-            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
-          >
-            {t("habits.open")}
-          </Link>
           <Link
             to="/focus"
             className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"

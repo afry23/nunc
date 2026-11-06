@@ -23,8 +23,8 @@ const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/binding
 
 fn specta_builder() -> Builder<tauri::Wry> {
     use commands::{
-        api, app, backup, habits, notifications, plan, review, sessions, settings, stats, sync,
-        timer, todos, todotxt,
+        api, app, backup, notifications, plan, review, sessions, settings, stats, sync, timer,
+        todos, todotxt,
     };
 
     Builder::<tauri::Wry>::new()
@@ -63,11 +63,6 @@ fn specta_builder() -> Builder<tauri::Wry> {
             plan::plan_todo,
             plan::set_todo_estimate,
             plan::close_day,
-            habits::get_habit_overview,
-            habits::save_habit,
-            habits::archive_habit,
-            habits::delete_habit,
-            habits::set_habit_done,
             review::get_review,
             review::get_day_note,
             review::get_day_focus,

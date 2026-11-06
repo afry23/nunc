@@ -1,6 +1,6 @@
 //! Migrationsrunner, kompatibel zur Tabelle `schema_migrations` der Go-App
 //! (`nunc-go/internal/db/db.go`). Migrationen 001–005 sind unverändert aus der Go-App übernommen (006 und folgende sind nunc-eigen); neue
-//! Migrationen sind ausschließlich additiv (ADR 0002).
+//! Migrationen sind additiv (ADR 0002); Migration 017 räumt den entfernten Habit-Tracker ab (ADR 0033).
 
 use rusqlite::{Connection, params};
 
@@ -42,6 +42,7 @@ pub const MIGRATIONS: &[Migration] = &[
     migration!(14, "014_journal.sql"),
     migration!(15, "015_habits.sql"),
     migration!(16, "016_journal_day_focus.sql"),
+    migration!(17, "017_drop_habits.sql"),
 ];
 
 /// Wendet alle noch nicht in `schema_migrations` vermerkten Migrationen an.
@@ -136,7 +137,7 @@ mod tests {
         conn.execute("INSERT INTO schema_migrations (version) VALUES (42)", [])
             .unwrap();
         migrate(&mut conn).unwrap();
-        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 17);
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 18);
     }
 
     #[test]
@@ -223,6 +224,35 @@ mod tests {
             ),
             0
         );
+    }
+
+    #[test]
+    fn dropping_habits_removes_their_tables_and_keeps_the_rest() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        apply(&mut conn, &MIGRATIONS[..16]).unwrap();
+        conn.execute(
+            "INSERT INTO habits (sync_id, created, name, schedule, goal) VALUES ('h', '2026-01-01', 'Read', 'daily', 'check')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO journal_entries (sync_id, kind, date, text, deleted)
+             VALUES ('note:day:2026-03-02', 'day_note', '2026-03-02', 'Calm day', 0)",
+            [],
+        )
+        .unwrap();
+        migrate(&mut conn).unwrap();
+        for table in ["habits", "habit_field_clock", "habit_logs"] {
+            assert_eq!(
+                count(
+                    &conn,
+                    &format!("SELECT COUNT(*) FROM sqlite_master WHERE name = '{table}'")
+                ),
+                0,
+                "{table}"
+            );
+        }
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM journal_entries"), 1);
     }
 
     #[test]

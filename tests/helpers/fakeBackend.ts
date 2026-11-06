@@ -5,7 +5,6 @@ import type {
   BackupStatus,
   ConnectionTestResult,
   DayPlan,
-  HabitItem,
   GroupBy,
   KnownTags,
   Review,
@@ -114,8 +113,6 @@ export interface FakeBackend extends BackendMock {
   permissionAnswer: "granted" | "denied";
   /** Antwort von `get_day_plan`. */
   dayPlan: DayPlan;
-  /** Antwort von `get_habit_overview`. */
-  habits: HabitItem[];
   /** Antwort von `get_review` (der Zeitraum wird aus der Anfrage eingesetzt). */
   review: Review;
   /** Ergebnis von `save_review_markdown` (`null` = Dialog abgebrochen). */
@@ -256,7 +253,6 @@ export function createFakeBackend(): FakeBackend {
     restoreFile: null,
     backupDirChoice: null,
     restoreError: null,
-    habits: [],
     dayPlan: {
       day: toIsoDate(new Date()),
       items: [],
@@ -286,7 +282,6 @@ export function createFakeBackend(): FakeBackend {
       contexts: [],
       completedTodos: [],
       journal: { achievements: [], weekNotes: [], dayNotes: [] },
-      habits: [],
     },
     reviewPath: null,
     timesheet: {},
@@ -599,11 +594,6 @@ export function createFakeBackend(): FakeBackend {
       return fake.dayPlan.items.filter((item) => item.reason === "planned")
         .length;
     },
-    get_habit_overview: () => fake.habits,
-    save_habit: ({ id }: { id: string | null }) => id ?? "h-new",
-    archive_habit: () => null,
-    delete_habit: () => null,
-    set_habit_done: () => null,
     plan_todo: ({ id }: { id: number; day: string | null }) => find(id),
     set_todo_estimate: ({ id }: { id: number; estimateMin: number | null }) =>
       find(id),

@@ -196,30 +196,6 @@ Feature: Review in the times view
     And I see "Good week"
     And the field "Reflexion" does not exist
 
-
-  @ui @US-HB05
-  Scenario: The review lists the habits with their quota
-    Given the review is:
-      """
-      { "habits": [
-        { "id": "h1", "name": "Lesen", "archived": false, "dueDays": 7, "doneDays": 5, "ratePercent": 71 },
-        { "id": "h2", "name": "Sport", "archived": false, "dueDays": 0, "doneDays": 0, "ratePercent": null }
-      ] }
-      """
-    When I open the app at "/times"
-    And I click "Rückblick"
-    Then I see "Lesen"
-    And I see "5 von 7 Tagen (71 %)"
-    And I see "Sport"
-    And I see "0 von 0 Tagen"
-
-  @ui @US-HB05
-  Scenario: Without habits the review has no habit section
-    When I open the app at "/times"
-    And I click "Rückblick"
-    Then I see "Erfasste Arbeitszeit"
-    And I do not see "Gewohnheiten"
-
   @ui @US-UM06
   Scenario: The review starts with results and ends with the way of working
     Given the review is:

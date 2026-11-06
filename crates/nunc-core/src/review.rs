@@ -11,7 +11,6 @@ use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-use crate::habit::{Habit, HabitLog, Schedule, count_period, done_days};
 use crate::journal::{JournalEntry, JournalKind};
 use crate::model::{
     Language, Session, SessionStatus, SessionType, TimerMode, Todo, effective_tags,
@@ -119,27 +118,6 @@ pub struct ReviewJournal {
     pub day_notes: Vec<JournalItem>,
 }
 
-/// Eine Gewohnheit im Bericht: an wie vielen Tagen des Zeitraums sie fällig war und erledigt wurde.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct ReviewHabit {
-    pub id: String,
-    pub name: String,
-    pub archived: bool,
-    pub due_days: u32,
-    pub done_days: u32,
-    /// Quote in Prozent (höchstens 100); `None`, wenn nichts fällig war.
-    pub rate_percent: Option<u32>,
-}
-
-/// Gewohnheiten und Haken für den Bericht (ADR 0028); `today` begrenzt den Zeitraum nach hinten.
-#[derive(Debug, Clone, Copy)]
-pub struct HabitInput<'a> {
-    pub habits: &'a [Habit],
-    pub logs: &'a [HabitLog],
-    pub today: NaiveDate,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Review {
@@ -164,8 +142,6 @@ pub struct Review {
     pub contexts: Vec<GroupMinutes>,
     pub completed_todos: Vec<CompletedTodo>,
     pub journal: ReviewJournal,
-    /// Gewohnheiten mit ihrer Quote im Zeitraum, in der Reihenfolge der Eingabe.
-    pub habits: Vec<ReviewHabit>,
 }
 
 /// Erster Tag des Monats `month0` (0 = Januar), auch über Jahresgrenzen hinweg (`month0` darf negativ sein).
@@ -366,43 +342,6 @@ fn review_journal(period: Period, entries: &[JournalEntry]) -> ReviewJournal {
     journal
 }
 
-/// Die Gewohnheiten, die im Zeitraum eine Rolle spielten: angelegt bis zum Ende des Zeitraums, auswertbar, und
-/// archivierte nur, wenn sie im Zeitraum erledigt wurden.
-fn review_habits(
-    period: Period,
-    input: &HabitInput<'_>,
-    sessions: &[Session],
-    todos: &[Todo],
-    local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
-) -> Vec<ReviewHabit> {
-    input
-        .habits
-        .iter()
-        .filter(|habit| habit.created <= period.to)
-        .filter_map(|habit| {
-            let schedule: Schedule = habit.schedule()?;
-            habit.goal()?;
-            let done = done_days(habit, input.logs, sessions, todos, local_date);
-            let count = count_period(
-                &schedule,
-                &done,
-                habit.created,
-                period.from,
-                period.to,
-                input.today,
-            );
-            (!habit.archived.value || count.done_days > 0).then(|| ReviewHabit {
-                id: habit.sync_id.clone(),
-                name: habit.name.value.clone(),
-                archived: habit.archived.value,
-                due_days: count.due_days,
-                done_days: count.done_days,
-                rate_percent: count.rate_percent(),
-            })
-        })
-        .collect()
-}
-
 /// Berechnet den Bericht; die Vorperiode ist der vorherige Kalendermonat/-quartal bzw. der Zeitraum gleicher Länge davor.
 pub fn build_review(
     period: Period,
@@ -410,7 +349,6 @@ pub fn build_review(
     todos: &[Todo],
     notes: &HashMap<i32, String>,
     journal: &[JournalEntry],
-    habits: &HabitInput<'_>,
     local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
 ) -> Review {
     let previous = previous_period(period);
@@ -514,7 +452,6 @@ pub fn build_review(
         projects: group_totals(projects),
         contexts: group_totals(contexts),
         journal: review_journal(period, journal),
-        habits: review_habits(period, habits, sessions, todos, local_date),
         completed_todos: finished
             .into_iter()
             .map(|(todo, completed_at)| CompletedTodo {
@@ -544,7 +481,6 @@ struct Texts {
     achievements: &'static str,
     week_notes: &'static str,
     day_notes: &'static str,
-    habits: &'static str,
     sessions: &'static str,
     min: &'static str,
     none: &'static str,
@@ -574,7 +510,6 @@ fn texts(language: Language) -> Texts {
             achievements: "Achievements",
             week_notes: "Week review",
             day_notes: "Day notes",
-            habits: "Habits",
             sessions: "sessions",
             min: "min",
             none: "(none)",
@@ -600,7 +535,6 @@ fn texts(language: Language) -> Texts {
             achievements: "Erfolge",
             week_notes: "Wochenrückblick",
             day_notes: "Tagesnotizen",
-            habits: "Gewohnheiten",
             sessions: "Sessions",
             min: "Min.",
             none: "(ohne Zuordnung)",
@@ -663,18 +597,6 @@ pub fn review_markdown(review: &Review, language: Language) -> String {
     journal_lines(&mut markdown, t.achievements, &review.journal.achievements);
     journal_lines(&mut markdown, t.week_notes, &review.journal.week_notes);
     journal_lines(&mut markdown, t.day_notes, &review.journal.day_notes);
-    if !review.habits.is_empty() {
-        markdown.push_str(&format!("\n## {}\n\n", t.habits));
-        for habit in &review.habits {
-            let rate = habit
-                .rate_percent
-                .map_or_else(String::new, |rate| format!(" ({rate} %)"));
-            markdown.push_str(&format!(
-                "- {}: {} / {}{rate}\n",
-                habit.name, habit.done_days, habit.due_days
-            ));
-        }
-    }
     if review.modes.iter().any(|entry| entry.sessions > 0) {
         markdown.push_str(&format!("\n## {}\n\n", t.techniques));
         for entry in &review.modes {
