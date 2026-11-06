@@ -11,8 +11,7 @@ import { createMemoryHistory } from "@tanstack/react-router";
 import { expect, vi } from "vitest";
 import { DataTable, Given, Then, When } from "quickpickle";
 import App from "../../src/App";
-import type { HabitItem, TimerMode, TimerSnapshot } from "../../src/bindings";
-import { toIsoDate } from "../../src/lib/format";
+import type { TimerMode, TimerSnapshot } from "../../src/bindings";
 import { commands } from "../../src/lib/api";
 import { mockBackend } from "../helpers/ipc";
 import type { UiWorld } from "./world";
@@ -633,58 +632,6 @@ Given("the day plan lists:", (world: UiWorld, table: DataTable) => {
     unestimated: items.filter((i) => i.estimateMin === null).length,
     remainingMin: capacityMin - estimateMin,
   };
-});
-
-// ---------------------------------------------------------------------------------------------
-// Gewohnheiten (ADR 0028)
-
-function scheduleFrom(text: string): HabitItem["schedule"] {
-  if (text === "daily") return { kind: "daily" };
-  const [kind, value] = text.split(":");
-  if (kind === "days")
-    return { kind: "days", days: value.split(",").map(Number) };
-  if (kind === "weekly") return { kind: "weekly", perWeek: Number(value) };
-  return null;
-}
-
-function goalFrom(text: string): HabitItem["goal"] {
-  if (text === "check") return { kind: "check" };
-  const [kind, minutes, tag] = text.split(":");
-  if (kind === "minutes")
-    return { kind: "minutes", minutes: Number(minutes), tag };
-  return null;
-}
-
-/**
- * Spalten: `id`, `name`, `schedule`, `goal` (Kodierung), `done` (yes/no, leer = nicht auswertbar), `streak`, `unit`,
- * `weekDone`, `weekTarget`, optional `open` (yes/no, sonst „nicht erledigt“) und `archived` (yes/no).
- */
-Given("the habits are:", (world: UiWorld, table: DataTable) => {
-  const today = toIsoDate(new Date());
-  world.fake.habits = table.hashes().map((row) => {
-    const done = row.done === "yes";
-    const evaluable = row.done !== "" && row.done !== undefined;
-    return {
-      id: row.id,
-      name: row.name,
-      created: "2026-03-01",
-      archived: row.archived === "yes",
-      schedule: scheduleFrom(row.schedule),
-      goal: goalFrom(row.goal),
-      progress: evaluable
-        ? {
-            doneToday: done,
-            openToday: row.open ? row.open === "yes" : !done,
-            currentStreak: Number(row.streak),
-            bestStreak: Number(row.streak),
-            unit: row.unit as "days" | "weeks",
-            weekDone: Number(row.weekDone),
-            weekTarget: Number(row.weekTarget),
-          }
-        : null,
-      recent: done ? [today] : [],
-    };
-  });
 });
 
 When("I leave the field {string}", async (_world: UiWorld, label: string) => {

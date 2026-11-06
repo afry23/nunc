@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use chrono::NaiveDate;
 use nunc_core::journal::JournalKind;
 use nunc_core::model::Language;
-use nunc_core::review::{HabitInput, Review, build_review, review_markdown};
+use nunc_core::review::{Review, build_review, review_markdown};
 use nunc_platform::to_local_date;
 use tauri::{AppHandle, Runtime, State};
 use tauri_plugin_dialog::DialogExt;
@@ -29,15 +29,12 @@ fn review_for(state: &AppState, from: NaiveDate, to: NaiveDate) -> Result<Review
             "Der Zeitraum darf höchstens ein Jahr umfassen.",
         ));
     }
-    let today = state.today();
-    let (sessions, todos, details, journal, habits, logs) = state.db.with(|conn| {
+    let (sessions, todos, details, journal) = state.db.with(|conn| {
         Ok::<_, nunc_store::StoreError>((
             nunc_store::list_sessions(conn)?,
             nunc_store::list_all_todos(conn)?,
             nunc_store::list_session_details(conn)?,
             nunc_store::list_journal(conn, from, to)?,
-            nunc_store::list_habits(conn)?,
-            nunc_store::list_habit_logs(conn, from, to)?,
         ))
     })?;
     let notes: HashMap<i32, String> = details
@@ -50,11 +47,6 @@ fn review_for(state: &AppState, from: NaiveDate, to: NaiveDate) -> Result<Review
         &todos,
         &notes,
         &journal,
-        &HabitInput {
-            habits: &habits,
-            logs: &logs,
-            today,
-        },
         &to_local_date,
     ))
 }

@@ -475,8 +475,6 @@ pub fn local_state(
         todos,
         sessions,
         journal: crate::journal_repo::entries(conn)?,
-        habits: crate::habit_repo::habits(conn)?,
-        habit_logs: crate::habit_repo::logs(conn)?,
     })
 }
 
@@ -608,7 +606,6 @@ pub fn apply_state(conn: &mut Connection, merged: &SyncState) -> Result<Applied,
         }
     }
     crate::journal_repo::apply_entries(&tx, &merged.journal)?;
-    crate::habit_repo::apply(&tx, &merged.habits, &merged.habit_logs)?;
     renumber_positions(&tx)?;
     tx.commit()?;
     Ok(applied)

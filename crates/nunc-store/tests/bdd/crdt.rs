@@ -15,8 +15,6 @@ pub struct State {
     pub(crate) last_exchange: Applied,
     /// Fehlermeldung des letzten Journal-Schreibvorgangs (leer: kein Fehler).
     pub(crate) journal_error: Option<String>,
-    /// Fehlermeldung des letzten Schreibvorgangs bei Gewohnheiten oder Haken.
-    pub(crate) habit_error: Option<String>,
 }
 
 fn today() -> NaiveDate {

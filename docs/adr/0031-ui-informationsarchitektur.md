@@ -58,4 +58,4 @@ Vier gleichrangige Hauptbereiche, auf Desktop (Seitenleiste) und Android (untere
 
 - Kein Backend- und kein Schema-Eingriff in dieser Stufe.
 - Maestro- und WebdriverIO-Flows starten auf „Heute“ und gehen für den Timer über „Timer“.
-- Weitere Etappen: [ui-umbau-plan.md](../ui-umbau-plan.md) (E2–E6, darunter das Entfernen des Habit-Trackers als eigener ADR).
+- Weitere Etappen: [ui-umbau-plan.md](../ui-umbau-plan.md) (E2–E6, das Entfernen des Habit-Trackers steht in [ADR 0033](./0033-habits-entfernt.md)).

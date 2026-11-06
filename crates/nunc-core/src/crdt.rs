@@ -15,7 +15,6 @@ use std::collections::BTreeMap;
 use chrono::{DateTime, NaiveDate, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::habit::{Habit, HabitLog};
 use crate::hlc::Hlc;
 use crate::journal::JournalEntry;
 use crate::model::SyncSession;
@@ -406,12 +405,6 @@ pub struct SyncState {
     /// Tages-/Wochennotizen und Erfolge (ADR 0026); Schlüssel ist die `sync_id`.
     #[serde(default)]
     pub journal: BTreeMap<String, JournalEntry>,
-    /// Gewohnheiten (ADR 0028); Schlüssel ist die `sync_id`.
-    #[serde(default)]
-    pub habits: BTreeMap<String, Habit>,
-    /// Haken je (Gewohnheit, Tag); Schlüssel ist [`crate::habit::log_id`].
-    #[serde(default)]
-    pub habit_logs: BTreeMap<String, HabitLog>,
 }
 
 impl SyncState {
@@ -440,28 +433,10 @@ impl SyncState {
             };
             journal.insert(id.clone(), merged);
         }
-        let mut habits = self.habits.clone();
-        for (id, habit) in &other.habits {
-            let merged = match habits.get(id) {
-                Some(mine) => mine.merge(habit),
-                None => habit.clone(),
-            };
-            habits.insert(id.clone(), merged);
-        }
-        let mut habit_logs = self.habit_logs.clone();
-        for (id, log) in &other.habit_logs {
-            let merged = match habit_logs.get(id) {
-                Some(mine) => mine.merge(log),
-                None => log.clone(),
-            };
-            habit_logs.insert(id.clone(), merged);
-        }
         Self {
             todos,
             sessions,
             journal,
-            habits,
-            habit_logs,
         }
     }
 
@@ -470,19 +445,6 @@ impl SyncState {
     /// **nach** dem Zusammenführen anwenden: Vorher würde ein altes Löschen verschwinden, bevor es ein lebendes
     /// Todo der Gegenseite überstimmt hat.
     pub fn collect_garbage(&self, now_ms: i64) -> Self {
-        let habits: BTreeMap<String, Habit> = self
-            .habits
-            .iter()
-            .filter(|(_, habit)| !habit.is_collectable(now_ms))
-            .map(|(id, habit)| (id.clone(), habit.clone()))
-            .collect();
-        // Haken ohne Gewohnheit (gelöscht und eingesammelt) haben keinen Zweck mehr
-        let habit_logs = self
-            .habit_logs
-            .iter()
-            .filter(|(_, log)| habits.contains_key(&log.habit) && !log.is_collectable(now_ms))
-            .map(|(id, log)| (id.clone(), log.clone()))
-            .collect();
         Self {
             todos: self
                 .todos
@@ -502,8 +464,6 @@ impl SyncState {
                 .filter(|(_, entry)| !entry.is_collectable(now_ms))
                 .map(|(id, entry)| (id.clone(), entry.clone()))
                 .collect(),
-            habits,
-            habit_logs,
         }
     }
 
@@ -525,16 +485,6 @@ impl SyncState {
                 .journal
                 .iter()
                 .map(|(id, entry)| (id.clone(), entry.sanitized(now_ms)))
-                .collect(),
-            habits: self
-                .habits
-                .iter()
-                .map(|(id, habit)| (id.clone(), habit.sanitized(now_ms)))
-                .collect(),
-            habit_logs: self
-                .habit_logs
-                .iter()
-                .map(|(id, log)| (id.clone(), log.sanitized(now_ms)))
                 .collect(),
         }
     }

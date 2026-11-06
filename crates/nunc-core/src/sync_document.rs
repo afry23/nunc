@@ -14,14 +14,13 @@ use flate2::write::GzEncoder;
 use serde::{Deserialize, Serialize};
 
 use crate::crdt::{Register, SessionCrdt, SyncState, TodoCrdt, session_key};
-use crate::habit::{Habit, HabitLog};
 use crate::hlc::Hlc;
 use crate::journal::JournalEntry;
 use crate::model::{SyncFile, SyncSession, SyncTodo};
 use crate::todotxt::parse_line;
 
-/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`, ADR 0023: Projekte/Kontexte der Session, ADR 0026: Journal, ADR 0028: Gewohnheiten, ADR 0029: kompakte Stempel und gzip).
-pub const SCHEMA_VERSION: u32 = 10;
+/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`, ADR 0023: Projekte/Kontexte der Session, ADR 0026: Journal, ADR 0028: Gewohnheiten, ADR 0029: kompakte Stempel und gzip, ADR 0033: Gewohnheiten entfallen wieder).
+pub const SCHEMA_VERSION: u32 = 11;
 
 /// Älteste Version, die noch gelesen wird: Version 2 kennt Sessions nur als Rohdaten ([`SyncSession`]).
 pub const MIN_SCHEMA_VERSION: u32 = 2;
@@ -65,12 +64,6 @@ pub struct SyncDocument {
     /// Tages-/Wochennotizen und Erfolge (ab Version 7, ADR 0026); ältere Dateien haben keine.
     #[serde(default)]
     pub journal: Vec<JournalEntry>,
-    /// Gewohnheiten (ab Version 8, ADR 0028); ältere Dateien haben keine.
-    #[serde(default)]
-    pub habits: Vec<Habit>,
-    /// Haken je (Gewohnheit, Tag) (ab Version 8).
-    #[serde(default)]
-    pub habit_logs: Vec<HabitLog>,
 }
 
 impl SyncDocument {
@@ -86,8 +79,6 @@ impl SyncDocument {
                 .map(|session| SessionEntry::Crdt(Box::new(session)))
                 .collect(),
             journal: state.journal.values().cloned().collect(),
-            habits: state.habits.values().cloned().collect(),
-            habit_logs: state.habit_logs.values().cloned().collect(),
         }
     }
 
@@ -153,17 +144,6 @@ impl SyncDocument {
                 .journal
                 .into_iter()
                 .map(|entry| (entry.sync_id.clone(), entry))
-                .collect(),
-            habits: self
-                .habits
-                .into_iter()
-                .filter(|habit| !habit.sync_id.is_empty())
-                .map(|habit| (habit.sync_id.clone(), habit))
-                .collect(),
-            habit_logs: self
-                .habit_logs
-                .into_iter()
-                .map(|log| (log.sync_id(), log))
                 .collect(),
         })
     }
@@ -281,5 +261,14 @@ mod tests {
             SyncDocument::decode_limited(&bytes, size - 1),
             Err(DocumentError::Invalid("entpackt zu groß".to_owned()))
         );
+    }
+
+    #[test]
+    fn habits_of_an_older_file_are_ignored() {
+        let json = br#"{"schema_version":10,"synced_at":"2026-03-01T00:00:00Z","todos":[],"sessions":[],"journal":[],
+            "habits":[{"sync_id":"h"}],"habit_logs":[{"habit":"h"}]}"#;
+        let document = SyncDocument::decode(json).unwrap();
+        assert_eq!(document.schema_version, 10);
+        assert!(document.todos.is_empty() && document.sessions.is_empty());
     }
 }

@@ -156,6 +156,16 @@ In die Notes des ersten Release mit der komprimierten Sync-Datei aufnehmen:
 - WebDAV-Server müssen nichts Neues können. Unterstützt der Server `If-None-Match` (`304`), entfällt der Download im
   Leerlauf; andernfalls läuft der Sync wie bisher vollständig.
 
+## Release-Notes: Habit-Tracker entfernt, Sync-Format 11 (ADR 0033)
+
+In die Notes des Release mit dem Umbau (ADR 0031) aufnehmen:
+
+- Der **Habit-Tracker entfällt vollständig**. Beim ersten Start nach dem Update werden Gewohnheiten und Haken gelöscht.
+  Wer sie behalten will, sichert vorher (Einstellungen, Backup); ein Restore der alten Sicherung funktioniert weiter.
+- Die Sync-Datei hat `schema_version` 11. **Alle Geräte aktualisieren:** ältere Versionen melden „Sync-Datei nicht
+  lesbar“ und synchronisieren nicht, bis sie aktualisiert sind; es geht kein Stand verloren.
+- Die Oberfläche ist neu geordnet: Heute, Aufgaben, Verlauf, Rückblick (ADR 0031, ADR 0032: Tagesfokus ab Format 10).
+
 ## Checkliste vor dem Tag
 
 - [ ] `npm run docs:report` und alle Pflicht-Checks grün (CLAUDE.md)

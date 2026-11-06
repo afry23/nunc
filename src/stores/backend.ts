@@ -1,7 +1,6 @@
 import { commands, events } from "../lib/api";
 import { isMobile } from "../lib/platform";
 import { changedData, describeSyncResult } from "../lib/sync";
-import { useHabitStore } from "./habitStore";
 import { useNotificationStore } from "./notificationStore";
 import { useSettingsStore } from "./settingsStore";
 import { useSyncStore } from "./syncStore";
@@ -14,7 +13,6 @@ export async function reloadAll(): Promise<void> {
   await Promise.all([
     useSettingsStore.getState().load(),
     useTodoStore.getState().load(),
-    useHabitStore.getState().load(),
     useTimerStore.getState().refresh(),
     useNotificationStore.getState().refresh(),
     useSyncStore.getState().loadStatus(),
@@ -33,9 +31,8 @@ export async function connectBackend(): Promise<() => void> {
       useTimerStore
         .getState()
         .setFinish({ kind: "completed", payload: event.payload });
-      // der Zähler eines Todos hat sich geändert, eine berechnete Gewohnheit vielleicht ihren Stand
+      // der Zähler eines Todos hat sich geändert
       void useTodoStore.getState().load();
-      void useHabitStore.getState().load();
     }),
     events.timerStopped.listen((event) => {
       useTimerStore
@@ -55,7 +52,6 @@ export async function connectBackend(): Promise<() => void> {
       if (!changedData(result)) return;
       // vom Server übernommene Daten sind im Backend, die Ansichten laden sie neu
       void useTodoStore.getState().load();
-      void useHabitStore.getState().load();
       const message = describeSyncResult(result);
       if (message) useUiStore.getState().notify(message);
     }),

@@ -25,7 +25,7 @@ ist dafür zu groß, sie ist der Raum für den Tagesabschluss.
 - **Sync:** `SCHEMA_VERSION` wird **10** (gelesen 2 bis 10). Ältere Clients lehnen das Format mit „Bitte nunc
   aktualisieren“ ab, statt die unbekannte Art zu verwerfen oder beim Zurückschreiben zu löschen (strikter
   Versionscheck wie in ADR 0017). Das Entfernen des Habit-Trackers (docs/ui-umbau-plan.md E6) erhöht das Format
-  danach auf 11.
+  danach auf 11 (ADR 0033).
 - **Commands:** `get_day_focus(date)`; gespeichert wird über `save_journal_note(kind = "day_focus", …)`.
 - **Oberfläche:** Feld „Tagesfokus“ unter der Überschrift von „Heute“, auf dem Telefon über allen Segmenten.
   Gespeichert wird beim Verlassen des Feldes und mit Enter, nur bei geänderter Fassung.

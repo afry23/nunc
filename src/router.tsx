@@ -8,7 +8,6 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { AppShell } from "./components/AppShell";
-import { HabitsView } from "./views/HabitsView";
 import { HelpView } from "./views/HelpView";
 import { MiniTimerView } from "./views/MiniTimerView";
 import { SettingsView } from "./views/SettingsView";
@@ -71,11 +70,6 @@ const routeTree = rootRoute.addChildren([
       getParentRoute: () => shellRoute,
       path: "/focus",
       component: TimerView,
-    }),
-    createRoute({
-      getParentRoute: () => shellRoute,
-      path: "/habits",
-      component: HabitsView,
     }),
     // alte Adressen (Lesezeichen, Tray, Hilfe) führen zu den neuen Bereichen
     redirect("/today", "/"),
