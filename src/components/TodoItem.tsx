@@ -41,6 +41,8 @@ export function TodoItem({
   canOutdent,
   isFirst,
   isLast,
+  selected,
+  onOpen,
 }: {
   row: TreeRow;
   collapsed: boolean;
@@ -49,6 +51,9 @@ export function TodoItem({
   canOutdent: boolean;
   isFirst: boolean;
   isLast: boolean;
+  /** Die Details dieser Aufgabe sind geöffnet. */
+  selected: boolean;
+  onOpen: (id: number) => void;
 }) {
   const t = useT();
   const { todo, depth, hasChildren, pomodoroTotal } = row;
@@ -283,7 +288,13 @@ export function TodoItem({
                   ({todo.priority})
                 </span>
               )}
-              <span className="break-words">
+              <button
+                type="button"
+                aria-label={t("todos.item.details", { title })}
+                aria-current={selected ? "true" : undefined}
+                onClick={() => onOpen(todo.id)}
+                className="min-h-11 min-w-0 cursor-pointer text-left break-words"
+              >
                 {splitSegments(todo.description).map((segment, index) => (
                   <span
                     key={index}
@@ -298,7 +309,7 @@ export function TodoItem({
                     {segment.text}
                   </span>
                 ))}
-              </span>
+              </button>
               {meta.length > 0 && (
                 <span
                   data-testid="todo-meta"

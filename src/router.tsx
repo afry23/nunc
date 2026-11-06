@@ -44,6 +44,11 @@ const routeTree = rootRoute.addChildren([
     createRoute({
       getParentRoute: () => shellRoute,
       path: "/tasks",
+      // geöffnete Aufgabe (Details); Filter und Sortierung bleiben beim Wechsel erhalten
+      validateSearch: (search: Record<string, unknown>): { task?: number } => {
+        const task = Number(search.task);
+        return Number.isInteger(task) && task > 0 ? { task } : {};
+      },
       component: TodoView,
     }),
     createRoute({

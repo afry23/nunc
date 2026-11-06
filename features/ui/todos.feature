@@ -274,3 +274,64 @@ Feature: Todo list
     When I click "Weitere Aktionen"
     Then I see the menu items "Importieren, Exportieren"
 
+  @ui @US-UM03
+  Scenario: Clicking the title opens the details next to the list
+    Given the todos:
+      | rawText                     |
+      | (A) Bericht +work @office   |
+      | Einkaufen                   |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    Then I see the heading "Aufgabendetails"
+    And I see "Priorität"
+    And I see "+work"
+    And the todo list shows "(A) Bericht +work @office, Einkaufen"
+
+  @ui @US-UM03 @mobile
+  Scenario: On a phone the details replace the list and back returns to it with the filter
+    Given the platform is "mobile"
+    And the viewport is 390 pixels wide
+    And the todos:
+      | rawText   |
+      | Bericht   |
+      | Einkaufen |
+    When I open the app at "/tasks"
+    And I enter "Bericht" into the field "Aufgaben durchsuchen"
+    And I click "Details: Bericht"
+    Then I see the heading "Aufgabendetails"
+    And the field "Aufgaben durchsuchen" does not exist
+    When I click "Zurück zur Liste"
+    Then the todo list shows "Bericht"
+
+  @ui @US-UM03
+  Scenario: The raw todo.txt line is edited in the details
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I enter "Bericht abgeben +work" into the field "todo.txt-Zeile"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht abgeben +work" }
+      """
+
+  @ui @US-UM03
+  Scenario: A task is started from its details
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Arbeit starten"
+    Then the backend received "start_timer" with:
+      """
+      { "mode": "pomodoro", "todoId": 1 }
+      """
+
+  @ui @US-UM03
+  Scenario: The details of a task that is gone say so
+    When I open the app at "/tasks?task=99"
+    Then I see "Diese Aufgabe gibt es nicht mehr."
+
