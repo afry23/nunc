@@ -23,7 +23,9 @@ export async function reloadAll(): Promise<void> {
  * Verbindet die Backend-Ereignisse mit den Stores und lädt den Anfangszustand.
  * Liefert die Funktion zum Abmelden.
  */
-export async function connectBackend(): Promise<() => void> {
+export async function connectBackend(
+  onNavigate?: (route: string) => void,
+): Promise<() => void> {
   const timer = useTimerStore.getState();
   const unlisten = await Promise.all([
     events.timerTick.listen((event) => timer.setSnapshot(event.payload)),
@@ -40,6 +42,7 @@ export async function connectBackend(): Promise<() => void> {
         .setFinish({ kind: "stopped", payload: event.payload });
     }),
     events.appReload.listen(() => void reloadAll()),
+    events.appNavigate.listen((event) => onNavigate?.(event.payload)),
     events.syncStatus.listen((event) => {
       const status = event.payload;
       useSyncStore.getState().setStatus(status);

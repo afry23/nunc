@@ -155,6 +155,15 @@ Given(
 );
 
 When(
+  "the backend asks the app to open {string}",
+  async (_world: UiWorld, route: string) => {
+    await act(async () => {
+      await emit("app:navigate", route);
+    });
+  },
+);
+
+When(
   "the backend reports a finished {string} session with a suggested break of {int} minutes",
   async (_world: UiWorld, mode: string, minutes: number) => {
     await act(async () => {

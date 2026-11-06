@@ -13,8 +13,11 @@ export const commands = {
 	getApiToken: () => typedError<string, AppError>(__TAURI_INVOKE("get_api_token")),
 	/**  Erzeugt ein neues Token; das alte gilt sofort nicht mehr. */
 	regenerateApiToken: () => typedError<string, AppError>(__TAURI_INVOKE("regenerate_api_token")),
-	/**  Holt das Hauptfenster nach vorn und versteckt den Mini-Timer (Desktop; mobil ohne Wirkung). */
-	showMainWindow: () => __TAURI_INVOKE<void>("show_main_window"),
+	/**
+	 *  Holt das Hauptfenster nach vorn und versteckt den Mini-Timer (Desktop; mobil ohne Wirkung). Mit `route`
+	 *  wechselt das Hauptfenster zusätzlich zu dieser Adresse.
+	 */
+	showMainWindow: (route: string | null) => __TAURI_INVOKE<void>("show_main_window", { route }),
 	getSettings: () => typedError<Settings, AppError>(__TAURI_INVOKE("get_settings")),
 	/**
 	 *  Speichert die Einstellungen nach Prüfung der Wertebereiche. `lastBackupDate` gehört dem Backup-Dienst,
@@ -204,6 +207,7 @@ export const commands = {
 /** Events */
 export const events = {
 	apiStatus: makeEvent<ApiStatusChanged>("api:status"),
+	appNavigate: makeEvent<AppNavigate>("app:navigate"),
 	appReload: makeEvent<AppReload>("app:reload"),
 	syncComplete: makeEvent<SyncComplete>("sync:complete"),
 	syncStart: makeEvent<SyncStart>("sync:start"),
@@ -236,6 +240,9 @@ export type AppInfo = {
 	name: string,
 	version: string,
 };
+
+/**  Das Hauptfenster soll zu dieser Adresse wechseln (z. B. vom Mini-Timer zum Fokus). */
+export type AppNavigate = string;
 
 /**  Datenbank wurde ausgetauscht (Restore): alle Stores neu laden. */
 export type AppReload = null;

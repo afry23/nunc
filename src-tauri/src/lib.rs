@@ -96,6 +96,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             events::TimerComplete,
             events::TimerStopped,
             events::AppReload,
+            events::AppNavigate,
             events::SyncStart,
             events::SyncStatusChanged,
             events::SyncComplete,
