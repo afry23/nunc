@@ -80,7 +80,7 @@ export function HabitsView() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            to="/today"
+            to="/"
             className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
           >
             <ChevronLeftIcon />

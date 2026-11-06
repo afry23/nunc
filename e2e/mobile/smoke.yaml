@@ -7,13 +7,14 @@ name: Smoke
     clearState: true
     permissions:
       notifications: allow
-- assertVisible: "25:00"
+- assertVisible: "Heute"
 - tapOn: "Aufgaben"
 - tapOn:
     id: "todo-input"
 - inputText: "(A) Maestro-Test +e2e"
 - tapOn: "Hinzufügen"
 - assertVisible: ".*Maestro-Test.*"
+- tapOn: "Heute"
 - tapOn: "Timer"
 - tapOn: "Start"
 - assertVisible: "(24|25):[0-5][0-9]"

@@ -69,6 +69,13 @@ Given(
 );
 
 Given(
+  "the timeline of {string} has the sessions:",
+  (world: UiWorld, date: string, table: DataTable) => {
+    world.fake.timeline[date] = blocksFrom(world, date, table);
+  },
+);
+
+Given(
   "the timeline of the weekday {string} has the sessions:",
   (world: UiWorld, weekday: string, table: DataTable) => {
     const date = toIsoDate(addDays(thisMonday(), DAYS.indexOf(weekday)));

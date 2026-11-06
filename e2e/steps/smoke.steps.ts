@@ -25,6 +25,7 @@ When("I add the todo {string}", async (text: string) => {
 });
 
 When("I start a pomodoro for the todo {string}", async (title: string) => {
+  await clickByName("Heute");
   await clickByName("Timer");
   const select = await $("#active-todo");
   await select.selectByVisibleText(title);
@@ -44,7 +45,8 @@ When("the pomodoro has ended", async () => {
 });
 
 Then("the statistics show {int} pomodoro", async (count: number) => {
-  await clickByName("Statistik");
+  await clickByName("Rückblick");
+  await clickByName("Arbeitsweise");
   const term = await $(
     "//dt[normalize-space(.)='Pomodoros']/following-sibling::dd[1]",
   );

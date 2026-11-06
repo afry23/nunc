@@ -29,6 +29,7 @@ const REASON_CLASS: Record<PlanReason, string> = {
 export function TodayView() {
   const t = useT();
   const plan = usePlanStore((s) => s.plan);
+  const tracked = usePlanStore((s) => s.tracked);
   const all = useTodoStore((s) => s.all);
   const { planTodo, setEstimate } = usePlanStore.getState();
   const { toggle } = useTodoStore.getState();
@@ -75,7 +76,13 @@ export function TodayView() {
             {t("habits.open")}
           </Link>
           <Link
-            to="/todos"
+            to="/focus"
+            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
+          >
+            {t("today.focus")}
+          </Link>
+          <Link
+            to="/tasks"
             className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
           >
             <ChevronLeftIcon />
@@ -119,6 +126,9 @@ export function TodayView() {
               }}
             />
           </div>
+          <p className="text-on-surface-variant" data-testid="tracked">
+            {t("today.tracked", { time: formatMinutes(tracked) })}
+          </p>
           {plan.unestimated > 0 && (
             <p className="text-sm text-on-surface-variant">
               {t("today.unestimated", { count: plan.unestimated })}
@@ -128,9 +138,26 @@ export function TodayView() {
       )}
 
       {plan && rows.length === 0 ? (
-        <p className="rounded-xl bg-surface-container-low p-6 text-center text-on-surface-variant">
-          {t("today.empty")}
-        </p>
+        <div className="flex flex-col items-center gap-4 rounded-xl bg-surface-container-low p-6 text-center">
+          <p className="font-display text-lg font-bold">{t("today.empty")}</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link
+              to="/tasks"
+              className="inline-flex min-h-11 items-center rounded-lg bg-secondary-container px-4 font-semibold text-on-surface"
+            >
+              {t("today.pick")}
+            </Link>
+            <Link
+              to="/tasks"
+              className="inline-flex min-h-11 items-center rounded-lg px-4 font-semibold text-on-surface-variant hover:bg-surface-container-high"
+            >
+              {t("today.addTask")}
+            </Link>
+          </div>
+          <p className="text-sm text-on-surface-variant">
+            {t("today.emptyHint")}
+          </p>
+        </div>
       ) : (
         <ul aria-label={t("today.list")} className="flex flex-col gap-3">
           {rows.map(({ item, todo }) => {

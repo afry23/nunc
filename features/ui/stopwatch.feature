@@ -3,7 +3,7 @@ Feature: Stopwatch in the UI
 
   @ui @US-B01
   Scenario: The stopwatch can be chosen as the timer mode
-    When I open the app
+    When I open the app at "/focus"
     And I click "Stoppuhr"
     Then the backend received "save_settings" with:
       """
@@ -13,7 +13,7 @@ Feature: Stopwatch in the UI
   @ui @US-B01
   Scenario: The stopwatch is started with its own mode
     Given the setting "activeMode" is "stopwatch"
-    When I open the app
+    When I open the app at "/focus"
     And I click "Start"
     Then the backend received "start_timer" with:
       """
@@ -22,7 +22,7 @@ Feature: Stopwatch in the UI
 
   @ui @US-B01
   Scenario: A running stopwatch counts up in its own color
-    When I open the app
+    When I open the app at "/focus"
     And the backend reports the timer as:
       | state   | mode      | sessionType | remaining | total |
       | running | stopwatch | work        | 3725      | 0     |
@@ -32,14 +32,14 @@ Feature: Stopwatch in the UI
 
   @ui @US-B01
   Scenario: Stopping a stopwatch shows no break recommendation
-    When I open the app
+    When I open the app at "/focus"
     And the backend reports a finished "stopwatch" session without a suggested break
     Then I do not see a dialog
 
   @ui @US-B01
   Scenario: A stopwatch without a task is started with projects, contexts and a note
     Given the setting "activeMode" is "stopwatch"
-    When I open the app
+    When I open the app at "/focus"
     And I enter "meetings" into the field "Projekt hinzufügen"
     And I press the key "Enter" in the field "Projekt hinzufügen"
     And I enter "@office" into the field "Kontext hinzufügen"
@@ -57,14 +57,14 @@ Feature: Stopwatch in the UI
     Given the todos:
       | rawText      | completed |
       | Write report | false     |
-    When I open the app
+    When I open the app at "/focus"
     Then I see "Zuordnung ohne Aufgabe"
     When I select "Write report" in the field "Aktive Aufgabe"
     Then I do not see "Zuordnung ohne Aufgabe"
 
   @ui @US-B01
   Scenario: A chosen project can be removed again
-    When I open the app
+    When I open the app at "/focus"
     And I enter "+meetings" into the field "Projekt hinzufügen"
     And I press the key "Enter" in the field "Projekt hinzufügen"
     Then I see "+meetings ×"

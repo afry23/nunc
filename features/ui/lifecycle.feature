@@ -4,7 +4,7 @@ Feature: App lifecycle on mobile
   @ui @REQ-13 @mobile
   Scenario: Returning from the background shows the recalculated timer
     Given the platform is "mobile"
-    When I open the app
+    When I open the app at "/focus"
     And the timer ran in the background and is now:
       | state   | mode     | sessionType | remaining | total |
       | running | pomodoro | work        | 754       | 1500  |
@@ -14,7 +14,7 @@ Feature: App lifecycle on mobile
   @ui @REQ-13 @mobile
   Scenario: Returning from the background also refreshes the todo list
     Given the platform is "mobile"
-    When I open the app at "/todos"
+    When I open the app at "/tasks"
     And the todo "Neu im Backend" was added in the backend
     And the app returns to the foreground
     Then the todo list shows "Neu im Backend"
@@ -22,7 +22,7 @@ Feature: App lifecycle on mobile
   @ui @REQ-13 @mobile
   Scenario: Going to the background does not reload anything
     Given the platform is "mobile"
-    When I open the app at "/todos"
+    When I open the app at "/tasks"
     And the todo "Neu im Backend" was added in the backend
     And the app goes to the background
     Then the todo list is empty

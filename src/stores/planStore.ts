@@ -1,11 +1,14 @@
 import { create } from "zustand";
 import { commands, unwrap, type CloseAction, type DayPlan } from "../lib/api";
+import { trackedMinutes } from "../lib/dayPlan";
 import { useTodoStore } from "./todoStore";
 import { useUiStore } from "./uiStore";
 
 interface PlanStoreState {
   /** Plan für heute; `null`, bis er geladen ist. */
   plan: DayPlan | null;
+  /** Erfasste Arbeit des Plan-Tages in Minuten (aus den Sessions, nicht aus dem Plan). */
+  tracked: number;
   /** Gespeicherte Tagesnotiz von heute (leer, wenn es keine gibt). */
   note: string;
   load: () => Promise<void>;
@@ -38,9 +41,14 @@ export const usePlanStore = create<PlanStoreState>((set, get) => {
 
   return {
     plan: null,
+    tracked: 0,
     note: "",
     load: () =>
-      guard(async () => set({ plan: await unwrap(commands.getDayPlan()) })),
+      guard(async () => {
+        const plan = await unwrap(commands.getDayPlan());
+        const timeline = await unwrap(commands.getDayTimeline(plan.day));
+        set({ plan, tracked: trackedMinutes(timeline.blocks) });
+      }),
     loadNote: (day) =>
       guard(async () => set({ note: await unwrap(commands.getDayNote(day)) })),
     saveNote: (day, text) =>

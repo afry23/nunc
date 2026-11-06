@@ -19,10 +19,10 @@ describe("shortcutFor", () => {
     expect(shortcutFor(press("Escape"))).toBe("stop");
     expect(shortcutFor(press("n"))).toBe("new-todo");
     expect(shortcutFor(press("N"))).toBe("new-todo");
-    expect(shortcutFor(press("1"))).toBe("go-timer");
+    expect(shortcutFor(press("1"))).toBe("go-today");
     expect(shortcutFor(press("2"))).toBe("go-todos");
-    expect(shortcutFor(press("3"))).toBe("go-times");
-    expect(shortcutFor(press("4"))).toBe("go-stats");
+    expect(shortcutFor(press("3"))).toBe("go-log");
+    expect(shortcutFor(press("4"))).toBe("go-review");
     expect(shortcutFor(press(","))).toBe("go-settings");
     expect(shortcutFor(press("?"))).toBe("go-help");
     expect(shortcutFor(press("x"))).toBeNull();

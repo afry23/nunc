@@ -7,10 +7,12 @@ name: Kill und Resume
     clearState: true
     permissions:
       notifications: allow
+- tapOn: "Timer"
 - tapOn: "Start"
 - assertVisible: "(24|25):[0-5][0-9]"
 - stopApp
 - launchApp
+- tapOn: "Timer"
 # Die Uhr lief weiter: nicht wieder 25:00, sondern der Rest aus dem Zeitstempel
 - assertVisible: "24:[0-5][0-9]"
 - assertVisible: "Pause"

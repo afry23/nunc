@@ -38,7 +38,7 @@ Feature: Flowtime in the UI
 
   @ui @US-FT-02
   Scenario: The stopwatch is displayed while a flowtime session runs
-    When I open the app
+    When I open the app at "/focus"
     And the backend reports the timer as:
       | state   | mode     | sessionType | remaining | total |
       | running | flowtime | work        | 754       | 0     |
@@ -49,7 +49,7 @@ Feature: Flowtime in the UI
   @ui @US-FT-02
   Scenario: The break recommendation is shown after stopping
     Given the backend suggests a break of 10 minutes
-    When I open the app
+    When I open the app at "/focus"
     And the backend reports a finished "flowtime" session with a suggested break of 10 minutes
     Then I see a dialog with the text "Empfohlene Pause: 10 Minuten"
     When I click "Später"

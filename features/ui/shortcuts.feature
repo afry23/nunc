@@ -41,11 +41,11 @@ Feature: Keyboard shortcuts
     And I press the key "2"
     Then I see the heading "Aufgaben"
     When I press the key "3"
-    Then I see the heading "Zeiten"
+    Then I see the heading "Verlauf"
     When I press the key "4"
-    Then I see the heading "Statistik"
+    Then I see the heading "Rückblick"
     When I press the key "1"
-    Then the ring shows "25:00"
+    Then I see the heading "Heute"
 
   @ui @REQ-9 @desktop
   Scenario: Comma opens the settings
@@ -55,7 +55,7 @@ Feature: Keyboard shortcuts
 
   @ui @REQ-9 @desktop
   Scenario: Shortcuts are ignored while typing in an input
-    When I open the app at "/todos"
+    When I open the app at "/tasks"
     And I press the key "2" in the field "Neue Aufgabe"
     And I press the key "Space" in the field "Neue Aufgabe"
     Then I see the heading "Aufgaben"
