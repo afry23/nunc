@@ -32,6 +32,30 @@ Feature: Journal CRDT
     Then the merged state has 1 journal entries
     And the merged entry "note:day:2026-03-02" reads "from B"
 
+  @domain @US-UM05
+  Scenario: The day focus has its own id and does not replace the day note
+    When device A writes the day note "Long text" for 2026-03-02 at 1000
+    And device A writes the day focus "Ship the API" for 2026-03-02 at 1500
+    And the devices are merged at 5000
+    Then the merged state has 2 journal entries
+    And the merged entry "note:day:2026-03-02" reads "Long text"
+    And the merged entry "note:focus:2026-03-02" reads "Ship the API"
+
+  @domain @US-UM05
+  Scenario: The same day focus written on two devices is one entry, the later write wins
+    When device A writes the day focus "from A" for 2026-03-02 at 1000
+    And device B writes the day focus "from B" for 2026-03-02 at 2000
+    And the devices are merged at 5000
+    Then the merged state has 1 journal entries
+    And the merged entry "note:focus:2026-03-02" reads "from B"
+
+  @domain @US-UM05
+  Scenario: An empty text removes the day focus
+    When device A writes the day focus "Ship the API" for 2026-03-02 at 1000
+    And device A writes the day focus " " for 2026-03-02 at 2000
+    And the devices are merged at 5000
+    Then the merged entry "note:focus:2026-03-02" is deleted
+
   @domain @US-RV02
   Scenario: Achievements of different devices are all kept
     When device A adds the achievement "Shipped" with id "a1" for 2026-03-02 at 1000
@@ -156,6 +180,7 @@ Feature: Journal CRDT
       | DayNote     | day_note    |
       | WeekNote    | week_note   |
       | Achievement | achievement |
+      | DayFocus    | day_focus   |
 
   @domain @property @US-RV02
   Scenario: Journal entries merge like a CRDT for random states

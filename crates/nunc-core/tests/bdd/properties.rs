@@ -732,6 +732,7 @@ fn session_merge_laws(cases: u32) -> Result<(), String> {
 fn journal_entry() -> impl Strategy<Value = JournalEntry> {
     (
         prop::sample::select(vec![
+            JournalKind::DayFocus,
             JournalKind::DayNote,
             JournalKind::WeekNote,
             JournalKind::Achievement,

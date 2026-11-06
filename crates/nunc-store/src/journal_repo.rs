@@ -10,7 +10,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use nunc_core::crdt::Register;
 use nunc_core::hlc::Hlc;
 use nunc_core::journal::{
-    JournalEntry, JournalError, JournalKind, day_note_id, validate_text, week_note_id,
+    JournalEntry, JournalError, JournalKind, day_focus_id, day_note_id, validate_text, week_note_id,
 };
 use rusqlite::{Connection, Row, params};
 
@@ -170,6 +170,22 @@ fn save_note(
 /// Hat der Eintrag schon diesen Text? Für einen leeren Text zählt nur, dass er gelöscht ist.
 fn is_same(entry: &JournalEntry, text: &str) -> bool {
     text.is_empty() || entry.text.value == text
+}
+
+/// Speichert den Tagesfokus für `date` (leerer Text löscht ihn).
+pub fn save_day_focus(
+    conn: &Connection,
+    date: NaiveDate,
+    text: &str,
+    at: DateTime<Utc>,
+) -> Result<(), StoreError> {
+    save_note(
+        conn,
+        &day_focus_id(date),
+        |text, clock| JournalEntry::day_focus(date, text, clock),
+        text,
+        at,
+    )
 }
 
 /// Speichert die Tagesnotiz für `date` (leerer Text löscht sie).

@@ -357,6 +357,8 @@ fn review_journal(period: Period, entries: &[JournalEntry]) -> ReviewJournal {
             JournalKind::Achievement => journal.achievements.push(item),
             JournalKind::WeekNote => journal.week_notes.push(item),
             JournalKind::DayNote => journal.day_notes.push(item),
+            // der Fokus eines Tages gehört zur Planung, nicht in den Rückblick (ADR 0032)
+            JournalKind::DayFocus => {}
         }
     }
     journal

@@ -147,11 +147,11 @@ Feature: Edit and delete sessions
     And on device B 1 sessions are listed
 
   @integration @sync @US-TT02
-  Scenario: A version 2 sync file is read and written back as version 9
+  Scenario: A version 2 sync file is read and written back as version 10
     Given a WebDAV server with the folder "/nunc/" holding a sync file of format 2
     And no database exists yet
     And the local todos "Task"
     When I sync
     Then the sync succeeds
-    And the sync file on the server has format 9
+    And the sync file on the server has format 10
     And the sync file on the server is compressed
