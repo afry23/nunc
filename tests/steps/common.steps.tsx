@@ -321,6 +321,10 @@ Given("the sidebar was collapsed earlier", () => {
   localStorage.setItem("nunc.sidebarCollapsed", "1");
 });
 
+Given("the sidebar was expanded earlier", () => {
+  localStorage.setItem("nunc.sidebarCollapsed", "0");
+});
+
 Then("the sidebar is collapsed", async () => {
   await waitFor(() =>
     expect(screen.getByTestId("sidebar").getAttribute("data-collapsed")).toBe(

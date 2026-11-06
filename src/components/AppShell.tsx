@@ -1,6 +1,6 @@
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { useKeyboardInset } from "../hooks/useKeyboardInset";
-import { useIsWide } from "../hooks/useMediaQuery";
+import { useNavMode } from "../hooks/useMediaQuery";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { useShortcuts } from "../hooks/useShortcuts";
 import { useT } from "../i18n";
@@ -23,10 +23,12 @@ const refresh = (): void => {
     void useSyncStore.getState().syncNow();
 };
 
-/** Rahmen der Hauptansichten: Seitenleiste (≥ 768 px) oder Tab-Leiste, Meldungen, Pausenvorschlag. */
+/** Rahmen der Hauptansichten: Seitenleiste (≥ 1024 px), Leiste (≥ 600 px) oder Tab-Leiste, Meldungen, Pausenvorschlag. */
 export function AppShell() {
   const t = useT();
-  const wide = useIsWide();
+  const navMode = useNavMode();
+  // mit Seitenleiste oder Leiste: keine Tab-Leiste, die Aktiv-Leiste steht unten im Inhalt
+  const wide = navMode !== "tabs";
   const running = useTimerStore((s) => s.snapshot.state === "running");
   const active = useTimerStore((s) => s.snapshot.state !== "idle");
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -47,7 +49,7 @@ export function AppShell() {
       >
         {t("nav.skip")}
       </a>
-      {wide && <Sidebar />}
+      {wide && <Sidebar rail={navMode === "rail"} />}
       <main
         id="main"
         tabIndex={-1}

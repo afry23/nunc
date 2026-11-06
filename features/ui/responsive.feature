@@ -2,15 +2,39 @@ Feature: Responsive layout
   Source: PLAN 1.3, roadmap M4-01, M5-02
 
   @ui @REQ-responsive
-  Scenario: A sidebar is shown from 768 pixels width
-    Given the viewport is 768 pixels wide
+  Scenario: The expanded sidebar is shown from 1024 pixels width
+    Given the viewport is 1024 pixels wide
     When I open the app
     Then I see a sidebar
+    And the sidebar is expanded
     And I do not see a bottom tab bar
 
+  @ui @REQ-responsive @US-UM08
+  Scenario Outline: A rail with icons is shown between 600 and 1023 pixels width
+    Given the viewport is <width> pixels wide
+    When I open the app
+    Then I see a sidebar
+    And the sidebar is collapsed
+    And the navigation still offers "Heute, Aufgaben, Verlauf, Rückblick, Einstellungen, Hilfe"
+    And I do not see a bottom tab bar
+    And I do not see the button "Seitenleiste ausklappen"
+
+    Examples:
+      | width |
+      | 600   |
+      | 767   |
+      | 1023  |
+
+  @ui @REQ-responsive @US-UM08
+  Scenario: The rail ignores the stored width of the sidebar
+    Given the sidebar was expanded earlier
+    And the viewport is 800 pixels wide
+    When I open the app
+    Then the sidebar is collapsed
+
   @ui @REQ-responsive
-  Scenario: A bottom tab bar is shown below 768 pixels width
-    Given the viewport is 767 pixels wide
+  Scenario: A bottom tab bar is shown below 600 pixels width
+    Given the viewport is 599 pixels wide
     When I open the app
     Then I see a bottom tab bar
     And I do not see a sidebar
