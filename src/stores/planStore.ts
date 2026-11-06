@@ -9,6 +9,12 @@ interface PlanStoreState {
   plan: DayPlan | null;
   /** Erfasste Arbeit des Plan-Tages in Minuten (aus den Sessions, nicht aus dem Plan). */
   tracked: number;
+  /** Tagesfokus von heute (leer, wenn es keinen gibt). */
+  focus: string;
+  /** Lädt den Tagesfokus für `day`. */
+  loadFocus: (day: string) => Promise<void>;
+  /** Speichert den Tagesfokus für `day`; ein leerer Text entfernt ihn. */
+  saveFocus: (day: string, text: string) => Promise<void>;
   /** Gespeicherte Tagesnotiz von heute (leer, wenn es keine gibt). */
   note: string;
   load: () => Promise<void>;
@@ -43,6 +49,16 @@ export const usePlanStore = create<PlanStoreState>((set, get) => {
     plan: null,
     tracked: 0,
     note: "",
+    focus: "",
+    loadFocus: (day) =>
+      guard(async () =>
+        set({ focus: await unwrap(commands.getDayFocus(day)) }),
+      ),
+    saveFocus: (day, text) =>
+      guard(async () => {
+        await unwrap(commands.saveJournalNote("day_focus", day, text));
+        set({ focus: text.trim() });
+      }),
     load: () =>
       guard(async () => {
         const plan = await unwrap(commands.getDayPlan());

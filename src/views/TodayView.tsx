@@ -7,6 +7,7 @@ import {
   PlayIcon,
 } from "../components/icons";
 import { CloseDayDialog } from "../components/CloseDayDialog";
+import { DayFocus } from "../components/DayFocus";
 import { DayNote } from "../components/DayNote";
 import { FreeActivityDialog } from "../components/FreeActivityDialog";
 import { HabitRow } from "../components/HabitRow";
@@ -47,6 +48,7 @@ export function TodayView() {
   }, [all]);
 
   const note = usePlanStore((s) => s.note);
+  const focus = usePlanStore((s) => s.focus);
   const [closing, setClosing] = useState(false);
   const [freeActivity, setFreeActivity] = useState(false);
   const wide = useIsWide();
@@ -57,7 +59,10 @@ export function TodayView() {
 
   // die Notiz gehört zum Tag des Plans; das Feld folgt der gespeicherten Fassung
   useEffect(() => {
-    if (day) void usePlanStore.getState().loadNote(day);
+    if (day) {
+      void usePlanStore.getState().loadNote(day);
+      void usePlanStore.getState().loadFocus(day);
+    }
   }, [day]);
 
   const rows = plan ? planRows(plan, all) : [];
@@ -316,6 +321,15 @@ export function TodayView() {
           </Link>
         </div>
       </header>
+
+      {plan && (
+        // neuer Schlüssel bei jeder gespeicherten Fassung: das Feld beginnt wieder mit ihr
+        <DayFocus
+          key={`${day}|${focus}`}
+          focus={focus}
+          onSave={(text) => void usePlanStore.getState().saveFocus(day, text)}
+        />
+      )}
 
       {wide ? (
         <>

@@ -538,6 +538,8 @@ export const de = {
   "todos.item.today": "Heute",
   "todos.more": "Weitere Aktionen",
   "nav.menu": "Menü",
+  "today.focusLabel": "Tagesfokus",
+  "today.focusPlaceholder": "Was ist heute das Wichtigste?",
   "today.parts": "Bereiche des Tages",
   "today.part.plan": "Plan",
   "today.part.log": "Tagesverlauf",

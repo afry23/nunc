@@ -535,6 +535,8 @@ export const en: Record<keyof typeof de, string> = {
   "todos.item.today": "Today",
   "todos.more": "More actions",
   "nav.menu": "Menu",
+  "today.focusLabel": "Focus of the day",
+  "today.focusPlaceholder": "What matters most today?",
   "today.parts": "Parts of the day",
   "today.part.plan": "Plan",
   "today.part.log": "Day log",
