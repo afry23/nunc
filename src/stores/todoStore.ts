@@ -8,6 +8,7 @@ import {
 } from "../lib/api";
 import { t } from "../i18n";
 import {
+  duplicateText,
   buildTree,
   describeImport,
   indentParent,
@@ -45,6 +46,8 @@ interface TodoStoreState {
   direction: SortDirection;
   load: () => Promise<void>;
   add: (rawText: string) => Promise<boolean>;
+  /** Legt eine offene Kopie an (bei einer Unteraufgabe unter demselben Elternknoten). */
+  duplicate: (id: number) => Promise<void>;
   /** Legt eine Unteraufgabe unter `parentId` an. */
   addSubtask: (parentId: number, rawText: string) => Promise<boolean>;
   update: (id: number, rawText: string) => Promise<boolean>;
@@ -145,6 +148,13 @@ export const useTodoStore = create<TodoStoreState>((set, get) => {
         useUiStore.getState().fail(error);
         return false;
       }
+    },
+    duplicate: async (id) => {
+      const todo = get().all.find((item) => item.id === id);
+      if (!todo) return;
+      const text = duplicateText(todo.rawText);
+      if (todo.parentId != null) await get().addSubtask(todo.parentId, text);
+      else await get().add(text);
     },
     addSubtask: async (parentId, rawText) => {
       try {

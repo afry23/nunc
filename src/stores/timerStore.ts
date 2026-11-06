@@ -10,6 +10,7 @@ import {
   type TimerSnapshot,
 } from "../lib/api";
 import { useNotificationStore } from "./notificationStore";
+import { useSettingsStore } from "./settingsStore";
 import { useUiStore } from "./uiStore";
 
 export const NO_LABELS: Labels = { projectTags: [], contextTags: [], note: "" };
@@ -47,6 +48,8 @@ interface TimerStoreState {
   selectTodo: (id: number | null) => void;
   refresh: () => Promise<void>;
   start: (mode: TimerMode) => Promise<void>;
+  /** Startet Arbeit an einer Aufgabe im zuletzt benutzten Modus; die Zuordnung steht fest. */
+  startTodo: (id: number) => Promise<void>;
   startBreak: () => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
@@ -117,6 +120,12 @@ export const useTimerStore = create<TimerStoreState>((set, get) => {
         ),
       );
       set({ labels: NO_LABELS });
+    },
+    startTodo: async (id) => {
+      get().selectTodo(id);
+      await get().start(
+        useSettingsStore.getState().settings?.activeMode ?? "pomodoro",
+      );
     },
     startBreak: async () => {
       set({ finish: null });

@@ -77,11 +77,13 @@ async function press(key: string, target: Element | Document): Promise<void> {
 }
 
 function clickable(name: string): HTMLElement {
-  for (const role of ["button", "link", "radio"] as const) {
+  for (const role of ["button", "link", "radio", "menuitem"] as const) {
     const found = screen.queryByRole(role, { name });
     if (found) return found;
   }
-  throw new Error(`Kein Button, Link oder Radio "${name}" gefunden`);
+  throw new Error(
+    `Kein Button, Link, Radio oder Menüeintrag "${name}" gefunden`,
+  );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -475,6 +477,14 @@ Then("I do not see {string}", (_world: UiWorld, text: string) => {
 
 Then("I see the buttons {string}", async (_world: UiWorld, list: string) => {
   for (const name of names(list)) await screen.findByRole("button", { name });
+});
+
+Then("I see the menu items {string}", async (_world: UiWorld, list: string) => {
+  for (const name of names(list)) await screen.findByRole("menuitem", { name });
+});
+
+Then("I do not see the menu item {string}", (_world: UiWorld, name: string) => {
+  expect(screen.queryByRole("menuitem", { name })).toBeNull();
 });
 
 Then("I do not see the button {string}", (_world: UiWorld, name: string) => {

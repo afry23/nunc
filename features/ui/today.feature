@@ -150,6 +150,7 @@ Feature: Today
       | rawText |
       | Bericht |
     When I open the app at "/tasks"
+    And I click "Aktionen: Bericht"
     And I click "Für heute einplanen: Bericht"
     Then the backend received "plan_todo" with "id" equal to "1"
 

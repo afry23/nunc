@@ -13,14 +13,9 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useState, type FormEvent } from "react";
-import {
-  CheckIcon,
-  CloseIcon,
-  DownloadIcon,
-  PlusIcon,
-  UploadIcon,
-} from "../components/icons";
+import { useEffect, useState, type FormEvent } from "react";
+import { CheckIcon, CloseIcon, DotsIcon, PlusIcon } from "../components/icons";
+import { ActionMenu } from "../components/ActionMenu";
 import { FilterMenu } from "../components/FilterMenu";
 import { TodoItem } from "../components/TodoItem";
 import { ActionButton, Button, Chip } from "../components/ui";
@@ -33,6 +28,7 @@ import {
   moveItem,
   outdentParent,
 } from "../lib/todos";
+import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
 
 /** Horizontale Zugstrecke, ab der ein Ziehen als Ein-/Ausrücken gilt. */
@@ -69,6 +65,11 @@ export function TodoView() {
     exportFile,
   } = useTodoStore.getState();
   const [draft, setDraft] = useState("");
+
+  // „Heute“ und Zeiten der Zeilen kommen aus dem Tagesplan
+  useEffect(() => {
+    void usePlanStore.getState().load();
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -151,15 +152,14 @@ export function TodoView() {
           <p className="text-on-surface-variant">{t("todos.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ActionButton icon={<UploadIcon />} onClick={() => void importFile()}>
-            {t("todos.import")}
-          </ActionButton>
-          <ActionButton
-            icon={<DownloadIcon />}
-            onClick={() => void exportFile()}
-          >
-            {t("todos.export")}
-          </ActionButton>
+          <ActionMenu
+            label={t("todos.more")}
+            icon={<DotsIcon />}
+            actions={[
+              { label: t("todos.import"), onSelect: () => void importFile() },
+              { label: t("todos.export"), onSelect: () => void exportFile() },
+            ]}
+          />
           <label htmlFor="todo-sort" className="sr-only">
             {t("todos.sort.label")}
           </label>
