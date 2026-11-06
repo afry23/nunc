@@ -299,6 +299,8 @@ export type CloseAction =
 export type CompletedTodo = {
 	completedAt: string,
 	text: string,
+	/**  Erfasste Arbeitszeit an der Aufgabe im Zeitraum. */
+	minutes: number,
 };
 
 /**  Ergebnis des Verbindungstests. */
@@ -493,6 +495,8 @@ export type ReviewJournal = {
 	achievements: JournalItem[],
 	weekNotes: JournalItem[],
 	dayNotes: JournalItem[],
+	/**  Der Fokus der Tage (ADR 0032), jeweils der Vorsatz des Morgens. */
+	dayFocus: JournalItem[],
 };
 
 /**  Gespeichertes Arbeits- oder Pausenintervall. */

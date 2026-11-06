@@ -33,6 +33,30 @@ Feature: Review in the times view
     And I see "Plan trip +home"
 
   @ui @US-RV01
+  Scenario: Completed tasks show the time worked on them
+    Given the review is:
+      """
+      { "completedTodos": [
+        { "completedAt": "2026-03-04", "text": "Plan trip +home", "minutes": 85 },
+        { "completedAt": "2026-03-05", "text": "Book hotel", "minutes": 0 } ] }
+      """
+    When I open the app at "/review"
+    Then I see "Plan trip +home"
+    And I see "1h 25m"
+    And I see "Book hotel"
+
+  @ui @US-RV02
+  Scenario: The day focus of the period is listed with the day notes
+    Given the review is:
+      """
+      { "journal": { "achievements": [], "weekNotes": [], "dayNotes": [],
+        "dayFocus": [{ "id": "note:focus:2026-03-02", "date": "2026-03-02", "text": "Finish the report" }] } }
+      """
+    When I open the app at "/review"
+    Then I see "Fokus der Tage"
+    And I see "Finish the report"
+
+  @ui @US-RV01
   Scenario: Without completed tasks the list says so
     When I open the app at "/times"
     And I click "Rückblick"
@@ -167,7 +191,7 @@ Feature: Review in the times view
   Scenario: Day notes are listed and can be added and emptied
     Given the review is:
       """
-      { "journal": { "achievements": [], "weekNotes": [],
+      { "journal": { "achievements": [], "weekNotes": [], "dayFocus": [],
         "dayNotes": [{ "id": "note:day:2026-03-02", "date": "2026-03-02", "text": "Calm day" }] } }
       """
     When I open the app at "/times"
@@ -186,7 +210,7 @@ Feature: Review in the times view
   Scenario: A month review shows the week reviews of the month read-only
     Given the review is:
       """
-      { "journal": { "achievements": [], "dayNotes": [],
+      { "journal": { "achievements": [], "dayNotes": [], "dayFocus": [],
         "weekNotes": [{ "id": "note:week:2026-03-08", "date": "2026-03-08", "text": "Good week" }] } }
       """
     When I open the app at "/times"

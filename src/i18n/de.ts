@@ -332,6 +332,7 @@ export const de = {
   "review.days": "Tage",
   "review.dayValue": "{time} · {pomodoros} Pomodoros",
   "review.completed": "Erledigte Aufgaben",
+  "review.dayFocus": "Fokus der Tage",
   "review.noCompleted": "Keine Aufgaben erledigt.",
   "journal.weekNote": "Reflexion",
   "journal.weekNotes": "Wochenrückblicke",

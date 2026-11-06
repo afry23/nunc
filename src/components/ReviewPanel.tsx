@@ -323,6 +323,11 @@ export function ReviewPanel() {
                       {shortDate(todo.completedAt)}
                     </span>
                     <span>{todo.text}</span>
+                    {todo.minutes > 0 && (
+                      <span className="text-on-surface-variant tabular-nums">
+                        {formatMinutes(todo.minutes)}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>

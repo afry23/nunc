@@ -49,8 +49,30 @@ Feature: Review report
   Scenario: Completed todos are listed by completion date in the period
     When I build the review from 2026-03-02 to 2026-03-08
     Then the completed todos are:
-      | completed  | text            |
-      | 2026-03-04 | Plan trip +home |
+      | completed  | text            | minutes |
+      | 2026-03-04 | Plan trip +home | 0       |
+
+  @domain @US-RV01
+  Scenario: A completed todo shows the time worked on it in the period
+    Given the todos:
+      | id | line                                    | pomodoros | position |
+      | 1  | x 2026-03-04 2026-03-02 Plan trip +home | 0         | 1        |
+      | 2  | x 2026-03-05 2026-03-02 Book hotel      | 0         | 2        |
+    And the sessions:
+      | start            | mode     | type | status    | minutes | todo |
+      | 2026-02-23 09:00 | flowtime | work | completed | 40      | 1    |
+      | 2026-03-02 09:00 | flowtime | work | completed | 60      | 1    |
+      | 2026-03-03 09:00 | pomodoro | work | completed | 25      | 1    |
+      | 2026-03-03 14:00 | flowtime | work | aborted   | 30      | 2    |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the completed todos are:
+      | completed  | text            | minutes |
+      | 2026-03-04 | Plan trip +home | 85      |
+      | 2026-03-05 | Book hotel      | 0       |
+    When I export the review as Markdown in English
+    Then the Markdown contains "- 2026-03-04: Plan trip +home (85 min)"
+    And the Markdown contains "- 2026-03-05: Book hotel"
+    And the Markdown does not contain "Book hotel ("
 
   @domain @US-RV01
   Scenario: Time is grouped by project
@@ -308,6 +330,25 @@ Feature: Review report
     Then the review achievements are "2026-03-03: Fixed the sync | 2026-03-05: Shipped the beta"
     And the review week_notes are "2026-03-08: Good week"
     And the review day_notes are "2026-03-06: Long Friday"
+
+  @domain @US-RV02
+  Scenario: The review lists the day focus of the period and the export has a section for it
+    Given the journal entries:
+      | kind      | date       | text               | deleted |
+      | day_focus | 2026-03-03 | Finish the report  |         |
+      | day_focus | 2026-03-02 | Plan the week      |         |
+      | day_focus | 2026-03-09 | After the period   |         |
+      | day_focus | 2026-03-04 | Taken back         | yes     |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review day_focus are "2026-03-02: Plan the week | 2026-03-03: Finish the report"
+    When I export the review as Markdown in English
+    Then the Markdown contains:
+      """
+      ## Day focus
+
+      - 2026-03-02: Plan the week
+      - 2026-03-03: Finish the report
+      """
 
   @domain @US-RV02
   Scenario: A month review shows the week notes of weeks that end in the month
