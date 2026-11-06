@@ -483,6 +483,20 @@ Then("I see the menu items {string}", async (_world: UiWorld, list: string) => {
   for (const name of names(list)) await screen.findByRole("menuitem", { name });
 });
 
+Then(
+  "I see the group {string} with {string}",
+  async (_world: UiWorld, name: string, minutes: string) => {
+    const group = await screen.findByRole("region", { name });
+    const heading = normalize(within(group).getByRole("heading").textContent);
+    expect(heading).toContain(name);
+    expect(heading.endsWith(minutes)).toBe(true);
+  },
+);
+
+Then("I do not see the group {string}", (_world: UiWorld, name: string) => {
+  expect(screen.queryByRole("region", { name })).toBeNull();
+});
+
 Then("I do not see the menu item {string}", (_world: UiWorld, name: string) => {
   expect(screen.queryByRole("menuitem", { name })).toBeNull();
 });

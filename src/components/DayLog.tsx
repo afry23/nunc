@@ -8,12 +8,13 @@ import {
   type TimelineBlock,
 } from "../lib/api";
 import { trackedMinutes } from "../lib/dayPlan";
+import { groupBlocks, type DayGroupBy } from "../lib/dayLog";
 import { formatMinutes, formatTimeOfDay } from "../lib/format";
 import { useTodoStore } from "../stores/todoStore";
 import { useUiStore } from "../stores/uiStore";
 import { blockName } from "./Timeline";
 import { SessionDialog, type EditedSession } from "./SessionDialog";
-import { Button } from "./ui";
+import { Button, Segmented } from "./ui";
 
 type Loaded = { timeline: DayTimeline } | { error: string };
 type Editing = { session: EditedSession | null } | null;
@@ -29,6 +30,7 @@ export function DayLog({ day }: { day: string }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
   const [reload, setReload] = useState(0);
+  const [groupBy, setGroupBy] = useState<DayGroupBy>("none");
 
   useEffect(() => {
     if (day === "") return;
@@ -83,33 +85,42 @@ export function DayLog({ day }: { day: string }) {
           {blocks.length === 0 ? (
             <p className="text-on-surface-variant">{t("timeline.empty")}</p>
           ) : (
-            <ul aria-label={t("daylog.list")} className="flex flex-col gap-2">
-              {blocks.map((block) => {
-                const tags = [...block.projectTags, ...block.contextTags];
-                const range = `${formatTimeOfDay(block.start)}–${formatTimeOfDay(block.end)}`;
-                return (
-                  <li key={block.sessionId}>
-                    <button
-                      type="button"
-                      onClick={() => edit(block)}
-                      className="flex min-h-11 w-full flex-col items-start rounded-xl bg-surface-container-low px-3 py-2 text-left hover:bg-surface-bright"
+            <>
+              <Segmented<DayGroupBy>
+                label={t("daylog.group")}
+                value={groupBy}
+                onChange={setGroupBy}
+                options={[
+                  { value: "none", label: t("daylog.group.none") },
+                  { value: "project", label: t("daylog.group.project") },
+                  { value: "context", label: t("daylog.group.context") },
+                  { value: "todo", label: t("daylog.group.todo") },
+                ]}
+              />
+              {groupBy === "none" ? (
+                <EntryList blocks={blocks} onSelect={edit} />
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {groupBlocks(blocks, todos, groupBy).map((group) => (
+                    <section
+                      key={group.label ?? ""}
+                      aria-label={group.label ?? t(`daylog.none.${groupBy}`)}
+                      className="flex flex-col gap-2"
                     >
-                      <span className="tabular-nums text-on-surface-variant">
-                        {range}
-                      </span>
-                      <span className="break-words">
-                        {block.note || blockName(block, todos, t)}
-                      </span>
-                      {tags.length > 0 && (
-                        <span className="text-sm text-on-surface-variant">
-                          {tags.join(" · ")}
+                      <h3 className="flex justify-between gap-4 font-semibold">
+                        <span className="min-w-0 break-words">
+                          {group.label ?? t(`daylog.none.${groupBy}`)}
                         </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+                        <span className="tabular-nums text-on-surface-variant">
+                          {formatMinutes(group.minutes)}
+                        </span>
+                      </h3>
+                      <EntryList blocks={group.blocks} onSelect={edit} />
+                    </section>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -151,5 +162,47 @@ export function DayLogCard({ day }: { day: string }) {
       </h2>
       <DayLog day={day} />
     </section>
+  );
+}
+
+/** Die Einträge als antippbare Liste (Beginn–Ende, Name, Zuordnung). */
+function EntryList({
+  blocks,
+  onSelect,
+}: {
+  blocks: TimelineBlock[];
+  onSelect: (block: TimelineBlock) => void;
+}) {
+  const t = useT();
+  const todos = useTodoStore((s) => s.all);
+  return (
+    <ul aria-label={t("daylog.list")} className="flex flex-col gap-2">
+      {blocks.map((block) => {
+        const tags = [...block.projectTags, ...block.contextTags];
+        const range = `${formatTimeOfDay(block.start)}–${formatTimeOfDay(block.end)}`;
+        return (
+          <li key={block.sessionId}>
+            <button
+              type="button"
+              onClick={() => onSelect(block)}
+              className="flex min-h-11 w-full flex-col items-start rounded-xl bg-surface-container-low px-3 py-2 text-left hover:bg-surface-bright"
+            >
+              <span className="tabular-nums text-on-surface-variant">
+                {range}
+              </span>{" "}
+              <span className="break-words">
+                {block.note || blockName(block, todos, t)}
+              </span>
+              {tags.length > 0 && " "}
+              {tags.length > 0 && (
+                <span className="text-sm text-on-surface-variant">
+                  {tags.join(" · ")}
+                </span>
+              )}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
