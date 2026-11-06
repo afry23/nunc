@@ -1,3 +1,4 @@
+import { CollapsibleSection } from "./CollapsibleSection";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useT } from "../i18n";
 import { commands, unwrap, type JournalItem, type Review } from "../lib/api";
@@ -20,10 +21,9 @@ async function run(action: () => Promise<unknown>, done: () => void) {
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl bg-surface-container-low p-5">
-      <h2 className="font-display mb-3 text-lg font-bold">{title}</h2>
+    <CollapsibleSection title={title} defaultOpen>
       <div className="flex flex-col gap-3">{children}</div>
-    </section>
+    </CollapsibleSection>
   );
 }
 

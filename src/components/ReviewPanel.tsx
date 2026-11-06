@@ -24,16 +24,16 @@ import {
   type ReviewKind,
 } from "../lib/review";
 import { useUiStore } from "../stores/uiStore";
+import { CollapsibleSection } from "./CollapsibleSection";
 import { ReviewJournal } from "./ReviewJournal";
 
 type Loaded = { review: Review } | { error: string };
 
 function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl bg-surface-container-low p-5">
-      <h2 className="font-display mb-3 text-lg font-bold">{title}</h2>
+    <CollapsibleSection title={title}>
       <ul className="flex flex-col gap-1">{children}</ul>
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -67,8 +67,7 @@ function GroupList({
   const t = useT();
   if (groups.length === 0) return null;
   return (
-    <section className="rounded-2xl bg-surface-container-low p-5">
-      <h2 className="font-display mb-3 text-lg font-bold">{title}</h2>
+    <CollapsibleSection title={title}>
       <ul className="flex flex-col gap-1">
         {groups.map((entry) => (
           <li
@@ -82,7 +81,7 @@ function GroupList({
           </li>
         ))}
       </ul>
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -324,10 +323,7 @@ export function ReviewPanel() {
               })}
             </Card>
           )}
-          <section className="rounded-2xl bg-surface-container-low p-5">
-            <h2 className="font-display mb-3 text-lg font-bold">
-              {t("review.completed")}
-            </h2>
+          <CollapsibleSection title={t("review.completed")}>
             {review.completedTodos.length === 0 ? (
               <p className="text-on-surface-variant">
                 {t("review.noCompleted")}
@@ -347,7 +343,7 @@ export function ReviewPanel() {
                 ))}
               </ul>
             )}
-          </section>
+          </CollapsibleSection>
         </>
       )}
     </div>

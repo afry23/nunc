@@ -8,6 +8,7 @@ name: Hintergrund und Benachrichtigung
     clearState: true
     permissions:
       notifications: allow
+- tapOn: "Menü"
 - tapOn: "Einstellungen"
 - tapOn:
     text: "Arbeitszeit"

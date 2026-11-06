@@ -34,6 +34,11 @@ Vier gleichrangige Hauptbereiche, auf Desktop (Seitenleiste) und Android (untere
   und Sortierung liegen im Store und bleiben beim Zurück erhalten. Import und Export stehen im Überlaufmenü.
 - **Aufgaben auswählen** (`/pick`): der Bestand als Mehrfachauswahl für den Tag; Aufgaben werden nur eingeplant
   (`plan:`), nicht verschoben (ADR 0027).
+- **Schmal (unter 768 px):** Die untere Leiste führt nur die vier Hauptbereiche; Einstellungen und Hilfe stehen im
+  Menü der Kopfzeile. „Heute“ zeigt Plan, Tagesverlauf und Notizen als Segmente nacheinander, breit nebeneinander.
+  „Verlauf“ beginnt mit der Liste eines Tages (die Wochenmatrix ist die Ansicht „Woche“, breit der Standard), im
+  „Rückblick“ klappen die Abschnitte auf. Der Tagesverlauf in Heute und im Verlauf ist dieselbe Komponente
+  (`DayLog`) auf derselben Datenquelle.
 - Die Timerstatistik (`/stats`) bleibt vorerst bestehen und hängt als „Arbeitsweise“ am Rückblick (E5 ordnet sie ein).
 - Alte Adressen `/today`, `/todos`, `/times` leiten auf die neuen um.
 - Tastenkürzel 1–4 folgen den vier Bereichen.

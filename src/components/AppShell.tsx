@@ -11,7 +11,7 @@ import { useSyncStore } from "../stores/syncStore";
 import { useTimerStore } from "../stores/timerStore";
 import { ActiveSessionBar } from "./ActiveSessionBar";
 import { BreakDialog } from "./BreakDialog";
-import { BottomTabs, Sidebar } from "./Navigation";
+import { BottomTabs, ShellMenu, Sidebar } from "./Navigation";
 import { SyncStatusBar } from "./SyncStatusBar";
 import { Toast } from "./Toast";
 
@@ -55,6 +55,7 @@ export function AppShell() {
       >
         <div className="flex min-h-dvh flex-col">
           <div className="flex-1">
+            {!wide && <ShellMenu />}
             <SyncStatusBar />
             <Outlet />
           </div>
