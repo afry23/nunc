@@ -40,31 +40,40 @@ Feature: Stopwatch in the UI
   Scenario: A stopwatch without a task is started with projects, contexts and a note
     Given the setting "activeMode" is "stopwatch"
     When I open the app at "/focus"
+    And I click "Freie Tätigkeit starten"
     And I enter "meetings" into the field "Projekt hinzufügen"
     And I press the key "Enter" in the field "Projekt hinzufügen"
     And I enter "@office" into the field "Kontext hinzufügen"
     And I press the key "Enter" in the field "Kontext hinzufügen"
-    And I enter "Weekly" into the field "Notiz"
-    And I click "Start"
+    And I enter "Weekly" into the field "Tätigkeit"
+    And I click "Starten"
     Then the backend received "start_timer" with:
       """
       { "mode": "stopwatch", "todoId": null, "labels": { "projectTags": ["+meetings"], "contextTags": ["@office"], "note": "Weekly" } }
       """
-    And I see "Weekly · +meetings · @office"
 
   @ui @US-B01
-  Scenario: Projects and contexts are offered only without a task
+  Scenario: A running stopwatch without a task shows its assignment
+    When I open the app at "/focus"
+    And the backend reports the timer as:
+      | state   | mode      | sessionType | remaining | total | note   | projects  | contexts |
+      | running | stopwatch | work        | 60        | 0     | Weekly | +meetings | @office  |
+    Then I see "Weekly · +meetings · @office"
+
+  @ui @US-B01
+  Scenario: The free activity is offered only without a task
     Given the todos:
       | rawText      | completed |
       | Write report | false     |
     When I open the app at "/focus"
-    Then I see "Zuordnung ohne Aufgabe"
+    Then I see the buttons "Freie Tätigkeit starten"
     When I select "Write report" in the field "Aktive Aufgabe"
-    Then I do not see "Zuordnung ohne Aufgabe"
+    Then I do not see the button "Freie Tätigkeit starten"
 
   @ui @US-B01
   Scenario: A chosen project can be removed again
     When I open the app at "/focus"
+    And I click "Freie Tätigkeit starten"
     And I enter "+meetings" into the field "Projekt hinzufügen"
     And I press the key "Enter" in the field "Projekt hinzufügen"
     Then I see "+meetings ×"

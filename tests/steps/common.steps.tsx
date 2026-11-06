@@ -128,8 +128,12 @@ function snapshotOf(row: Record<string, string>): TimerSnapshot {
     sessionType: row.sessionType as TimerSnapshot["sessionType"],
     remaining: Number(row.remaining),
     total: Number(row.total),
-    todoId: null,
-    labels: { projectTags: [], contextTags: [], note: "" },
+    todoId: row.todoId ? Number(row.todoId) : null,
+    labels: {
+      projectTags: (row.projects ?? "").split(" ").filter(Boolean),
+      contextTags: (row.contexts ?? "").split(" ").filter(Boolean),
+      note: row.note ?? "",
+    },
   };
 }
 
@@ -265,6 +269,14 @@ Then(
     ).toEqual(names(entries));
   },
 );
+
+Then("I see the active session bar", async () => {
+  await screen.findByTestId("active-session");
+});
+
+Then("I do not see the active session bar", () => {
+  expect(screen.queryByTestId("active-session")).toBeNull();
+});
 
 Then("I do not see a navigation", () => {
   expect(screen.queryByRole("navigation")).toBeNull();

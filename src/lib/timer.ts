@@ -1,5 +1,6 @@
 import { t } from "../i18n";
 import type { SessionType, TimerMode, TimerSnapshot } from "../bindings";
+import { titleOf } from "./todos";
 
 /** CSS-Farbe (Design-Token) je Modus und Sessiontyp. */
 export function sessionColor(
@@ -78,4 +79,25 @@ export function miniRingSize(width: number, height: number): number {
       Math.max(90, Math.min(width - 24, height - MINI_CHROME_HEIGHT)),
     ),
   );
+}
+
+/**
+ * Titel der laufenden Arbeit für die Aktiv-Leiste: Pause als Pause, sonst die Aufgabe, sonst Notiz bzw. Zuordnung der
+ * freien Tätigkeit, zuletzt der Name der Session.
+ */
+export function activeTitle(
+  snapshot: TimerSnapshot,
+  todo: { description: string } | undefined,
+): string {
+  if (snapshot.sessionType !== "work")
+    return sessionLabel(snapshot.mode, snapshot.sessionType);
+  if (todo) return titleOf(todo);
+  const parts = [
+    snapshot.labels.note,
+    ...snapshot.labels.projectTags,
+    ...snapshot.labels.contextTags,
+  ].filter((part) => part !== "");
+  return parts.length > 0
+    ? parts.join(" · ")
+    : sessionLabel(snapshot.mode, snapshot.sessionType);
 }

@@ -1,4 +1,4 @@
-import { Outlet } from "@tanstack/react-router";
+import { Outlet, useRouterState } from "@tanstack/react-router";
 import { useKeyboardInset } from "../hooks/useKeyboardInset";
 import { useIsWide } from "../hooks/useMediaQuery";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -9,6 +9,7 @@ import { reloadAll } from "../stores/backend";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useSyncStore } from "../stores/syncStore";
 import { useTimerStore } from "../stores/timerStore";
+import { ActiveSessionBar } from "./ActiveSessionBar";
 import { BreakDialog } from "./BreakDialog";
 import { BottomTabs, Sidebar } from "./Navigation";
 import { SyncStatusBar } from "./SyncStatusBar";
@@ -27,6 +28,10 @@ export function AppShell() {
   const t = useT();
   const wide = useIsWide();
   const running = useTimerStore((s) => s.snapshot.state === "running");
+  const active = useTimerStore((s) => s.snapshot.state !== "idle");
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // im Fokusmodus ist der Timer selbst zu sehen
+  const showBar = active && pathname !== "/focus";
   const keyboardOpen = useKeyboardInset();
   const pull = usePullToRefresh(refresh);
   useShortcuts();
@@ -46,11 +51,21 @@ export function AppShell() {
       <main
         id="main"
         tabIndex={-1}
-        className={`min-w-0 flex-1 outline-none ${wide || keyboardOpen ? "" : "pb-20"}`}
+        className={`min-w-0 flex-1 outline-none ${wide || keyboardOpen ? "" : showBar ? "pb-36" : "pb-20"}`}
       >
-        <SyncStatusBar />
-        <Outlet />
+        <div className="flex min-h-dvh flex-col">
+          <div className="flex-1">
+            <SyncStatusBar />
+            <Outlet />
+          </div>
+          {showBar && wide && (
+            <ActiveSessionBar floating={false} keyboardOpen={keyboardOpen} />
+          )}
+        </div>
       </main>
+      {showBar && !wide && (
+        <ActiveSessionBar floating keyboardOpen={keyboardOpen} />
+      )}
       {!wide && !keyboardOpen && <BottomTabs />}
       {pull > 0 && (
         <p
