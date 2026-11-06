@@ -298,6 +298,26 @@ pub fn update_session(
     get(conn, id)
 }
 
+/// Setzt nur die Notiz einer Session (z. B. „Ergebnis / nächste Schritte“ beim Stoppen) und stempelt nur dieses
+/// Feld; Dauer, Todo und Zuordnung bleiben unberührt. Eine gelöschte Session gilt als nicht gefunden.
+pub fn set_session_note(
+    conn: &Connection,
+    id: i32,
+    note: &str,
+    now: DateTime<Utc>,
+) -> Result<(), StoreError> {
+    let id = i64::from(id);
+    atomic(conn, || {
+        ensure_meta(conn)?;
+        let before = live_fields(conn, id)?;
+        conn.execute(
+            "UPDATE session_meta SET note = ?1 WHERE session_id = ?2",
+            params![note, id],
+        )?;
+        stamp_changes(conn, id, Some(&before), now)
+    })
+}
+
 /// Löscht eine Session (Tombstone): Sie verschwindet aus Statistik, Export und Timesheet, die Zeile bleibt für den
 /// Sync erhalten. Eine schon gelöschte Session gilt als nicht gefunden.
 pub fn delete_session(conn: &Connection, id: i32, now: DateTime<Utc>) -> Result<(), StoreError> {
@@ -326,6 +346,13 @@ fn live_fields(conn: &Connection, id: i64) -> Result<crate::session_sync::Fields
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_note_of_a_missing_session_is_not_found() {
+        let conn = crate::open_in_memory().unwrap();
+        let error = set_session_note(&conn, 42, "x", Utc::now()).unwrap_err();
+        assert!(matches!(error, StoreError::NotFound { id: 42, .. }));
+    }
     use crate::{add_todo, list_todos, load_timer, open_in_memory};
     use nunc_core::model::{Settings, TimerMode};
 

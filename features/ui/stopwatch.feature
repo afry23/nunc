@@ -34,7 +34,8 @@ Feature: Stopwatch in the UI
   Scenario: Stopping a stopwatch shows no break recommendation
     When I open the app at "/focus"
     And the backend reports a finished "stopwatch" session without a suggested break
-    Then I do not see a dialog
+    Then I do not see "Empfohlene Pause"
+    And I do not see the button "Pause starten"
 
   @ui @US-B01
   Scenario: A stopwatch without a task is started with projects, contexts and a note

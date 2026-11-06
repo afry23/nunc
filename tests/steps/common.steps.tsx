@@ -643,6 +643,13 @@ Given("the day plan lists:", (world: UiWorld, table: DataTable) => {
   };
 });
 
+Given(
+  "the session {int} has the note {string}",
+  (world: UiWorld, id: number, note: string) => {
+    world.fake.sessionNotes[id] = note;
+  },
+);
+
 /** Spalten `start` (ISO), `minutes`, `mode` und `note`. */
 Given(
   "the time entries of todo {int} are:",

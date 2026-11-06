@@ -126,6 +126,31 @@ pub fn get_task_time(state: State<'_, AppState>, todo_id: i32) -> Result<TaskTim
     Ok(task_time(&sessions, todo_id, &notes))
 }
 
+/// Die Notiz einer Session (leer, wenn es keine gibt).
+#[tauri::command]
+#[specta::specta]
+pub fn get_session_note(state: State<'_, AppState>, id: i32) -> Result<String, AppError> {
+    let details = state
+        .db
+        .with(|conn| nunc_store::list_session_details(conn))?;
+    Ok(details
+        .get(&id)
+        .map(|detail| detail.note.clone())
+        .unwrap_or_default())
+}
+
+/// Setzt nur die Notiz einer Session (z. B. Ergebnis und nächste Schritte beim Stoppen).
+#[tauri::command]
+#[specta::specta]
+pub fn set_session_note(state: State<'_, AppState>, id: i32, note: String) -> Result<(), AppError> {
+    let now = state.clock.now();
+    state
+        .db
+        .with(|conn| nunc_store::set_session_note(conn, id, note.trim(), now))?;
+    state.sessions_changed();
+    Ok(())
+}
+
 /// Alle bekannten Projekte und Kontexte (Todos und Sessions) als Vorschläge für die Auswahl.
 #[tauri::command]
 #[specta::specta]

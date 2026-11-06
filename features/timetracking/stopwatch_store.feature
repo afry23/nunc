@@ -38,3 +38,13 @@ Feature: Stopwatch sessions in the store
     Then on device B the session has projects "+meetings +team" and contexts "@office"
     And on device B the session note is "Weekly"
     And on device B the project "+team" has 45 minutes
+
+  @integration @US-B01
+  Scenario: Setting only the note of a finished session keeps its time and syncs the note
+    Given device A records a stopwatch session from 09:00:00 to 09:45:00
+    When device A sets only the session note to "Send the draft to Sam" at 10:00:00
+    And the devices exchange their state
+    Then on device A the session note is "Send the draft to Sam"
+    And on device A the session has 45 minutes
+    And on device B the session note is "Send the draft to Sam"
+    And on device B the session has 45 minutes

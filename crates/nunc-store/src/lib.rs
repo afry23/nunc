@@ -34,7 +34,7 @@ pub use restore::{restore_backup, validate_backup_file};
 pub use rusqlite::Connection;
 pub use session_repo::{
     ManualSession, SessionDetails, SessionEdit, commit_finish, delete_session, insert_manual,
-    list_session_details, list_sessions, update_session,
+    list_session_details, list_sessions, set_session_note, update_session,
 };
 pub use settings_repo::{device_id, load_settings, save_settings, set_sync_provider};
 pub use sync_repo::{

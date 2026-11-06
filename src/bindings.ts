@@ -99,6 +99,10 @@ export const commands = {
 	getDayTimeline: (date: string) => typedError<DayTimeline, AppError>(__TAURI_INVOKE("get_day_timeline", { date })),
 	/**  Die Zeiteinträge einer Aufgabe (abgeschlossene Arbeitssessions, neueste zuerst) samt Summe. */
 	getTaskTime: (todoId: number) => typedError<TaskTime, AppError>(__TAURI_INVOKE("get_task_time", { todoId })),
+	/**  Die Notiz einer Session (leer, wenn es keine gibt). */
+	getSessionNote: (id: number) => typedError<string, AppError>(__TAURI_INVOKE("get_session_note", { id })),
+	/**  Setzt nur die Notiz einer Session (z. B. Ergebnis und nächste Schritte beim Stoppen). */
+	setSessionNote: (id: number, note: string) => typedError<null, AppError>(__TAURI_INVOKE("set_session_note", { id, note })),
 	/**  Alle bekannten Projekte und Kontexte (Todos und Sessions) als Vorschläge für die Auswahl. */
 	getKnownTags: () => typedError<KnownTags, AppError>(__TAURI_INVOKE("get_known_tags")),
 	/**  Trägt eine Arbeitssession nach. */

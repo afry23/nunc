@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import type { TaskTime } from "../bindings";
-import { commands, unwrap } from "../lib/api";
+import { commands, unwrap, type TaskTime } from "../lib/api";
 import { useT } from "../i18n";
 import { formatDateTime, formatMinutes } from "../lib/format";
 import { subtaskProgress, titleOf } from "../lib/todos";

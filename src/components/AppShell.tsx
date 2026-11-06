@@ -10,7 +10,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useSyncStore } from "../stores/syncStore";
 import { useTimerStore } from "../stores/timerStore";
 import { ActiveSessionBar } from "./ActiveSessionBar";
-import { BreakDialog } from "./BreakDialog";
+import { SessionEndDialog } from "./SessionEndDialog";
 import { BottomTabs, ShellMenu, Sidebar } from "./Navigation";
 import { SyncStatusBar } from "./SyncStatusBar";
 import { Toast } from "./Toast";
@@ -78,7 +78,7 @@ export function AppShell() {
         </p>
       )}
       <Toast />
-      <BreakDialog />
+      <SessionEndDialog />
     </div>
   );
 }

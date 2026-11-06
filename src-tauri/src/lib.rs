@@ -56,6 +56,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             sessions::get_timesheet,
             sessions::get_day_timeline,
             sessions::get_task_time,
+            sessions::get_session_note,
+            sessions::set_session_note,
             sessions::get_known_tags,
             sessions::create_manual_session,
             sessions::update_session,

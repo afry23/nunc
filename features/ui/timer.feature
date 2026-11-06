@@ -83,6 +83,49 @@ Feature: Timer view
       { "mode": "pomodoro", "todoId": 2 }
       """
 
+  @ui @US-UM07
+  Scenario: The result of a completed session can be noted before the break
+    Given the backend suggests a break of 5 minutes
+    When I open the app at "/focus"
+    And the backend reports a finished "pomodoro" session with a suggested break of 5 minutes
+    And I enter "Draft done, send to Sam" into the field "Ergebnis / nächste Schritte"
+    And I click "Pause starten"
+    Then the backend received "set_session_note" with:
+      """
+      { "id": 1, "note": "Draft done, send to Sam" }
+      """
+    And the backend received "start_break"
+
+  @ui @US-UM07
+  Scenario: A stopped session asks for the result and saves it
+    When I open the app at "/focus"
+    And the backend reports a finished "stopwatch" session without a suggested break
+    Then I see a dialog with the text "Session beendet"
+    When I enter "Next: call the client" into the field "Ergebnis / nächste Schritte"
+    And I click "Speichern"
+    Then the backend received "set_session_note" with:
+      """
+      { "id": 1, "note": "Next: call the client" }
+      """
+    And I do not see a dialog
+
+  @ui @US-UM07
+  Scenario: Skipping the result saves nothing
+    When I open the app at "/focus"
+    And the backend reports a finished "stopwatch" session without a suggested break
+    And I click "Überspringen"
+    Then the backend did not receive "set_session_note"
+    And I do not see a dialog
+
+  @ui @US-UM07
+  Scenario: An existing note of the session is shown and kept when nothing changes
+    Given the session 1 has the note "Weekly"
+    When I open the app at "/focus"
+    And the backend reports a finished "stopwatch" session without a suggested break
+    Then a field holds "Weekly"
+    When I click "Speichern"
+    Then the backend did not receive "set_session_note"
+
   @ui @REQ-2.1
   Scenario: A break suggestion dialog appears after a completed pomodoro
     Given the backend suggests a break of 5 minutes

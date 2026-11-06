@@ -161,6 +161,8 @@ export interface FakeBackend extends BackendMock {
   timesheet: Partial<Record<GroupBy, TimesheetSeed[]>>;
   /** Tagesfokus je Tag (`get_day_focus`). */
   focus: Record<string, string>;
+  /** Notizen je Session-Id (`get_session_note`). */
+  sessionNotes: Record<number, string>;
   /** Antwort von `get_task_time` je Todo-Id. */
   taskTime: Record<number, TaskTime>;
   /** Blöcke von `get_day_timeline` je lokalem Tag. */
@@ -288,6 +290,7 @@ export function createFakeBackend(): FakeBackend {
     },
     reviewPath: null,
     timesheet: {},
+    sessionNotes: {},
     taskTime: {},
     timeline: {},
     focus: {},
@@ -531,6 +534,11 @@ export function createFakeBackend(): FakeBackend {
         dayTotals,
         total: dayTotals.reduce((sum, m) => sum + m, 0),
       };
+    },
+    get_session_note: ({ id }: { id: number }) => fake.sessionNotes[id] ?? "",
+    set_session_note: ({ id, note }: { id: number; note: string }) => {
+      fake.sessionNotes[id] = note;
+      return null;
     },
     get_task_time: ({ todoId }: { todoId: number }) =>
       fake.taskTime[todoId] ?? { todoId, totalMin: 0, entries: [] },
