@@ -8,6 +8,7 @@ import type {
   GroupBy,
   KnownTags,
   Review,
+  TaskTime,
   TimelineBlock,
   SyncResult,
   SyncStatus,
@@ -160,6 +161,8 @@ export interface FakeBackend extends BackendMock {
   timesheet: Partial<Record<GroupBy, TimesheetSeed[]>>;
   /** Tagesfokus je Tag (`get_day_focus`). */
   focus: Record<string, string>;
+  /** Antwort von `get_task_time` je Todo-Id. */
+  taskTime: Record<number, TaskTime>;
   /** Blöcke von `get_day_timeline` je lokalem Tag. */
   timeline: Record<string, TimelineBlock[]>;
   /** Vorschläge, die `get_known_tags` liefert. */
@@ -285,6 +288,7 @@ export function createFakeBackend(): FakeBackend {
     },
     reviewPath: null,
     timesheet: {},
+    taskTime: {},
     timeline: {},
     focus: {},
     sessionError: null,
@@ -528,6 +532,8 @@ export function createFakeBackend(): FakeBackend {
         total: dayTotals.reduce((sum, m) => sum + m, 0),
       };
     },
+    get_task_time: ({ todoId }: { todoId: number }) =>
+      fake.taskTime[todoId] ?? { todoId, totalMin: 0, entries: [] },
     get_day_timeline: ({ date }: { date: string }) => ({
       date,
       blocks: fake.timeline[date] ?? [],

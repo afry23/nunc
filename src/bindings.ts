@@ -97,6 +97,8 @@ export const commands = {
 	getTimesheet: (startDate: string, endDate: string, groupBy: GroupBy) => typedError<Timesheet, AppError>(__TAURI_INVOKE("get_timesheet", { startDate, endDate, groupBy })),
 	/**  Die Sessions eines lokalen Tages als Blöcke, mit Notiz und Herkunft. */
 	getDayTimeline: (date: string) => typedError<DayTimeline, AppError>(__TAURI_INVOKE("get_day_timeline", { date })),
+	/**  Die Zeiteinträge einer Aufgabe (abgeschlossene Arbeitssessions, neueste zuerst) samt Summe. */
+	getTaskTime: (todoId: number) => typedError<TaskTime, AppError>(__TAURI_INVOKE("get_task_time", { todoId })),
 	/**  Alle bekannten Projekte und Kontexte (Todos und Sessions) als Vorschläge für die Auswahl. */
 	getKnownTags: () => typedError<KnownTags, AppError>(__TAURI_INVOKE("get_known_tags")),
 	/**  Trägt eine Arbeitssession nach. */
@@ -680,6 +682,23 @@ export type TagCombination = {
 	minutes: number,
 	/**  Notizen dieser Sessions, älteste zuerst; Sessions ohne Notiz fehlen. */
 	notes: SessionNote[],
+};
+
+/**  Ein Zeiteintrag an einer Aufgabe. */
+export type TaskEntry = {
+	sessionId: number,
+	startedAt: string,
+	minutes: number,
+	mode: TimerMode,
+	/**  Notiz der Session, leer ohne. */
+	note: string,
+};
+
+/**  Alle Zeiteinträge einer Aufgabe und ihre Summe. */
+export type TaskTime = {
+	todoId: number,
+	totalMin: number,
+	entries: TaskEntry[],
 };
 
 /**  Fokuszeit, Pomodoros und Sessions einer Aufgabe. */

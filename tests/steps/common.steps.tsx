@@ -643,6 +643,25 @@ Given("the day plan lists:", (world: UiWorld, table: DataTable) => {
   };
 });
 
+/** Spalten `start` (ISO), `minutes`, `mode` und `note`. */
+Given(
+  "the time entries of todo {int} are:",
+  (world: UiWorld, todoId: number, table: DataTable) => {
+    const entries = table.hashes().map((row, index) => ({
+      sessionId: index + 1,
+      startedAt: row.start,
+      minutes: Number(row.minutes),
+      mode: row.mode as TimerMode,
+      note: row.note ?? "",
+    }));
+    world.fake.taskTime[todoId] = {
+      todoId,
+      totalMin: entries.reduce((sum, entry) => sum + entry.minutes, 0),
+      entries,
+    };
+  },
+);
+
 When("I leave the field {string}", async (_world: UiWorld, label: string) => {
   const field = await screen.findByLabelText(label);
   await act(async () => {

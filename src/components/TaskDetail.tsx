@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { TaskTime } from "../bindings";
+import { commands, unwrap } from "../lib/api";
 import { useT } from "../i18n";
-import { formatMinutes } from "../lib/format";
+import { formatDateTime, formatMinutes } from "../lib/format";
 import { subtaskProgress, titleOf } from "../lib/todos";
 import { usePlanStore } from "../stores/planStore";
 import { useTimerStore } from "../stores/timerStore";
@@ -16,6 +18,22 @@ export function TaskDetail({ id }: { id: number }) {
   const planItem = usePlanStore((s) =>
     s.plan?.items.find((item) => item.todoId === id),
   );
+
+  const timerState = useTimerStore((s) => s.snapshot.state);
+  const [time, setTime] = useState<TaskTime | null>(null);
+  // neu laden, wenn der Timer anhält: dann ist eine Session dazugekommen
+  useEffect(() => {
+    let cancelled = false;
+    void unwrap(commands.getTaskTime(id)).then(
+      (loaded) => {
+        if (!cancelled) setTime(loaded);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [id, timerState]);
 
   if (!todo) {
     return (
@@ -100,6 +118,37 @@ export function TaskDetail({ id }: { id: number }) {
           </div>
         ))}
       </dl>
+
+      <section aria-label={t("task.time")} className="flex flex-col gap-2">
+        <h3 className="label-md text-on-surface-variant">{t("task.time")}</h3>
+        {time === null || time.entries.length === 0 ? (
+          <p className="text-on-surface-variant">{t("task.time.none")}</p>
+        ) : (
+          <>
+            <p className="font-semibold">
+              {t("task.time.total", { time: formatMinutes(time.totalMin) })}
+            </p>
+            <ul className="flex flex-col gap-1">
+              {time.entries.map((entry) => (
+                <li
+                  key={entry.sessionId}
+                  className="flex flex-col gap-0.5 sm:flex-row sm:gap-4"
+                >
+                  <span className="text-on-surface-variant tabular-nums">
+                    {formatDateTime(entry.startedAt)}
+                  </span>
+                  <span className="tabular-nums">
+                    {formatMinutes(entry.minutes)}
+                  </span>
+                  {entry.note !== "" && (
+                    <span className="break-words">{entry.note}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
 
       {/* neuer Schlüssel nach jedem Speichern: das Feld beginnt wieder mit der gespeicherten Zeile */}
       <RawLine key={todo.rawText} id={todo.id} rawText={todo.rawText} />

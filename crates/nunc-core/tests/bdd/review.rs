@@ -11,6 +11,7 @@ use nunc_core::review::{
     GroupMinutes, JournalItem, Period, PeriodKind, Review, build_review, period_containing,
     review_markdown,
 };
+use nunc_core::task_time::{TaskTime, task_time};
 
 use crate::DomainWorld;
 use crate::stats::day;
@@ -25,6 +26,7 @@ pub struct State {
     markdown: Option<String>,
     notes: HashMap<i32, String>,
     journal: Vec<JournalEntry>,
+    task_time: Option<TaskTime>,
 }
 
 fn review(world: &DomainWorld) -> &Review {
@@ -333,4 +335,36 @@ fn journal_lists(world: &mut DomainWorld, group: String, expected: String) {
         other => panic!("unbekannte Gruppe {other}"),
     };
     assert_eq!(lines(items), expected);
+}
+
+#[when(expr = "I list the time entries of todo {int}")]
+fn list_task_time(world: &mut DomainWorld, todo_id: i32) {
+    world.review.task_time = Some(task_time(
+        &world.stats.sessions,
+        todo_id,
+        &world.review.notes,
+    ));
+}
+
+#[then(expr = "the total time is {int} minutes")]
+fn task_time_total(world: &mut DomainWorld, expected: u32) {
+    let time = world.review.task_time.as_ref().expect("keine Zeiteinträge");
+    assert_eq!(time.total_min, expected);
+}
+
+#[then("the time entries are:")]
+fn task_time_entries(world: &mut DomainWorld, step: &Step) {
+    let time = world.review.task_time.as_ref().expect("keine Zeiteinträge");
+    let actual: Vec<Vec<String>> = time
+        .entries
+        .iter()
+        .map(|entry| {
+            vec![
+                entry.started_at.format("%Y-%m-%d %H:%M").to_string(),
+                entry.minutes.to_string(),
+                entry.note.clone(),
+            ]
+        })
+        .collect();
+    assert_eq!(actual, crate::stats::rows(step));
 }
