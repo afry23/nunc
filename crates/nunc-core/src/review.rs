@@ -1,6 +1,8 @@
 //! Rückblick-Bericht für einen Zeitraum (ADR 0025), pur aus den Roh-Sessions und Todos.
 //!
-//! Fokuszeit zählt nur **abgeschlossene** Arbeitssessions; abgebrochene gehen in die Abbruchquote ein.
+//! Die erfasste Arbeitszeit (`focus_min`) zählt nur **abgeschlossene** Arbeitssessions aller Modi (auch Stoppuhr und
+//! Nachgetragenes); abgebrochene gehen in die Abbruchquote ein. Die Fokuszeit im engen Sinn (Pomodoro, Flowtime) leitet
+//! die Oberfläche aus `modes` ab.
 //! Ein Tag ist der lokale Kalendertag des Beginns (`local_date` kommt vom Aufrufer).
 
 use std::collections::{BTreeMap, HashMap};
@@ -556,7 +558,7 @@ fn texts(language: Language) -> Texts {
     match language {
         Language::En => Texts {
             title: "Review",
-            focus_time: "Focus time",
+            focus_time: "Tracked work time",
             versus: "vs.",
             work_sessions: "Work sessions",
             completed: "completed",
@@ -582,7 +584,7 @@ fn texts(language: Language) -> Texts {
         },
         Language::De | Language::System => Texts {
             title: "Rückblick",
-            focus_time: "Fokuszeit",
+            focus_time: "Erfasste Arbeitszeit",
             versus: "gegenüber",
             work_sessions: "Arbeitssessions",
             completed: "abgeschlossen",

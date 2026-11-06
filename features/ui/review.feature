@@ -14,7 +14,8 @@ Feature: Review in the times view
     Then the backend received "get_review"
     And I see "1h 25m"
     And I see "+45m gegenüber der Vorperiode (40m)"
-    And I see "2 abgeschlossen, 1 abgebrochen (33 % Abbrüche)"
+    When I click "Arbeitsweise"
+    Then I see "2 abgeschlossen, 1 abgebrochen (33 % Abbrüche)"
 
   @ui @US-RV01
   Scenario: Projects, contexts and completed tasks are listed
@@ -58,7 +59,10 @@ Feature: Review in the times view
 
   @ui @US-RV01
   Scenario: The review shows pomodoros, techniques, tasks and days
-    Given the review is:
+    Given the todos:
+      | rawText           | completed |
+      | Write report +work | false     |
+    And the review is:
       """
       { "pomodoroCount": 3,
         "modes": [{ "mode": "pomodoro", "sessions": 3, "minutes": 75 },
@@ -69,11 +73,12 @@ Feature: Review in the times view
       """
     When I open the app at "/times"
     And I click "Rückblick"
+    Then I see "Write report +work"
+    And I see "1h 40m · 3 Pomodoros · 4 Sessions"
+    When I click "Arbeitsweise"
     Then I see "3 Sessions, 1h 15m"
     And I see "1 Sessions, 40m"
     And I see "2 Sessions, 1h 30m"
-    And I see "Write report +work"
-    And I see "1h 40m · 3 Pomodoros · 4 Sessions"
     And I see "1h 5m · 2 Pomodoros"
 
   @ui @US-RV01
@@ -99,8 +104,8 @@ Feature: Review in the times view
   Scenario: The week review is written into the review of a week
     When I open the app at "/times"
     And I click "Rückblick"
-    And I enter "Good week" into the field "Wochenrückblick"
-    And I click "Speichern" in the section "Wochenrückblick"
+    And I enter "Good week" into the field "Reflexion"
+    And I click "Speichern" in the section "Reflexion"
     Then the backend received "save_journal_note"
     And the backend received "save_journal_note" with "kind" equal to "week_note"
     And the backend received "save_journal_note" with "text" equal to "Good week"
@@ -110,7 +115,7 @@ Feature: Review in the times view
   Scenario: Saving is only possible after the text changed
     When I open the app at "/times"
     And I click "Rückblick"
-    Then the button "Speichern" in the section "Wochenrückblick" is disabled
+    Then the button "Speichern" in the section "Reflexion" is disabled
 
   @ui @US-RV02
   Scenario: An achievement can be added, changed and deleted
@@ -118,12 +123,12 @@ Feature: Review in the times view
     And I click "Rückblick"
     Then I see "Noch keine Erfolge in diesem Zeitraum."
     When I enter "Released the beta" into the field "Neuer Erfolg"
-    And I click "Hinzufügen" in the section "Erfolge"
+    And I click "Hinzufügen" in the section "Ergebnisse und Beiträge"
     Then the backend received "add_achievement"
     And I see "Released the beta"
     When I click "Bearbeiten"
     And I enter "Released the beta 1.0" into the field "Text"
-    And I click "Speichern" in the section "Erfolge"
+    And I click "Speichern" in the section "Ergebnisse und Beiträge"
     Then the backend received "update_achievement"
     And I see "Released the beta 1.0"
     When I click "Löschen"
@@ -156,7 +161,7 @@ Feature: Review in the times view
   Scenario: Adding an achievement needs a text
     When I open the app at "/times"
     And I click "Rückblick"
-    Then the button "Hinzufügen" in the section "Erfolge" is disabled
+    Then the button "Hinzufügen" in the section "Ergebnisse und Beiträge" is disabled
 
   @ui @US-RV02
   Scenario: Day notes are listed and can be added and emptied
@@ -168,13 +173,13 @@ Feature: Review in the times view
     When I open the app at "/times"
     And I click "Rückblick"
     Then a field holds "Calm day"
-    When I enter "" into the field "Tagesnotizen 02.03."
-    And I click "Speichern" in the section "Tagesnotizen"
+    When I enter "" into the field "Notizen aus den Tagen 02.03."
+    And I click "Speichern" in the section "Notizen aus den Tagen"
     Then the backend received "save_journal_note" with "kind" equal to "day_note"
     And the backend received "save_journal_note" with "text" equal to ""
     And I see "Noch keine Tagesnotizen in diesem Zeitraum."
     When I enter "New note" into the field "Neue Tagesnotiz"
-    And I click "Hinzufügen" in the section "Tagesnotizen"
+    And I click "Hinzufügen" in the section "Notizen aus den Tagen"
     Then a field holds "New note"
 
   @ui @US-RV02
@@ -189,7 +194,7 @@ Feature: Review in the times view
     And I click "Monat"
     Then I see "Wochenrückblicke"
     And I see "Good week"
-    And I do not see the field "Wochenrückblick"
+    And the field "Reflexion" does not exist
 
 
   @ui @US-HB05
@@ -212,5 +217,101 @@ Feature: Review in the times view
   Scenario: Without habits the review has no habit section
     When I open the app at "/times"
     And I click "Rückblick"
-    Then I see "Fokuszeit"
+    Then I see "Erfasste Arbeitszeit"
     And I do not see "Gewohnheiten"
+
+  @ui @US-UM06
+  Scenario: The review starts with results and ends with the way of working
+    Given the review is:
+      """
+      { "projects": [{ "group": "+work", "minutes": 85 }],
+        "completedTodos": [{ "completedAt": "2026-03-04", "text": "Plan trip +home" }] }
+      """
+    When I open the app at "/review"
+    Then the sections appear in the order "Ergebnisse und Beiträge, Arbeit nach Projekten, Erledigte Aufgaben, Notizen aus den Tagen, Reflexion, Für den nächsten Zeitraum, Arbeitsweise"
+
+  @ui @US-UM06
+  Scenario: The total is the tracked work time, the focus time is a part of it
+    Given the review is:
+      """
+      { "focusMin": 150, "previousFocusMin": 100,
+        "modes": [{ "mode": "pomodoro", "sessions": 3, "minutes": 60 },
+                  { "mode": "flowtime", "sessions": 1, "minutes": 30 },
+                  { "mode": "stopwatch", "sessions": 2, "minutes": 60 }] }
+      """
+    When I open the app at "/review"
+    Then I see "Erfasste Arbeitszeit"
+    And I see "2h 30m"
+    And I see "davon Fokuszeit (Pomodoro und Flowtime): 1h 30m"
+
+  @ui @US-UM06
+  Scenario: Tasks that were worked on but are still open are listed apart
+    Given the todos:
+      | rawText      | completed |
+      | Write report | false     |
+      | Plan trip    | true      |
+    And the review is:
+      """
+      { "tasks": [{ "todoId": 1, "text": "Write report", "minutes": 90, "pomodoros": 2, "sessions": 3 },
+                  { "todoId": 2, "text": "Plan trip", "minutes": 30, "pomodoros": 1, "sessions": 1 }] }
+      """
+    When I open the app at "/review"
+    Then I see "Bearbeitet, aber noch offen"
+    And I see "Write report"
+    And I do not see "Plan trip"
+
+  @ui @US-UM06
+  Scenario: Without open work in progress there is no such section
+    When I open the app at "/review"
+    Then I do not see "Bearbeitet, aber noch offen"
+
+  @ui @US-UM06
+  Scenario: The reflection of a week asks three questions
+    When I open the app at "/review"
+    Then I see "Was lief gut?"
+    And I see "Was war schwierig?"
+    And I see "Was nehme ich mit?"
+
+  @ui @US-UM06
+  Scenario: The week review can be started from the top
+    When I open the app at "/review"
+    And I click "Wochenrückblick beginnen"
+    Then the field "Reflexion" has the focus
+
+  @ui @US-UM06
+  Scenario: The month review has no week review to start
+    When I open the app at "/review"
+    And I click "Monat"
+    Then I do not see the button "Wochenrückblick beginnen"
+
+  @ui @US-UM06
+  Scenario: A follow-up task is created for the next period
+    When I open the app at "/review"
+    And I enter "Bericht nachreichen +work" into the field "Aufgabe für den nächsten Zeitraum"
+    And I click "Aufgabe erstellen"
+    Then the backend received "add_todo" with:
+      """
+      { "rawText": "Bericht nachreichen +work" }
+      """
+    And the field "Aufgabe für den nächsten Zeitraum" is empty
+
+  @ui @US-UM06
+  Scenario: An empty follow-up task cannot be created
+    When I open the app at "/review"
+    And I click "Aufgabe erstellen"
+    Then the backend did not receive "add_todo"
+
+  @ui @US-UM06
+  Scenario: The way of working is folded and leads to the timer statistics
+    Given the review is:
+      """
+      { "pomodoroCount": 3, "completedSessions": 4, "abortedSessions": 1, "abortRatePercent": 20 }
+      """
+    When I open the app at "/review"
+    Then I do not see "abgebrochen"
+    When I click "Arbeitsweise"
+    Then I see "abgebrochen"
+    And I see "Zeitmessung"
+    When I click "Timerstatistik öffnen"
+    Then I see the heading "Arbeitsweise"
+

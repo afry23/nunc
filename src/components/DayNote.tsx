@@ -2,15 +2,13 @@ import { useState } from "react";
 import { useT } from "../i18n";
 import { Button } from "./ui";
 
-/** Tagesnotiz mit Speichern und Einstieg in den Tagesabschluss (ADR 0027). Beginnt mit der gespeicherten `note`. */
+/** Tagesnotiz mit Speichern (ADR 0027). „Tag abschließen“ liegt im Tagesmenü. Beginnt mit der gespeicherten `note`. */
 export function DayNote({
   note,
   onSave,
-  onClose,
 }: {
   note: string;
   onSave: (text: string) => void;
-  onClose: () => void;
 }) {
   const t = useT();
   const [draft, setDraft] = useState(note);
@@ -36,9 +34,6 @@ export function DayNote({
           onClick={() => onSave(draft)}
         >
           {t("today.noteSave")}
-        </Button>
-        <Button variant="primary" onClick={onClose}>
-          {t("today.close")}
         </Button>
       </div>
     </div>

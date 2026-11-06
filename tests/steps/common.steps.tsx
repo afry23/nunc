@@ -484,6 +484,19 @@ Then("I see the menu items {string}", async (_world: UiWorld, list: string) => {
 });
 
 Then(
+  "the sections appear in the order {string}",
+  async (_world: UiWorld, list: string) => {
+    const expected = names(list);
+    await screen.findByRole("heading", { name: expected[0] });
+    const seen = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((heading) => normalize(heading.textContent))
+      .filter((text) => expected.includes(text));
+    expect(seen).toEqual(expected);
+  },
+);
+
+Then(
   "I see the group {string} with {string}",
   async (_world: UiWorld, name: string, minutes: string) => {
     const group = await screen.findByRole("region", { name });

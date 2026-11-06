@@ -194,6 +194,7 @@ Feature: Today
       | 1    | planned |          | 0     |
       | 2    | due     |          | 0     |
     When I open the app at "/"
+    And I click "Tagesmenü"
     And I click "Tag abschließen"
     Then I see a dialog with the text "1 eingeplante Aufgaben, 1 mit Frist."
     And I see a dialog with the text "Aufgaben mit Frist bleiben auf dem Plan"
@@ -214,6 +215,7 @@ Feature: Today
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
     When I open the app at "/"
+    And I click "Tagesmenü"
     And I click "Tag abschließen"
     And I click "Vom Plan nehmen"
     And I enter "Too much planned" into the field "Notiz zum Tag"
@@ -227,6 +229,7 @@ Feature: Today
   Scenario: Cancelling the dialog changes nothing
     Given the day plan for 2026-03-04 has a capacity of 240 minutes
     When I open the app at "/"
+    And I click "Tagesmenü"
     And I click "Tag abschließen"
     And I click "Abbrechen"
     Then I do not see a dialog
@@ -236,6 +239,7 @@ Feature: Today
   Scenario: Without planned tasks the dialog offers only the note
     Given the day plan for 2026-03-04 has a capacity of 240 minutes
     When I open the app at "/"
+    And I click "Tagesmenü"
     And I click "Tag abschließen"
     Then I see a dialog with the text "0 eingeplante Aufgaben, 0 mit Frist."
     And I do not see the button "Unverändert lassen"
