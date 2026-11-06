@@ -1,12 +1,19 @@
-import { Link, useRouter, useRouterState } from "@tanstack/react-router";
+import {
+  Link,
+  useNavigate,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useT, type MessageKey } from "../i18n";
 import { useUiStore } from "../stores/uiStore";
 import { isMobile } from "../lib/platform";
+import { ActionMenu } from "./ActionMenu";
 import {
   BarsIcon,
   CheckIcon,
   ClockIcon,
+  DotsIcon,
   GearIcon,
   HelpIcon,
   SidebarIcon,
@@ -25,6 +32,9 @@ export const NAV_ITEMS: {
   { to: "/settings", label: "nav.settings", icon: <GearIcon /> },
   { to: "/help", label: "nav.help", icon: <HelpIcon /> },
 ];
+
+/** Die vier Hauptbereiche; Einstellungen und Hilfe stehen mobil im Menü der Kopfzeile. */
+export const MAIN_ITEMS = NAV_ITEMS.slice(0, 4);
 
 /** Seitenleiste ab 768 px Breite; einklappbar auf reine Icons (Beschriftung bleibt für Screenreader und Tooltip). */
 export function Sidebar() {
@@ -106,7 +116,7 @@ export function BottomTabs() {
       data-testid="tabbar"
       className="safe-bottom fixed inset-x-0 bottom-0 z-30 flex bg-surface-container-lowest"
     >
-      {NAV_ITEMS.map((item) => (
+      {MAIN_ITEMS.map((item) => (
         <Link
           key={item.to}
           to={item.to}
@@ -132,5 +142,32 @@ export function BottomTabs() {
         </Link>
       ))}
     </nav>
+  );
+}
+
+/** Kopfzeile unter 768 px: Menü mit den selteneren Zielen (Einstellungen, Hilfe). */
+export function ShellMenu() {
+  const t = useT();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // wie bei den Tabs: außerhalb von „Heute“ ersetzt das Ziel den Eintrag, der Zurück-Stapel wächst nicht
+  const replace = isMobile() && pathname !== "/";
+  return (
+    <div className="flex justify-end px-2 pt-1">
+      <ActionMenu
+        label={t("nav.menu")}
+        icon={<DotsIcon />}
+        actions={[
+          {
+            label: t("nav.settings"),
+            onSelect: () => void navigate({ to: "/settings", replace }),
+          },
+          {
+            label: t("nav.help"),
+            onSelect: () => void navigate({ to: "/help", replace }),
+          },
+        ]}
+      />
+    </div>
   );
 }

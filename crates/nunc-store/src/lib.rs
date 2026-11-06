@@ -30,8 +30,8 @@ pub use habit_repo::{
     update_habit,
 };
 pub use journal_repo::{
-    add_achievement, delete_achievement, list_journal, save_day_note, save_week_note,
-    update_achievement,
+    add_achievement, delete_achievement, list_journal, save_day_focus, save_day_note,
+    save_week_note, update_achievement,
 };
 pub use legacy::{LegacyImport, import_legacy_db, legacy_db_path};
 pub use migrations::{MIGRATIONS, Migration, migrate};

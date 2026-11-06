@@ -70,6 +70,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             habits::set_habit_done,
             review::get_review,
             review::get_day_note,
+            review::get_day_focus,
             review::save_journal_note,
             review::add_achievement,
             review::update_achievement,

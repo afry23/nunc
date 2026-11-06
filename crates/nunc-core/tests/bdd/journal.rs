@@ -75,6 +75,20 @@ fn write_day_note(world: &mut DomainWorld, device: String, text: String, day: St
     );
 }
 
+#[given(expr = "device {word} writes the day focus {string} for {word} at {int}")]
+#[when(expr = "device {word} writes the day focus {string} for {word} at {int}")]
+fn write_day_focus(world: &mut DomainWorld, device: String, text: String, day: String, at: i64) {
+    let day = date(&day);
+    let id = format!("note:focus:{day}");
+    world.journal.write(
+        &device,
+        &id,
+        |clock| JournalEntry::day_focus(day, &text, clock),
+        &text,
+        at,
+    );
+}
+
 #[given(expr = "device {word} writes the week note {string} for {word} at {int}")]
 #[when(expr = "device {word} writes the week note {string} for {word} at {int}")]
 fn write_week_note(world: &mut DomainWorld, device: String, text: String, day: String, at: i64) {
@@ -242,6 +256,7 @@ fn edit_entry(world: &mut DomainWorld, device: String, id: String, text: String,
 #[then(expr = "the kind {word} is stored as {string}")]
 fn kind_text(_world: &mut DomainWorld, kind: String, stored: String) {
     let kind = match kind.as_str() {
+        "DayFocus" => JournalKind::DayFocus,
         "DayNote" => JournalKind::DayNote,
         "WeekNote" => JournalKind::WeekNote,
         "Achievement" => JournalKind::Achievement,

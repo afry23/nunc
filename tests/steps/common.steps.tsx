@@ -483,6 +483,20 @@ Then("I see the menu items {string}", async (_world: UiWorld, list: string) => {
   for (const name of names(list)) await screen.findByRole("menuitem", { name });
 });
 
+Then(
+  "I see the group {string} with {string}",
+  async (_world: UiWorld, name: string, minutes: string) => {
+    const group = await screen.findByRole("region", { name });
+    const heading = normalize(within(group).getByRole("heading").textContent);
+    expect(heading).toContain(name);
+    expect(heading.endsWith(minutes)).toBe(true);
+  },
+);
+
+Then("I do not see the group {string}", (_world: UiWorld, name: string) => {
+  expect(screen.queryByRole("region", { name })).toBeNull();
+});
+
 Then("I do not see the menu item {string}", (_world: UiWorld, name: string) => {
   expect(screen.queryByRole("menuitem", { name })).toBeNull();
 });
@@ -519,6 +533,21 @@ Then("the field {string} exists", async (_world: UiWorld, label: string) => {
 Then("the field {string} does not exist", (_world: UiWorld, label: string) => {
   expect(screen.queryByLabelText(label)).toBeNull();
 });
+
+Given(
+  "the day focus for {word} is {string}",
+  (world: UiWorld, day: string, text: string) => {
+    world.fake.focus[day] = text;
+  },
+);
+
+Then(
+  "the field {string} contains {string}",
+  async (_world: UiWorld, label: string, value: string) => {
+    const field = await screen.findByLabelText(label);
+    await waitFor(() => expect((field as HTMLInputElement).value).toBe(value));
+  },
+);
 
 Then("the field {string} is empty", (_world: UiWorld, label: string) => {
   expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe("");

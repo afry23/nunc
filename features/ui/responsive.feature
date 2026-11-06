@@ -38,8 +38,10 @@ Feature: Responsive layout
     Examples:
       | route     |
       | /         |
-      | /todos    |
-      | /times    |
+      | /tasks    |
+      | /log      |
+      | /review   |
+      | /focus    |
       | /stats    |
       | /settings |
 
@@ -48,7 +50,7 @@ Feature: Responsive layout
     Given the platform is "mobile"
     And the viewport is 390 pixels wide
     And the screen is 800 pixels high
-    When I open the app at "/todos"
+    When I open the app at "/tasks"
     And I focus the field "Neue Aufgabe"
     And the on-screen keyboard opens with a height of 300 pixels
     Then the field "Neue Aufgabe" is scrolled into view
@@ -60,7 +62,7 @@ Feature: Responsive layout
   Scenario: Pulling the page down reloads the data
     Given the platform is "mobile"
     And the viewport is 390 pixels wide
-    When I open the app at "/todos"
+    When I open the app at "/tasks"
     And the todo "Neu im Backend" was added in the backend
     And I pull the page down by 200 pixels
     Then I see "Loslassen zum Aktualisieren"
@@ -71,7 +73,7 @@ Feature: Responsive layout
   Scenario: A short pull does not reload the data
     Given the platform is "mobile"
     And the viewport is 390 pixels wide
-    When I open the app at "/todos"
+    When I open the app at "/tasks"
     And the todo "Neu im Backend" was added in the backend
     And I pull the page down by 40 pixels
     Then I see "Zum Aktualisieren ziehen"

@@ -41,6 +41,7 @@ pub const MIGRATIONS: &[Migration] = &[
     migration!(13, "013_drop_todoist_drive.sql"),
     migration!(14, "014_journal.sql"),
     migration!(15, "015_habits.sql"),
+    migration!(16, "016_journal_day_focus.sql"),
 ];
 
 /// Wendet alle noch nicht in `schema_migrations` vermerkten Migrationen an.
@@ -135,7 +136,7 @@ mod tests {
         conn.execute("INSERT INTO schema_migrations (version) VALUES (42)", [])
             .unwrap();
         migrate(&mut conn).unwrap();
-        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 16);
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 17);
     }
 
     #[test]
@@ -152,6 +153,75 @@ mod tests {
                 "SELECT COUNT(*) FROM sqlite_master WHERE name = 'active_timer'"
             ),
             1
+        );
+    }
+
+    #[test]
+    fn the_day_focus_migration_keeps_entries_and_their_stamps() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = ON").unwrap();
+        apply(&mut conn, &MIGRATIONS[..15]).unwrap();
+        conn.execute(
+            "INSERT INTO journal_entries (sync_id, kind, date, text, deleted)
+             VALUES ('note:day:2026-03-02', 'day_note', '2026-03-02', 'Calm day', 0)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO journal_field_clock (sync_id, field, hlc_ms, hlc_counter, hlc_device)
+             VALUES ('note:day:2026-03-02', 'text', 1000, 2, 'a')",
+            [],
+        )
+        .unwrap();
+        // vorher ist der Tagesfokus nicht erlaubt
+        assert!(
+            conn.execute(
+                "INSERT INTO journal_entries (sync_id, kind, date) VALUES ('f', 'day_focus', '2026-03-02')",
+                [],
+            )
+            .is_err()
+        );
+
+        migrate(&mut conn).unwrap();
+
+        let text: String = conn
+            .query_row(
+                "SELECT text FROM journal_entries WHERE sync_id = 'note:day:2026-03-02'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(text, "Calm day");
+        assert_eq!(
+            count(
+                &conn,
+                "SELECT hlc_counter FROM journal_field_clock WHERE sync_id = 'note:day:2026-03-02'"
+            ),
+            2
+        );
+        conn.execute(
+            "INSERT INTO journal_entries (sync_id, kind, date) VALUES ('note:focus:2026-03-02', 'day_focus', '2026-03-02')",
+            [],
+        )
+        .unwrap();
+        // das Kind hängt wieder an der neuen Tabelle
+        conn.execute(
+            "INSERT INTO journal_field_clock (sync_id, field, hlc_ms, hlc_counter, hlc_device)
+             VALUES ('note:focus:2026-03-02', 'text', 1, 0, 'a')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "DELETE FROM journal_entries WHERE sync_id = 'note:focus:2026-03-02'",
+            [],
+        )
+        .unwrap();
+        assert_eq!(
+            count(
+                &conn,
+                "SELECT COUNT(*) FROM journal_field_clock WHERE sync_id = 'note:focus:2026-03-02'"
+            ),
+            0
         );
     }
 

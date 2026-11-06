@@ -113,7 +113,21 @@ pub fn get_day_note(state: State<'_, AppState>, date: NaiveDate) -> Result<Strin
         .unwrap_or_default())
 }
 
-/// Speichert die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz.
+/// Tagesfokus für `date`; leer, wenn es keinen gibt (ADR 0032).
+#[tauri::command]
+#[specta::specta]
+pub fn get_day_focus(state: State<'_, AppState>, date: NaiveDate) -> Result<String, AppError> {
+    let entries = state
+        .db
+        .with(|conn| nunc_store::list_journal(conn, date, date))?;
+    Ok(entries
+        .into_iter()
+        .find(|entry| entry.kind == JournalKind::DayFocus)
+        .map(|entry| entry.text.value)
+        .unwrap_or_default())
+}
+
+/// Speichert den Tagesfokus, die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz.
 #[tauri::command]
 #[specta::specta]
 pub fn save_journal_note(
@@ -124,6 +138,7 @@ pub fn save_journal_note(
 ) -> Result<(), AppError> {
     let now = state.clock.now();
     state.db.with(|conn| match kind {
+        JournalKind::DayFocus => nunc_store::save_day_focus(conn, date, &text, now),
         JournalKind::DayNote => nunc_store::save_day_note(conn, date, &text, now),
         JournalKind::WeekNote => nunc_store::save_week_note(conn, date, &text, now),
         JournalKind::Achievement => Err(nunc_core::journal::JournalError::NotANote.into()),

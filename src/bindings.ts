@@ -131,7 +131,9 @@ export const commands = {
 	getReview: (from: string, to: string) => typedError<Review, AppError>(__TAURI_INVOKE("get_review", { from, to })),
 	/**  Text der Tagesnotiz für `date`; leer, wenn es keine gibt. */
 	getDayNote: (date: string) => typedError<string, AppError>(__TAURI_INVOKE("get_day_note", { date })),
-	/**  Speichert die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz. */
+	/**  Tagesfokus für `date`; leer, wenn es keinen gibt (ADR 0032). */
+	getDayFocus: (date: string) => typedError<string, AppError>(__TAURI_INVOKE("get_day_focus", { date })),
+	/**  Speichert den Tagesfokus, die Tages- oder Wochennotiz für `date` (bei `week_note` irgendein Tag der Woche). Ein leerer Text löscht die Notiz. */
 	saveJournalNote: (kind: JournalKind, date: string, text: string) => typedError<null, AppError>(__TAURI_INVOKE("save_journal_note", { kind, date, text })),
 	/**  Legt einen Erfolg für `date` an und liefert seine Kennung. */
 	addAchievement: (date: string, text: string) => typedError<string, AppError>(__TAURI_INVOKE("add_achievement", { date, text })),
@@ -425,7 +427,9 @@ export type JournalItem = {
 };
 
 /**  Art eines Journal-Eintrags. */
-export type JournalKind = "day_note" | "week_note" | "achievement";
+export type JournalKind = 
+/**  Kurzer Fokus eines Tages („Was ist heute das Wichtigste?“), ADR 0032. */
+"day_focus" | "day_note" | "week_note" | "achievement";
 
 /**  Alle bekannten Projekte und Kontexte (Vorschläge für die Auswahl), sortiert und ohne Duplikate. */
 export type KnownTags = {

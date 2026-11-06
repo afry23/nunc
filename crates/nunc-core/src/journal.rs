@@ -1,4 +1,4 @@
-//! Journal (ADR 0026): Tages-/Wochennotizen und Erfolge als zustandsbasierter CRDT.
+//! Journal (ADR 0026, 0032): Tagesfokus, Tages-/Wochennotizen und Erfolge als zustandsbasierter CRDT.
 //!
 //! Wie [`TodoCrdt`](crate::crdt::TodoCrdt) und [`SessionCrdt`](crate::crdt::SessionCrdt): Art und Identität gelten ab
 //! der Anlage, `date`, `text` und `deleted` sind LWW-Register. Notizen haben eine **deterministische** `sync_id`
@@ -21,6 +21,8 @@ pub const MAX_TEXT_CHARS: usize = 4000;
 )]
 #[serde(rename_all = "snake_case")]
 pub enum JournalKind {
+    /// Kurzer Fokus eines Tages („Was ist heute das Wichtigste?“), ADR 0032.
+    DayFocus,
     DayNote,
     WeekNote,
     Achievement,
@@ -30,6 +32,7 @@ impl JournalKind {
     /// Textwert wie in der Datenbank und im JSON.
     pub fn as_str(self) -> &'static str {
         match self {
+            Self::DayFocus => "day_focus",
             Self::DayNote => "day_note",
             Self::WeekNote => "week_note",
             Self::Achievement => "achievement",
@@ -38,9 +41,14 @@ impl JournalKind {
 
     /// Gegenstück zu [`as_str`](Self::as_str); Unbekanntes ist `None`.
     pub fn parse(text: &str) -> Option<Self> {
-        [Self::DayNote, Self::WeekNote, Self::Achievement]
-            .into_iter()
-            .find(|kind| kind.as_str() == text)
+        [
+            Self::DayFocus,
+            Self::DayNote,
+            Self::WeekNote,
+            Self::Achievement,
+        ]
+        .into_iter()
+        .find(|kind| kind.as_str() == text)
     }
 }
 
@@ -73,6 +81,11 @@ fn note_id(kind: &str, date: NaiveDate) -> String {
     format!("note:{kind}:{date}")
 }
 
+/// Kennung des Tagesfokus für `date` (`note:focus:2026-03-02`).
+pub fn day_focus_id(date: NaiveDate) -> String {
+    note_id("focus", date)
+}
+
 /// Kennung der Tagesnotiz für `date`.
 pub fn day_note_id(date: NaiveDate) -> String {
     note_id("day", date)
@@ -93,6 +106,11 @@ pub struct JournalEntry {
 }
 
 impl JournalEntry {
+    /// Tagesfokus; wie die Tagesnotiz mit deterministischer Kennung, ein leerer Text ergibt einen gelöschten Eintrag.
+    pub fn day_focus(date: NaiveDate, text: &str, clock: &Hlc) -> Self {
+        Self::new(day_focus_id(date), JournalKind::DayFocus, date, text, clock)
+    }
+
     /// Tagesnotiz; alle Felder tragen `clock`. Ein leerer Text ergibt einen gelöschten Eintrag.
     pub fn day_note(date: NaiveDate, text: &str, clock: &Hlc) -> Self {
         Self::new(day_note_id(date), JournalKind::DayNote, date, text, clock)
@@ -195,6 +213,7 @@ mod tests {
     #[test]
     fn kinds_are_read_back_from_their_text() {
         for kind in [
+            JournalKind::DayFocus,
             JournalKind::DayNote,
             JournalKind::WeekNote,
             JournalKind::Achievement,
@@ -209,6 +228,7 @@ mod tests {
     fn note_ids_follow_from_the_day() {
         let wednesday = NaiveDate::from_ymd_opt(2026, 3, 4).unwrap();
         assert_eq!(day_note_id(wednesday), "note:day:2026-03-04");
+        assert_eq!(day_focus_id(wednesday), "note:focus:2026-03-04");
         assert_eq!(week_note_id(wednesday), "note:week:2026-03-08");
         let clock = Hlc::new(1, 0, "d");
         assert_eq!(

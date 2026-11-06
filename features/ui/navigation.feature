@@ -53,6 +53,7 @@ Feature: Navigation
     When I open the app
     And I click "Aufgaben"
     And I click "Rückblick"
+    And I click "Menü"
     And I click "Einstellungen"
     And I press the back button of the device
     Then I see the heading "Heute"

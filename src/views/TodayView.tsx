@@ -7,10 +7,13 @@ import {
   PlayIcon,
 } from "../components/icons";
 import { CloseDayDialog } from "../components/CloseDayDialog";
+import { DayFocus } from "../components/DayFocus";
 import { DayNote } from "../components/DayNote";
 import { FreeActivityDialog } from "../components/FreeActivityDialog";
 import { HabitRow } from "../components/HabitRow";
-import { ActionButton, IconButton } from "../components/ui";
+import { ActionButton, IconButton, Segmented } from "../components/ui";
+import { DayLogCard } from "../components/DayLog";
+import { useIsWide } from "../hooks/useMediaQuery";
 import { useT } from "../i18n";
 import type { PlanReason } from "../lib/api";
 import { fillPercent, nextDay, planRows } from "../lib/dayPlan";
@@ -28,6 +31,8 @@ const REASON_CLASS: Record<PlanReason, string> = {
   planned: "bg-surface-container-high text-on-surface-variant",
 };
 
+type TodayPart = "plan" | "log" | "notes";
+
 /** „Heute“: überfällige, heute fällige und eingeplante Aufgaben gegen die Tageskapazität (ADR 0027). */
 export function TodayView() {
   const t = useT();
@@ -43,59 +48,28 @@ export function TodayView() {
   }, [all]);
 
   const note = usePlanStore((s) => s.note);
+  const focus = usePlanStore((s) => s.focus);
   const [closing, setClosing] = useState(false);
   const [freeActivity, setFreeActivity] = useState(false);
+  const wide = useIsWide();
+  const [part, setPart] = useState<TodayPart>("plan");
   const navigate = useNavigate();
   const habits = todayHabits(useHabitStore((s) => s.items));
   const day = plan?.day ?? "";
 
   // die Notiz gehört zum Tag des Plans; das Feld folgt der gespeicherten Fassung
   useEffect(() => {
-    if (day) void usePlanStore.getState().loadNote(day);
+    if (day) {
+      void usePlanStore.getState().loadNote(day);
+      void usePlanStore.getState().loadFocus(day);
+    }
   }, [day]);
 
   const rows = plan ? planRows(plan, all) : [];
   const over = plan !== null && plan.remainingMin < 0;
 
-  return (
-    <section
-      aria-labelledby="today-heading"
-      className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10"
-    >
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 id="today-heading" className="headline-md">
-            {t("today.title")}
-          </h1>
-          <p className="text-on-surface-variant">
-            {plan
-              ? `${weekdayLabel(plan.day)}, ${shortDate(plan.day)}`
-              : t("today.subtitle")}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/habits"
-            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
-          >
-            {t("habits.open")}
-          </Link>
-          <Link
-            to="/focus"
-            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
-          >
-            {t("today.focus")}
-          </Link>
-          <Link
-            to="/tasks"
-            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
-          >
-            <ChevronLeftIcon />
-            {t("today.back")}
-          </Link>
-        </div>
-      </header>
-
+  const planPart = (
+    <>
       {plan && (
         <div
           className="flex flex-col gap-2 rounded-xl bg-surface-container-low p-4"
@@ -293,7 +267,10 @@ export function TodayView() {
           </ul>
         </div>
       )}
-
+    </>
+  );
+  const notesPart = (
+    <>
       {plan && (
         // neuer Schlüssel bei jeder gespeicherten Fassung: das Feld beginnt wieder mit ihr
         <DayNote
@@ -303,6 +280,85 @@ export function TodayView() {
           onClose={() => setClosing(true)}
         />
       )}
+    </>
+  );
+
+  return (
+    <section
+      aria-labelledby="today-heading"
+      className={`mx-auto flex flex-col gap-6 px-6 py-10 ${wide ? "max-w-5xl" : "max-w-3xl"}`}
+    >
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 id="today-heading" className="headline-md">
+            {t("today.title")}
+          </h1>
+          <p className="text-on-surface-variant">
+            {plan
+              ? `${weekdayLabel(plan.day)}, ${shortDate(plan.day)}`
+              : t("today.subtitle")}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/habits"
+            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
+          >
+            {t("habits.open")}
+          </Link>
+          <Link
+            to="/focus"
+            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
+          >
+            {t("today.focus")}
+          </Link>
+          <Link
+            to="/tasks"
+            className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
+          >
+            <ChevronLeftIcon />
+            {t("today.back")}
+          </Link>
+        </div>
+      </header>
+
+      {plan && (
+        // neuer Schlüssel bei jeder gespeicherten Fassung: das Feld beginnt wieder mit ihr
+        <DayFocus
+          key={`${day}|${focus}`}
+          focus={focus}
+          onSave={(text) => void usePlanStore.getState().saveFocus(day, text)}
+        />
+      )}
+
+      {wide ? (
+        <>
+          <div className="grid items-start gap-6 lg:grid-cols-2">
+            <div className="flex flex-col gap-6">{planPart}</div>
+            <DayLogCard day={day} />
+          </div>
+          {notesPart}
+        </>
+      ) : (
+        <>
+          <Segmented<TodayPart>
+            label={t("today.parts")}
+            value={part}
+            onChange={setPart}
+            options={[
+              { value: "plan", label: t("today.part.plan") },
+              { value: "log", label: t("today.part.log") },
+              { value: "notes", label: t("today.part.notes") },
+            ]}
+          />
+          {part === "plan" && (
+            <div className="flex flex-col gap-6">{planPart}</div>
+          )}
+          {part === "log" && <DayLogCard day={day} />}
+          {part === "notes" && notesPart}
+        </>
+      )}
+
       {freeActivity && (
         <FreeActivityDialog
           onCancel={() => setFreeActivity(false)}
