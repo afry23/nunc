@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
 import { commands, unwrap } from "../lib/api";
 import { sessionLabel } from "../lib/timer";
+import { useSettingsStore } from "../stores/settingsStore";
 import { useTimerStore, type Finish } from "../stores/timerStore";
 import { useUiStore } from "../stores/uiStore";
 import { Button } from "./ui";
@@ -12,19 +13,23 @@ import { Button } from "./ui";
  */
 export function SessionEndDialog() {
   const finish = useTimerStore((s) => s.finish);
+  const ask = useSettingsStore((s) => s.settings?.askSessionResult ?? true);
   const session = finish?.payload.session;
+  const suggested =
+    finish?.kind === "completed" && finish.payload.suggestedBreak !== null;
   if (
     !finish ||
     !session ||
     session.sessionType !== "work" ||
-    (session.actualMin ?? 0) <= 0
+    (session.actualMin ?? 0) <= 0 ||
+    (!ask && !suggested)
   )
     return null;
   // neuer Schlüssel je Session: das Formular beginnt mit der Notiz dieser Session
-  return <EndForm key={session.id} finish={finish} />;
+  return <EndForm key={session.id} finish={finish} ask={ask} />;
 }
 
-function EndForm({ finish }: { finish: Finish }) {
+function EndForm({ finish, ask }: { finish: Finish; ask: boolean }) {
   const t = useT();
   const dismiss = useTimerStore((s) => s.dismissFinish);
   const startBreak = useTimerStore((s) => s.startBreak);
@@ -40,6 +45,7 @@ function EndForm({ finish }: { finish: Finish }) {
   // die vorhandene Notiz (z. B. aus einer freien Tätigkeit) bleibt erhalten und wird ergänzt
   useEffect(() => {
     let cancelled = false;
+    if (!ask) return;
     unwrap(commands.getSessionNote(sessionId)).then(
       (text) => {
         if (cancelled) return;
@@ -52,7 +58,7 @@ function EndForm({ finish }: { finish: Finish }) {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, ask]);
 
   const changed = note.trim() !== initial.trim();
 
@@ -99,18 +105,20 @@ function EndForm({ finish }: { finish: Finish }) {
             ({sessionLabel(session.mode, suggestion.sessionType)})
           </p>
         )}
-        <label className="mt-4 flex flex-col gap-1">
-          <span className="label-md text-on-surface-variant">
-            {t("timer.result")}
-          </span>
-          <textarea
-            ref={field}
-            value={note}
-            rows={3}
-            onChange={(event) => setNote(event.target.value)}
-            className="w-full min-w-0 rounded-lg bg-surface-container-highest p-3 text-on-surface focus:bg-secondary-container"
-          />
-        </label>
+        {ask && (
+          <label className="mt-4 flex flex-col gap-1">
+            <span className="label-md text-on-surface-variant">
+              {t("timer.result")}
+            </span>
+            <textarea
+              ref={field}
+              value={note}
+              rows={3}
+              onChange={(event) => setNote(event.target.value)}
+              className="w-full min-w-0 rounded-lg bg-surface-container-highest p-3 text-on-surface focus:bg-secondary-container"
+            />
+          </label>
+        )}
         <div className="mt-6 flex flex-col gap-2">
           {suggestion ? (
             <>

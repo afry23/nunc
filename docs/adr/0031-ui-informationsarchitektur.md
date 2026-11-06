@@ -59,7 +59,8 @@ Vier gleichrangige Hauptbereiche, auf Desktop (Seitenleiste) und Android (untere
 - **Ergebnis / nächste Schritte:** Nach einer beendeten Arbeitssession (Ablauf oder Stopp, mindestens eine Minute) fragt
   `SessionEndDialog` optional nach einer Notiz. Sie wird mit `set_session_note` nur als Notiz der Session gespeichert
   (eigener Stempel, Dauer und Zuordnung bleiben); eine vorhandene Notiz wird vorbelegt. Escape und „Überspringen“
-  speichern nichts.
+  speichern nichts. Die Einstellung `ask_session_result` (Standard an, Abschnitt „Session-Ende“) schaltet das Feld ab; eine
+  empfohlene Pause erscheint weiterhin.
 - **Mini-Timer:** „Zur App“ öffnet das Hauptfenster auf `/focus` (Ereignis `app:navigate`, nur die Hauptfenster folgen).
 - **Aufgabendetails:** `get_task_time` liefert die abgeschlossenen Arbeitssessions einer Aufgabe, neueste zuerst, mit
   Summe und Notiz (pur in `nunc_core::task_time`).

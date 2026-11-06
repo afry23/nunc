@@ -598,6 +598,11 @@ export type Settings = {
 	syncIntervalMin: number,
 	/**  Tageskapazität des Tagesplaners in Minuten (1–1440, ADR 0027); die Go-App kennt den Schlüssel nicht. */
 	dayCapacityMin: number,
+	/**
+	 *  Fragt nach dem Ende einer Arbeitssession optional nach Ergebnis und nächsten Schritten; die Go-App
+	 *  kennt den Schlüssel nicht.
+	 */
+	askSessionResult: boolean,
 };
 
 /**  Sortierrichtung. Fehlende Werte (keine Priorität, kein Datum) stehen in beiden Richtungen zuletzt. */

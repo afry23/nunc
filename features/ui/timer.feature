@@ -126,6 +126,22 @@ Feature: Timer view
     When I click "Speichern"
     Then the backend did not receive "set_session_note"
 
+  @ui @US-UM07
+  Scenario: Without the setting a stopped session shows no dialog
+    Given the setting "askSessionResult" is "false"
+    When I open the app at "/focus"
+    And the backend reports a finished "stopwatch" session without a suggested break
+    Then I do not see a dialog
+
+  @ui @US-UM07
+  Scenario: Without the setting the break suggestion has no result field
+    Given the setting "askSessionResult" is "false"
+    And the backend suggests a break of 5 minutes
+    When I open the app at "/focus"
+    And the backend reports a finished "pomodoro" session with a suggested break of 5 minutes
+    Then I see a dialog with the text "Empfohlene Pause: 5 Minuten"
+    And I do not see "Ergebnis / nächste Schritte"
+
   @ui @REQ-2.1
   Scenario: A break suggestion dialog appears after a completed pomodoro
     Given the backend suggests a break of 5 minutes

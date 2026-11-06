@@ -608,6 +608,10 @@ export const de = {
   "todos.item.planToday": "Für heute einplanen: {title}",
   "todos.item.achievement": "Als Erfolg merken: {title}",
   "todos.achievement.saved": "Als Erfolg im Rückblick gemerkt.",
+  "settings.session": "Session-Ende",
+  "settings.session.ask": "Nach einer Session nach dem Ergebnis fragen",
+  "settings.session.askHint":
+    "Zeigt nach einer Arbeitssession ein Feld für Ergebnis und nächste Schritte.",
   "settings.dayplan": "Tagesplaner",
   "settings.dayplan.capacity": "Tageskapazität",
   "settings.dayplan.capacityHint":

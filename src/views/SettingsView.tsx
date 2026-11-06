@@ -277,6 +277,17 @@ function SettingsForm({ stored }: { stored: Settings }) {
         />
       </Section>
 
+      <Section id="settings-session" title={t("settings.session")}>
+        <Card>
+          <Toggle
+            label={t("settings.session.ask")}
+            description={t("settings.session.askHint")}
+            checked={draft.askSessionResult}
+            onChange={(v) => set("askSessionResult", v)}
+          />
+        </Card>
+      </Section>
+
       <Section id="settings-sound" title={t("settings.sound")}>
         <NotificationHint withRequest />
         <Card>

@@ -52,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   apiPort: 42820,
   syncIntervalMin: 15,
   dayCapacityMin: 240,
+  askSessionResult: true,
 };
 
 export const EMPTY_STATS: StatsResponse = {

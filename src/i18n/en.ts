@@ -605,6 +605,10 @@ export const en: Record<keyof typeof de, string> = {
   "todos.item.planToday": "Plan for today: {title}",
   "todos.item.achievement": "Save as achievement: {title}",
   "todos.achievement.saved": "Saved as an achievement in the review.",
+  "settings.session": "End of a session",
+  "settings.session.ask": "Ask for the result after a session",
+  "settings.session.askHint":
+    "Shows a field for the result and next steps after a work session.",
   "settings.dayplan": "Day planner",
   "settings.dayplan.capacity": "Daily capacity",
   "settings.dayplan.capacityHint":

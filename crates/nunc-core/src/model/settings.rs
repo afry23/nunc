@@ -72,6 +72,9 @@ pub struct Settings {
     pub sync_interval_min: u32,
     /// Tageskapazität des Tagesplaners in Minuten (1–1440, ADR 0027); die Go-App kennt den Schlüssel nicht.
     pub day_capacity_min: u32,
+    /// Fragt nach dem Ende einer Arbeitssession optional nach Ergebnis und nächsten Schritten; die Go-App
+    /// kennt den Schlüssel nicht.
+    pub ask_session_result: bool,
 }
 
 /// Erlaubte Werte für [`Settings::sync_interval_min`] (0 = aus).
@@ -169,6 +172,7 @@ impl Default for Settings {
             api_port: 42820,
             sync_interval_min: 15,
             day_capacity_min: 240,
+            ask_session_result: true,
         }
     }
 }
@@ -276,10 +280,11 @@ mod tests {
             "apiPort",
             "syncIntervalMin",
             "dayCapacityMin",
+            "askSessionResult",
         ] {
             assert!(value.get(key).is_some(), "Schlüssel {key} fehlt");
         }
-        assert_eq!(value.as_object().unwrap().len(), 24);
+        assert_eq!(value.as_object().unwrap().len(), 25);
         assert_eq!(value["activeMode"], "pomodoro");
         assert_eq!(value["syncProvider"], "none");
         assert_eq!(value["language"], "system");
@@ -287,6 +292,7 @@ mod tests {
         assert_eq!(value["apiPort"], 42820);
         assert_eq!(value["syncIntervalMin"], 15);
         assert_eq!(value["dayCapacityMin"], 240);
+        assert_eq!(value["askSessionResult"], true);
     }
 
     #[test]
