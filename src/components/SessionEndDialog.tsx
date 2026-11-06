@@ -13,15 +13,16 @@ import { Button } from "./ui";
  */
 export function SessionEndDialog() {
   const finish = useTimerStore((s) => s.finish);
-  const ask = useSettingsStore((s) => s.settings?.askSessionResult ?? true);
+  const setting = useSettingsStore((s) => s.settings?.askSessionResult ?? true);
   const session = finish?.payload.session;
+  // Kurze Sessions (unter einer Minute) fragen nicht nach einem Ergebnis, die Pausenempfehlung bleibt
+  const ask = setting && (session?.actualMin ?? 0) > 0;
   const suggested =
     finish?.kind === "completed" && finish.payload.suggestedBreak !== null;
   if (
     !finish ||
     !session ||
     session.sessionType !== "work" ||
-    (session.actualMin ?? 0) <= 0 ||
     (!ask && !suggested)
   )
     return null;

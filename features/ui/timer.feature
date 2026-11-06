@@ -142,6 +142,14 @@ Feature: Timer view
     Then I see a dialog with the text "Empfohlene Pause: 5 Minuten"
     And I do not see "Ergebnis / nächste Schritte"
 
+  @ui @US-UM07
+  Scenario: A session under a minute still offers the break but no result field
+    Given the backend suggests a break of 5 minutes
+    When I open the app at "/focus"
+    And the backend reports a finished "pomodoro" session of 0 minutes with a suggested break of 5 minutes
+    Then I see a dialog with the text "Empfohlene Pause: 5 Minuten"
+    And I do not see "Ergebnis / nächste Schritte"
+
   @ui @REQ-2.1
   Scenario: A break suggestion dialog appears after a completed pomodoro
     Given the backend suggests a break of 5 minutes

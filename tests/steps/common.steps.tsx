@@ -187,6 +187,29 @@ When(
 );
 
 When(
+  "the backend reports a finished {string} session of {int} minutes with a suggested break of {int} minutes",
+  async (_world: UiWorld, mode: string, actual: number, minutes: number) => {
+    await act(async () => {
+      await emit("timer:complete", {
+        session: {
+          id: 1,
+          mode,
+          sessionType: "work",
+          status: "completed",
+          startedAt: "2026-10-04T09:00:00Z",
+          endedAt: "2026-10-04T09:00:20Z",
+          plannedMin: null,
+          actualMin: actual,
+          todoId: null,
+          breakMin: null,
+        },
+        suggestedBreak: { sessionType: "short_break", minutes },
+      });
+    });
+  },
+);
+
+When(
   "the backend reports a finished {string} session without a suggested break",
   async (_world: UiWorld, mode: string) => {
     await act(async () => {
