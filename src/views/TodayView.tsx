@@ -1,14 +1,16 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   ChevronRightIcon,
   ChevronLeftIcon,
   CloseIcon,
+  PlayIcon,
 } from "../components/icons";
 import { CloseDayDialog } from "../components/CloseDayDialog";
 import { DayNote } from "../components/DayNote";
+import { FreeActivityDialog } from "../components/FreeActivityDialog";
 import { HabitRow } from "../components/HabitRow";
-import { IconButton } from "../components/ui";
+import { ActionButton, IconButton } from "../components/ui";
 import { useT } from "../i18n";
 import type { PlanReason } from "../lib/api";
 import { fillPercent, nextDay, planRows } from "../lib/dayPlan";
@@ -16,6 +18,8 @@ import { formatMinutes, shortDate, weekdayLabel } from "../lib/format";
 import { todayHabits } from "../lib/habits";
 import { titleOf } from "../lib/todos";
 import { useHabitStore } from "../stores/habitStore";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useTimerStore } from "../stores/timerStore";
 import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
 
@@ -41,6 +45,16 @@ export function TodayView() {
 
   const note = usePlanStore((s) => s.note);
   const [closing, setClosing] = useState(false);
+  const [freeActivity, setFreeActivity] = useState(false);
+  const navigate = useNavigate();
+  // „Starten“ an einer Aufgabe: Zuordnung steht fest, der zuletzt benutzte Modus ist vorausgewählt
+  const startTask = (id: number): void => {
+    const timer = useTimerStore.getState();
+    timer.selectTodo(id);
+    void timer.start(
+      useSettingsStore.getState().settings?.activeMode ?? "pomodoro",
+    );
+  };
   const habits = todayHabits(useHabitStore((s) => s.items));
   const day = plan?.day ?? "";
 
@@ -137,6 +151,16 @@ export function TodayView() {
         </div>
       )}
 
+      <div className="flex flex-wrap gap-2">
+        <ActionButton
+          icon={<PlayIcon />}
+          variant="secondary"
+          onClick={() => setFreeActivity(true)}
+        >
+          {t("activity.start")}
+        </ActionButton>
+      </div>
+
       {plan && rows.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-xl bg-surface-container-low p-6 text-center">
           <p className="font-display text-lg font-bold">{t("today.empty")}</p>
@@ -222,22 +246,30 @@ export function TodayView() {
                       })}
                     </span>
                   )}
-                  {item.reason === "planned" && (
-                    <span className="ml-auto flex">
-                      <IconButton
-                        label={t("today.unplan", { title })}
-                        onClick={() => void planTodo(todo.id, null)}
-                      >
-                        <CloseIcon />
-                      </IconButton>
-                      <IconButton
-                        label={t("today.postpone", { title })}
-                        onClick={() => void planTodo(todo.id, nextDay(day))}
-                      >
-                        <ChevronRightIcon />
-                      </IconButton>
-                    </span>
-                  )}
+                  <span className="ml-auto flex">
+                    <IconButton
+                      label={t("today.start", { title })}
+                      onClick={() => startTask(todo.id)}
+                    >
+                      <PlayIcon />
+                    </IconButton>
+                    {item.reason === "planned" && (
+                      <>
+                        <IconButton
+                          label={t("today.unplan", { title })}
+                          onClick={() => void planTodo(todo.id, null)}
+                        >
+                          <CloseIcon />
+                        </IconButton>
+                        <IconButton
+                          label={t("today.postpone", { title })}
+                          onClick={() => void planTodo(todo.id, nextDay(day))}
+                        >
+                          <ChevronRightIcon />
+                        </IconButton>
+                      </>
+                    )}
+                  </span>
                 </div>
               </li>
             );
@@ -268,6 +300,15 @@ export function TodayView() {
           note={note}
           onSave={(text) => void usePlanStore.getState().saveNote(day, text)}
           onClose={() => setClosing(true)}
+        />
+      )}
+      {freeActivity && (
+        <FreeActivityDialog
+          onCancel={() => setFreeActivity(false)}
+          onStarted={() => {
+            setFreeActivity(false);
+            void navigate({ to: "/focus" });
+          }}
         />
       )}
       {plan && closing && (

@@ -23,6 +23,11 @@ Vier gleichrangige Hauptbereiche, auf Desktop (Seitenleiste) und Android (untere
 
 - Der Timer ist keine Startseite mehr, sondern der **Fokusmodus** unter `/focus` (E1: über „Timer“ in Heute erreichbar;
   E2: globale Aktiv-Leiste).
+- Eine laufende Session zeigt die **Aktiv-Leiste** (Titel, Zeit, Pause/Fortsetzen, Stop) in allen Bereichen außer dem
+  Fokusmodus; sie ist nur ein Abbild des Timer-Snapshots (ADR 0004). Antippen öffnet `/focus`.
+- Arbeit startet aus einer Aufgabe („Starten“ im Tagesplan; Zuordnung steht fest, zuletzt benutzter Modus) oder als
+  **freie Tätigkeit** (Dialog: Tätigkeit, Projekte, Kontexte, Modus; ADR 0023). Das Feld „Zuordnung ohne Aufgabe“ im
+  Timer entfällt.
 - Die Timerstatistik (`/stats`) bleibt vorerst bestehen und hängt als „Arbeitsweise“ am Rückblick (E5 ordnet sie ein).
 - Alte Adressen `/today`, `/todos`, `/times` leiten auf die neuen um.
 - Tastenkürzel 1–4 folgen den vier Bereichen.

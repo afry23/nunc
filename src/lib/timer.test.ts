@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TimerSnapshot } from "../bindings";
 import {
+  activeTitle,
   miniRingSize,
   ringDash,
   ringProgress,
@@ -90,5 +91,36 @@ describe("miniRingSize", () => {
     expect(miniRingSize(100, 100)).toBe(90);
     expect(miniRingSize(900, 900)).toBe(200);
     expect(miniRingSize(264, 400)).toBe(200);
+  });
+});
+
+describe("activeTitle", () => {
+  it("names a break as a break", () => {
+    expect(activeTitle(snap({ sessionType: "short_break" }), undefined)).toBe(
+      "Kurze Pause",
+    );
+  });
+
+  it("prefers the task", () => {
+    expect(
+      activeTitle(snap({ todoId: 1 }), { description: "Bericht +work" }),
+    ).toBe("Bericht");
+  });
+
+  it("falls back to note and assignment of a free activity", () => {
+    const labels = {
+      projectTags: ["+Produkt"],
+      contextTags: ["@meeting"],
+      note: "Abstimmung",
+    };
+    expect(activeTitle(snap({ labels }), undefined)).toBe(
+      "Abstimmung · +Produkt · @meeting",
+    );
+  });
+
+  it("names an unlabelled session after its mode", () => {
+    expect(activeTitle(snap({ mode: "stopwatch" }), undefined)).toBe(
+      "Stoppuhr",
+    );
   });
 });
