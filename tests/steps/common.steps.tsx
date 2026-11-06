@@ -512,6 +512,10 @@ Then(
   },
 );
 
+Then("the field {string} exists", async (_world: UiWorld, label: string) => {
+  await screen.findByLabelText(label);
+});
+
 Then("the field {string} does not exist", (_world: UiWorld, label: string) => {
   expect(screen.queryByLabelText(label)).toBeNull();
 });

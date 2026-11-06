@@ -143,6 +143,14 @@ export function TodayView() {
       )}
 
       <div className="flex flex-wrap gap-2">
+        {rows.length > 0 && (
+          <Link
+            to="/pick"
+            className="inline-flex min-h-11 items-center rounded-lg bg-surface-container-high px-4 font-semibold hover:bg-surface-bright"
+          >
+            {t("today.pick")}
+          </Link>
+        )}
         <ActionButton
           icon={<PlayIcon />}
           variant="secondary"
@@ -157,7 +165,7 @@ export function TodayView() {
           <p className="font-display text-lg font-bold">{t("today.empty")}</p>
           <div className="flex flex-wrap justify-center gap-2">
             <Link
-              to="/tasks"
+              to="/pick"
               className="inline-flex min-h-11 items-center rounded-lg bg-secondary-container px-4 font-semibold text-on-surface"
             >
               {t("today.pick")}

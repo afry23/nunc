@@ -14,6 +14,7 @@ import { MiniTimerView } from "./views/MiniTimerView";
 import { SettingsView } from "./views/SettingsView";
 import { StatsView } from "./views/StatsView";
 import { LogView } from "./views/LogView";
+import { PickView } from "./views/PickView";
 import { ReviewView } from "./views/ReviewView";
 import { TimerView } from "./views/TimerView";
 import { TodayView } from "./views/TodayView";
@@ -50,6 +51,11 @@ const routeTree = rootRoute.addChildren([
         return Number.isInteger(task) && task > 0 ? { task } : {};
       },
       component: TodoView,
+    }),
+    createRoute({
+      getParentRoute: () => shellRoute,
+      path: "/pick",
+      component: PickView,
     }),
     createRoute({
       getParentRoute: () => shellRoute,
