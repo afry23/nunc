@@ -27,7 +27,11 @@ function Card({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/** Kennung des Reflexionsfelds, damit „Wochenrückblick beginnen“ dorthin springen kann. */
+export const REFLECTION_FIELD_ID = "reflection-note";
+
 interface EntryFormProps {
+  id?: string;
   /** Beschriftung des Textfelds (zugänglicher Name). */
   label: string;
   submitLabel: string;
@@ -42,6 +46,7 @@ interface EntryFormProps {
 
 /** Textfeld mit Speichern-Knopf und optionaler Tageswahl, für Notizen und Erfolge. */
 function EntryForm({
+  id,
   label,
   submitLabel,
   initialText,
@@ -88,6 +93,7 @@ function EntryForm({
         </label>
       )}
       <textarea
+        id={id}
         aria-label={label}
         value={text}
         maxLength={MAX_TEXT}
@@ -185,136 +191,151 @@ function AchievementRow({
   );
 }
 
-/**
- * Journal im Rückblick (ADR 0026): Wochenrückblick, Erfolge und Tagesnotizen des Zeitraums, direkt bearbeitbar.
- * `weekHint` blendet ab Freitag der aktuellen Woche den Hinweis auf den Wochenrückblick ein.
- */
-export function ReviewJournal({
-  review,
-  isWeek,
-  weekHint,
-  today,
-  onChanged,
-}: {
+interface JournalProps {
   review: Review;
-  isWeek: boolean;
-  weekHint: boolean;
   /** Heutiger Tag (`YYYY-MM-DD`) als Vorgabe beim Hinzufügen. */
   today: string;
   onChanged: () => void;
-}) {
+}
+
+/** Ergebnisse und Beiträge des Zeitraums (Erfolge, ADR 0026), direkt bearbeitbar. */
+export function ResultsCard({ review, today, onChanged }: JournalProps) {
   const t = useT();
   const { from, to } = review.period;
-  const { achievements, weekNotes, dayNotes } = review.journal;
+  const { achievements } = review.journal;
   const start = clampDay(today, from, to);
-
   return (
-    <>
-      {isWeek ? (
-        <Card title={t("journal.weekNote")}>
-          {weekHint && (
-            <p className="text-on-surface-variant">{t("journal.weekHint")}</p>
-          )}
-          <EntryForm
-            key={weekNotes[0]?.text ?? ""}
-            label={t("journal.weekNote")}
-            submitLabel={t("common.save")}
-            initialText={weekNotes[0]?.text ?? ""}
-            day={null}
-            onSubmit={(_, text) =>
-              run(
-                () => unwrap(commands.saveJournalNote("week_note", to, text)),
-                onChanged,
-              )
-            }
-          />
-        </Card>
+    <Card title={t("review.section.results")}>
+      {achievements.length === 0 ? (
+        <p className="text-on-surface-variant">{t("journal.noAchievements")}</p>
       ) : (
-        weekNotes.length > 0 && (
-          <Card title={t("journal.weekNotes")}>
-            <ul className="flex flex-col gap-2">
-              {weekNotes.map((note) => (
-                <li key={note.id} className="break-words whitespace-pre-wrap">
-                  <ItemDate date={note.date} /> {note.text}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )
+        <ul className="flex flex-col gap-2">
+          {achievements.map((item) => (
+            <AchievementRow
+              key={`${item.id}|${item.date}|${item.text}`}
+              item={item}
+              from={from}
+              to={to}
+              onChanged={onChanged}
+            />
+          ))}
+        </ul>
       )}
-      <Card title={t("journal.achievements")}>
-        {achievements.length === 0 ? (
-          <p className="text-on-surface-variant">
-            {t("journal.noAchievements")}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {achievements.map((item) => (
-              <AchievementRow
-                key={`${item.id}|${item.date}|${item.text}`}
-                item={item}
-                from={from}
-                to={to}
-                onChanged={onChanged}
+      <EntryForm
+        label={t("journal.newAchievement")}
+        submitLabel={t("journal.add")}
+        initialText=""
+        day={{ value: start, from, to }}
+        clearOnSubmit
+        onSubmit={(date, text) =>
+          run(() => unwrap(commands.addAchievement(date, text)), onChanged)
+        }
+      />
+    </Card>
+  );
+}
+
+/** Notizen aus den Tagen des Zeitraums, direkt bearbeitbar. */
+export function DayNotesCard({ review, today, onChanged }: JournalProps) {
+  const t = useT();
+  const { from, to } = review.period;
+  const { dayNotes } = review.journal;
+  const start = clampDay(today, from, to);
+  return (
+    <Card title={t("review.section.notes")}>
+      {dayNotes.length === 0 ? (
+        <p className="text-on-surface-variant">{t("journal.noDayNotes")}</p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {dayNotes.map((note) => (
+            <li key={`${note.id}|${note.text}`} className="flex flex-col gap-1">
+              <ItemDate date={note.date} />
+              <EntryForm
+                label={`${t("review.section.notes")} ${shortDate(note.date)}`}
+                submitLabel={t("common.save")}
+                initialText={note.text}
+                day={null}
+                onSubmit={(_, text) =>
+                  run(
+                    () =>
+                      unwrap(
+                        commands.saveJournalNote("day_note", note.date, text),
+                      ),
+                    onChanged,
+                  )
+                }
               />
-            ))}
-          </ul>
-        )}
-        <EntryForm
-          label={t("journal.newAchievement")}
-          submitLabel={t("journal.add")}
-          initialText=""
-          day={{ value: start, from, to }}
-          clearOnSubmit
-          onSubmit={(date, text) =>
-            run(() => unwrap(commands.addAchievement(date, text)), onChanged)
-          }
-        />
+            </li>
+          ))}
+        </ul>
+      )}
+      <EntryForm
+        label={t("journal.newDayNote")}
+        submitLabel={t("journal.add")}
+        initialText=""
+        day={{ value: start, from, to }}
+        clearOnSubmit
+        onSubmit={(date, text) =>
+          run(
+            () => unwrap(commands.saveJournalNote("day_note", date, text)),
+            onChanged,
+          )
+        }
+      />
+    </Card>
+  );
+}
+
+/**
+ * Reflexion der Woche (Wochennotiz) mit den drei Leitfragen. Monats- und Quartalsrückblicke zeigen die Wochennotizen
+ * ihrer Wochen nur zum Lesen. `weekHint` blendet ab Freitag der aktuellen Woche den Hinweis ein.
+ */
+export function ReflectionCard({
+  review,
+  isWeek,
+  weekHint,
+  onChanged,
+}: Omit<JournalProps, "today"> & { isWeek: boolean; weekHint: boolean }) {
+  const t = useT();
+  const { to } = review.period;
+  const { weekNotes } = review.journal;
+  if (!isWeek) {
+    return weekNotes.length > 0 ? (
+      <Card title={t("journal.weekNotes")}>
+        <ul className="flex flex-col gap-2">
+          {weekNotes.map((note) => (
+            <li key={note.id} className="break-words whitespace-pre-wrap">
+              <ItemDate date={note.date} /> {note.text}
+            </li>
+          ))}
+        </ul>
       </Card>
-      <Card title={t("journal.dayNotes")}>
-        {dayNotes.length === 0 ? (
-          <p className="text-on-surface-variant">{t("journal.noDayNotes")}</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {dayNotes.map((note) => (
-              <li
-                key={`${note.id}|${note.text}`}
-                className="flex flex-col gap-1"
-              >
-                <ItemDate date={note.date} />
-                <EntryForm
-                  label={`${t("journal.dayNotes")} ${shortDate(note.date)}`}
-                  submitLabel={t("common.save")}
-                  initialText={note.text}
-                  day={null}
-                  onSubmit={(_, text) =>
-                    run(
-                      () =>
-                        unwrap(
-                          commands.saveJournalNote("day_note", note.date, text),
-                        ),
-                      onChanged,
-                    )
-                  }
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-        <EntryForm
-          label={t("journal.newDayNote")}
-          submitLabel={t("journal.add")}
-          initialText=""
-          day={{ value: start, from, to }}
-          clearOnSubmit
-          onSubmit={(date, text) =>
-            run(
-              () => unwrap(commands.saveJournalNote("day_note", date, text)),
-              onChanged,
-            )
-          }
-        />
-      </Card>
-    </>
+    ) : null;
+  }
+  return (
+    <Card title={t("journal.weekNote")}>
+      {weekHint && (
+        <p className="text-on-surface-variant">{t("journal.weekHint")}</p>
+      )}
+      <ul className="list-disc pl-5 text-on-surface-variant">
+        <li>{t("review.reflection.good")}</li>
+        <li>{t("review.reflection.hard")}</li>
+        <li>{t("review.reflection.take")}</li>
+      </ul>
+      <EntryForm
+        key={weekNotes[0]?.text ?? ""}
+        id={REFLECTION_FIELD_ID}
+        label={t("journal.weekNote")}
+        submitLabel={t("common.save")}
+        initialText={weekNotes[0]?.text ?? ""}
+        day={null}
+        onSubmit={(_, text) =>
+          run(
+            () => unwrap(commands.saveJournalNote("week_note", to, text)),
+            onChanged,
+          )
+        }
+      />
+    </Card>
   );
 }

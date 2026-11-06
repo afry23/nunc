@@ -283,14 +283,14 @@ Feature: Review report
     When I build the review from 2026-03-01 to 2026-03-08
     And I export the review as Markdown in German
     Then the Markdown contains "# Rückblick 2026-03-01 – 2026-03-08"
-    And the Markdown contains "- Fokuszeit: 45 Min. (+45 Min. gegenüber 2026-02-21 – 2026-02-28)"
+    And the Markdown contains "- Erfasste Arbeitszeit: 45 Min. (+45 Min. gegenüber 2026-02-21 – 2026-02-28)"
     And the Markdown contains "- Arbeitssessions: 1 abgeschlossen, 1 abgebrochen (50 % abgebrochen)"
     And the Markdown contains "## Zeitmessung"
     And the Markdown contains "- Stoppuhr: 1 Sessions, 45 Min."
     And the Markdown contains "## Projekte und Kontexte zusammen"
     And the Markdown contains "- +foo: 45 Min., 1 Sessions"
     And the Markdown contains "  - 2026-03-02: Weekly planning"
-    And the Markdown does not contain "Focus time"
+    And the Markdown does not contain "Tracked work time"
 
   @domain @US-RV02
   Scenario: The review lists achievements, week notes and day notes of the period

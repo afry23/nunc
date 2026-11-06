@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from "./icons";
 import { Button, IconButton, Segmented } from "./ui";
 import { currentLanguage, useT } from "../i18n";
@@ -18,14 +19,22 @@ import {
 import {
   REVIEW_KINDS,
   deltaText,
+  focusOnlyMinutes,
   isWeekReviewTime,
+  openTasks,
   rangeLabel,
   reviewRange,
   type ReviewKind,
 } from "../lib/review";
+import { useTodoStore } from "../stores/todoStore";
 import { useUiStore } from "../stores/uiStore";
 import { CollapsibleSection } from "./CollapsibleSection";
-import { ReviewJournal } from "./ReviewJournal";
+import {
+  DayNotesCard,
+  REFLECTION_FIELD_ID,
+  ReflectionCard,
+  ResultsCard,
+} from "./ReviewJournal";
 
 type Loaded = { review: Review } | { error: string };
 
@@ -85,6 +94,43 @@ function GroupList({
   );
 }
 
+/** Folgeaufgabe für den nächsten Zeitraum: legt eine Aufgabe an (todo.txt-Syntax). */
+function NextPeriodCard() {
+  const t = useT();
+  const [text, setText] = useState("");
+  const submit = async (event: FormEvent): Promise<void> => {
+    event.preventDefault();
+    if (text.trim() === "") return;
+    if (await useTodoStore.getState().add(text)) {
+      setText("");
+      useUiStore.getState().notify(t("review.next.created"));
+    }
+  };
+  return (
+    <CollapsibleSection title={t("review.nextTitle")} defaultOpen>
+      <form
+        onSubmit={(event) => void submit(event)}
+        className="flex flex-col gap-2"
+      >
+        <input
+          type="text"
+          value={text}
+          autoComplete="off"
+          aria-label={t("review.next.label")}
+          placeholder={t("review.next.placeholder")}
+          onChange={(event) => setText(event.target.value)}
+          className="min-h-11 w-full rounded-lg bg-surface-container-high px-3"
+        />
+        <div>
+          <Button type="submit" disabled={text.trim() === ""}>
+            {t("review.next.create")}
+          </Button>
+        </div>
+      </form>
+    </CollapsibleSection>
+  );
+}
+
 /** Rückblick (ADR 0025): Fokuszeit mit Vergleich, Sessions, Projekte/Kontexte und erledigte Aufgaben eines Zeitraums. */
 export function ReviewPanel() {
   const t = useT();
@@ -123,6 +169,9 @@ export function ReviewPanel() {
   };
 
   const review = loaded && "review" in loaded ? loaded.review : null;
+  const todos = useTodoStore((state) => state.all);
+  const inProgress = review ? openTasks(review.tasks, todos) : [];
+  const reloadReview = (): void => setVersion((value) => value + 1);
 
   return (
     <div className="flex flex-col gap-6">
@@ -164,6 +213,17 @@ export function ReviewPanel() {
               setPeriodsAgo(0);
             }}
           />
+          {kind === "week" && (
+            <Button
+              variant="primary"
+              disabled={!review}
+              onClick={() =>
+                document.getElementById(REFLECTION_FIELD_ID)?.focus()
+              }
+            >
+              {t("review.startWeek")}
+            </Button>
+          )}
           <Button disabled={!review} onClick={() => void exportMarkdown()}>
             <DownloadIcon /> {t("review.export")}
           </Button>
@@ -197,93 +257,17 @@ export function ReviewPanel() {
                 previous: formatMinutes(review.previousFocusMin),
               })}
             </p>
-            <p className="label-md mt-4 text-on-surface-variant">
-              {t("review.pomodoros")}
-            </p>
-            <p className="tabular-nums">{review.pomodoroCount}</p>
-            <p className="label-md mt-4 text-on-surface-variant">
-              {t("review.sessions")}
-            </p>
-            <p>
-              {t("review.sessionsValue", {
-                completed: review.completedSessions,
-                aborted: review.abortedSessions,
-                rate: review.abortRatePercent,
+            <p className="mt-2 text-on-surface-variant">
+              {t("review.focusPart", {
+                time: formatMinutes(focusOnlyMinutes(review.modes)),
               })}
             </p>
           </section>
-          <ReviewJournal
+          <ResultsCard
             review={review}
-            isWeek={kind === "week"}
-            weekHint={
-              kind === "week" && periodsAgo === 0 && isWeekReviewTime(today)
-            }
             today={toIsoDate(today)}
-            onChanged={() => setVersion((value) => value + 1)}
+            onChanged={reloadReview}
           />
-          {review.habits.length > 0 && (
-            <Card title={t("review.habits")}>
-              {review.habits.map((habit) => (
-                <Row
-                  key={habit.id}
-                  label={habit.name}
-                  value={
-                    habit.ratePercent === null
-                      ? t("review.habitValueNone", {
-                          done: habit.doneDays,
-                          due: habit.dueDays,
-                        })
-                      : t("review.habitValue", {
-                          done: habit.doneDays,
-                          due: habit.dueDays,
-                          rate: habit.ratePercent,
-                        })
-                  }
-                />
-              ))}
-            </Card>
-          )}
-          <Card title={t("review.modes")}>
-            {review.modes.map((entry) => (
-              <Row
-                key={entry.mode}
-                label={t(`review.mode.${entry.mode}`)}
-                value={t("review.modeValue", {
-                  sessions: entry.sessions,
-                  time: formatMinutes(entry.minutes),
-                })}
-              />
-            ))}
-          </Card>
-          {review.tasks.length > 0 && (
-            <Card title={t("review.tasks")}>
-              {review.tasks.map((task) => (
-                <Row
-                  key={task.todoId}
-                  label={task.text}
-                  value={t("review.taskValue", {
-                    time: formatMinutes(task.minutes),
-                    pomodoros: task.pomodoros,
-                    sessions: task.sessions,
-                  })}
-                />
-              ))}
-            </Card>
-          )}
-          {review.days.length > 0 && (
-            <Card title={t("review.days")}>
-              {review.days.map((day) => (
-                <Row
-                  key={day.date}
-                  label={`${weekdayLabel(day.date)} ${shortDate(day.date)}`}
-                  value={t("review.dayValue", {
-                    time: formatMinutes(day.minutes),
-                    pomodoros: day.pomodoros,
-                  })}
-                />
-              ))}
-            </Card>
-          )}
           <GroupList title={t("review.projects")} groups={review.projects} />
           <GroupList title={t("review.contexts")} groups={review.contexts} />
           {review.combinations.length > 0 && (
@@ -343,6 +327,123 @@ export function ReviewPanel() {
                 ))}
               </ul>
             )}
+          </CollapsibleSection>
+          {inProgress.length > 0 && (
+            <Card title={t("review.inProgress")}>
+              {inProgress.map((task) => (
+                <Row
+                  key={task.todoId}
+                  label={task.text}
+                  value={t("review.taskValue", {
+                    time: formatMinutes(task.minutes),
+                    pomodoros: task.pomodoros,
+                    sessions: task.sessions,
+                  })}
+                />
+              ))}
+            </Card>
+          )}
+          <DayNotesCard
+            review={review}
+            today={toIsoDate(today)}
+            onChanged={reloadReview}
+          />
+          {review.habits.length > 0 && (
+            <Card title={t("review.habits")}>
+              {review.habits.map((habit) => (
+                <Row
+                  key={habit.id}
+                  label={habit.name}
+                  value={
+                    habit.ratePercent === null
+                      ? t("review.habitValueNone", {
+                          done: habit.doneDays,
+                          due: habit.dueDays,
+                        })
+                      : t("review.habitValue", {
+                          done: habit.doneDays,
+                          due: habit.dueDays,
+                          rate: habit.ratePercent,
+                        })
+                  }
+                />
+              ))}
+            </Card>
+          )}
+          <ReflectionCard
+            review={review}
+            isWeek={kind === "week"}
+            weekHint={
+              kind === "week" && periodsAgo === 0 && isWeekReviewTime(today)
+            }
+            onChanged={reloadReview}
+          />
+          <NextPeriodCard />
+          <CollapsibleSection title={t("review.workStyle")} foldable>
+            <div className="flex flex-col gap-4">
+              <div>
+                <p className="label-md text-on-surface-variant">
+                  {t("review.pomodoros")}
+                </p>
+                <p className="tabular-nums">{review.pomodoroCount}</p>
+              </div>
+              <div>
+                <p className="label-md text-on-surface-variant">
+                  {t("review.sessions")}
+                </p>
+                <p>
+                  {t("review.sessionsValue", {
+                    completed: review.completedSessions,
+                    aborted: review.abortedSessions,
+                    rate: review.abortRatePercent,
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className="label-md mb-1 text-on-surface-variant">
+                  {t("review.modes")}
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {review.modes.map((entry) => (
+                    <Row
+                      key={entry.mode}
+                      label={t(`review.mode.${entry.mode}`)}
+                      value={t("review.modeValue", {
+                        sessions: entry.sessions,
+                        time: formatMinutes(entry.minutes),
+                      })}
+                    />
+                  ))}
+                </ul>
+              </div>
+              {review.days.length > 0 && (
+                <div>
+                  <p className="label-md mb-1 text-on-surface-variant">
+                    {t("review.days")}
+                  </p>
+                  <ul className="flex flex-col gap-1">
+                    {review.days.map((day) => (
+                      <Row
+                        key={day.date}
+                        label={`${weekdayLabel(day.date)} ${shortDate(day.date)}`}
+                        value={t("review.dayValue", {
+                          time: formatMinutes(day.minutes),
+                          pomodoros: day.pomodoros,
+                        })}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <Link
+                  to="/stats"
+                  className="inline-flex min-h-11 items-center rounded-lg bg-surface-container-high px-4 font-semibold hover:bg-surface-bright"
+                >
+                  {t("review.openStats")}
+                </Link>
+              </div>
+            </div>
           </CollapsibleSection>
         </>
       )}

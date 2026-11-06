@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { Todo } from "../bindings";
 import {
   clampDay,
   deltaText,
+  focusOnlyMinutes,
   isWeekReviewTime,
+  openTasks,
   rangeLabel,
   reviewRange,
 } from "./review";
@@ -106,5 +109,46 @@ describe("clampDay", () => {
     expect(clampDay("2026-03-20", "2026-03-02", "2026-03-08")).toBe(
       "2026-03-08",
     );
+  });
+});
+
+describe("focusOnlyMinutes", () => {
+  it("counts pomodoro and flowtime but not the stopwatch", () => {
+    expect(
+      focusOnlyMinutes([
+        { mode: "pomodoro", sessions: 3, minutes: 60 },
+        { mode: "flowtime", sessions: 1, minutes: 30 },
+        { mode: "stopwatch", sessions: 2, minutes: 45 },
+      ]),
+    ).toBe(90);
+  });
+
+  it("is zero without sessions", () => {
+    expect(focusOnlyMinutes([])).toBe(0);
+  });
+});
+
+describe("openTasks", () => {
+  const task = (todoId: number) => ({
+    todoId,
+    text: `Task ${todoId}`,
+    minutes: 10,
+    pomodoros: 0,
+    sessions: 1,
+  });
+  const todo = (id: number, completed: boolean) =>
+    ({ id, completed }) as unknown as Todo;
+
+  it("keeps the tasks of open todos only", () => {
+    expect(
+      openTasks(
+        [task(1), task(2), task(3)],
+        [todo(1, false), todo(2, true)],
+      ).map((entry) => entry.todoId),
+    ).toEqual([1]);
+  });
+
+  it("drops tasks whose todo is gone", () => {
+    expect(openTasks([task(9)], [])).toEqual([]);
   });
 });

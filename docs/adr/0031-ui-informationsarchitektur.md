@@ -39,6 +39,14 @@ Vier gleichrangige Hauptbereiche, auf Desktop (Seitenleiste) und Android (untere
   „Verlauf“ beginnt mit der Liste eines Tages (die Wochenmatrix ist die Ansicht „Woche“, breit der Standard), im
   „Rückblick“ klappen die Abschnitte auf. Der Tagesverlauf in Heute und im Verlauf ist dieselbe Komponente
   (`DayLog`) auf derselben Datenquelle.
+- **Rückblick (E5):** Er beginnt mit den Ergebnissen, nicht mit Timerzahlen. Reihenfolge: Erfasste Arbeitszeit, Ergebnisse
+  und Beiträge, Arbeit nach Projekten/Kontexten, Erledigte Aufgaben, Bearbeitet-aber-noch-offen, Notizen aus den Tagen,
+  Reflexion (Leitfragen „Was lief gut? Was war schwierig? Was nehme ich mit?“, Wochennotiz), Für den nächsten Zeitraum
+  (Folgeaufgabe), zuletzt der eingeklappte Abschnitt „Arbeitsweise“ (Pomodoros, Sessions, Zeitmessung, Tage) mit Link zur
+  Timerstatistik. „Wochenrückblick beginnen“ springt in die Reflexion. „Tag abschließen“ liegt im Tagesmenü von Heute.
+- **Begriffe:** Die Summe des Rückblicks heißt **Erfasste Arbeitszeit** (alle Modi, auch Stoppuhr und Nachgetragenes);
+  **Fokuszeit** ist nur die Teilmenge aus Pomodoro und Flowtime (`focusOnlyMinutes`, aus `modes` abgeleitet). Das Feld
+  `focus_min` des Backends behält seinen Namen, der Markdown-Export nennt es „Erfasste Arbeitszeit“.
 - Die Timerstatistik (`/stats`) bleibt vorerst bestehen und hängt als „Arbeitsweise“ am Rückblick (E5 ordnet sie ein).
 - Alte Adressen `/today`, `/todos`, `/times` leiten auf die neuen um.
 - Tastenkürzel 1–4 folgen den vier Bereichen.

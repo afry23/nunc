@@ -1,5 +1,5 @@
 import { t } from "../i18n";
-import type { Review } from "../bindings";
+import type { ModeTotals, Review, TaskTotals, Todo } from "../bindings";
 import {
   addDays,
   formatMinutes,
@@ -63,4 +63,25 @@ export function clampDay(day: string, from: string, to: string): string {
   if (day < from) return from;
   if (day > to) return to;
   return day;
+}
+
+/**
+ * Fokuszeit im engen Sinn: Zeit mit Pomodoro und Flowtime. Die Gesamtsumme des Rückblicks („Erfasste Arbeitszeit“)
+ * enthält auch Stoppuhr und Nachgetragenes (Meetings, freie Tätigkeiten).
+ */
+export function focusOnlyMinutes(modes: readonly ModeTotals[]): number {
+  return modes
+    .filter((entry) => entry.mode === "pomodoro" || entry.mode === "flowtime")
+    .reduce((sum, entry) => sum + entry.minutes, 0);
+}
+
+/** Aufgaben, an denen im Zeitraum gearbeitet wurde und die noch offen sind (in der Reihenfolge der Eingabe). */
+export function openTasks(
+  tasks: readonly TaskTotals[],
+  todos: readonly Todo[],
+): TaskTotals[] {
+  const open = new Set(
+    todos.filter((todo) => !todo.completed).map((todo) => todo.id),
+  );
+  return tasks.filter((task) => open.has(task.todoId));
 }

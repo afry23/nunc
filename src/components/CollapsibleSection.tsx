@@ -4,24 +4,28 @@ import { ChevronDownIcon, ChevronRightIcon } from "./icons";
 
 /**
  * Abschnitt mit Überschrift. Breite Fenster zeigen ihn offen; schmale klappen ihn auf Wunsch auf (`defaultOpen`
- * bestimmt den Anfang). Die Überschrift bleibt eine `h2`.
+ * bestimmt den Anfang). Mit `foldable` gilt das auf jeder Breite (selten gebrauchte Abschnitte). Die Überschrift bleibt
+ * eine `h2`.
  */
 export function CollapsibleSection({
   title,
   defaultOpen = false,
+  foldable = false,
   children,
 }: {
   title: string;
   defaultOpen?: boolean;
+  foldable?: boolean;
   children: ReactNode;
 }) {
   const wide = useIsWide();
   const [open, setOpen] = useState(defaultOpen);
-  const shown = wide || open;
+  const folds = foldable || !wide;
+  const shown = !folds || open;
   return (
     <section className="rounded-2xl bg-surface-container-low p-5">
       <h2 className="font-display text-lg font-bold">
-        {wide ? (
+        {!folds ? (
           title
         ) : (
           <button

@@ -4,9 +4,11 @@ import {
   ChevronRightIcon,
   ChevronLeftIcon,
   CloseIcon,
+  DotsIcon,
   PlayIcon,
 } from "../components/icons";
 import { CloseDayDialog } from "../components/CloseDayDialog";
+import { ActionMenu } from "../components/ActionMenu";
 import { DayFocus } from "../components/DayFocus";
 import { DayNote } from "../components/DayNote";
 import { FreeActivityDialog } from "../components/FreeActivityDialog";
@@ -277,7 +279,6 @@ export function TodayView() {
           key={`${day}|${note}`}
           note={note}
           onSave={(text) => void usePlanStore.getState().saveNote(day, text)}
-          onClose={() => setClosing(true)}
         />
       )}
     </>
@@ -300,6 +301,17 @@ export function TodayView() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <ActionMenu
+            label={t("today.menu")}
+            icon={<DotsIcon />}
+            actions={[
+              {
+                label: t("today.close"),
+                disabled: !plan,
+                onSelect: () => setClosing(true),
+              },
+            ]}
+          />
           <Link
             to="/habits"
             className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"

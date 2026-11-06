@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { ReviewPanel } from "../components/ReviewPanel";
 import { SectionLabel } from "../components/ui";
 import { useT } from "../i18n";
@@ -18,12 +17,6 @@ export function ReviewView() {
             {t("review.title")}
           </h1>
         </div>
-        <Link
-          to="/stats"
-          className="inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-on-surface-variant hover:bg-surface-container-high"
-        >
-          {t("review.workStyle")}
-        </Link>
       </header>
       <ReviewPanel />
     </section>
