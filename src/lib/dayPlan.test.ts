@@ -4,6 +4,7 @@ import {
   closeSummary,
   fillPercent,
   nextDay,
+  pickableTodos,
   planRows,
   trackedMinutes,
 } from "./dayPlan";
@@ -133,5 +134,39 @@ describe("trackedMinutes", () => {
     expect(
       trackedMinutes([block("2026-03-04T09:00:00Z", "2026-03-04T09:00:00Z")]),
     ).toBe(0);
+  });
+});
+
+describe("pickableTodos", () => {
+  const open = (id: number, rawText: string, completed = false): Todo => ({
+    ...todo(id),
+    rawText,
+    completed,
+  });
+  const list = [
+    open(1, "Bericht +work"),
+    open(2, "Einkaufen"),
+    open(3, "Steuer"),
+    open(4, "Erledigt", true),
+  ];
+  const plan = { items: [{ todoId: 3 }] } as unknown as DayPlan;
+
+  it("offers open todos that are not on the plan", () => {
+    expect(pickableTodos(list, plan, "").map((item) => item.id)).toEqual([
+      1, 2,
+    ]);
+  });
+
+  it("offers every open todo without a plan", () => {
+    expect(pickableTodos(list, null, "").map((item) => item.id)).toEqual([
+      1, 2, 3,
+    ]);
+  });
+
+  it("filters by text and tags, ignoring case and blanks", () => {
+    expect(pickableTodos(list, plan, " WORK ").map((item) => item.id)).toEqual([
+      1,
+    ]);
+    expect(pickableTodos(list, plan, "xyz")).toEqual([]);
   });
 });

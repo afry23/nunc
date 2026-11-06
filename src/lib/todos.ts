@@ -193,3 +193,21 @@ export function describeImport({
     parts.push(t("todos.import.duplicates", { count: duplicates }));
   return `${parts.join(", ")}.`;
 }
+
+/** Fortschritt der direkten Unteraufgaben: erledigte und alle; `null` ohne Unteraufgaben. */
+export function subtaskProgress(
+  todos: readonly Todo[],
+  id: number,
+): { done: number; total: number } | null {
+  const kids = todos.filter((todo) => todo.parentId === id);
+  if (kids.length === 0) return null;
+  return {
+    done: kids.filter((todo) => todo.completed).length,
+    total: kids.length,
+  };
+}
+
+/** Rohtext für eine Kopie: eine Erledigt-Markierung (`x 2026-03-03 …`) entfällt, die Kopie ist offen. */
+export function duplicateText(rawText: string): string {
+  return rawText.replace(/^x \d{4}-\d{2}-\d{2}( \d{4}-\d{2}-\d{2})? /, "");
+}

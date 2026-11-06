@@ -14,6 +14,7 @@ import { MiniTimerView } from "./views/MiniTimerView";
 import { SettingsView } from "./views/SettingsView";
 import { StatsView } from "./views/StatsView";
 import { LogView } from "./views/LogView";
+import { PickView } from "./views/PickView";
 import { ReviewView } from "./views/ReviewView";
 import { TimerView } from "./views/TimerView";
 import { TodayView } from "./views/TodayView";
@@ -44,7 +45,17 @@ const routeTree = rootRoute.addChildren([
     createRoute({
       getParentRoute: () => shellRoute,
       path: "/tasks",
+      // geöffnete Aufgabe (Details); Filter und Sortierung bleiben beim Wechsel erhalten
+      validateSearch: (search: Record<string, unknown>): { task?: number } => {
+        const task = Number(search.task);
+        return Number.isInteger(task) && task > 0 ? { task } : {};
+      },
       component: TodoView,
+    }),
+    createRoute({
+      getParentRoute: () => shellRoute,
+      path: "/pick",
+      component: PickView,
     }),
     createRoute({
       getParentRoute: () => shellRoute,

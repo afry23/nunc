@@ -18,7 +18,6 @@ import { formatMinutes, shortDate, weekdayLabel } from "../lib/format";
 import { todayHabits } from "../lib/habits";
 import { titleOf } from "../lib/todos";
 import { useHabitStore } from "../stores/habitStore";
-import { useSettingsStore } from "../stores/settingsStore";
 import { useTimerStore } from "../stores/timerStore";
 import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
@@ -47,14 +46,6 @@ export function TodayView() {
   const [closing, setClosing] = useState(false);
   const [freeActivity, setFreeActivity] = useState(false);
   const navigate = useNavigate();
-  // „Starten“ an einer Aufgabe: Zuordnung steht fest, der zuletzt benutzte Modus ist vorausgewählt
-  const startTask = (id: number): void => {
-    const timer = useTimerStore.getState();
-    timer.selectTodo(id);
-    void timer.start(
-      useSettingsStore.getState().settings?.activeMode ?? "pomodoro",
-    );
-  };
   const habits = todayHabits(useHabitStore((s) => s.items));
   const day = plan?.day ?? "";
 
@@ -152,6 +143,14 @@ export function TodayView() {
       )}
 
       <div className="flex flex-wrap gap-2">
+        {rows.length > 0 && (
+          <Link
+            to="/pick"
+            className="inline-flex min-h-11 items-center rounded-lg bg-surface-container-high px-4 font-semibold hover:bg-surface-bright"
+          >
+            {t("today.pick")}
+          </Link>
+        )}
         <ActionButton
           icon={<PlayIcon />}
           variant="secondary"
@@ -166,7 +165,7 @@ export function TodayView() {
           <p className="font-display text-lg font-bold">{t("today.empty")}</p>
           <div className="flex flex-wrap justify-center gap-2">
             <Link
-              to="/tasks"
+              to="/pick"
               className="inline-flex min-h-11 items-center rounded-lg bg-secondary-container px-4 font-semibold text-on-surface"
             >
               {t("today.pick")}
@@ -249,7 +248,9 @@ export function TodayView() {
                   <span className="ml-auto flex">
                     <IconButton
                       label={t("today.start", { title })}
-                      onClick={() => startTask(todo.id)}
+                      onClick={() =>
+                        void useTimerStore.getState().startTodo(todo.id)
+                      }
                     >
                       <PlayIcon />
                     </IconButton>

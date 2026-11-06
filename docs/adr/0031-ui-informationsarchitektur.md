@@ -28,6 +28,12 @@ Vier gleichrangige Hauptbereiche, auf Desktop (Seitenleiste) und Android (untere
 - Arbeit startet aus einer Aufgabe („Starten“ im Tagesplan; Zuordnung steht fest, zuletzt benutzter Modus) oder als
   **freie Tätigkeit** (Dialog: Tätigkeit, Projekte, Kontexte, Modus; ADR 0023). Das Feld „Zuordnung ohne Aufgabe“ im
   Timer entfällt.
+- **Aufgabenzeile:** Erledigen, Titel, Metadaten (Fortschritt der Unteraufgaben, „Heute“, erfasste Zeit), „Starten“ und ein
+  „⋯“-Menü (einplanen, Unteraufgabe, verschieben, einrücken, duplizieren, bearbeiten, löschen). Ein Klick auf den Titel
+  öffnet die Details (`/tasks?task=ID`): neben der Liste auf breiten, als eigener Screen auf schmalen Fenstern; Filter
+  und Sortierung liegen im Store und bleiben beim Zurück erhalten. Import und Export stehen im Überlaufmenü.
+- **Aufgaben auswählen** (`/pick`): der Bestand als Mehrfachauswahl für den Tag; Aufgaben werden nur eingeplant
+  (`plan:`), nicht verschoben (ADR 0027).
 - Die Timerstatistik (`/stats`) bleibt vorerst bestehen und hängt als „Arbeitsweise“ am Rückblick (E5 ordnet sie ein).
 - Alte Adressen `/today`, `/todos`, `/times` leiten auf die neuen um.
 - Tastenkürzel 1–4 folgen den vier Bereichen.

@@ -3,6 +3,7 @@ import type { Todo } from "../bindings";
 import {
   buildTree,
   describeImport,
+  duplicateText,
   indentParent,
   outdentParent,
   collectTags,
@@ -11,6 +12,7 @@ import {
   priorityTone,
   selectableTodos,
   splitSegments,
+  subtaskProgress,
   titleOf,
 } from "./todos";
 
@@ -209,5 +211,42 @@ describe("selectableTodos", () => {
   });
   it("keeps the current todo even when completed", () => {
     expect(selectableTodos(all, 3).map((x) => x.id)).toEqual([1, 3]);
+  });
+});
+
+describe("subtaskProgress", () => {
+  const list = [
+    todo({ id: 1 }),
+    todo({ id: 2, parentId: 1, completed: true }),
+    todo({ id: 3, parentId: 1 }),
+    todo({ id: 4, parentId: 3, completed: true }),
+  ];
+
+  it("counts direct subtasks only", () => {
+    expect(subtaskProgress(list, 1)).toEqual({ done: 1, total: 2 });
+    expect(subtaskProgress(list, 3)).toEqual({ done: 1, total: 1 });
+  });
+
+  it("is null without subtasks", () => {
+    expect(subtaskProgress(list, 2)).toBeNull();
+  });
+});
+
+describe("duplicateText", () => {
+  it("keeps an open todo as it is", () => {
+    expect(duplicateText("(A) Bericht +work est:30")).toBe(
+      "(A) Bericht +work est:30",
+    );
+  });
+
+  it("drops the completion marker with one or two dates", () => {
+    expect(duplicateText("x 2026-03-03 Bericht")).toBe("Bericht");
+    expect(duplicateText("x 2026-03-03 2026-03-01 Bericht")).toBe("Bericht");
+  });
+
+  it("does not touch an x inside the text", () => {
+    expect(duplicateText("Kiste x 2026-03-03 prüfen")).toBe(
+      "Kiste x 2026-03-03 prüfen",
+    );
   });
 });

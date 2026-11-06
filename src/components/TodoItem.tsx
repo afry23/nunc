@@ -6,25 +6,23 @@ import { useSwipeToComplete } from "../hooks/useSwipeToComplete";
 import {
   priorityTone,
   splitSegments,
+  subtaskProgress,
   titleOf,
   type TreeRow,
 } from "../lib/todos";
-import { toIsoDate } from "../lib/format";
+import { formatMinutes, toIsoDate } from "../lib/format";
+import { useTimerStore } from "../stores/timerStore";
 import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
 import {
   CheckIcon,
   ChevronDownIcon,
-  ChevronLeftIcon,
   ChevronRightIcon,
-  ChevronUpIcon,
+  DotsIcon,
   GripIcon,
-  PencilIcon,
-  PlusIcon,
-  StarIcon,
-  SunIcon,
-  TrashIcon,
+  PlayIcon,
 } from "./icons";
+import { ActionMenu, type MenuAction } from "./ActionMenu";
 import { IconButton } from "./ui";
 
 const TONE_CLASS = {
@@ -43,6 +41,8 @@ export function TodoItem({
   canOutdent,
   isFirst,
   isLast,
+  selected,
+  onOpen,
 }: {
   row: TreeRow;
   collapsed: boolean;
@@ -51,6 +51,9 @@ export function TodoItem({
   canOutdent: boolean;
   isFirst: boolean;
   isLast: boolean;
+  /** Die Details dieser Aufgabe sind geöffnet. */
+  selected: boolean;
+  onOpen: (id: number) => void;
 }) {
   const t = useT();
   const { todo, depth, hasChildren, pomodoroTotal } = row;
@@ -80,6 +83,26 @@ export function TodoItem({
   const { offset, handlers } = useSwipeToComplete(() => void toggle(todo.id));
   const title = titleOf(todo);
   const tone = priorityTone(todo.priority);
+  const progress = subtaskProgress(
+    useTodoStore((s) => s.all),
+    todo.id,
+  );
+  const planItem = usePlanStore((s) =>
+    s.plan?.items.find((item) => item.todoId === todo.id),
+  );
+  const today = toIsoDate(new Date());
+  const meta = [
+    progress
+      ? t("todos.item.progress", {
+          done: progress.done,
+          total: progress.total,
+        })
+      : null,
+    planItem ? t("todos.item.today") : null,
+    planItem && planItem.spentMin > 0
+      ? t("today.spent", { spent: formatMinutes(planItem.spentMin) })
+      : null,
+  ].filter((part): part is string => part !== null);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -110,6 +133,65 @@ export function TodoItem({
     }
     if (await update(todo.id, draft)) setEditing(false);
   };
+
+  const menuActions: MenuAction[] = [
+    {
+      label: t("todos.item.planToday", { title }),
+      hidden: todo.completed || planItem?.reason === "planned",
+      onSelect: () => void usePlanStore.getState().planTodo(todo.id, today),
+    },
+    {
+      label: t("todos.item.unplan", { title }),
+      hidden: todo.completed || planItem?.reason !== "planned",
+      onSelect: () => void usePlanStore.getState().planTodo(todo.id, null),
+    },
+    {
+      label: t("todos.item.achievement", { title }),
+      hidden: !todo.completed,
+      onSelect: () =>
+        void useTodoStore.getState().markAchievement(todo.id, today),
+    },
+    {
+      label: t("todos.item.addSub", { title }),
+      onSelect: () => setAddingSub(true),
+    },
+    {
+      label: t("todos.item.up", { title }),
+      hidden: !canReorder,
+      disabled: isFirst,
+      onSelect: () => void move(todo.id, -1),
+    },
+    {
+      label: t("todos.item.down", { title }),
+      hidden: !canReorder,
+      disabled: isLast,
+      onSelect: () => void move(todo.id, 1),
+    },
+    {
+      label: t("todos.item.indent", { title }),
+      hidden: !canReorder,
+      disabled: !canIndent,
+      onSelect: () => void indent(todo.id),
+    },
+    {
+      label: t("todos.item.outdent", { title }),
+      hidden: !canReorder,
+      disabled: !canOutdent,
+      onSelect: () => void outdent(todo.id),
+    },
+    {
+      label: t("todos.item.duplicate", { title }),
+      onSelect: () => void useTodoStore.getState().duplicate(todo.id),
+    },
+    {
+      label: t("todos.item.edit", { title }),
+      onSelect: startEditing,
+    },
+    {
+      label: t("todos.item.delete", { title }),
+      onSelect: () => void remove(todo.id),
+    },
+  ];
 
   return (
     <li
@@ -206,7 +288,13 @@ export function TodoItem({
                   ({todo.priority})
                 </span>
               )}
-              <span className="break-words">
+              <button
+                type="button"
+                aria-label={t("todos.item.details", { title })}
+                aria-current={selected ? "true" : undefined}
+                onClick={() => onOpen(todo.id)}
+                className="min-h-11 min-w-0 cursor-pointer text-left break-words"
+              >
                 {splitSegments(todo.description).map((segment, index) => (
                   <span
                     key={index}
@@ -221,7 +309,15 @@ export function TodoItem({
                     {segment.text}
                   </span>
                 ))}
-              </span>
+              </button>
+              {meta.length > 0 && (
+                <span
+                  data-testid="todo-meta"
+                  className="basis-full text-sm text-on-surface-variant no-underline"
+                >
+                  {meta.join(" · ")}
+                </span>
+              )}
             </div>
           )}
 
@@ -240,84 +336,19 @@ export function TodoItem({
         <div
           className={`flex shrink-0 max-sm:justify-end ${editing ? "max-sm:hidden" : ""}`}
         >
-          {canReorder && (
-            <>
-              <IconButton
-                label={t("todos.item.up", { title })}
-                disabled={isFirst}
-                onClick={() => void move(todo.id, -1)}
-              >
-                <ChevronUpIcon />
-              </IconButton>
-              <IconButton
-                label={t("todos.item.down", { title })}
-                disabled={isLast}
-                onClick={() => void move(todo.id, 1)}
-              >
-                <ChevronDownIcon />
-              </IconButton>
-            </>
-          )}
-          {canReorder && (
-            <>
-              <IconButton
-                label={t("todos.item.indent", { title })}
-                disabled={!canIndent}
-                onClick={() => void indent(todo.id)}
-              >
-                <ChevronRightIcon />
-              </IconButton>
-              <IconButton
-                label={t("todos.item.outdent", { title })}
-                disabled={!canOutdent}
-                onClick={() => void outdent(todo.id)}
-              >
-                <ChevronLeftIcon />
-              </IconButton>
-            </>
-          )}
           {!todo.completed && (
             <IconButton
-              label={t("todos.item.planToday", { title })}
-              onClick={() =>
-                void usePlanStore
-                  .getState()
-                  .planTodo(todo.id, toIsoDate(new Date()))
-              }
+              label={t("todos.item.start", { title })}
+              onClick={() => void useTimerStore.getState().startTodo(todo.id)}
             >
-              <SunIcon />
+              <PlayIcon />
             </IconButton>
           )}
-          {todo.completed && (
-            <IconButton
-              label={t("todos.item.achievement", { title })}
-              onClick={() =>
-                void useTodoStore
-                  .getState()
-                  .markAchievement(todo.id, toIsoDate(new Date()))
-              }
-            >
-              <StarIcon />
-            </IconButton>
-          )}
-          <IconButton
-            label={t("todos.item.addSub", { title })}
-            onClick={() => setAddingSub((open) => !open)}
-          >
-            <PlusIcon />
-          </IconButton>
-          <IconButton
-            label={t("todos.item.edit", { title })}
-            onClick={startEditing}
-          >
-            <PencilIcon />
-          </IconButton>
-          <IconButton
-            label={t("todos.item.delete", { title })}
-            onClick={() => void remove(todo.id)}
-          >
-            <TrashIcon />
-          </IconButton>
+          <ActionMenu
+            label={t("todos.item.actions", { title })}
+            icon={<DotsIcon />}
+            actions={menuActions}
+          />
         </div>
       </div>
       {addingSub && (

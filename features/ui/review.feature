@@ -138,6 +138,7 @@ Feature: Review in the times view
       | Open task                 | false     |
     When I open the app at "/todos"
     And I click "Erledigte anzeigen (1)"
+    And I click "Aktionen: Report"
     And I click "Als Erfolg merken: Report"
     Then the backend received "add_achievement" with "text" equal to "Report"
     And I see "Als Erfolg im Rückblick gemerkt."
@@ -148,7 +149,8 @@ Feature: Review in the times view
       | rawText   |
       | Open task |
     When I open the app at "/todos"
-    Then I do not see the button "Als Erfolg merken: Open task"
+    And I click "Aktionen: Open task"
+    Then I do not see the menu item "Als Erfolg merken: Open task"
 
   @ui @US-RV02
   Scenario: Adding an achievement needs a text

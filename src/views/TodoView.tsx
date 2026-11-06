@@ -13,17 +13,21 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useState, type FormEvent } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   CheckIcon,
+  ChevronLeftIcon,
   CloseIcon,
-  DownloadIcon,
+  DotsIcon,
   PlusIcon,
-  UploadIcon,
 } from "../components/icons";
+import { ActionMenu } from "../components/ActionMenu";
 import { FilterMenu } from "../components/FilterMenu";
+import { TaskDetail } from "../components/TaskDetail";
 import { TodoItem } from "../components/TodoItem";
 import { ActionButton, Button, Chip } from "../components/ui";
+import { useIsWide } from "../hooks/useMediaQuery";
 import { useT } from "../i18n";
 import type { TodoSort } from "../lib/api";
 import {
@@ -33,6 +37,7 @@ import {
   moveItem,
   outdentParent,
 } from "../lib/todos";
+import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
 
 /** Horizontale Zugstrecke, ab der ein Ziehen als Ein-/Ausrücken gilt. */
@@ -69,6 +74,18 @@ export function TodoView() {
     exportFile,
   } = useTodoStore.getState();
   const [draft, setDraft] = useState("");
+  const wide = useIsWide();
+  const navigate = useNavigate();
+  // geöffnete Aufgabe steht in der Adresse: Zurück führt zur Liste, deren Filter im Store bleiben
+  const { task: openId } = useSearch({ strict: false }) as { task?: number };
+  const openTask = (id: number): void =>
+    void navigate({ to: "/tasks", search: { task: id } });
+  const closeTask = (): void => void navigate({ to: "/tasks", search: {} });
+
+  // „Heute“ und Zeiten der Zeilen kommen aus dem Tagesplan
+  useEffect(() => {
+    void usePlanStore.getState().load();
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -138,10 +155,25 @@ export function TodoView() {
     );
   };
 
-  return (
+  // schmal: die Details ersetzen die Liste (eigener Screen); breit: sie stehen daneben
+  if (openId !== undefined && !wide) {
+    return (
+      <section className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-10">
+        <div>
+          <Button variant="ghost" onClick={closeTask}>
+            <ChevronLeftIcon />
+            {t("task.back")}
+          </Button>
+        </div>
+        <TaskDetail id={openId} />
+      </section>
+    );
+  }
+
+  const list = (
     <section
       aria-labelledby="todos-heading"
-      className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10"
+      className="flex min-w-0 flex-1 flex-col gap-6"
     >
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -151,15 +183,14 @@ export function TodoView() {
           <p className="text-on-surface-variant">{t("todos.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ActionButton icon={<UploadIcon />} onClick={() => void importFile()}>
-            {t("todos.import")}
-          </ActionButton>
-          <ActionButton
-            icon={<DownloadIcon />}
-            onClick={() => void exportFile()}
-          >
-            {t("todos.export")}
-          </ActionButton>
+          <ActionMenu
+            label={t("todos.more")}
+            icon={<DotsIcon />}
+            actions={[
+              { label: t("todos.import"), onSelect: () => void importFile() },
+              { label: t("todos.export"), onSelect: () => void exportFile() },
+            ]}
+          />
           <label htmlFor="todo-sort" className="sr-only">
             {t("todos.sort.label")}
           </label>
@@ -319,6 +350,8 @@ export function TodoView() {
                     canOutdent={outdentParent(rows, index) !== undefined}
                     isFirst={siblings[0] === row}
                     isLast={siblings[siblings.length - 1] === row}
+                    selected={row.todo.id === openId}
+                    onOpen={openTask}
                   />
                 );
               })}
@@ -340,5 +373,24 @@ export function TodoView() {
         </ActionButton>
       )}
     </section>
+  );
+
+  if (openId === undefined || !wide)
+    return <div className="mx-auto flex max-w-3xl px-6 py-10">{list}</div>;
+  return (
+    <div className="mx-auto flex max-w-6xl items-start gap-6 px-6 py-10">
+      {list}
+      <aside
+        aria-label={t("task.heading")}
+        className="sticky top-6 w-96 shrink-0"
+      >
+        <div className="mb-2 flex justify-end">
+          <Button variant="ghost" onClick={closeTask}>
+            {t("task.close")}
+          </Button>
+        </div>
+        <TaskDetail id={openId} />
+      </aside>
+    </div>
   );
 }

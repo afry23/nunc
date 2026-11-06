@@ -19,6 +19,7 @@ Feature: Todo list
       | rawText           |
       | Bericht +work     |
     When I open the app at "/todos"
+    And I click "Aktionen: Bericht"
     And I click "Bearbeiten: Bericht"
     And I enter "Bericht abgeben +work" into the field "Aufgabe bearbeiten: Bericht"
     And I press the key "Enter" in the field "Aufgabe bearbeiten: Bericht"
@@ -50,6 +51,7 @@ Feature: Todo list
       | Bericht +work     |
       | Einkaufen @street |
     When I open the app at "/todos"
+    And I click "Aktionen: Bericht"
     And I click "Löschen: Bericht"
     Then the backend received "delete_todo" with:
       """
@@ -121,8 +123,9 @@ Feature: Todo list
       | Zwei    |
       | Drei    |
     When I open the app at "/todos"
-    Then I see the buttons "Verschieben: Eins, Nach unten: Eins"
-    When I click "Nach unten: Eins"
+    Then I see the buttons "Verschieben: Eins, Aktionen: Eins"
+    When I click "Aktionen: Eins"
+    And I click "Nach unten: Eins"
     Then the backend received "reorder_todos" with:
       """
       { "ids": [2, 1, 3] }
@@ -171,6 +174,7 @@ Feature: Todo list
       | Projekt |
       | Teil A  |
     When I open the app at "/todos"
+    And I click "Aktionen: Teil A"
     And I click "Einrücken: Teil A"
     Then the backend received "set_todo_parent" with:
       """
@@ -184,6 +188,7 @@ Feature: Todo list
       | rawText |
       | Projekt |
     When I open the app at "/todos"
+    And I click "Aktionen: Projekt"
     And I click "Unteraufgabe hinzufügen: Projekt"
     And I enter "Teil A" into the field "Neue Unteraufgabe zu Projekt"
     And I press the key "Enter" in the field "Neue Unteraufgabe zu Projekt"
@@ -192,3 +197,141 @@ Feature: Todo list
       { "parentId": 1, "rawText": "Teil A" }
       """
     And the todo "Teil A" is at depth 1
+
+  @ui @US-UM03
+  Scenario: A row shows only the main actions
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    Then I see the buttons "Starten: Bericht, Aktionen: Bericht"
+    And I do not see the menu item "Löschen: Bericht"
+    When I click "Aktionen: Bericht"
+    Then I see the menu items "Für heute einplanen: Bericht, Unteraufgabe hinzufügen: Bericht, Duplizieren: Bericht, Bearbeiten: Bericht, Löschen: Bericht"
+
+  @ui @US-UM03
+  Scenario: A task is started from its row
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Starten: Bericht"
+    Then the backend received "start_timer" with:
+      """
+      { "mode": "pomodoro", "todoId": 1 }
+      """
+
+  @ui @US-UM03
+  Scenario: A completed task cannot be started
+    Given the todos:
+      | rawText                | completed |
+      | x 2026-03-03 Bericht   | true      |
+    When I open the app at "/tasks"
+    And I click "Erledigte anzeigen (1)"
+    Then I do not see the button "Starten: Bericht"
+
+  @ui @US-UM03
+  Scenario: A task is duplicated as an open copy
+    Given the todos:
+      | rawText              |
+      | Bericht +work est:30 |
+    When I open the app at "/tasks"
+    And I click "Aktionen: Bericht"
+    And I click "Duplizieren: Bericht"
+    Then the backend received "add_todo" with:
+      """
+      { "rawText": "Bericht +work est:30" }
+      """
+
+  @ui @US-UM03
+  Scenario: A row with subtasks shows their progress
+    Given the todos:
+      | rawText | parent | completed |
+      | Projekt |        | false     |
+      | Teil A  | 1      | true      |
+      | Teil B  | 1      | false     |
+    When I open the app at "/tasks"
+    Then I see "1/2 Teilaufgaben"
+
+  @ui @US-UM03
+  Scenario: A planned task shows today and its tracked time
+    Given the todos:
+      | rawText                 |
+      | Bericht plan:2026-03-04 |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned | 60       | 75    |
+    When I open the app at "/tasks"
+    Then I see "Heute · 1h 15m erfasst"
+    When I click "Aktionen: Bericht"
+    Then I see the menu items "Vom Plan nehmen: Bericht"
+
+  @ui @US-UM03
+  Scenario: Import and export are in the overflow menu
+    When I open the app at "/tasks"
+    Then I do not see the button "Importieren"
+    When I click "Weitere Aktionen"
+    Then I see the menu items "Importieren, Exportieren"
+
+  @ui @US-UM03
+  Scenario: Clicking the title opens the details next to the list
+    Given the todos:
+      | rawText                     |
+      | (A) Bericht +work @office   |
+      | Einkaufen                   |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    Then I see the heading "Aufgabendetails"
+    And I see "Priorität"
+    And I see "+work"
+    And the todo list shows "(A) Bericht +work @office, Einkaufen"
+
+  @ui @US-UM03 @mobile
+  Scenario: On a phone the details replace the list and back returns to it with the filter
+    Given the platform is "mobile"
+    And the viewport is 390 pixels wide
+    And the todos:
+      | rawText   |
+      | Bericht   |
+      | Einkaufen |
+    When I open the app at "/tasks"
+    And I enter "Bericht" into the field "Aufgaben durchsuchen"
+    And I click "Details: Bericht"
+    Then I see the heading "Aufgabendetails"
+    And the field "Aufgaben durchsuchen" does not exist
+    When I click "Zurück zur Liste"
+    Then the todo list shows "Bericht"
+
+  @ui @US-UM03
+  Scenario: The raw todo.txt line is edited in the details
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I enter "Bericht abgeben +work" into the field "todo.txt-Zeile"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht abgeben +work" }
+      """
+
+  @ui @US-UM03
+  Scenario: A task is started from its details
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Arbeit starten"
+    Then the backend received "start_timer" with:
+      """
+      { "mode": "pomodoro", "todoId": 1 }
+      """
+
+  @ui @US-UM03
+  Scenario: The details of a task that is gone say so
+    When I open the app at "/tasks?task=99"
+    Then I see "Diese Aufgabe gibt es nicht mehr."
+

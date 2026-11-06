@@ -77,11 +77,13 @@ async function press(key: string, target: Element | Document): Promise<void> {
 }
 
 function clickable(name: string): HTMLElement {
-  for (const role of ["button", "link", "radio"] as const) {
+  for (const role of ["button", "link", "radio", "menuitem"] as const) {
     const found = screen.queryByRole(role, { name });
     if (found) return found;
   }
-  throw new Error(`Kein Button, Link oder Radio "${name}" gefunden`);
+  throw new Error(
+    `Kein Button, Link, Radio oder Menüeintrag "${name}" gefunden`,
+  );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -477,6 +479,14 @@ Then("I see the buttons {string}", async (_world: UiWorld, list: string) => {
   for (const name of names(list)) await screen.findByRole("button", { name });
 });
 
+Then("I see the menu items {string}", async (_world: UiWorld, list: string) => {
+  for (const name of names(list)) await screen.findByRole("menuitem", { name });
+});
+
+Then("I do not see the menu item {string}", (_world: UiWorld, name: string) => {
+  expect(screen.queryByRole("menuitem", { name })).toBeNull();
+});
+
 Then("I do not see the button {string}", (_world: UiWorld, name: string) => {
   expect(screen.queryByRole("button", { name })).toBeNull();
 });
@@ -501,6 +511,10 @@ Then(
     );
   },
 );
+
+Then("the field {string} exists", async (_world: UiWorld, label: string) => {
+  await screen.findByLabelText(label);
+});
 
 Then("the field {string} does not exist", (_world: UiWorld, label: string) => {
   expect(screen.queryByLabelText(label)).toBeNull();

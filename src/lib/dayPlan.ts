@@ -55,3 +55,22 @@ export function trackedMinutes(blocks: readonly TimelineBlock[]): number {
   }
   return Math.round(total / 60000);
 }
+
+/**
+ * Aufgaben für die Auswahl „Für heute“: offene Todos, die noch nicht im Tagesplan stehen (auch nicht als fällig),
+ * gefiltert nach `query` (Groß-/Kleinschreibung egal, Tags zählen mit).
+ */
+export function pickableTodos(
+  todos: readonly Todo[],
+  plan: DayPlan | null,
+  query: string,
+): Todo[] {
+  const planned = new Set(plan?.items.map((item) => item.todoId));
+  const needle = query.trim().toLowerCase();
+  return todos.filter(
+    (todo) =>
+      !todo.completed &&
+      !planned.has(todo.id) &&
+      (needle === "" || todo.rawText.toLowerCase().includes(needle)),
+  );
+}
