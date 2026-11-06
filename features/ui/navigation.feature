@@ -2,27 +2,28 @@ Feature: Navigation
   Source: REQUIREMENTS 9, PLAN 1.3
 
   @ui @REQ-9
-  Scenario: The routes timer, todos, statistics and settings are available
+  Scenario: The areas today, tasks, log and review and the settings are available
     When I open the app
-    Then I see a navigation with the entries "Timer, Aufgaben, Zeiten, Statistik, Einstellungen, Hilfe"
+    Then I see the heading "Heute"
+    And I see a navigation with the entries "Heute, Aufgaben, Verlauf, Rückblick, Einstellungen, Hilfe"
     When I click "Aufgaben"
     Then I see the heading "Aufgaben"
-    When I click "Zeiten"
-    Then I see the heading "Zeiten"
-    When I click "Statistik"
-    Then I see the heading "Statistik"
+    When I click "Verlauf"
+    Then I see the heading "Verlauf"
+    When I click "Rückblick"
+    Then I see the heading "Rückblick"
     When I click "Einstellungen"
     Then I see the heading "Einstellungen"
-    When I click "Timer"
-    Then the ring shows "25:00"
+    When I click "Heute"
+    Then I see the heading "Heute"
 
   @ui @REQ-9
   Scenario: The active route is highlighted
     When I open the app
-    Then the entry "Timer" is marked as current
+    Then the entry "Heute" is marked as current
     When I click "Aufgaben"
     Then the entry "Aufgaben" is marked as current
-    And the entry "Timer" is not marked as current
+    And the entry "Heute" is not marked as current
 
   @ui @REQ-8 @desktop
   Scenario: The mini timer opens in its own window
@@ -42,7 +43,7 @@ Feature: Navigation
     When I open the app
     And I click "Aufgaben"
     And I press the back button of the device
-    Then the ring shows "25:00"
+    Then I see the heading "Heute"
     And the back button would leave the app
 
   @ui @REQ-8 @mobile
@@ -51,20 +52,20 @@ Feature: Navigation
     And the viewport is 390 pixels wide
     When I open the app
     And I click "Aufgaben"
-    And I click "Statistik"
+    And I click "Rückblick"
     And I click "Einstellungen"
     And I press the back button of the device
-    Then the ring shows "25:00"
+    Then I see the heading "Heute"
     And the back button would leave the app
 
   @ui @REQ-8 @mobile
-  Scenario: The timer tab goes back instead of adding an entry
+  Scenario: The today tab goes back instead of adding an entry
     Given the platform is "mobile"
     And the viewport is 390 pixels wide
     When I open the app
-    And I click "Statistik"
-    And I click "Timer"
-    Then the ring shows "25:00"
+    And I click "Rückblick"
+    And I click "Heute"
+    Then I see the heading "Heute"
     And the back button would leave the app
 
   @ui @REQ-8 @desktop
@@ -73,7 +74,7 @@ Feature: Navigation
     And the viewport is 390 pixels wide
     When I open the app
     And I click "Aufgaben"
-    And I click "Statistik"
+    And I click "Rückblick"
     And I press the back button of the device
     Then I see the heading "Aufgaben"
 
@@ -83,7 +84,7 @@ Feature: Navigation
     Then the sidebar is expanded
     When I click "Seitenleiste einklappen"
     Then the sidebar is collapsed
-    And the navigation still offers "Timer, Aufgaben, Zeiten, Statistik, Einstellungen, Hilfe"
+    And the navigation still offers "Heute, Aufgaben, Verlauf, Rückblick, Einstellungen, Hilfe"
     When I click "Aufgaben"
     Then I see the heading "Aufgaben"
     And the sidebar is collapsed

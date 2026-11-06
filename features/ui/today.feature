@@ -16,7 +16,7 @@ Feature: Today
       | 1    | overdue | 30       | 15    |
       | 2    | due     |          | 0     |
       | 3    | planned | 60       | 0     |
-    When I open the app at "/today"
+    When I open the app at "/"
     Then I see the heading "Heute"
     And I see "Überfällig"
     And I see "Heute fällig"
@@ -27,6 +27,24 @@ Feature: Today
     And I see "15m erfasst"
 
   @ui @US-TP01
+  Scenario: The tracked work is shown apart from the planned effort
+    Given the todos:
+      | rawText                          |
+      | Bericht plan:2026-03-04 est:60   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned | 60       | 0     |
+    And the timeline of "2026-03-04" has the sessions:
+      | start | end   | type        | todo | note | origin |
+      | 09:00 | 09:25 | work        |      |      | timer  |
+      | 09:25 | 09:30 | short_break |      |      | timer  |
+      | 10:00 | 10:35 | work        |      |      | manual |
+    When I open the app
+    Then I see "Geplant: 1h von 4h"
+    And I see "Erfasste Arbeit: 1h"
+
+  @ui @US-TP01
   Scenario: An overfull plan shows how much is too much
     Given the todos:
       | rawText                          |
@@ -35,14 +53,17 @@ Feature: Today
     And the day plan lists:
       | todo | reason  | estimate | spent |
       | 1    | planned | 90       | 0     |
-    When I open the app at "/today"
+    When I open the app at "/"
     Then I see "30m zu viel"
 
   @ui @US-TP01
   Scenario: An empty plan explains how to plan something
     Given the day plan for 2026-03-04 has a capacity of 240 minutes
-    When I open the app at "/today"
-    Then I see "Für heute ist nichts geplant."
+    When I open the app at "/"
+    Then I see "Was möchtest du heute angehen?"
+    And I see "Aufgaben auswählen"
+    And I see "Neue Aufgabe hinzufügen"
+    And I see "Du kannst auch ohne Aufgabe eine Tätigkeit starten."
 
   @ui @US-TP01
   Scenario: Set the estimate of an entry
@@ -53,7 +74,7 @@ Feature: Today
     And the day plan lists:
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
-    When I open the app at "/today"
+    When I open the app at "/"
     And I enter "45" into the field "Schätzung (min): Bericht"
     And I leave the field "Schätzung (min): Bericht"
     Then the backend received "set_todo_estimate" with:
@@ -70,7 +91,7 @@ Feature: Today
     And the day plan lists:
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
-    When I open the app at "/today"
+    When I open the app at "/"
     And I click "Auf morgen verschieben: Bericht"
     Then the backend received "plan_todo" with:
       """
@@ -86,7 +107,7 @@ Feature: Today
     And the day plan lists:
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
-    When I open the app at "/today"
+    When I open the app at "/"
     And I click "Vom Plan nehmen: Bericht"
     Then the backend received "plan_todo" with:
       """
@@ -102,7 +123,7 @@ Feature: Today
     And the day plan lists:
       | todo | reason  | estimate | spent |
       | 1    | overdue |          | 0     |
-    When I open the app at "/today"
+    When I open the app at "/"
     Then I see "Überfällig"
     And I do not see the button "Auf morgen verschieben: Bericht"
     And I do not see the button "Vom Plan nehmen: Bericht"
@@ -116,7 +137,7 @@ Feature: Today
     And the day plan lists:
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
-    When I open the app at "/today"
+    When I open the app at "/"
     And I check "Erledigt: Bericht"
     Then the backend received "set_todo_completed" with:
       """
@@ -128,15 +149,9 @@ Feature: Today
     Given the todos:
       | rawText |
       | Bericht |
-    When I open the app at "/todos"
+    When I open the app at "/tasks"
     And I click "Für heute einplanen: Bericht"
     Then the backend received "plan_todo" with "id" equal to "1"
-
-  @ui @US-TP01
-  Scenario: The list leads to the day plan
-    When I open the app at "/todos"
-    And I click "Heute"
-    Then I see the heading "Heute"
 
   @ui @US-TP01
   Scenario: The daily capacity is set in the settings
@@ -156,7 +171,7 @@ Feature: Today
       { "journal": { "achievements": [], "weekNotes": [],
         "dayNotes": [{ "id": "n", "date": "2026-03-04", "text": "Calm day" }] } }
       """
-    When I open the app at "/today"
+    When I open the app at "/"
     Then the field "Tagesnotiz" has the value "Calm day"
     And the button "Notiz speichern" is disabled
     When I enter "Calm day, good focus" into the field "Tagesnotiz"
@@ -177,7 +192,7 @@ Feature: Today
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
       | 2    | due     |          | 0     |
-    When I open the app at "/today"
+    When I open the app at "/"
     And I click "Tag abschließen"
     Then I see a dialog with the text "1 eingeplante Aufgaben, 1 mit Frist."
     And I see a dialog with the text "Aufgaben mit Frist bleiben auf dem Plan"
@@ -197,7 +212,7 @@ Feature: Today
     And the day plan lists:
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
-    When I open the app at "/today"
+    When I open the app at "/"
     And I click "Tag abschließen"
     And I click "Vom Plan nehmen"
     And I enter "Too much planned" into the field "Notiz zum Tag"
@@ -210,7 +225,7 @@ Feature: Today
   @ui @US-TP02
   Scenario: Cancelling the dialog changes nothing
     Given the day plan for 2026-03-04 has a capacity of 240 minutes
-    When I open the app at "/today"
+    When I open the app at "/"
     And I click "Tag abschließen"
     And I click "Abbrechen"
     Then I do not see a dialog
@@ -219,7 +234,7 @@ Feature: Today
   @ui @US-TP02
   Scenario: Without planned tasks the dialog offers only the note
     Given the day plan for 2026-03-04 has a capacity of 240 minutes
-    When I open the app at "/today"
+    When I open the app at "/"
     And I click "Tag abschließen"
     Then I see a dialog with the text "0 eingeplante Aufgaben, 0 mit Frist."
     And I do not see the button "Unverändert lassen"

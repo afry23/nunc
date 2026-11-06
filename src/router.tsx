@@ -1,5 +1,6 @@
 import {
   Outlet,
+  Navigate,
   RouterProvider,
   createRootRoute,
   createRoute,
@@ -12,7 +13,8 @@ import { HelpView } from "./views/HelpView";
 import { MiniTimerView } from "./views/MiniTimerView";
 import { SettingsView } from "./views/SettingsView";
 import { StatsView } from "./views/StatsView";
-import { TimesView } from "./views/TimesView";
+import { LogView } from "./views/LogView";
+import { ReviewView } from "./views/ReviewView";
 import { TimerView } from "./views/TimerView";
 import { TodayView } from "./views/TodayView";
 import { TodoView } from "./views/TodoView";
@@ -24,33 +26,50 @@ const shellRoute = createRoute({
   component: AppShell,
 });
 
+function redirect(from: string, to: string) {
+  return createRoute({
+    getParentRoute: () => shellRoute,
+    path: from,
+    component: () => <Navigate to={to} replace />,
+  });
+}
+
 const routeTree = rootRoute.addChildren([
   shellRoute.addChildren([
     createRoute({
       getParentRoute: () => shellRoute,
       path: "/",
-      component: TimerView,
+      component: TodayView,
     }),
     createRoute({
       getParentRoute: () => shellRoute,
-      path: "/todos",
+      path: "/tasks",
       component: TodoView,
     }),
     createRoute({
       getParentRoute: () => shellRoute,
-      path: "/today",
-      component: TodayView,
+      path: "/log",
+      component: LogView,
+    }),
+    createRoute({
+      getParentRoute: () => shellRoute,
+      path: "/review",
+      component: ReviewView,
+    }),
+    createRoute({
+      getParentRoute: () => shellRoute,
+      path: "/focus",
+      component: TimerView,
     }),
     createRoute({
       getParentRoute: () => shellRoute,
       path: "/habits",
       component: HabitsView,
     }),
-    createRoute({
-      getParentRoute: () => shellRoute,
-      path: "/times",
-      component: TimesView,
-    }),
+    // alte Adressen (Lesezeichen, Tray, Hilfe) führen zu den neuen Bereichen
+    redirect("/today", "/"),
+    redirect("/todos", "/tasks"),
+    redirect("/times", "/log"),
     createRoute({
       getParentRoute: () => shellRoute,
       path: "/stats",

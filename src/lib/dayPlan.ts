@@ -1,4 +1,4 @@
-import type { DayPlan, PlanItem, Todo } from "./api";
+import type { DayPlan, PlanItem, TimelineBlock, Todo } from "./api";
 import { addDays, parseIsoDate, toIsoDate } from "./format";
 
 /** Der Tag nach `day` (`YYYY-MM-DD`). */
@@ -34,4 +34,24 @@ export function closeSummary(plan: DayPlan): {
 } {
   const planned = plan.items.filter((item) => item.reason === "planned").length;
   return { planned, fixed: plan.items.length - planned };
+}
+
+/**
+ * Erfasste Arbeit eines Tages in Minuten: Vereinigung der Arbeitsblöcke (Pausen zählen nicht, überlappende
+ * Blöcke zählen nur einmal).
+ */
+export function trackedMinutes(blocks: readonly TimelineBlock[]): number {
+  const spans = blocks
+    .filter((block) => block.sessionType === "work")
+    .map((block) => [Date.parse(block.start), Date.parse(block.end)] as const)
+    .filter(([start, end]) => end > start)
+    .sort((a, b) => a[0] - b[0]);
+  let total = 0;
+  let until = Number.NEGATIVE_INFINITY;
+  for (const [start, end] of spans) {
+    const from = Math.max(start, until);
+    if (end > from) total += end - from;
+    until = Math.max(until, end);
+  }
+  return Math.round(total / 60000);
 }

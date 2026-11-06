@@ -28,21 +28,21 @@ export function useShortcuts(): void {
           if (timer.snapshot.state !== "idle") void timer.stop();
           return;
         case "new-todo":
-          void navigate({ to: "/todos" }).then(() =>
+          void navigate({ to: "/tasks" }).then(() =>
             document.getElementById("todo-input")?.focus(),
           );
           return;
-        case "go-timer":
+        case "go-today":
           void navigate({ to: "/" });
           return;
         case "go-todos":
-          void navigate({ to: "/todos" });
+          void navigate({ to: "/tasks" });
           return;
-        case "go-times":
-          void navigate({ to: "/times" });
+        case "go-log":
+          void navigate({ to: "/log" });
           return;
-        case "go-stats":
-          void navigate({ to: "/stats" });
+        case "go-review":
+          void navigate({ to: "/review" });
           return;
         case "go-settings":
           void navigate({ to: "/settings" });

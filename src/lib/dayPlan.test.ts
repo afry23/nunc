@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { DayPlan, Todo } from "./api";
-import { closeSummary, fillPercent, nextDay, planRows } from "./dayPlan";
+import type { DayPlan, TimelineBlock, Todo } from "./api";
+import {
+  closeSummary,
+  fillPercent,
+  nextDay,
+  planRows,
+  trackedMinutes,
+} from "./dayPlan";
 
 const todo = (id: number): Todo => ({
   id,
@@ -80,5 +86,52 @@ describe("closeSummary", () => {
     };
     expect(closeSummary(mixed)).toEqual({ planned: 2, fixed: 2 });
     expect(closeSummary(plan([]))).toEqual({ planned: 0, fixed: 0 });
+  });
+});
+
+describe("trackedMinutes", () => {
+  const block = (
+    start: string,
+    end: string,
+    sessionType: TimelineBlock["sessionType"] = "work",
+  ): TimelineBlock => ({
+    sessionId: 1,
+    start,
+    end,
+    sessionType,
+    status: "completed",
+    todoId: null,
+    note: "",
+    origin: "timer",
+    projectTags: [],
+    contextTags: [],
+    overlaps: false,
+  });
+
+  it("sums work blocks and ignores breaks", () => {
+    expect(
+      trackedMinutes([
+        block("2026-03-04T09:00:00Z", "2026-03-04T09:25:00Z"),
+        block("2026-03-04T09:25:00Z", "2026-03-04T09:30:00Z", "short_break"),
+        block("2026-03-04T10:00:00Z", "2026-03-04T10:35:00Z"),
+      ]),
+    ).toBe(60);
+  });
+
+  it("counts overlapping blocks once", () => {
+    expect(
+      trackedMinutes([
+        block("2026-03-04T09:00:00Z", "2026-03-04T10:00:00Z"),
+        block("2026-03-04T09:30:00Z", "2026-03-04T10:30:00Z"),
+        block("2026-03-04T09:10:00Z", "2026-03-04T09:20:00Z"),
+      ]),
+    ).toBe(90);
+  });
+
+  it("is zero without blocks and ignores empty spans", () => {
+    expect(trackedMinutes([])).toBe(0);
+    expect(
+      trackedMinutes([block("2026-03-04T09:00:00Z", "2026-03-04T09:00:00Z")]),
+    ).toBe(0);
   });
 });

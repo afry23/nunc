@@ -14,14 +14,14 @@ import {
 } from "./icons";
 
 export const NAV_ITEMS: {
-  to: "/" | "/todos" | "/times" | "/stats" | "/settings" | "/help";
+  to: "/" | "/tasks" | "/log" | "/review" | "/settings" | "/help";
   label: MessageKey;
   icon: ReactNode;
 }[] = [
-  { to: "/", label: "nav.timer", icon: <TimerIcon /> },
-  { to: "/todos", label: "nav.todos", icon: <CheckIcon /> },
-  { to: "/times", label: "nav.times", icon: <ClockIcon /> },
-  { to: "/stats", label: "nav.stats", icon: <BarsIcon /> },
+  { to: "/", label: "nav.today", icon: <TimerIcon /> },
+  { to: "/tasks", label: "nav.tasks", icon: <CheckIcon /> },
+  { to: "/log", label: "nav.log", icon: <ClockIcon /> },
+  { to: "/review", label: "nav.review", icon: <BarsIcon /> },
   { to: "/settings", label: "nav.settings", icon: <GearIcon /> },
   { to: "/help", label: "nav.help", icon: <HelpIcon /> },
 ];
@@ -90,9 +90,9 @@ export function Sidebar() {
 /**
  * Tab-Leiste unter 768 px Breite (Touch-Ziele ≥ 44 px, Safe-Area unten).
  *
- * Mobil gilt ein Zurück-Stapel mit dem Timer als Startseite: Ein Tab ersetzt den vorigen statt sich
- * aufzustapeln, und „Timer“ geht einen Schritt zurück. So führt die Zurück-Taste (Android) vom Tab zuerst
- * zum Timer und erst von dort aus der App, statt durch alle besuchten Tabs zu laufen.
+ * Mobil gilt ein Zurück-Stapel mit „Heute“ als Startseite: Ein Tab ersetzt den vorigen statt sich
+ * aufzustapeln, und „Heute“ geht einen Schritt zurück. So führt die Zurück-Taste (Android) vom Tab zuerst
+ * zu „Heute“ und erst von dort aus der App, statt durch alle besuchten Tabs zu laufen.
  */
 export function BottomTabs() {
   const t = useT();

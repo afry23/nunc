@@ -14,6 +14,7 @@ name: Hintergrund und Benachrichtigung
 - eraseText: 3
 - inputText: "1"
 - tapOn: "Speichern"
+- tapOn: "Heute"
 - tapOn: "Timer"
 - assertVisible: "01:00"
 - tapOn: "Start"
@@ -27,5 +28,8 @@ name: Hintergrund und Benachrichtigung
 - assertVisible: "Pomodoro geschafft"
 - tapOn: "Pomodoro geschafft"
 # Zurück in der App: der abgelaufene Timer ist verbucht, nichts läuft mehr
+- tapOn:
+    text: "Timer"
+    optional: true
 - assertVisible: "01:00"
 - assertVisible: "Start"

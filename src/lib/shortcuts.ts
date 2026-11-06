@@ -4,10 +4,10 @@ export type ShortcutAction =
   | "toggle-timer"
   | "stop"
   | "new-todo"
-  | "go-timer"
+  | "go-today"
   | "go-todos"
-  | "go-times"
-  | "go-stats"
+  | "go-log"
+  | "go-review"
   | "go-settings"
   | "go-help";
 
@@ -47,13 +47,13 @@ export function shortcutFor(
     case "N":
       return "new-todo";
     case "1":
-      return "go-timer";
+      return "go-today";
     case "2":
       return "go-todos";
     case "3":
-      return "go-times";
+      return "go-log";
     case "4":
-      return "go-stats";
+      return "go-review";
     case ",":
       return "go-settings";
     case "?":
