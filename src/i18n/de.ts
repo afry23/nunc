@@ -101,7 +101,7 @@ export const de = {
     "Pomodoro wechselt zwischen Arbeit und Pause mit festen Zeiten. Flowtime läuft offen, bis du aufhörst, und schlägt danach eine Pause passend zur Arbeitszeit vor. Das Ende meldet eine Benachrichtigung, auch wenn die App im Hintergrund ist.",
   "help.todos.title": "Aufgaben",
   "help.todos.body":
-    "Aufgaben liegen im todo.txt-Format: Priorität in Klammern am Anfang, +projekt, @kontext. Beispiel: (A) Dokumentation fertig +projekt @kontext. Ein Timer lässt sich einer Aufgabe zuordnen, die Statistik zeigt die Zeit pro Aufgabe.",
+    "Aufgaben liegen im todo.txt-Format: Priorität in Klammern am Anfang, +projekt, @kontext. Beispiel: (A) Dokumentation fertig +projekt @kontext. Ein Timer lässt sich einer Aufgabe zuordnen, die Statistik zeigt die Zeit pro Aufgabe. Wiederkehrende Aufgaben tragen rec:1w (ab Abschluss) oder rec:+1w (ab Frist); beim Abhaken entsteht die nächste.",
   "help.stats.title": "Statistik",
   "help.stats.body":
     "Alle Auswertungen werden aus den einzelnen Sitzungen berechnet. Es gibt Tages-, Wochen- und Monatsansichten. In „Zeiten“ siehst du die Arbeitszeit pro Woche und kannst Einträge nachtragen, bearbeiten und löschen.",
@@ -654,5 +654,21 @@ export const de = {
     "Schätzungen: {onTarget} von {count} im Rahmen ({percent} %), {under} schneller, {over} länger",
   "taskEdit.title": "Aufgabe bearbeiten",
   "taskEdit.open": "Bearbeiten",
+  "recurrence.label": "Wiederholung",
+  "recurrence.none": "Keine Wiederholung",
+  "recurrence.every": "Alle",
+  "recurrence.count": "Anzahl der Einheiten",
+  "recurrence.unit": "Einheit der Wiederholung",
+  "recurrence.unit.d": "Tage",
+  "recurrence.unit.b": "Werktage",
+  "recurrence.unit.w": "Wochen",
+  "recurrence.unit.m": "Monate",
+  "recurrence.unit.y": "Jahre",
+  "recurrence.base": "Basis der Wiederholung",
+  "recurrence.fromDone": "ab Abschlussdatum",
+  "recurrence.fromDue": "ab bisheriger Frist",
+  "recurrence.summary": "alle {count} {unit}, {base}",
+  "recurrence.hint":
+    "Beim Abhaken entsteht eine neue Aufgabe mit der nächsten Frist. Leer lassen für keine Wiederholung.",
   "estimate.hint": "Leer lassen, wenn die Aufgabe nicht geschätzt werden soll.",
 } as const satisfies Record<string, string>;

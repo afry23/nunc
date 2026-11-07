@@ -9,6 +9,7 @@ import {
   verdictLabel,
 } from "../lib/estimate";
 import { formatDateTime, formatMinutes } from "../lib/format";
+import { recurrenceOf, recurrenceSummary } from "../lib/recurrence";
 import { subtaskProgress, titleOf } from "../lib/todos";
 import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
@@ -39,8 +40,12 @@ export function TaskInfo({ todo }: { todo: Todo }) {
 
   const progress = subtaskProgress(all, todo.id);
   const check = time?.estimateCheck ?? null;
+  const repeat = recurrenceOf(todo.description);
   const rows: [string, string][] = [
     [t("task.pomodoros"), String(todo.pomodoroCount)],
+    ...(repeat
+      ? [[t("recurrence.label"), recurrenceSummary(repeat)] as [string, string]]
+      : []),
     ...(progress
       ? [
           [

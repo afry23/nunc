@@ -36,6 +36,8 @@ pub enum PlanKey {
     Plan,
     Estimate,
     EstimatePomodoros,
+    /// Wiederholung (`rec:`, ADR 0036).
+    Recurrence,
 }
 
 impl PlanKey {
@@ -45,6 +47,7 @@ impl PlanKey {
             Self::Plan => "plan",
             Self::Estimate => "est",
             Self::EstimatePomodoros => "estp",
+            Self::Recurrence => "rec",
         }
     }
 }
@@ -106,6 +109,7 @@ fn is_field(word: &str, key: PlanKey) -> bool {
         && match key {
             PlanKey::Estimate => parse_estimate(value).is_some(),
             PlanKey::EstimatePomodoros => parse_estimate_pomodoros(value).is_some(),
+            PlanKey::Recurrence => crate::recurrence::parse(value).is_some(),
             PlanKey::Due | PlanKey::Plan => parse_day(value).is_some(),
         }
 }
@@ -117,6 +121,7 @@ pub fn with_field(description: &str, key: PlanKey, value: Option<&str>) -> Strin
     let valid = value.is_none_or(|v| match key {
         PlanKey::Estimate => parse_estimate(v).is_some(),
         PlanKey::EstimatePomodoros => parse_estimate_pomodoros(v).is_some(),
+        PlanKey::Recurrence => crate::recurrence::parse(v).is_some(),
         PlanKey::Due | PlanKey::Plan => parse_day(v).is_some(),
     });
     if !valid {

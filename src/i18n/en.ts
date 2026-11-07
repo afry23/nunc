@@ -101,7 +101,7 @@ export const en: Record<keyof typeof de, string> = {
     "Pomodoro alternates between work and breaks with fixed durations. Flowtime runs open-ended until you stop and then suggests a break matching your work time. A notification announces the end, even when the app is in the background.",
   "help.todos.title": "Tasks",
   "help.todos.body":
-    "Tasks use the todo.txt format: priority in parentheses first, +project, @context. Example: (A) Finish documentation +project @context. A timer can be linked to a task, and statistics show time per task.",
+    "Tasks use the todo.txt format: priority in parentheses first, +project, @context. Example: (A) Finish documentation +project @context. A timer can be linked to a task, and statistics show time per task. Recurring tasks carry rec:1w (from completion) or rec:+1w (from due date); completing one creates the next.",
   "help.stats.title": "Statistics",
   "help.stats.body":
     "All figures are computed from the individual sessions. Daily, weekly and monthly views are available. The “Times” view shows work time per week and lets you add, edit and delete entries.",
@@ -651,5 +651,21 @@ export const en: Record<keyof typeof de, string> = {
     "Estimates: {onTarget} of {count} on target ({percent} %), {under} faster, {over} longer",
   "taskEdit.title": "Edit task",
   "taskEdit.open": "Edit",
+  "recurrence.label": "Repeat",
+  "recurrence.none": "Does not repeat",
+  "recurrence.every": "Every",
+  "recurrence.count": "Number of units",
+  "recurrence.unit": "Repeat unit",
+  "recurrence.unit.d": "days",
+  "recurrence.unit.b": "business days",
+  "recurrence.unit.w": "weeks",
+  "recurrence.unit.m": "months",
+  "recurrence.unit.y": "years",
+  "recurrence.base": "Repeat base",
+  "recurrence.fromDone": "from completion date",
+  "recurrence.fromDue": "from previous due date",
+  "recurrence.summary": "every {count} {unit}, {base}",
+  "recurrence.hint":
+    "Completing the task creates a new one with the next due date. Leave empty for no repetition.",
   "estimate.hint": "Leave empty if the task should not be estimated.",
 };
