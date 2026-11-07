@@ -20,6 +20,7 @@ import {
   ChevronRightIcon,
   DotsIcon,
   GripIcon,
+  PauseIcon,
   PlayIcon,
 } from "./icons";
 import { ActionMenu, type MenuAction } from "./ActionMenu";
@@ -57,6 +58,12 @@ export function TodoItem({
 }) {
   const t = useT();
   const { todo, depth, hasChildren, pomodoroTotal } = row;
+  /** Läuft der Timer für genau diese Aufgabe (Arbeitsphase), ersetzt Pause/Fortsetzen den Start-Knopf. */
+  const timerState = useTimerStore((s) =>
+    s.snapshot.todoId === todo.id && s.snapshot.sessionType === "work"
+      ? s.snapshot.state
+      : "idle",
+  );
   const {
     toggle,
     remove,
@@ -136,59 +143,59 @@ export function TodoItem({
 
   const menuActions: MenuAction[] = [
     {
-      label: t("todos.item.planToday", { title }),
+      label: t("todos.menu.planToday"),
       hidden: todo.completed || planItem?.reason === "planned",
       onSelect: () => void usePlanStore.getState().planTodo(todo.id, today),
     },
     {
-      label: t("todos.item.unplan", { title }),
+      label: t("todos.menu.unplan"),
       hidden: todo.completed || planItem?.reason !== "planned",
       onSelect: () => void usePlanStore.getState().planTodo(todo.id, null),
     },
     {
-      label: t("todos.item.achievement", { title }),
+      label: t("todos.menu.achievement"),
       hidden: !todo.completed,
       onSelect: () =>
         void useTodoStore.getState().markAchievement(todo.id, today),
     },
     {
-      label: t("todos.item.addSub", { title }),
+      label: t("todos.menu.addSub"),
       onSelect: () => setAddingSub(true),
     },
     {
-      label: t("todos.item.up", { title }),
+      label: t("todos.menu.up"),
       hidden: !canReorder,
       disabled: isFirst,
       onSelect: () => void move(todo.id, -1),
     },
     {
-      label: t("todos.item.down", { title }),
+      label: t("todos.menu.down"),
       hidden: !canReorder,
       disabled: isLast,
       onSelect: () => void move(todo.id, 1),
     },
     {
-      label: t("todos.item.indent", { title }),
+      label: t("todos.menu.indent"),
       hidden: !canReorder,
       disabled: !canIndent,
       onSelect: () => void indent(todo.id),
     },
     {
-      label: t("todos.item.outdent", { title }),
+      label: t("todos.menu.outdent"),
       hidden: !canReorder,
       disabled: !canOutdent,
       onSelect: () => void outdent(todo.id),
     },
     {
-      label: t("todos.item.duplicate", { title }),
+      label: t("todos.menu.duplicate"),
       onSelect: () => void useTodoStore.getState().duplicate(todo.id),
     },
     {
-      label: t("todos.item.edit", { title }),
+      label: t("todos.menu.edit"),
       onSelect: startEditing,
     },
     {
-      label: t("todos.item.delete", { title }),
+      label: t("todos.menu.delete"),
       onSelect: () => void remove(todo.id),
     },
   ];
@@ -336,14 +343,29 @@ export function TodoItem({
         <div
           className={`flex shrink-0 max-sm:justify-end ${editing ? "max-sm:hidden" : ""}`}
         >
-          {!todo.completed && (
-            <IconButton
-              label={t("todos.item.start", { title })}
-              onClick={() => void useTimerStore.getState().startTodo(todo.id)}
-            >
-              <PlayIcon />
-            </IconButton>
-          )}
+          {!todo.completed &&
+            (timerState === "running" ? (
+              <IconButton
+                label={t("todos.item.pause", { title })}
+                onClick={() => void useTimerStore.getState().pause()}
+              >
+                <PauseIcon />
+              </IconButton>
+            ) : timerState === "paused" ? (
+              <IconButton
+                label={t("todos.item.resume", { title })}
+                onClick={() => void useTimerStore.getState().resume()}
+              >
+                <PlayIcon />
+              </IconButton>
+            ) : (
+              <IconButton
+                label={t("todos.item.start", { title })}
+                onClick={() => void useTimerStore.getState().startTodo(todo.id)}
+              >
+                <PlayIcon />
+              </IconButton>
+            ))}
           <ActionMenu
             label={t("todos.item.actions", { title })}
             icon={<DotsIcon />}
