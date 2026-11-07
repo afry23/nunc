@@ -267,6 +267,39 @@ Feature: Todo list
     When I open the app at "/tasks"
     Then I see "1/2 Teilaufgaben"
 
+  @ui @US-RV03
+  Scenario Outline: The list shows the estimate of a task
+    Given the todos:
+      | rawText      |
+      | <rawText>    |
+    When I open the app at "/tasks"
+    Then I see "<shown>"
+
+    Examples:
+      | rawText         | shown                |
+      | Bericht estp:3  | geschätzt 3 Pomodoros |
+      | Bericht est:90  | geschätzt 1h 30m     |
+
+  @ui @US-RV03
+  Scenario: A task without estimate shows no estimate
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    Then I do not see "geschätzt"
+
+  @ui @US-RV03
+  Scenario: The estimate joins today and the tracked time in the list
+    Given the todos:
+      | rawText                          |
+      | Bericht plan:2026-03-04 estp:2   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 25    |
+    When I open the app at "/tasks"
+    Then I see "Heute · geschätzt 2 Pomodoros · 25m erfasst"
+
   @ui @US-UM03
   Scenario: A planned task shows today and its tracked time
     Given the todos:
