@@ -14,6 +14,7 @@ import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { TagInput } from "./TagInput";
+import { TaskInfo } from "./TaskInfo";
 
 const FIELD =
   "min-h-11 w-24 rounded-lg bg-surface-container-highest px-3 text-on-surface tabular-nums focus:bg-secondary-container";
@@ -80,9 +81,11 @@ export function TaskEditDialog({
       title={t("taskEdit.title")}
       confirmLabel={t("task.save")}
       busy={busy || !valid}
+      wide
       onCancel={onClose}
       onConfirm={() => void save()}
     >
+      <TaskInfo todo={todo} />
       <label className="flex flex-col gap-1">
         <span className="label-md">{t("task.raw")}</span>
         <textarea

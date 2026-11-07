@@ -8,6 +8,7 @@ export function ConfirmDialog({
   confirmLabel,
   danger = false,
   busy = false,
+  wide = false,
   onConfirm,
   onCancel,
   children,
@@ -16,6 +17,8 @@ export function ConfirmDialog({
   confirmLabel: string;
   danger?: boolean;
   busy?: boolean;
+  /** Breiter und scrollbar, für Dialoge mit viel Inhalt. */
+  wide?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   children: ReactNode;
@@ -37,7 +40,7 @@ export function ConfirmDialog({
             onCancel();
           }
         }}
-        className="glass shadow-ambient w-full max-w-md rounded-2xl p-6"
+        className={`glass shadow-ambient max-h-[90vh] w-full overflow-y-auto rounded-2xl p-6 ${wide ? "max-w-2xl" : "max-w-md"}`}
       >
         <h2 id={titleId} className="headline-md">
           {title}

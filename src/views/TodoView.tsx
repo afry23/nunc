@@ -13,21 +13,13 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import {
-  CheckIcon,
-  ChevronLeftIcon,
-  CloseIcon,
-  DotsIcon,
-  PlusIcon,
-} from "../components/icons";
+import { CheckIcon, CloseIcon, DotsIcon, PlusIcon } from "../components/icons";
 import { ActionMenu } from "../components/ActionMenu";
 import { FilterMenu } from "../components/FilterMenu";
-import { TaskDetail } from "../components/TaskDetail";
+import { TaskEditDialog } from "../components/TaskEditDialog";
 import { TodoItem } from "../components/TodoItem";
 import { ActionButton, Button, Chip } from "../components/ui";
-import { useIsWide } from "../hooks/useMediaQuery";
 import { useT } from "../i18n";
 import type { TodoSort } from "../lib/api";
 import {
@@ -74,13 +66,9 @@ export function TodoView() {
     exportFile,
   } = useTodoStore.getState();
   const [draft, setDraft] = useState("");
-  const wide = useIsWide();
-  const navigate = useNavigate();
-  // geöffnete Aufgabe steht in der Adresse: Zurück führt zur Liste, deren Filter im Store bleiben
-  const { task: openId } = useSearch({ strict: false }) as { task?: number };
-  const openTask = (id: number): void =>
-    void navigate({ to: "/tasks", search: { task: id } });
-  const closeTask = (): void => void navigate({ to: "/tasks", search: {} });
+  // Klick auf eine Aufgabe öffnet den Dialog zum Bearbeiten (modal, die Liste samt Filter bleibt dahinter)
+  const [openId, setOpenId] = useState<number | null>(null);
+  const openTodo = all.find((item) => item.id === openId);
 
   // „Heute“ und Zeiten der Zeilen kommen aus dem Tagesplan
   useEffect(() => {
@@ -154,21 +142,6 @@ export function TodoView() {
       ),
     );
   };
-
-  // schmal: die Details ersetzen die Liste (eigener Screen); breit: sie stehen daneben
-  if (openId !== undefined && !wide) {
-    return (
-      <section className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-10">
-        <div>
-          <Button variant="ghost" onClick={closeTask}>
-            <ChevronLeftIcon />
-            {t("task.back")}
-          </Button>
-        </div>
-        <TaskDetail id={openId} />
-      </section>
-    );
-  }
 
   const list = (
     <section
@@ -351,7 +324,7 @@ export function TodoView() {
                     isFirst={siblings[0] === row}
                     isLast={siblings[siblings.length - 1] === row}
                     selected={row.todo.id === openId}
-                    onOpen={openTask}
+                    onOpen={setOpenId}
                   />
                 );
               })}
@@ -375,22 +348,16 @@ export function TodoView() {
     </section>
   );
 
-  if (openId === undefined || !wide)
-    return <div className="mx-auto flex max-w-3xl px-6 py-10">{list}</div>;
   return (
-    <div className="mx-auto flex max-w-6xl items-start gap-6 px-6 py-10">
+    <div className="mx-auto flex max-w-3xl px-6 py-10">
       {list}
-      <aside
-        aria-label={t("task.heading")}
-        className="sticky top-6 w-96 shrink-0"
-      >
-        <div className="mb-2 flex justify-end">
-          <Button variant="ghost" onClick={closeTask}>
-            {t("task.close")}
-          </Button>
-        </div>
-        <TaskDetail id={openId} />
-      </aside>
+      {openTodo && (
+        <TaskEditDialog
+          key={openTodo.id}
+          todo={openTodo}
+          onClose={() => setOpenId(null)}
+        />
+      )}
     </div>
   );
 }

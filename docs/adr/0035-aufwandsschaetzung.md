@@ -23,7 +23,7 @@ oft in Pomodoros, und der Rückblick beantwortet nicht, ob die Schätzung gestim
   der Schätzung.
 - **Urteil:** Abweichung bis 20 % der Schätzung ist „im Rahmen“, darunter „schneller“, darüber „länger“.
 - **Anzeige:** Rückblick (erledigte Aufgaben mit Soll/Ist, Summenzeile, Markdown-Export) und Aufgabendetails
-  (Fortschritt gegen Schätzung). Ein modaler Dialog („Bearbeiten“ im Detail) bearbeitet die todo.txt-Zeile ohne Schätzung und den Zeitbedarf.
+  (Fortschritt gegen Schätzung). Ein Klick auf eine Aufgabe öffnet einen modalen Dialog (ersetzt das Detail-Panel und die Route `/tasks?task=` aus ADR 0031). Er zeigt oben Start-Knopf, Soll/Ist-Balken, Unteraufgaben und Zeiteinträge und darunter die Eingaben: todo.txt-Zeile ohne Tags und Schätzung, Projekte, Kontexte und Zeitbedarf.
 
 ## Verworfen
 

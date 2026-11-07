@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { commands, unwrap, type TaskTime } from "../lib/api";
+import { commands, unwrap, type TaskTime, type Todo } from "../lib/api";
 import { useT } from "../i18n";
 import {
-  estimateOf,
   formatDelta,
   formatEstimate,
   formatInUnit,
@@ -11,29 +10,23 @@ import {
 } from "../lib/estimate";
 import { formatDateTime, formatMinutes } from "../lib/format";
 import { subtaskProgress, titleOf } from "../lib/todos";
-import { usePlanStore } from "../stores/planStore";
 import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
-import { TaskEditDialog } from "./TaskEditDialog";
 import { StartButton } from "./StartButton";
-import { Button } from "./ui";
 
-/** Details einer Aufgabe: Beschreibung, Eigenschaften und die rohe todo.txt-Zeile zum Bearbeiten. */
-export function TaskDetail({ id }: { id: number }) {
+/**
+ * Der Infobereich im Aufgaben-Dialog: Start-Knopf, Schätzung gegen bisherigen Aufwand, Fortschritt der
+ * Unteraufgaben und die Zeiteinträge der Aufgabe.
+ */
+export function TaskInfo({ todo }: { todo: Todo }) {
   const t = useT();
   const all = useTodoStore((s) => s.all);
-  const todo = all.find((item) => item.id === id);
-  const planItem = usePlanStore((s) =>
-    s.plan?.items.find((item) => item.todoId === id),
-  );
-
-  const [editing, setEditing] = useState(false);
   const timerState = useTimerStore((s) => s.snapshot.state);
   const [time, setTime] = useState<TaskTime | null>(null);
   // neu laden, wenn der Timer anhält: dann ist eine Session dazugekommen
   useEffect(() => {
     let cancelled = false;
-    void unwrap(commands.getTaskTime(id)).then(
+    void unwrap(commands.getTaskTime(todo.id)).then(
       (loaded) => {
         if (!cancelled) setTime(loaded);
       },
@@ -42,22 +35,11 @@ export function TaskDetail({ id }: { id: number }) {
     return () => {
       cancelled = true;
     };
-  }, [id, timerState]);
+  }, [todo.id, timerState]);
 
-  if (!todo) {
-    return (
-      <p className="rounded-xl bg-surface-container-low p-6 text-on-surface-variant">
-        {t("task.gone")}
-      </p>
-    );
-  }
-
-  const progress = subtaskProgress(all, id);
-  const estimate = estimateOf(todo.description);
+  const progress = subtaskProgress(all, todo.id);
+  const check = time?.estimateCheck ?? null;
   const rows: [string, string][] = [
-    [t("task.priority"), todo.priority ?? "–"],
-    [t("task.projects"), todo.projectTags.join(" ") || "–"],
-    [t("task.contexts"), todo.contextTags.join(" ") || "–"],
     [t("task.pomodoros"), String(todo.pomodoroCount)],
     ...(progress
       ? [
@@ -70,93 +52,50 @@ export function TaskDetail({ id }: { id: number }) {
           ] as [string, string],
         ]
       : []),
-    ...(planItem
-      ? [
-          [
-            t("task.today"),
-            planItem.estimateMin !== null
-              ? t("task.estimate", {
-                  time: formatMinutes(planItem.estimateMin),
-                })
-              : t("todos.item.today"),
-          ] as [string, string],
-        ]
-      : []),
   ];
 
   return (
-    <article
-      aria-labelledby="task-heading"
-      className="flex flex-col gap-5 rounded-xl bg-surface-container-low p-5"
-    >
-      <header className="flex flex-col gap-1">
-        <h2 id="task-heading" className="headline-md">
-          {t("task.heading")}
-        </h2>
-        <p className="font-display text-lg font-bold break-words">
-          {titleOf(todo)}
-        </p>
-      </header>
-
-      <div className="flex flex-wrap items-center gap-3">
-        {!todo.completed && (
+    <div className="flex flex-col gap-4 text-on-surface">
+      {!todo.completed && (
+        <div>
           <StartButton
             todoId={todo.id}
             title={titleOf(todo)}
             variant="button"
           />
-        )}
-        <Button onClick={() => setEditing(true)}>{t("taskEdit.open")}</Button>
-      </div>
+        </div>
+      )}
 
-      <p>
-        <span className="text-on-surface-variant">{t("estimate.label")}: </span>
-        {estimate ? formatEstimate(estimate) : t("estimate.none")}
-      </p>
-
-      {time?.estimateCheck && (
+      {check && (
         <section
           aria-label={t("estimate.label")}
           className="flex flex-col gap-1"
         >
           <p>
             {t("estimate.progress", {
-              actual: formatInUnit(
-                time.estimateCheck.estimate.unit,
-                time.estimateCheck.actual,
-              ),
-              estimate: formatEstimate(time.estimateCheck.estimate),
-              delta: formatDelta(time.estimateCheck),
+              actual: formatInUnit(check.estimate.unit, check.actual),
+              estimate: formatEstimate(check.estimate),
+              delta: formatDelta(check),
             })}
           </p>
           <div
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={progressPercent(time.estimateCheck)}
-            aria-label={verdictLabel(time.estimateCheck.verdict)}
+            aria-valuenow={progressPercent(check)}
+            aria-label={verdictLabel(check.verdict)}
             className="h-2 overflow-hidden rounded-full bg-surface-container-highest"
           >
             <div
-              className={`h-full rounded-full ${time.estimateCheck.verdict === "over" ? "bg-error" : "bg-primary"}`}
-              style={{ width: `${progressPercent(time.estimateCheck)}%` }}
+              className={`h-full rounded-full ${check.verdict === "over" ? "bg-error" : "bg-primary"}`}
+              style={{ width: `${progressPercent(check)}%` }}
             />
           </div>
           <p className="text-on-surface-variant">
-            {verdictLabel(time.estimateCheck.verdict)}
+            {verdictLabel(check.verdict)}
           </p>
         </section>
       )}
-
-      <section
-        aria-label={t("task.description")}
-        className="flex flex-col gap-1"
-      >
-        <h3 className="label-md text-on-surface-variant">
-          {t("task.description")}
-        </h3>
-        <p className="break-all whitespace-pre-wrap">{todo.description}</p>
-      </section>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
         {rows.map(([name, value]) => (
@@ -197,9 +136,6 @@ export function TaskDetail({ id }: { id: number }) {
           </>
         )}
       </section>
-      {editing && (
-        <TaskEditDialog todo={todo} onClose={() => setEditing(false)} />
-      )}
-    </article>
+    </div>
   );
 }
