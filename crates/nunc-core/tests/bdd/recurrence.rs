@@ -74,3 +74,8 @@ fn ids_differ_by_due(_: &mut DomainWorld, template: String, a: String, b: String
 fn ids_differ_by_template(_: &mut DomainWorld, a: String, b: String, due: String) {
     assert_ne!(follow_up_sync_id(&a, &due), follow_up_sync_id(&b, &due));
 }
+
+#[then(expr = "the follow-up sync id of {string} for {string} is {string}")]
+fn id_is(_: &mut DomainWorld, template: String, due: String, expected: String) {
+    assert_eq!(follow_up_sync_id(&template, &due), expected);
+}

@@ -20,6 +20,8 @@ Feature: Recurring tasks
       | Report rec:+             | none |
       | Report rec:d             | none |
       | Report rec:bad rec:1y    | 1y   |
+      | Report rec:++1d          | none |
+      | Report rec:+-1d          | none |
 
   @domain @US-TP02
   Scenario Outline: The next due date is computed
@@ -58,6 +60,7 @@ Feature: Recurring tasks
     Then the follow-up sync ids of "abc" for "2026-03-05" are equal
     And the follow-up sync ids of "abc" for "2026-03-05" and "2026-03-06" differ
     And the follow-up sync ids of "abc" and "abd" for "2026-03-05" differ
+    And the follow-up sync id of "abc" for "2026-03-05" is "c4d6bf8d-17d3-8b7b-6eea-af6cc312a7e7"
 
   @integration @US-TP02
   Scenario: Completing a recurring todo creates the follow-up
