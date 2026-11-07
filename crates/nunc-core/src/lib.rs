@@ -7,6 +7,7 @@ pub mod backup_policy;
 pub mod clock;
 pub mod crdt;
 pub mod day_plan;
+pub mod estimate;
 pub mod export;
 pub mod flowtime;
 pub mod hlc;

@@ -285,6 +285,7 @@ export function createFakeBackend(): FakeBackend {
       projects: [],
       contexts: [],
       completedTodos: [],
+      estimateSummary: { count: 0, onTarget: 0, under: 0, over: 0 },
       journal: { achievements: [], weekNotes: [], dayNotes: [] },
     },
     reviewPath: null,
@@ -539,7 +540,12 @@ export function createFakeBackend(): FakeBackend {
       return null;
     },
     get_task_time: ({ todoId }: { todoId: number }) =>
-      fake.taskTime[todoId] ?? { todoId, totalMin: 0, entries: [] },
+      fake.taskTime[todoId] ?? {
+        todoId,
+        totalMin: 0,
+        entries: [],
+        estimateCheck: null,
+      },
     get_day_timeline: ({ date }: { date: string }) => ({
       date,
       blocks: fake.timeline[date] ?? [],
@@ -606,6 +612,8 @@ export function createFakeBackend(): FakeBackend {
         .length;
     },
     plan_todo: ({ id }: { id: number; day: string | null }) => find(id),
+    set_todo_effort_estimate: ({ id }: { id: number; estimate: unknown }) =>
+      find(id),
     set_todo_estimate: ({ id }: { id: number; estimateMin: number | null }) =>
       find(id),
     get_review: ({ from, to }: { from: string; to: string }) => ({

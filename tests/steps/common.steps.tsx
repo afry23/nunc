@@ -735,10 +735,32 @@ Given(
     world.fake.taskTime[todoId] = {
       todoId,
       totalMin: entries.reduce((sum, entry) => sum + entry.minutes, 0),
+      estimateCheck: null,
       entries,
     };
   },
 );
+
+Given(
+  "the task time of todo {int} is:",
+  (world: UiWorld, todoId: number, json: string) => {
+    world.fake.taskTime[todoId] = {
+      todoId,
+      totalMin: 0,
+      entries: [],
+      estimateCheck: null,
+      ...JSON.parse(String(json)),
+    };
+  },
+);
+
+When("I choose the option {string}", async (_world: UiWorld, name: string) => {
+  const option = await screen.findByRole("radio", { name });
+  await act(async () => {
+    fireEvent.click(option);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+});
 
 When("I leave the field {string}", async (_world: UiWorld, label: string) => {
   const field = await screen.findByLabelText(label);

@@ -317,6 +317,87 @@ Feature: Todo list
     And I see "Kickoff"
     And I see "1h 30m"
 
+  @ui @US-RV03
+  Scenario: The details edit the task line
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I enter "Bericht schreiben +work" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht schreiben +work" }
+      """
+
+  @ui @US-RV03
+  Scenario: The time needed is planned in pomodoros
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I enter "3" into the field "Anzahl Pomodoros"
+    And I click "Zeitbedarf speichern"
+    Then the backend received "set_todo_effort_estimate" with:
+      """
+      { "id": 1, "estimate": { "unit": "pomodoros", "value": 3 } }
+      """
+
+  @ui @US-RV03
+  Scenario: The time needed is planned in hours and minutes
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I choose the option "Stunden und Minuten"
+    And I enter "1" into the field "Stunden"
+    And I enter "30" into the field "Minuten"
+    And I click "Zeitbedarf speichern"
+    Then the backend received "set_todo_effort_estimate" with:
+      """
+      { "id": 1, "estimate": { "unit": "minutes", "value": 90 } }
+      """
+
+  @ui @US-RV03
+  Scenario: The time needed can be removed
+    Given the todos:
+      | rawText         |
+      | Bericht estp:3  |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Zeitbedarf entfernen"
+    Then the backend received "set_todo_effort_estimate" with:
+      """
+      { "id": 1, "estimate": null }
+      """
+
+  @ui @US-RV03
+  Scenario: Nothing is saved without a valid time needed
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I enter "0" into the field "Anzahl Pomodoros"
+    Then the button "Zeitbedarf speichern" is disabled
+
+  @ui @US-RV03
+  Scenario: The details compare the estimate with the effort so far
+    Given the todos:
+      | rawText        |
+      | Bericht estp:4 |
+    And the task time of todo 1 is:
+      """
+      { "estimateCheck": { "estimate": { "unit": "pomodoros", "value": 4 }, "actual": 5, "delta": 1, "verdict": "over" } }
+      """
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    Then I see "Bisher 5 Pomodoros von 4 Pomodoros (+1 Pomodoros)"
+    And I see "länger als geschätzt"
+
   @ui @US-UM03
   Scenario: A task without time says so
     Given the todos:
@@ -349,7 +430,7 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I enter "Bericht abgeben +work" into the field "todo.txt-Zeile"
+    And I enter "Bericht abgeben +work" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
     And I click "Speichern"
     Then the backend received "update_todo" with:
       """

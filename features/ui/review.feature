@@ -304,3 +304,20 @@ Feature: Review in the times view
     When I click "Timerstatistik öffnen"
     Then I see the heading "Arbeitsweise"
 
+
+  @ui @US-RV03
+  Scenario: Completed tasks show the estimate against the effort
+    Given the review is:
+      """
+      { "completedTodos": [
+        { "completedAt": "2026-03-04", "text": "Plan trip", "minutes": 85,
+          "estimateCheck": { "estimate": { "unit": "minutes", "value": 60 }, "actual": 85, "delta": 25, "verdict": "over" } },
+        { "completedAt": "2026-03-05", "text": "Book hotel", "minutes": 20,
+          "estimateCheck": { "estimate": { "unit": "pomodoros", "value": 1 }, "actual": 1, "delta": 0, "verdict": "on_target" } } ],
+        "estimateSummary": { "count": 2, "onTarget": 1, "under": 0, "over": 1 } }
+      """
+    When I open the app at "/times"
+    And I click "Rückblick"
+    Then I see "geschätzt 1h, tatsächlich 1h 25m (+25m)"
+    And I see "geschätzt 1 Pomodoros, tatsächlich 1 Pomodoros (genau getroffen)"
+    And I see "Schätzungen: 1 von 2 im Rahmen (50 %), 0 schneller, 1 länger"

@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 
 use cucumber::{gherkin::Step, given, then, when};
+use nunc_core::estimate::{Estimate, Verdict, check, estimate_of, summarize};
 use nunc_core::hlc::Hlc;
 use nunc_core::journal::JournalEntry;
 use nunc_core::model::Language;
@@ -27,6 +28,7 @@ pub struct State {
     notes: HashMap<i32, String>,
     journal: Vec<JournalEntry>,
     task_time: Option<TaskTime>,
+    check: Option<nunc_core::estimate::EstimateCheck>,
 }
 
 fn review(world: &DomainWorld) -> &Review {
@@ -365,4 +367,95 @@ fn task_time_entries(world: &mut DomainWorld, step: &Step) {
         })
         .collect();
     assert_eq!(actual, crate::stats::rows(step));
+}
+
+fn estimate_text(estimate: Option<Estimate>) -> String {
+    match estimate {
+        None => "none".to_owned(),
+        Some(Estimate::Minutes(value)) => format!("{value} min"),
+        Some(Estimate::Pomodoros(value)) => format!("{value} pom"),
+    }
+}
+
+fn parse_estimate(text: &str) -> Option<Estimate> {
+    if text == "none" {
+        return None;
+    }
+    let (value, unit) = text.split_once(' ').expect("Wert und Einheit");
+    let value = value.parse().expect("Zahl");
+    Some(match unit {
+        "min" => Estimate::Minutes(value),
+        "pom" => Estimate::Pomodoros(value),
+        other => panic!("unbekannte Einheit {other}"),
+    })
+}
+
+fn verdict_text(verdict: Verdict) -> &'static str {
+    match verdict {
+        Verdict::Under => "under",
+        Verdict::OnTarget => "on_target",
+        Verdict::Over => "over",
+    }
+}
+
+#[then("the estimate checks are:")]
+fn estimate_checks(world: &mut DomainWorld, step: &Step) {
+    let actual: Vec<Vec<String>> = review(world)
+        .completed_todos
+        .iter()
+        .map(|todo| match todo.estimate_check {
+            Some(check) => vec![
+                todo.text.clone(),
+                estimate_text(Some(check.estimate)),
+                check.actual.to_string(),
+                verdict_text(check.verdict).to_owned(),
+            ],
+            None => vec![
+                todo.text.clone(),
+                "none".to_owned(),
+                "none".to_owned(),
+                "none".to_owned(),
+            ],
+        })
+        .collect();
+    assert_eq!(actual, crate::stats::rows(step));
+}
+
+#[then(expr = "the estimate summary is {int} estimated, {int} on target, {int} under, {int} over")]
+fn estimate_summary(world: &mut DomainWorld, count: u32, on_target: u32, under: u32, over: u32) {
+    let summary = review(world).estimate_summary;
+    assert_eq!(
+        (
+            summary.count,
+            summary.on_target,
+            summary.under,
+            summary.over
+        ),
+        (count, on_target, under, over)
+    );
+    let again = summarize(
+        review(world)
+            .completed_todos
+            .iter()
+            .filter_map(|todo| todo.estimate_check),
+    );
+    assert_eq!(again, summary);
+}
+
+#[when(expr = "I compare an estimate of {string} with {int} minutes and {int} pomodoros")]
+fn compare(world: &mut DomainWorld, estimate: String, minutes: u32, pomodoros: u32) {
+    let estimate = parse_estimate(&estimate).expect("Schätzung");
+    world.review.check = Some(check(estimate, minutes, pomodoros));
+}
+
+#[then(expr = "the verdict is {word} with a deviation of {int}")]
+fn verdict_is(world: &mut DomainWorld, verdict: String, delta: i32) {
+    let check = world.review.check.expect("kein Vergleich");
+    assert_eq!(verdict_text(check.verdict), verdict);
+    assert_eq!(check.delta, delta);
+}
+
+#[then(expr = "the estimate of {string} is {string}")]
+fn estimate_of_is(_world: &mut DomainWorld, description: String, expected: String) {
+    assert_eq!(estimate_text(estimate_of(&description)), expected);
 }

@@ -65,6 +65,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             plan::get_day_plan,
             plan::plan_todo,
             plan::set_todo_estimate,
+            plan::set_todo_effort_estimate,
             plan::close_day,
             review::get_review,
             review::get_day_note,

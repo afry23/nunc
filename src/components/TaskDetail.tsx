@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
 import { commands, unwrap, type TaskTime } from "../lib/api";
 import { useT } from "../i18n";
+import {
+  estimateOf,
+  formatDelta,
+  formatEstimate,
+  formatInUnit,
+  progressPercent,
+  verdictLabel,
+} from "../lib/estimate";
 import { formatDateTime, formatMinutes } from "../lib/format";
 import { subtaskProgress, titleOf } from "../lib/todos";
 import { usePlanStore } from "../stores/planStore";
 import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
+import { EstimateField } from "./EstimateField";
 import { StartButton } from "./StartButton";
 import { Button } from "./ui";
 
@@ -97,6 +106,48 @@ export function TaskDetail({ id }: { id: number }) {
         </div>
       )}
 
+      {/* neuer Schlüssel nach jedem Speichern: das Feld beginnt wieder mit der gespeicherten Zeile */}
+      <RawLine key={todo.rawText} id={todo.id} rawText={todo.rawText} />
+
+      <EstimateField
+        key={todo.rawText}
+        id={todo.id}
+        estimate={estimateOf(todo.description)}
+      />
+      {time?.estimateCheck && (
+        <section
+          aria-label={t("estimate.label")}
+          className="flex flex-col gap-1"
+        >
+          <p>
+            {t("estimate.progress", {
+              actual: formatInUnit(
+                time.estimateCheck.estimate.unit,
+                time.estimateCheck.actual,
+              ),
+              estimate: formatEstimate(time.estimateCheck.estimate),
+              delta: formatDelta(time.estimateCheck),
+            })}
+          </p>
+          <div
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressPercent(time.estimateCheck)}
+            aria-label={verdictLabel(time.estimateCheck.verdict)}
+            className="h-2 overflow-hidden rounded-full bg-surface-container-highest"
+          >
+            <div
+              className={`h-full rounded-full ${time.estimateCheck.verdict === "over" ? "bg-error" : "bg-primary"}`}
+              style={{ width: `${progressPercent(time.estimateCheck)}%` }}
+            />
+          </div>
+          <p className="text-on-surface-variant">
+            {verdictLabel(time.estimateCheck.verdict)}
+          </p>
+        </section>
+      )}
+
       <section
         aria-label={t("task.description")}
         className="flex flex-col gap-1"
@@ -146,9 +197,6 @@ export function TaskDetail({ id }: { id: number }) {
           </>
         )}
       </section>
-
-      {/* neuer Schlüssel nach jedem Speichern: das Feld beginnt wieder mit der gespeicherten Zeile */}
-      <RawLine key={todo.rawText} id={todo.id} rawText={todo.rawText} />
     </article>
   );
 }

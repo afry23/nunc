@@ -26,6 +26,12 @@ import {
   reviewRange,
   type ReviewKind,
 } from "../lib/review";
+import {
+  formatDelta,
+  formatEstimate,
+  formatInUnit,
+  onTargetPercent,
+} from "../lib/estimate";
 import { useTodoStore } from "../stores/todoStore";
 import { useUiStore } from "../stores/uiStore";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -328,9 +334,38 @@ export function ReviewPanel() {
                         {formatMinutes(todo.minutes)}
                       </span>
                     )}
+                    {todo.estimateCheck && (
+                      <span
+                        className={
+                          todo.estimateCheck.verdict === "over"
+                            ? "text-error tabular-nums"
+                            : "text-on-surface-variant tabular-nums"
+                        }
+                      >
+                        {t("review.estimatePair", {
+                          estimate: formatEstimate(todo.estimateCheck.estimate),
+                          actual: formatInUnit(
+                            todo.estimateCheck.estimate.unit,
+                            todo.estimateCheck.actual,
+                          ),
+                          delta: formatDelta(todo.estimateCheck),
+                        })}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
+            )}
+            {review.estimateSummary.count > 0 && (
+              <p className="mt-2 font-semibold">
+                {t("review.estimateSummary", {
+                  onTarget: review.estimateSummary.onTarget,
+                  count: review.estimateSummary.count,
+                  percent: onTargetPercent(review.estimateSummary) ?? 0,
+                  under: review.estimateSummary.under,
+                  over: review.estimateSummary.over,
+                })}
+              </p>
             )}
           </CollapsibleSection>
           {inProgress.length > 0 && (

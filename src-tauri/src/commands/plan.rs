@@ -4,6 +4,7 @@ use chrono::NaiveDate;
 use nunc_core::day_plan::{
     CloseAction, DayPlan, PlanFields, apply_plan, closing_changes, day_plan, plan_fields,
 };
+use nunc_core::estimate::Estimate;
 use nunc_core::model::Todo;
 use nunc_store::{Connection, StoreError};
 use tauri::State;
@@ -86,7 +87,32 @@ pub fn set_todo_estimate(
     id: i32,
     estimate_min: Option<u32>,
 ) -> Result<Todo, AppError> {
-    change_plan(&state, id, |fields| fields.estimate_min = estimate_min)
+    set_estimate(&state, id, estimate_min.map(Estimate::Minutes))
+}
+
+/// Setzt `estimate` als einzige Schätzung des Todos und entfernt die andere Einheit.
+fn set_estimate(state: &AppState, id: i32, estimate: Option<Estimate>) -> Result<Todo, AppError> {
+    change_plan(state, id, |fields| {
+        fields.estimate_min = None;
+        fields.estimate_pomodoros = None;
+        match estimate {
+            Some(Estimate::Minutes(minutes)) => fields.estimate_min = Some(minutes),
+            Some(Estimate::Pomodoros(count)) => fields.estimate_pomodoros = Some(count),
+            None => {}
+        }
+    })
+}
+
+/// Setzt die Schätzung in Minuten (1–10080) oder Pomodoros (1–999); `null` entfernt sie. Je Aufgabe gilt eine Einheit
+/// (ADR 0035), die andere wird entfernt.
+#[tauri::command]
+#[specta::specta]
+pub fn set_todo_effort_estimate(
+    state: State<'_, AppState>,
+    id: i32,
+    estimate: Option<Estimate>,
+) -> Result<Todo, AppError> {
+    set_estimate(&state, id, estimate)
 }
 
 /// Tagesabschluss (ADR 0027): behandelt die noch eingeplanten Einträge von heute nach `action` und speichert die

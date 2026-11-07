@@ -121,6 +121,11 @@ export const commands = {
 	/**  Setzt die Schätzung (Minuten, 1–10080); `null` entfernt sie. Frist und Plan-Tag bleiben. */
 	setTodoEstimate: (id: number, estimateMin: number | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_estimate", { id, estimateMin })),
 	/**
+	 *  Setzt die Schätzung in Minuten (1–10080) oder Pomodoros (1–999); `null` entfernt sie. Je Aufgabe gilt eine Einheit
+	 *  (ADR 0035), die andere wird entfernt.
+	 */
+	setTodoEffortEstimate: (id: number, estimate: { unit: "minutes"; value: number } | { unit: "pomodoros"; value: number } | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_effort_estimate", { id, estimate })),
+	/**
 	 *  Tagesabschluss (ADR 0027): behandelt die noch eingeplanten Einträge von heute nach `action` und speichert die
 	 *  Tagesnotiz, wenn `note` gesetzt ist (ein leerer Text löscht sie). Alles oder nichts. Liefert, wie viele Einträge
 	 *  sich geändert haben.
@@ -305,6 +310,8 @@ export type CompletedTodo = {
 	text: string,
 	/**  Erfasste Arbeitszeit an der Aufgabe im Zeitraum. */
 	minutes: number,
+	/**  Schätzung gegen den Gesamtaufwand (ganze Lebenszeit der Aufgabe); `None` ohne Schätzung. */
+	estimateCheck: EstimateCheck | null,
 };
 
 /**  Ergebnis des Verbindungstests. */
@@ -365,6 +372,26 @@ export type DayTotals = {
 	date: string,
 	minutes: number,
 	pomodoros: number,
+};
+
+/**  Die Schätzung einer Aufgabe in ihrer Einheit. */
+export type Estimate = { unit: "minutes"; value: number } | { unit: "pomodoros"; value: number };
+
+/**  Schätzung gegen tatsächlichen Aufwand, beides in der Einheit der Schätzung. */
+export type EstimateCheck = {
+	estimate: Estimate,
+	actual: number,
+	/**  `actual − estimate`; positiv heißt länger als geschätzt. */
+	delta: number,
+	verdict: Verdict,
+};
+
+/**  Trefferquote der Schätzungen im Zeitraum. */
+export type EstimateSummary = {
+	count: number,
+	onTarget: number,
+	under: number,
+	over: number,
 };
 
 export type ExportFormat = "csv" | "json";
@@ -486,6 +513,8 @@ export type Review = {
 	projects: GroupMinutes[],
 	contexts: GroupMinutes[],
 	completedTodos: CompletedTodo[],
+	/**  Trefferquote der Schätzungen der im Zeitraum erledigten Aufgaben. */
+	estimateSummary: EstimateSummary,
 	journal: ReviewJournal,
 };
 
@@ -702,6 +731,8 @@ export type TaskTime = {
 	todoId: number,
 	totalMin: number,
 	entries: TaskEntry[],
+	/**  Schätzung gegen bisherigen Aufwand; vom Aufrufer gesetzt (`estimate::todo_check`), `None` ohne Schätzung. */
+	estimateCheck: EstimateCheck | null,
 };
 
 /**  Fokuszeit, Pomodoros und Sessions einer Aufgabe. */
@@ -856,6 +887,15 @@ export type TodoStats = {
 	pomodoroCount: number,
 	workMinutes: number,
 };
+
+/**  Wie die tatsächliche Arbeit zur Schätzung steht. */
+export type Verdict = 
+/**  Weniger als geschätzt, außerhalb der Toleranz. */
+"under" | 
+/**  Innerhalb der Toleranz. */
+"on_target" | 
+/**  Mehr als geschätzt, außerhalb der Toleranz. */
+"over";
 
 /**  Anmeldeverfahren am WebDAV-Server. */
 export type WebDavAuth = "basic" | "digest";
