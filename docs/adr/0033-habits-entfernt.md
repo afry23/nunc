@@ -26,7 +26,7 @@ Nutzers: der Habit-Tracker wird **vollständig entfernt**.
 - **Sync:** `SCHEMA_VERSION` wird **11** (gelesen 2 bis 11). Die Listen `habits` und `habit_logs` älterer Dateien werden
   beim Lesen ignoriert (serde überspringt unbekannte Felder). Ältere Clients lehnen Format 11 mit „Bitte nunc
   aktualisieren“ ab (wie ADR 0017/0029); dort liegen noch Habits, die nicht mehr geschrieben werden.
-- **Nicht entschieden:** Wiederholung von Aufgaben (`rec:`) gibt es in nunc nicht; sie wird hier nicht nachgerüstet.
+- **Nicht entschieden:** Wiederholung von Aufgaben (`rec:`) gibt es hier nicht; sie folgt eigenständig in [ADR 0036](./0036-wiederkehrende-aufgaben.md).
 
 ## Folgen
 

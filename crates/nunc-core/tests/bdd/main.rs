@@ -12,6 +12,7 @@ mod day_plan;
 mod export;
 mod journal;
 mod properties;
+mod recurrence;
 mod review;
 mod settings;
 mod stats;
@@ -31,6 +32,7 @@ pub struct DomainWorld {
     day_plan: day_plan::State,
     export: export::State,
     journal: journal::State,
+    recurrence: recurrence::State,
     review: review::State,
     settings: settings::State,
     stats: stats::State,

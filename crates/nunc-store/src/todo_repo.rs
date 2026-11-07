@@ -5,7 +5,9 @@
 //! Pomodoro-Zähler `updated_at` nicht. Zeit und `sync_id` kommen vom Aufrufer.
 
 use chrono::{DateTime, NaiveDate, Utc};
+use nunc_core::day_plan::plan_fields;
 use nunc_core::model::Todo;
+use nunc_core::recurrence::{follow_up_description, follow_up_sync_id};
 use nunc_core::todotxt::{ParsedTodo, build_raw_text, parse_line};
 use nunc_core::todotxt_file::{export_todotxt as export_todotxt_text, plan_import};
 use rusqlite::{Connection, OptionalExtension, Row, params};
@@ -259,8 +261,53 @@ pub fn set_todo_completed(
                 }
             }
         }
-        complete_one(conn, id, completed, today, now)
+        let done = complete_one(conn, id, completed, today, now)?;
+        if completed && done.parent_id.is_none() {
+            add_follow_up(conn, &done, today, now)?;
+        }
+        Ok(done)
     })
+}
+
+/// Legt die Folgeaufgabe einer abgehakten wiederkehrenden Aufgabe an (ADR 0036). Die Sync-Kennung leitet sich aus
+/// Vorlage und neuer Frist ab; gibt es sie schon (zweites Gerät, erneutes Abhaken), entsteht keine Dublette.
+fn add_follow_up(
+    conn: &Connection,
+    done: &Todo,
+    today: NaiveDate,
+    now: DateTime<Utc>,
+) -> Result<(), StoreError> {
+    let Some(description) = follow_up_description(&done.description, today) else {
+        return Ok(());
+    };
+    let template_id = conn
+        .query_row(
+            "SELECT sync_id FROM todos WHERE id = ?1",
+            [done.id],
+            |row| row.get::<_, Option<String>>(0),
+        )?
+        .unwrap_or_else(|| format!("local-{}", done.id));
+    let due = plan_fields(&description)
+        .due
+        .map(day_text)
+        .unwrap_or_default();
+    let sync_id = follow_up_sync_id(&template_id, &due);
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM todos WHERE sync_id = ?1)",
+        [&sync_id],
+        |row| row.get(0),
+    )?;
+    if exists {
+        return Ok(());
+    }
+    let raw_text = build_raw_text(&ParsedTodo {
+        priority: done.priority,
+        created_at: Some(today),
+        description,
+        ..ParsedTodo::default()
+    });
+    add_todo(conn, &raw_text, &sync_id, now)?;
+    Ok(())
 }
 
 fn complete_one(

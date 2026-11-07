@@ -52,8 +52,9 @@ export function splitSegments(description: string): Segment[] {
   }, []);
 }
 
-/** Planungsfelder des Tagesplaners (`due:`, `plan:`, `est:`, ADR 0027); nur zum Ausblenden im Titel. */
-const PLAN_WORD = /^(?:(?:due|plan):\d{4}-\d{2}-\d{2}|estp?:\d+)$/;
+/** Planungsfelder des Tagesplaners (`due:`, `plan:`, `est:`, `rec:`, ADR 0027, 0036); nur zum Ausblenden im Titel. */
+const PLAN_WORD =
+  /^(?:(?:due|plan):\d{4}-\d{2}-\d{2}|estp?:\d+|rec:\+?\d+[dbwmy])$/;
 
 /** Fälligkeitsdatum (`due:YYYY-MM-DD`) einer Beschreibung, sonst `null`. */
 export function dueOf(description: string): string | null {

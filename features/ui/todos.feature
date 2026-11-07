@@ -598,3 +598,45 @@ Feature: Todo list
     When I open the app at "/todos"
     Then I see the buttons "Starten: Bericht"
 
+  @ui @US-TP02
+  Scenario: A task is set to repeat from the due date
+    Given the todos:
+      | rawText                |
+      | Gießen due:2026-11-10 |
+    When I open the app at "/tasks"
+    And I click "Details: Gießen"
+    And I enter "2" into the field "Anzahl der Einheiten"
+    And I enter "w" into the field "Einheit der Wiederholung"
+    And I enter "due" into the field "Basis der Wiederholung"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Gießen due:2026-11-10 rec:+2w" }
+      """
+
+  @ui @US-TP02
+  Scenario: The repetition is shown in the dialog and can be removed
+    Given the todos:
+      | rawText                      |
+      | Gießen rec:+1m due:2026-11-10 |
+    When I open the app at "/tasks"
+    And I click "Details: Gießen"
+    Then the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "Gießen due:2026-11-10"
+    And the field "Anzahl der Einheiten" contains "1"
+    And I see "alle 1 Monate, ab bisheriger Frist"
+    When I enter "" into the field "Anzahl der Einheiten"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Gießen due:2026-11-10" }
+      """
+
+  @ui @US-TP02
+  Scenario: An invalid repetition blocks saving
+    Given the todos:
+      | rawText |
+      | Gießen  |
+    When I open the app at "/tasks"
+    And I click "Details: Gießen"
+    And I enter "1000" into the field "Anzahl der Einheiten"
+    Then the button "Speichern" is disabled

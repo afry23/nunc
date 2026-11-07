@@ -142,6 +142,11 @@ fn listed(world: &mut StoreWorld, step: &Step) {
     assert_rows(step, &world.todos);
 }
 
+#[then(expr = "there are/is {int} todo(s) in the list")]
+fn list_len(world: &mut StoreWorld, count: usize) {
+    assert_eq!(world.todos.len(), count);
+}
+
 #[then(expr = "the todo {int} is marked as deleted")]
 fn marked_deleted(world: &mut StoreWorld, id: i32) {
     let deleted: i64 = world

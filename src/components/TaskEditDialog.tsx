@@ -9,6 +9,14 @@ import {
   withoutEstimate,
   type EstimateMode,
 } from "../lib/estimate";
+import {
+  RECURRENCE_UNITS,
+  recurrenceFromInput,
+  recurrenceOf,
+  withRecurrence,
+  withoutRecurrence,
+  type RecurrenceUnit,
+} from "../lib/recurrence";
 import { withoutTags, withTags } from "../lib/tags";
 import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
@@ -38,7 +46,17 @@ export function TaskEditDialog({
   useEffect(() => {
     void useTimerStore.getState().loadKnownTags();
   }, []);
-  const [line, setLine] = useState(withoutTags(withoutEstimate(todo.rawText)));
+  const rule = recurrenceOf(todo.description);
+  const [line, setLine] = useState(
+    withoutTags(withoutRecurrence(withoutEstimate(todo.rawText))),
+  );
+  const [repeatCount, setRepeatCount] = useState(
+    rule ? String(rule.count) : "",
+  );
+  const [repeatUnit, setRepeatUnit] = useState<RecurrenceUnit>(
+    rule?.unit ?? "w",
+  );
+  const [repeatStrict, setRepeatStrict] = useState(rule?.strict ?? false);
   const [projectTags, setProjectTags] = useState(todo.projectTags);
   const [contextTags, setContextTags] = useState(todo.contextTags);
   const [mode, setMode] = useState<EstimateMode>(
@@ -60,7 +78,15 @@ export function TaskEditDialog({
   const filled =
     mode === "pomodoros" ? pomodoros !== "" : hours !== "" || minutes !== "";
   // gefüllte, aber ungültige Eingabe sperrt das Speichern; leere Felder heißen „keine Schätzung“
-  const valid = line.trim() !== "" && (!filled || estimate !== null);
+  const repeat = recurrenceFromInput({
+    count: repeatCount,
+    unit: repeatUnit,
+    strict: repeatStrict,
+  });
+  const valid =
+    line.trim() !== "" &&
+    (!filled || estimate !== null) &&
+    (repeatCount === "" || repeat !== null);
 
   const save = async (): Promise<void> => {
     setBusy(true);
@@ -68,9 +94,12 @@ export function TaskEditDialog({
       .getState()
       .update(
         todo.id,
-        withEstimate(
-          withTags(line, projectTags, contextTags),
-          filled ? estimate : null,
+        withRecurrence(
+          withEstimate(
+            withTags(line, projectTags, contextTags),
+            filled ? estimate : null,
+          ),
+          repeatCount === "" ? null : repeat,
         ),
       );
     onClose();
@@ -174,6 +203,48 @@ export function TaskEditDialog({
           )}
         </div>
         <p className="text-sm">{t("estimate.hint")}</p>
+      </fieldset>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="label-md">{t("recurrence.label")}</legend>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2">
+            {t("recurrence.every")}
+            <input
+              type="number"
+              min={1}
+              max={999}
+              inputMode="numeric"
+              aria-label={t("recurrence.count")}
+              value={repeatCount}
+              onChange={(event) => setRepeatCount(event.target.value)}
+              className={FIELD}
+            />
+          </label>
+          <select
+            aria-label={t("recurrence.unit")}
+            value={repeatUnit}
+            onChange={(event) =>
+              setRepeatUnit(event.target.value as RecurrenceUnit)
+            }
+            className="min-h-11 rounded-lg bg-surface-container-highest px-3 text-on-surface focus:bg-secondary-container"
+          >
+            {RECURRENCE_UNITS.map((unit) => (
+              <option key={unit} value={unit}>
+                {t(`recurrence.unit.${unit}`)}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label={t("recurrence.base")}
+            value={repeatStrict ? "due" : "done"}
+            onChange={(event) => setRepeatStrict(event.target.value === "due")}
+            className="min-h-11 rounded-lg bg-surface-container-highest px-3 text-on-surface focus:bg-secondary-container"
+          >
+            <option value="done">{t("recurrence.fromDone")}</option>
+            <option value="due">{t("recurrence.fromDue")}</option>
+          </select>
+        </div>
+        <p className="text-sm">{t("recurrence.hint")}</p>
       </fieldset>
     </ConfirmDialog>
   );

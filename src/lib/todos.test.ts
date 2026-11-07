@@ -100,6 +100,12 @@ describe("dueOf", () => {
 });
 
 describe("titleOf", () => {
+  it("blendet rec: aus", () => {
+    expect(titleOf({ description: "Gießen rec:+1w due:2026-03-04" })).toBe(
+      "Gießen",
+    );
+  });
+
   it("drops tags", () => {
     expect(titleOf({ description: "Bericht +work @desk" })).toBe("Bericht");
   });
