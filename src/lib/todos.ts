@@ -1,11 +1,20 @@
 import type { Todo, TodoImportResult } from "../bindings";
 import { t } from "../i18n";
 
-export type Segment = { text: string; kind: "plain" | "project" | "context" };
+export type Segment =
+  | { text: string; kind: "plain" | "project" | "context" | "field" }
+  | { text: string; kind: "link"; href: string };
 
-/** Zerlegt eine Beschreibung in Text, `+projekt`- und `@kontext`-Tags (Leerraum bleibt erhalten). */
-export function splitSegments(description: string): Segment[] {
-  return description
+/** Markdown-Link `[Text](https://…)` oder nackte Adresse; `)` beendet eine nackte Adresse. */
+const LINK = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|https?:\/\/[^\s)]+/g;
+
+/** Kurzform einer nackten Adresse für die Anzeige: nur der Host. */
+function hostOf(url: string): string {
+  return url.replace(/^https?:\/\//, "").split(/[/?#]/)[0] ?? url;
+}
+
+function wordSegments(text: string): Segment[] {
+  return text
     .split(/(\s+)/)
     .filter((part) => part !== "")
     .map((part): Segment => {
@@ -13,21 +22,45 @@ export function splitSegments(description: string): Segment[] {
         return { text: part, kind: "project" };
       if (part.length > 1 && part.startsWith("@"))
         return { text: part, kind: "context" };
+      if (PLAN_WORD.test(part)) return { text: part, kind: "field" };
       return { text: part, kind: "plain" };
-    })
-    .reduce<Segment[]>((merged, segment) => {
-      const last = merged[merged.length - 1];
-      if (last && last.kind === "plain" && segment.kind === "plain") {
-        last.text += segment.text;
-      } else {
-        merged.push({ ...segment });
-      }
-      return merged;
-    }, []);
+    });
+}
+
+/**
+ * Zerlegt eine Beschreibung in Text, `+projekt`-/`@kontext`-Tags, Links (Markdown oder nackt, mit Anzeigetext) und
+ * Planungsfelder (`kind: "field"`, werden nicht angezeigt). Leerraum bleibt erhalten.
+ */
+export function splitSegments(description: string): Segment[] {
+  const parts: Segment[] = [];
+  let last = 0;
+  for (const match of description.matchAll(LINK)) {
+    parts.push(...wordSegments(description.slice(last, match.index)));
+    const href = match[2] ?? match[0];
+    parts.push({ text: match[1] ?? hostOf(href), kind: "link", href });
+    last = match.index + match[0].length;
+  }
+  parts.push(...wordSegments(description.slice(last)));
+  return parts.reduce<Segment[]>((merged, segment) => {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.kind === "plain" && segment.kind === "plain") {
+      prev.text += segment.text;
+    } else {
+      merged.push({ ...segment });
+    }
+    return merged;
+  }, []);
 }
 
 /** Planungsfelder des Tagesplaners (`due:`, `plan:`, `est:`, ADR 0027); nur zum Ausblenden im Titel. */
 const PLAN_WORD = /^(?:(?:due|plan):\d{4}-\d{2}-\d{2}|estp?:\d+)$/;
+
+/** Fälligkeitsdatum (`due:YYYY-MM-DD`) einer Beschreibung, sonst `null`. */
+export function dueOf(description: string): string | null {
+  return (
+    /(?:^|\s)due:(\d{4}-\d{2}-\d{2})(?=\s|$)/.exec(description)?.[1] ?? null
+  );
+}
 
 /** Beschreibung ohne Tags und Planungsfelder für die Anzeige im Titel (z. B. Auswahlliste); sie bleiben im Rohtext. */
 export function titleOf(todo: Pick<Todo, "description">): string {

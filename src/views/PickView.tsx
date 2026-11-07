@@ -1,11 +1,12 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ChevronLeftIcon } from "../components/icons";
+import { DescriptionText, PriorityMark } from "../components/TodoText";
 import { Button } from "../components/ui";
 import { useT } from "../i18n";
 import { pickableTodos } from "../lib/dayPlan";
-import { toIsoDate } from "../lib/format";
-import { titleOf } from "../lib/todos";
+import { dateWithYear, toIsoDate } from "../lib/format";
+import { dueOf, titleOf } from "../lib/todos";
 import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
 
@@ -26,6 +27,7 @@ export function PickView() {
     void usePlanStore.getState().load();
   }, []);
 
+  const today = toIsoDate(new Date());
   const offered = pickableTodos(all, plan, query);
 
   const toggle = (id: number): void =>
@@ -38,7 +40,6 @@ export function PickView() {
   const confirm = async (): Promise<void> => {
     if (chosen.size === 0) return;
     setBusy(true);
-    const today = toIsoDate(new Date());
     for (const id of chosen) await usePlanStore.getState().planTodo(id, today);
     await usePlanStore.getState().load();
     setBusy(false);
@@ -79,25 +80,27 @@ export function PickView() {
         <ul aria-label={t("pick.list")} className="flex flex-col gap-2">
           {offered.map((todo) => {
             const title = titleOf(todo);
+            const picked = chosen.has(todo.id);
+            const due = dueOf(todo.description);
             return (
-              <li
-                key={todo.id}
-                className="flex items-center gap-2 rounded-xl bg-surface-container-low p-2"
-              >
-                <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3">
-                  <span className="inline-flex size-11 shrink-0 items-center justify-center">
-                    <input
-                      type="checkbox"
-                      checked={chosen.has(todo.id)}
-                      onChange={() => toggle(todo.id)}
-                      aria-label={t("pick.choose", { title })}
-                      className="size-6 accent-[var(--color-primary)]"
-                    />
+              <li key={todo.id}>
+                <button
+                  type="button"
+                  aria-pressed={picked}
+                  aria-label={t("pick.choose", { title })}
+                  onClick={() => toggle(todo.id)}
+                  className={`flex min-h-11 w-full cursor-pointer flex-col gap-1 rounded-xl p-3 text-left break-words ${picked ? "bg-secondary-container text-on-secondary-container" : "bg-surface-container-low hover:bg-surface-bright"}`}
+                >
+                  <span className="min-w-0">
+                    <PriorityMark priority={todo.priority} />{" "}
+                    <DescriptionText description={todo.description} />
                   </span>
-                  <span className="min-w-0 break-words">
-                    {todo.description}
-                  </span>
-                </label>
+                  {due && (
+                    <span className="text-sm text-on-surface-variant">
+                      {t("todos.item.due", { date: dateWithYear(due, today) })}
+                    </span>
+                  )}
+                </button>
               </li>
             );
           })}

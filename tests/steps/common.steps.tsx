@@ -414,6 +414,31 @@ When("I check {string}", async (_world: UiWorld, name: string) => {
   });
 });
 
+When("I toggle the task {string}", async (_world: UiWorld, name: string) => {
+  const row = await screen.findByRole("button", { name });
+  await act(async () => {
+    fireEvent.click(row);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+});
+
+Then("the task {string} is picked", async (_world: UiWorld, name: string) => {
+  const row = await screen.findByRole("button", { name });
+  expect(row.getAttribute("aria-pressed")).toBe("true");
+});
+
+Then(
+  "the task {string} is not picked",
+  async (_world: UiWorld, name: string) => {
+    const row = await screen.findByRole("button", { name });
+    expect(row.getAttribute("aria-pressed")).toBe("false");
+  },
+);
+
+Then("there is no checkbox", () => {
+  expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+});
+
 async function setSwitch(name: string, on: boolean): Promise<void> {
   const toggle = await screen.findByRole("switch", { name });
   if ((toggle.getAttribute("aria-checked") === "true") !== on) {

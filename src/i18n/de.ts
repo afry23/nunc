@@ -561,6 +561,7 @@ export const de = {
   "todos.item.resume": "Fortsetzen: {title}",
   "todos.item.actions": "Aktionen: {title}",
   "todos.item.progress": "{done}/{total} Teilaufgaben",
+  "todos.item.due": "fällig {date}",
   "todos.item.today": "Heute",
   "todos.more": "Weitere Aktionen",
   "nav.menu": "Menü",

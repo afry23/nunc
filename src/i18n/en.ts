@@ -558,6 +558,7 @@ export const en: Record<keyof typeof de, string> = {
   "todos.item.resume": "Resume: {title}",
   "todos.item.actions": "Actions: {title}",
   "todos.item.progress": "{done}/{total} subtasks",
+  "todos.item.due": "due {date}",
   "todos.item.today": "Today",
   "todos.more": "More actions",
   "nav.menu": "Menu",

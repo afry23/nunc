@@ -8,6 +8,7 @@ import {
   formatUtcDate,
   formatMinutes,
   parseIsoDate,
+  dateWithYear,
   shortDate,
   toIsoDate,
   weekdayLabel,
@@ -126,5 +127,15 @@ describe("formatTimeOfDay", () => {
   });
   it("returns unreadable input unchanged", () => {
     expect(formatTimeOfDay("gestern")).toBe("gestern");
+  });
+});
+
+describe("dateWithYear", () => {
+  it("omits the year within the current year", () => {
+    expect(dateWithYear("2026-12-15", "2026-11-07")).toBe("15.12.");
+  });
+  it("shows the year for other years", () => {
+    expect(dateWithYear("2027-01-05", "2026-11-07")).toBe("05.01.2027");
+    expect(dateWithYear("2025-12-31", "2026-01-01")).toBe("31.12.2025");
   });
 });

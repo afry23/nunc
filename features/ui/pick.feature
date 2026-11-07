@@ -22,6 +22,7 @@ Feature: Pick tasks for today
     And the field "Für heute auswählen: Einkaufen" exists
     And the field "Für heute auswählen: Steuer" does not exist
     And the field "Für heute auswählen: Erledigt" does not exist
+    And there is no checkbox
 
   @ui @US-UM03
   Scenario: The selected tasks are planned for today
@@ -32,12 +33,39 @@ Feature: Pick tasks for today
       | Steuer    |
     And the day plan for 2026-03-04 has a capacity of 240 minutes
     When I open the app at "/pick"
-    And I check "Für heute auswählen: Bericht"
-    And I check "Für heute auswählen: Steuer"
-    Then I see the buttons "Übernehmen (2)"
+    And I toggle the task "Für heute auswählen: Bericht"
+    And I toggle the task "Für heute auswählen: Steuer"
+    Then the task "Für heute auswählen: Bericht" is picked
+    And I see the buttons "Übernehmen (2)"
     When I click "Übernehmen (2)"
     Then the backend received "plan_todo" with "id" equal to "3"
     And I see the heading "Heute"
+
+  @ui @US-UM03
+  Scenario: A picked task is deselected by a second click
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/pick"
+    And I toggle the task "Für heute auswählen: Bericht"
+    And I toggle the task "Für heute auswählen: Bericht"
+    Then the task "Für heute auswählen: Bericht" is not picked
+    And I see the buttons "Übernehmen (0)"
+
+  @ui @US-UM03
+  Scenario: Links and due dates are shown readable
+    Given the todos:
+      | rawText                                                           |
+      | Kurs (https://example.com/a/b) @work due:2026-12-15               |
+      | Video ([Watch](https://youtu.be/x?t=1)) +Start                    |
+      | Steuer due:2027-01-05                                             |
+    When I open the app at "/pick"
+    Then I see "example.com"
+    And I see "Watch"
+    And I see "fällig 15.12."
+    And I see "fällig 05.01.2027"
+    And I do not see "https://example.com"
+    And I do not see "due:2026-12-15"
 
   @ui @US-UM03
   Scenario: Nothing is planned without a selection
