@@ -166,18 +166,21 @@ export function Segmented<T extends string>({
   options,
   onChange,
   disabled = false,
+  fill = false,
 }: {
   label: string;
   value: T;
   options: { value: T; label: string; disabled?: boolean }[];
   onChange: (value: T) => void;
   disabled?: boolean;
+  /** Füllt die Breite des Elternelements; die Optionen teilen sie sich und kürzen bei Platzmangel. */
+  fill?: boolean;
 }) {
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className="inline-flex gap-1 rounded-xl bg-surface-container-lowest p-1"
+      className={`gap-1 rounded-xl bg-surface-container-lowest p-1 ${fill ? "flex w-full" : "inline-flex"}`}
     >
       {options.map((option) => (
         <button
@@ -187,7 +190,7 @@ export function Segmented<T extends string>({
           aria-checked={option.value === value}
           disabled={disabled || option.disabled}
           onClick={() => onChange(option.value)}
-          className={`min-h-11 rounded-lg px-5 font-semibold transition-colors disabled:cursor-not-allowed ${
+          className={`min-h-11 rounded-lg font-semibold ${fill ? "min-w-0 flex-1 truncate px-2" : "px-5"} transition-colors disabled:cursor-not-allowed ${
             option.value === value
               ? "bg-surface-container-high text-on-surface"
               : "text-on-surface-variant hover:text-on-surface"
