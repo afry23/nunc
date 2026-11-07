@@ -40,3 +40,45 @@ export function matchingSuggestions(
       !chosen.includes(tag) && tag.slice(1).toLowerCase().includes(needle),
   );
 }
+
+const isTagWord = (word: string): boolean =>
+  word.length > 1 && (word.startsWith("+") || word.startsWith("@"));
+
+/** Die Projekte (`+x`) und Kontexte (`@x`) einer todo.txt-Zeile in Reihenfolge, ohne Duplikate. */
+export function tagsOfLine(line: string): {
+  projects: string[];
+  contexts: string[];
+} {
+  const words = [...new Set(line.split(/\s+/).filter(isTagWord))];
+  return {
+    projects: words.filter((word) => word.startsWith("+")),
+    contexts: words.filter((word) => word.startsWith("@")),
+  };
+}
+
+/** Die Zeile ohne Projekt- und Kontextwörter; der übrige Text bleibt wortgleich. */
+export function withoutTags(line: string): string {
+  return line
+    .replace(/(\s*)(\S+)/g, (whole: string, _lead: string, word: string) =>
+      isTagWord(word) ? "" : whole,
+    )
+    .trim();
+}
+
+/**
+ * Die Zeile mit genau diesen Tags am Ende (erst Projekte, dann Kontexte). Tags, die schon im Text stehen, bleiben
+ * erhalten und werden nicht doppelt gesetzt.
+ */
+export function withTags(
+  line: string,
+  projects: string[],
+  contexts: string[],
+): string {
+  const typed = tagsOfLine(line);
+  const all = [
+    ...new Set([...typed.projects, ...projects]),
+    ...new Set([...typed.contexts, ...contexts]),
+  ];
+  const base = withoutTags(line);
+  return [base, ...all].filter((part) => part !== "").join(" ");
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "../i18n";
 import type { Todo } from "../lib/api";
 import {
@@ -9,15 +9,18 @@ import {
   withoutEstimate,
   type EstimateMode,
 } from "../lib/estimate";
+import { withoutTags, withTags } from "../lib/tags";
+import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { TagInput } from "./TagInput";
 
 const FIELD =
   "min-h-11 w-24 rounded-lg bg-surface-container-highest px-3 text-on-surface tabular-nums focus:bg-secondary-container";
 
 /**
- * Aufgabe bearbeiten (modal): die todo.txt-Zeile ohne Schätzung und der Zeitbedarf in Pomodoros oder Stunden und
- * Minuten (ADR 0035). Beim Speichern entsteht daraus eine Zeile; ein einziger `update_todo`-Aufruf.
+ * Aufgabe bearbeiten (modal): Text, Projekte und Kontexte, Priorität und Datumsangaben bleiben in der Zeile; dazu der
+ * Zeitbedarf in Pomodoros oder Stunden und Minuten (ADR 0035). Beim Speichern entsteht daraus eine Zeile; ein einziger `update_todo`-Aufruf.
  */
 export function TaskEditDialog({
   todo,
@@ -30,7 +33,13 @@ export function TaskEditDialog({
   const initial = estimateOf(todo.description);
   const parts =
     initial?.unit === "minutes" ? splitMinutes(initial.value) : null;
-  const [line, setLine] = useState(withoutEstimate(todo.rawText));
+  const knownTags = useTimerStore((state) => state.knownTags);
+  useEffect(() => {
+    void useTimerStore.getState().loadKnownTags();
+  }, []);
+  const [line, setLine] = useState(withoutTags(withoutEstimate(todo.rawText)));
+  const [projectTags, setProjectTags] = useState(todo.projectTags);
+  const [contextTags, setContextTags] = useState(todo.contextTags);
   const [mode, setMode] = useState<EstimateMode>(
     initial?.unit === "minutes" ? "time" : "pomodoros",
   );
@@ -56,7 +65,13 @@ export function TaskEditDialog({
     setBusy(true);
     await useTodoStore
       .getState()
-      .update(todo.id, withEstimate(line, filled ? estimate : null));
+      .update(
+        todo.id,
+        withEstimate(
+          withTags(line, projectTags, contextTags),
+          filled ? estimate : null,
+        ),
+      );
     onClose();
   };
 
@@ -77,6 +92,22 @@ export function TaskEditDialog({
           className="w-full min-w-0 rounded-lg bg-surface-container-highest p-3 font-mono text-sm text-on-surface focus:bg-secondary-container"
         />
       </label>
+      <TagInput
+        label={t("labels.projects")}
+        addLabel={t("labels.addProject")}
+        prefix="+"
+        value={projectTags}
+        suggestions={knownTags.projects}
+        onChange={setProjectTags}
+      />
+      <TagInput
+        label={t("labels.contexts")}
+        addLabel={t("labels.addContext")}
+        prefix="@"
+        value={contextTags}
+        suggestions={knownTags.contexts}
+        onChange={setContextTags}
+      />
       <fieldset className="flex flex-col gap-2">
         <legend className="label-md">{t("estimate.label")}</legend>
         <div

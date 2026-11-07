@@ -387,13 +387,48 @@ Feature: Todo list
     When I open the app at "/tasks"
     And I click "Details: Bericht"
     And I click "Bearbeiten"
-    Then the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "(A) Bericht +work plan:2026-11-06"
+    Then the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "(A) Bericht plan:2026-11-06"
     And the field "Anzahl Pomodoros" contains "2"
     When I enter "3" into the field "Anzahl Pomodoros"
     And I click "Speichern"
     Then the backend received "update_todo" with:
       """
-      { "id": 1, "rawText": "(A) Bericht +work plan:2026-11-06 estp:3" }
+      { "id": 1, "rawText": "(A) Bericht plan:2026-11-06 +work estp:3" }
+      """
+
+  @ui @US-RV03
+  Scenario: Projects and contexts are edited as tags, the text stays in the line
+    Given the todos:
+      | rawText                           |
+      | (A) Bericht +work @office est:30  |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    Then the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "(A) Bericht"
+    When I click "+work entfernen"
+    And I enter "+home" into the field "Projekt hinzufügen"
+    And I press the key "Enter" in the field "Projekt hinzufügen"
+    And I enter "@phone" into the field "Kontext hinzufügen"
+    And I press the key "Enter" in the field "Kontext hinzufügen"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "(A) Bericht +home @office @phone est:30" }
+      """
+
+  @ui @US-RV03
+  Scenario: A tag typed into the line is not duplicated by the tag input
+    Given the todos:
+      | rawText         |
+      | Bericht +work   |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    And I enter "Bericht +work @office" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht +work @office" }
       """
 
   @ui @US-RV03
