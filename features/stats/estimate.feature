@@ -66,6 +66,8 @@ Feature: Estimate versus actual
       | 5 pom    | 200     | 7         | over      | 2     |
       | 5 pom    | 0       | 3         | under     | -2    |
       | 1 pom    | 0       | 1         | on_target | 0     |
+      | 60 min   | 4000000000 | 0      | over      | 2147483647  |
+      | 4000000000 min | 0  | 0         | under     | -2147483648 |
 
   @domain @US-RV03
   Scenario Outline: The estimate is read from the description

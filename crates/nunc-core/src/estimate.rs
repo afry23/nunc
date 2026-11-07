@@ -69,18 +69,18 @@ pub fn check(estimate: Estimate, actual_min: u32, actual_pomodoros: u32) -> Esti
     };
     let planned = estimate.value();
     let delta = i64::from(actual) - i64::from(planned);
-    let verdict = if delta.unsigned_abs() * 100 <= u64::from(planned) * u64::from(TOLERANCE_PERCENT)
-    {
-        Verdict::OnTarget
-    } else if delta > 0 {
-        Verdict::Over
-    } else {
-        Verdict::Under
+    let within = delta.unsigned_abs() * 100 <= u64::from(planned) * u64::from(TOLERANCE_PERCENT);
+    let verdict = match (within, delta.is_negative()) {
+        (true, _) => Verdict::OnTarget,
+        (false, true) => Verdict::Under,
+        (false, false) => Verdict::Over,
     };
     EstimateCheck {
         estimate,
         actual,
-        delta: i32::try_from(delta).unwrap_or(if delta > 0 { i32::MAX } else { i32::MIN }),
+        // Werte jenseits von i32 sättigen
+        delta: i32::try_from(delta.clamp(i64::from(i32::MIN), i64::from(i32::MAX)))
+            .unwrap_or_default(),
         verdict,
     }
 }
