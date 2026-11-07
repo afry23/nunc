@@ -35,7 +35,7 @@ Feature: Today
     Then I see the heading "Timer"
 
   @ui @US-TP01
-  Scenario: Starting a task of the plan opens the timer with the task selected
+  Scenario: Starting a task of the plan starts the timer and opens it
     Given the todos:
       | rawText                          |
       | Bericht due:2026-03-02 est:30    |
@@ -45,9 +45,47 @@ Feature: Today
       | 1    | overdue | 30       | 0     |
     When I open the app at "/"
     And I click "Starten: Bericht"
-    Then I see the heading "Timer"
-    And the field "Aktive Aufgabe" has the value "1"
-    And the backend did not receive "start_timer"
+    Then the backend received "start_timer" with:
+      """
+      { "mode": "pomodoro", "todoId": 1 }
+      """
+    And I see the heading "Timer"
+
+  @ui @US-TP01
+  Scenario: A task of the plan is started in another mode from the start menu
+    Given the todos:
+      | rawText                   |
+      | Bericht plan:2026-03-04   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 0     |
+    When I open the app at "/"
+    And I click "Startmodus: Bericht"
+    Then I see the menu items "Pomodoro, Flowtime, Stoppuhr"
+    When I click "Flowtime"
+    Then the backend received "start_timer" with:
+      """
+      { "mode": "flowtime", "todoId": 1 }
+      """
+    And I see the heading "Timer"
+
+  @ui @US-TP01
+  Scenario: The mode of the last start is the one the next start uses
+    Given the setting "activeMode" is "flowtime"
+    And the todos:
+      | rawText                   |
+      | Bericht plan:2026-03-04   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 0     |
+    When I open the app at "/"
+    And I click "Starten: Bericht"
+    Then the backend received "start_timer" with:
+      """
+      { "mode": "flowtime", "todoId": 1 }
+      """
 
   @ui @US-TP01
   Scenario: Free activities of the day are listed apart from the plan

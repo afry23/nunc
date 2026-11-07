@@ -85,7 +85,6 @@ Feature: Active session
       | 1    | planned | 60       | 0     |
     When I open the app
     And I click "Starten: Bericht"
-    And I click "Start"
     Then the backend received "start_timer" with:
       """
       { "mode": "pomodoro", "todoId": 1 }

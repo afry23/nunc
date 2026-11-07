@@ -156,7 +156,6 @@ export const en: Record<keyof typeof de, string> = {
   "activity.hint":
     "Without a task the time counts for these projects and contexts.",
   "active.label": "Active work",
-  "today.start": "Start: {title}",
   "labels.projects": "Projects",
   "labels.contexts": "Contexts",
   "labels.addProject": "Add project",
@@ -593,6 +592,7 @@ export const en: Record<keyof typeof de, string> = {
   "task.close": "Close",
   "task.back": "Back to the list",
   "task.gone": "This task no longer exists.",
+  "start.mode": "Start mode: {title}",
   "task.start": "Start work",
   "task.description": "Description",
   "task.priority": "Priority",

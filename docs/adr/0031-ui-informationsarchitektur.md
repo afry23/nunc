@@ -82,3 +82,6 @@ Vier gleichrangige Hauptbereiche, auf Desktop (Seitenleiste) und Android (untere
   „Starten“ an einer Aufgabe wählt sie im Timer vor (`selectTodo`) und öffnet den Reiter „Timer“; Modus wählen und
   Starten passiert dort. Die Schätzung in „Heute“ ist nur für die Planung, nicht die Timer-Dauer.
 - Der Tagesfokus (ADR 0032) und „Fokus der Tage“ im Rückblick entfallen.
+- **Starten (Änderung):** „Starten“ an einer Aufgabe ist ein geteilter Knopf (`StartButton`): ▶ startet sofort im zuletzt
+  benutzten Modus (`activeMode`), der Pfeil daneben wählt Pomodoro, Flowtime oder Stoppuhr, startet ebenfalls sofort und
+  merkt den Modus. Danach öffnet sich der Timer. Das ersetzt die Vorwahl der Aufgabe oben; gilt in „Heute“ und in „Aufgaben“.

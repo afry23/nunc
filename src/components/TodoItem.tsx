@@ -24,6 +24,7 @@ import {
   PlayIcon,
 } from "./icons";
 import { ActionMenu, type MenuAction } from "./ActionMenu";
+import { StartButton } from "./StartButton";
 import { IconButton } from "./ui";
 
 const TONE_CLASS = {
@@ -359,12 +360,7 @@ export function TodoItem({
                 <PlayIcon />
               </IconButton>
             ) : (
-              <IconButton
-                label={t("todos.item.start", { title })}
-                onClick={() => void useTimerStore.getState().startTodo(todo.id)}
-              >
-                <PlayIcon />
-              </IconButton>
+              <StartButton todoId={todo.id} title={title} />
             ))}
           <ActionMenu
             label={t("todos.item.actions", { title })}

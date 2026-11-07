@@ -156,7 +156,6 @@ export const de = {
   "activity.hint":
     "Ohne Aufgabe zählt die Zeit für diese Projekte und Kontexte.",
   "active.label": "Aktive Arbeit",
-  "today.start": "Starten: {title}",
   "labels.projects": "Projekte",
   "labels.contexts": "Kontexte",
   "labels.addProject": "Projekt hinzufügen",
@@ -596,6 +595,7 @@ export const de = {
   "task.close": "Schließen",
   "task.back": "Zurück zur Liste",
   "task.gone": "Diese Aufgabe gibt es nicht mehr.",
+  "start.mode": "Startmodus: {title}",
   "task.start": "Arbeit starten",
   "task.description": "Beschreibung",
   "task.priority": "Priorität",

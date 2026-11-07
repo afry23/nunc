@@ -204,7 +204,7 @@ Feature: Todo list
       | rawText |
       | Bericht |
     When I open the app at "/tasks"
-    Then I see the buttons "Starten: Bericht, Aktionen: Bericht"
+    Then I see the buttons "Starten: Bericht, Startmodus: Bericht, Aktionen: Bericht"
     And I do not see the menu item "Löschen"
     When I click "Aktionen: Bericht"
     Then I see the menu items "Für heute einplanen, Unteraufgabe hinzufügen, Duplizieren, Bearbeiten, Löschen"
@@ -220,6 +220,20 @@ Feature: Todo list
       """
       { "mode": "pomodoro", "todoId": 1 }
       """
+
+  @ui @US-UM03
+  Scenario: A task is started in another mode from its row
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Startmodus: Bericht"
+    And I click "Stoppuhr"
+    Then the backend received "start_timer" with:
+      """
+      { "mode": "stopwatch", "todoId": 1 }
+      """
+    And I see the heading "Timer"
 
   @ui @US-UM03
   Scenario: A completed task cannot be started

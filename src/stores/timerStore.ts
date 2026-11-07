@@ -49,7 +49,8 @@ interface TimerStoreState {
   refresh: () => Promise<void>;
   start: (mode: TimerMode) => Promise<void>;
   /** Startet Arbeit an einer Aufgabe im zuletzt benutzten Modus; die Zuordnung steht fest. */
-  startTodo: (id: number) => Promise<void>;
+  /** Startet die Aufgabe im gemerkten Modus oder in `mode`; ein anderer Modus wird zum neuen Standard. */
+  startTodo: (id: number, mode?: TimerMode) => Promise<void>;
   startBreak: () => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
@@ -121,11 +122,13 @@ export const useTimerStore = create<TimerStoreState>((set, get) => {
       );
       set({ labels: NO_LABELS });
     },
-    startTodo: async (id) => {
+    startTodo: async (id, mode) => {
       get().selectTodo(id);
-      await get().start(
-        useSettingsStore.getState().settings?.activeMode ?? "pomodoro",
-      );
+      const remembered =
+        useSettingsStore.getState().settings?.activeMode ?? "pomodoro";
+      if (mode !== undefined && mode !== remembered)
+        await useSettingsStore.getState().patch({ activeMode: mode });
+      await get().start(mode ?? remembered);
     },
     startBreak: async () => {
       set({ finish: null });

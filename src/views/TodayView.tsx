@@ -6,10 +6,11 @@ import { CloseDayDialog } from "../components/CloseDayDialog";
 import { CollapsibleSection } from "../components/CollapsibleSection";
 import { DayLog } from "../components/DayLog";
 import { DayNote } from "../components/DayNote";
+import { StartButton } from "../components/StartButton";
 import { DayTabs } from "../components/DayTabs";
 import { FreeActivityDialog } from "../components/FreeActivityDialog";
 import { blockName } from "../components/Timeline";
-import { ActionButton, IconButton } from "../components/ui";
+import { ActionButton } from "../components/ui";
 import { useIsWide } from "../hooks/useMediaQuery";
 import { useT } from "../i18n";
 import type { PlanReason } from "../lib/api";
@@ -22,7 +23,6 @@ import {
 } from "../lib/format";
 import { titleOf } from "../lib/todos";
 import { usePlanStore } from "../stores/planStore";
-import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
 
 const REASON_CLASS: Record<PlanReason, string> = {
@@ -60,12 +60,6 @@ export function TodayView() {
   const rows = plan ? planRows(plan, all) : [];
   const over = plan !== null && plan.remainingMin < 0;
   const free = blocks.filter((block) => block.todoId === null);
-
-  /** Wählt die Aufgabe vor; Modus und Start folgen im Timer. */
-  const openInTimer = (id: number): void => {
-    useTimerStore.getState().selectTodo(id);
-    void navigate({ to: "/focus" });
-  };
 
   const summary = plan && (
     <div className="flex flex-col gap-3" data-testid="capacity">
@@ -145,7 +139,6 @@ export function TodayView() {
                 key={row.todo.id}
                 row={row}
                 onToggle={() => void toggle(row.todo.id)}
-                onStart={() => openInTimer(row.todo.id)}
                 onEstimate={(value) => void setEstimate(row.todo.id, value)}
                 onUnplan={() => void planTodo(row.todo.id, null)}
                 onPostpone={() => void planTodo(row.todo.id, nextDay(day))}
@@ -321,14 +314,12 @@ export function TodayView() {
 function PlanListRow({
   row,
   onToggle,
-  onStart,
   onEstimate,
   onUnplan,
   onPostpone,
 }: {
   row: PlanRow;
   onToggle: () => void;
-  onStart: () => void;
   onEstimate: (value: number | null) => void;
   onUnplan: () => void;
   onPostpone: () => void;
@@ -413,9 +404,7 @@ function PlanListRow({
               })}
         </button>
       )}
-      <IconButton label={t("today.start", { title })} onClick={onStart}>
-        <PlayIcon />
-      </IconButton>
+      <StartButton todoId={todo.id} title={title} />
       {item.reason === "planned" ? (
         <ActionMenu
           label={t("todos.item.actions", { title })}
