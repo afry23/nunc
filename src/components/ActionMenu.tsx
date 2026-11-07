@@ -49,17 +49,23 @@ export function ActionMenu({
     setOpen(!open);
   };
 
-  /** Passt das Menü unten nicht mehr ins Fenster, klappt es nach oben auf. */
+  /**
+   * Wählt die Seite mit mehr Platz (unter oder über dem Auslöser) und begrenzt die Höhe auf den Rest des Fensters;
+   * was nicht passt, scrollt im Menü.
+   */
   useLayoutEffect(() => {
-    if (!open || !menuRef.current || !rootRef.current) return;
-    const menu = menuRef.current.getBoundingClientRect();
+    const el = menuRef.current;
+    if (!open || !el || !rootRef.current) return;
+    const margin = 8;
     const trigger = rootRef.current.getBoundingClientRect();
-    if (
-      menu.bottom > window.innerHeight - 8 &&
-      trigger.top - 4 - menu.height >= 8
-    ) {
-      menuRef.current.style.top = `${trigger.top - 4 - menu.height}px`;
-    }
+    const below = window.innerHeight - trigger.bottom - 4 - margin;
+    const above = trigger.top - 4 - margin;
+    const full = el.scrollHeight;
+    const placeAbove = full > below && above > below;
+    const room = Math.max(0, placeAbove ? above : below);
+    const height = Math.min(full, room);
+    el.style.maxHeight = `${room}px`;
+    el.style.top = `${placeAbove ? trigger.top - 4 - height : trigger.bottom + 4}px`;
   }, [open, pos]);
 
   useEffect(() => {
@@ -73,16 +79,20 @@ export function ActionMenu({
         setOpen(false);
     };
     const close = (): void => setOpen(false);
+    /** Scrollen im Menü selbst darf es nicht schließen. */
+    const closeOnPageScroll = (event: Event): void => {
+      if (!menuRef.current?.contains(event.target as Node)) close();
+    };
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", close);
-    window.addEventListener("scroll", close, true);
+    window.addEventListener("scroll", closeOnPageScroll, true);
     return () => {
       window.removeEventListener("resize", close);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", closeOnPageScroll, true);
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
@@ -108,7 +118,7 @@ export function ActionMenu({
             id={menuId}
             role="menu"
             aria-label={label}
-            className="glass shadow-ambient fixed z-50 flex min-w-56 max-w-[calc(100vw-2rem)] flex-col rounded-xl p-1"
+            className="glass shadow-ambient fixed z-50 flex min-w-56 overflow-y-auto overscroll-contain max-w-[calc(100vw-2rem)] flex-col rounded-xl p-1"
           >
             {actions
               .filter((action) => !action.hidden)

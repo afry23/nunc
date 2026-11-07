@@ -548,6 +548,8 @@ export const en: Record<keyof typeof de, string> = {
   "todos.menu.duplicate": "Duplicate",
   "todos.menu.edit": "Edit",
   "todos.menu.delete": "Delete",
+  "todos.item.pause": "Pause: {title}",
+  "todos.item.resume": "Resume: {title}",
   "todos.item.actions": "Actions: {title}",
   "todos.item.progress": "{done}/{total} subtasks",
   "todos.item.today": "Today",

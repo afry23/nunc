@@ -551,6 +551,8 @@ export const de = {
   "todos.menu.duplicate": "Duplizieren",
   "todos.menu.edit": "Bearbeiten",
   "todos.menu.delete": "Löschen",
+  "todos.item.pause": "Pausieren: {title}",
+  "todos.item.resume": "Fortsetzen: {title}",
   "todos.item.actions": "Aktionen: {title}",
   "todos.item.progress": "{done}/{total} Teilaufgaben",
   "todos.item.today": "Heute",

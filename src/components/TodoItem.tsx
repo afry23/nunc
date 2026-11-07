@@ -20,6 +20,7 @@ import {
   ChevronRightIcon,
   DotsIcon,
   GripIcon,
+  PauseIcon,
   PlayIcon,
 } from "./icons";
 import { ActionMenu, type MenuAction } from "./ActionMenu";
@@ -57,6 +58,12 @@ export function TodoItem({
 }) {
   const t = useT();
   const { todo, depth, hasChildren, pomodoroTotal } = row;
+  /** Läuft der Timer für genau diese Aufgabe (Arbeitsphase), ersetzt Pause/Fortsetzen den Start-Knopf. */
+  const timerState = useTimerStore((s) =>
+    s.snapshot.todoId === todo.id && s.snapshot.sessionType === "work"
+      ? s.snapshot.state
+      : "idle",
+  );
   const {
     toggle,
     remove,
@@ -336,14 +343,29 @@ export function TodoItem({
         <div
           className={`flex shrink-0 max-sm:justify-end ${editing ? "max-sm:hidden" : ""}`}
         >
-          {!todo.completed && (
-            <IconButton
-              label={t("todos.item.start", { title })}
-              onClick={() => void useTimerStore.getState().startTodo(todo.id)}
-            >
-              <PlayIcon />
-            </IconButton>
-          )}
+          {!todo.completed &&
+            (timerState === "running" ? (
+              <IconButton
+                label={t("todos.item.pause", { title })}
+                onClick={() => void useTimerStore.getState().pause()}
+              >
+                <PauseIcon />
+              </IconButton>
+            ) : timerState === "paused" ? (
+              <IconButton
+                label={t("todos.item.resume", { title })}
+                onClick={() => void useTimerStore.getState().resume()}
+              >
+                <PlayIcon />
+              </IconButton>
+            ) : (
+              <IconButton
+                label={t("todos.item.start", { title })}
+                onClick={() => void useTimerStore.getState().startTodo(todo.id)}
+              >
+                <PlayIcon />
+              </IconButton>
+            ))}
           <ActionMenu
             label={t("todos.item.actions", { title })}
             icon={<DotsIcon />}

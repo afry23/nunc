@@ -359,3 +359,42 @@ Feature: Todo list
   Scenario: The details of a task that is gone say so
     When I open the app at "/tasks?task=99"
     Then I see "Diese Aufgabe gibt es nicht mehr."
+
+  @ui @REQ-4.3
+  Scenario: A running timer for a todo shows pause instead of start
+    Given the todos:
+      | rawText | completed |
+      | Bericht | false     |
+      | Mail    | false     |
+    And the backend reports the timer as:
+      | state   | mode     | sessionType | remaining | total | todoId |
+      | running | pomodoro | work        | 754       | 1500  | 1      |
+    When I open the app at "/todos"
+    Then I see the buttons "Pausieren: Bericht, Starten: Mail"
+    And I do not see the button "Starten: Bericht"
+    When I click "Pausieren: Bericht"
+    Then the backend received "pause_timer"
+
+  @ui @REQ-4.3
+  Scenario: A paused timer for a todo shows resume
+    Given the todos:
+      | rawText | completed |
+      | Bericht | false     |
+    And the backend reports the timer as:
+      | state  | mode     | sessionType | remaining | total | todoId |
+      | paused | pomodoro | work        | 754       | 1500  | 1      |
+    When I open the app at "/todos"
+    And I click "Fortsetzen: Bericht"
+    Then the backend received "resume_timer"
+
+  @ui @REQ-4.3
+  Scenario: A break of a todo does not turn its start button into pause
+    Given the todos:
+      | rawText | completed |
+      | Bericht | false     |
+    And the backend reports the timer as:
+      | state   | mode     | sessionType | remaining | total | todoId |
+      | running | pomodoro | short_break | 240       | 300   | 1      |
+    When I open the app at "/todos"
+    Then I see the buttons "Starten: Bericht"
+
