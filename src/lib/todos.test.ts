@@ -11,6 +11,7 @@ import {
   moveItem,
   priorityTone,
   selectableTodos,
+  dueOf,
   splitSegments,
   subtaskProgress,
   titleOf,
@@ -47,6 +48,54 @@ describe("splitSegments", () => {
       { text: "a + b @", kind: "plain" },
     ]);
     expect(splitSegments("")).toEqual([]);
+  });
+});
+
+describe("splitSegments links and fields", () => {
+  it("shows the text of a markdown link", () => {
+    expect(splitSegments("Video ([Watch](https://y.be/x?t=1)) +A")).toEqual([
+      { text: "Video (", kind: "plain" },
+      { text: "Watch", kind: "link", href: "https://y.be/x?t=1" },
+      { text: ") ", kind: "plain" },
+      { text: "+A", kind: "project" },
+    ]);
+  });
+  it("shortens a bare url to its host and stops at a closing bracket", () => {
+    expect(splitSegments("Kurs (https://a.example.com/p/q?x=1) @work")).toEqual(
+      [
+        { text: "Kurs (", kind: "plain" },
+        {
+          text: "a.example.com",
+          kind: "link",
+          href: "https://a.example.com/p/q?x=1",
+        },
+        { text: ") ", kind: "plain" },
+        { text: "@work", kind: "context" },
+      ],
+    );
+    expect(splitSegments("https://a.de")).toEqual([
+      { text: "a.de", kind: "link", href: "https://a.de" },
+    ]);
+  });
+  it("marks planning fields so they can be hidden", () => {
+    expect(splitSegments("A due:2026-12-15 est:3")).toEqual([
+      { text: "A ", kind: "plain" },
+      { text: "due:2026-12-15", kind: "field" },
+      { text: " ", kind: "plain" },
+      { text: "est:3", kind: "field" },
+    ]);
+  });
+});
+
+describe("dueOf", () => {
+  it("reads the due date", () => {
+    expect(dueOf("A due:2026-12-15 +x")).toBe("2026-12-15");
+    expect(dueOf("due:2026-12-15")).toBe("2026-12-15");
+  });
+  it("ignores missing or malformed dates", () => {
+    expect(dueOf("A")).toBeNull();
+    expect(dueOf("A due:morgen")).toBeNull();
+    expect(dueOf("Adue:2026-12-15")).toBeNull();
   });
 });
 

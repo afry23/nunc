@@ -3,15 +3,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { useState, type FormEvent } from "react";
 import { useT } from "../i18n";
 import { useSwipeToComplete } from "../hooks/useSwipeToComplete";
-import {
-  priorityTone,
-  splitSegments,
-  subtaskProgress,
-  titleOf,
-  type TreeRow,
-} from "../lib/todos";
+import { dueOf, subtaskProgress, titleOf, type TreeRow } from "../lib/todos";
 import { estimateOf, formatEstimate } from "../lib/estimate";
-import { formatMinutes, toIsoDate } from "../lib/format";
+import { dateWithYear, formatMinutes, toIsoDate } from "../lib/format";
 import { useTimerStore } from "../stores/timerStore";
 import { usePlanStore } from "../stores/planStore";
 import { useTodoStore } from "../stores/todoStore";
@@ -25,15 +19,9 @@ import {
   PlayIcon,
 } from "./icons";
 import { ActionMenu, type MenuAction } from "./ActionMenu";
+import { DescriptionText, PriorityMark } from "./TodoText";
 import { StartButton } from "./StartButton";
 import { IconButton } from "./ui";
-
-const TONE_CLASS = {
-  high: "text-primary",
-  medium: "text-orange-300",
-  low: "text-on-surface-variant",
-  none: "",
-} as const;
 
 /** Eine Zeile der Aufgabenliste: abhaken, bearbeiten (todo.txt-Syntax), löschen, umsortieren. */
 export function TodoItem({
@@ -91,7 +79,6 @@ export function TodoItem({
   } = useSortable({ id: todo.id, disabled: !canReorder });
   const { offset, handlers } = useSwipeToComplete(() => void toggle(todo.id));
   const title = titleOf(todo);
-  const tone = priorityTone(todo.priority);
   const progress = subtaskProgress(
     useTodoStore((s) => s.all),
     todo.id,
@@ -101,6 +88,7 @@ export function TodoItem({
   );
   const today = toIsoDate(new Date());
   const estimate = estimateOf(todo.description);
+  const due = dueOf(todo.description);
   const meta = [
     progress
       ? t("todos.item.progress", {
@@ -108,6 +96,7 @@ export function TodoItem({
           total: progress.total,
         })
       : null,
+    due ? t("todos.item.due", { date: dateWithYear(due, today) }) : null,
     planItem ? t("todos.item.today") : null,
     estimate ? t("task.estimate", { time: formatEstimate(estimate) }) : null,
     planItem && planItem.spentMin > 0
@@ -289,16 +278,7 @@ export function TodoItem({
               className={`flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 ${todo.completed ? "text-on-surface-variant line-through" : ""}`}
               onDoubleClick={startEditing}
             >
-              {todo.priority && (
-                <span
-                  className={`font-semibold ${TONE_CLASS[tone]}`}
-                  aria-label={t("todos.item.priority", {
-                    priority: todo.priority,
-                  })}
-                >
-                  ({todo.priority})
-                </span>
-              )}
+              <PriorityMark priority={todo.priority} />
               <button
                 type="button"
                 aria-label={t("todos.item.details", { title })}
@@ -306,20 +286,7 @@ export function TodoItem({
                 onClick={() => onOpen(todo.id)}
                 className="min-h-11 min-w-0 cursor-pointer text-left break-words"
               >
-                {splitSegments(todo.description).map((segment, index) => (
-                  <span
-                    key={index}
-                    className={
-                      segment.kind === "project"
-                        ? "text-primary"
-                        : segment.kind === "context"
-                          ? "text-secondary-fixed-dim"
-                          : undefined
-                    }
-                  >
-                    {segment.text}
-                  </span>
-                ))}
+                <DescriptionText description={todo.description} />
               </button>
               {meta.length > 0 && (
                 <span

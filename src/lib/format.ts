@@ -54,6 +54,18 @@ export function shortDate(isoDate: string): string {
   });
 }
 
+/** `04.10.` im laufenden Jahr von `today`, sonst `04.10.2027`. */
+export function dateWithYear(isoDate: string, today: string): string {
+  const d = parseIsoDate(isoDate);
+  if (d.getFullYear() === parseIsoDate(today).getFullYear())
+    return shortDate(isoDate);
+  return t("format.date", {
+    day: pad(d.getDate()),
+    month: pad(d.getMonth() + 1),
+    year: String(d.getFullYear()),
+  });
+}
+
 /** Größe in Bytes als `12 KB` / `3,4 MB`. */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
