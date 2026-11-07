@@ -153,5 +153,5 @@ Feature: Edit and delete sessions
     And the local todos "Task"
     When I sync
     Then the sync succeeds
-    And the sync file on the server has format 11
+    And the sync file on the server has format 12
     And the sync file on the server is compressed

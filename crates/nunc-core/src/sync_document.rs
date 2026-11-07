@@ -15,12 +15,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::crdt::{Register, SessionCrdt, SyncState, TodoCrdt, session_key};
 use crate::hlc::Hlc;
-use crate::journal::JournalEntry;
+use crate::journal::{JournalEntry, JournalKind};
 use crate::model::{SyncFile, SyncSession, SyncTodo};
 use crate::todotxt::parse_line;
 
-/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`, ADR 0023: Projekte/Kontexte der Session, ADR 0026: Journal, ADR 0028: Gewohnheiten, ADR 0029: kompakte Stempel und gzip, ADR 0033: Gewohnheiten entfallen wieder).
-pub const SCHEMA_VERSION: u32 = 11;
+/// Version des Formats in `schema_version`, die geschrieben wird (ADR 0017: Sessions als CRDT, ADR 0018: `kind`, ADR 0022: `parent`, ADR 0023: Projekte/Kontexte der Session, ADR 0026: Journal, ADR 0028: Gewohnheiten, ADR 0029: kompakte Stempel und gzip, ADR 0033: Gewohnheiten entfallen wieder, ADR 0034: der Tagesfokus entfällt).
+pub const SCHEMA_VERSION: u32 = 12;
 
 /// Älteste Version, die noch gelesen wird: Version 2 kennt Sessions nur als Rohdaten ([`SyncSession`]).
 pub const MIN_SCHEMA_VERSION: u32 = 2;
@@ -62,8 +62,27 @@ pub struct SyncDocument {
     #[serde(default)]
     pub sessions: Vec<SessionEntry>,
     /// Tages-/Wochennotizen und Erfolge (ab Version 7, ADR 0026); ältere Dateien haben keine.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "known_journal_entries")]
     pub journal: Vec<JournalEntry>,
+}
+
+/// Liest die Journal-Einträge und lässt solche mit unbekannter Art weg (der Tagesfokus älterer Dateien, ADR 0034),
+/// statt die ganze Datei als beschädigt abzulehnen.
+fn known_journal_entries<'de, D>(deserializer: D) -> Result<Vec<JournalEntry>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let values = Vec::<serde_json::Value>::deserialize(deserializer)?;
+    values
+        .into_iter()
+        .filter(|value| {
+            value
+                .get("kind")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|kind| JournalKind::parse(kind).is_some())
+        })
+        .map(|value| serde_json::from_value(value).map_err(serde::de::Error::custom))
+        .collect()
 }
 
 impl SyncDocument {
@@ -270,5 +289,30 @@ mod tests {
         let document = SyncDocument::decode(json).unwrap();
         assert_eq!(document.schema_version, 10);
         assert!(document.todos.is_empty() && document.sessions.is_empty());
+    }
+
+    #[test]
+    fn the_day_focus_of_an_older_file_is_ignored_and_the_notes_stay() {
+        let entry = |id: &str, kind: &str| {
+            format!(
+                r#"{{"sync_id":"{id}","kind":"{kind}",
+                "date":{{"value":"2026-03-02","hlc":{{"ms":1,"counter":0,"device":"a"}}}},
+                "text":{{"value":"x","hlc":{{"ms":1,"counter":0,"device":"a"}}}},
+                "deleted":{{"value":false,"hlc":{{"ms":1,"counter":0,"device":"a"}}}}}}"#
+            )
+        };
+        let journal = JournalEntry::day_note(
+            NaiveDate::from_ymd_opt(2026, 3, 2).unwrap(),
+            "x",
+            &Hlc::new(1, 0, "a"),
+        );
+        let note = serde_json::to_string(&journal).unwrap();
+        let json = format!(
+            r#"{{"schema_version":11,"synced_at":"2026-03-01T00:00:00Z","journal":[{},{}]}}"#,
+            note,
+            entry("note:focus:2026-03-02", "day_focus")
+        );
+        let document = SyncDocument::decode(json.as_bytes()).unwrap();
+        assert_eq!(document.journal, vec![journal]);
     }
 }

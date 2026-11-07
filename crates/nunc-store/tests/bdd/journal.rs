@@ -50,19 +50,6 @@ fn writes_day_note(
     record(world, result);
 }
 
-#[given(expr = "device {word} writes the day focus {string} for {word} at {word}")]
-#[when(expr = "device {word} writes the day focus {string} for {word} at {word}")]
-fn writes_day_focus(
-    world: &mut StoreWorld,
-    device: String,
-    text: String,
-    date: String,
-    time: String,
-) {
-    let result = nunc_store::save_day_focus(world.crdt.conn(&device), day(&date), &text, at(&time));
-    record(world, result);
-}
-
 #[given(expr = "device {word} writes the week note {string} for {word} at {word}")]
 #[when(expr = "device {word} writes the week note {string} for {word} at {word}")]
 fn writes_week_note(

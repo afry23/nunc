@@ -68,7 +68,6 @@ fn specta_builder() -> Builder<tauri::Wry> {
             plan::close_day,
             review::get_review,
             review::get_day_note,
-            review::get_day_focus,
             review::save_journal_note,
             review::add_achievement,
             review::update_achievement,

@@ -620,13 +620,6 @@ Then("the field {string} does not exist", (_world: UiWorld, label: string) => {
   expect(screen.queryByLabelText(label)).toBeNull();
 });
 
-Given(
-  "the day focus for {word} is {string}",
-  (world: UiWorld, day: string, text: string) => {
-    world.fake.focus[day] = text;
-  },
-);
-
 Then(
   "the field {string} contains {string}",
   async (_world: UiWorld, label: string, value: string) => {

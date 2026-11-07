@@ -23,26 +23,6 @@ Feature: Journal in the database
     Then on device A the journal from 2026-03-02 to 2026-03-08 lists "2026-03-08 week_note: Very good week"
     And on device A the journal from 2026-03-02 to 2026-03-07 lists ""
 
-  @integration @US-UM05
-  Scenario: A day focus is stored next to the day note of the same day
-    When device A writes the day note "Calm day" for 2026-03-02 at 10:00:00
-    And device A writes the day focus "Ship the API" for 2026-03-02 at 10:05:00
-    Then on device A the journal from 2026-03-02 to 2026-03-02 lists "2026-03-02 day_focus: Ship the API | 2026-03-02 day_note: Calm day"
-
-  @integration @US-UM05
-  Scenario: A day focus is changed and removed again
-    Given device A writes the day focus "Ship the API" for 2026-03-02 at 10:00:00
-    When device A writes the day focus "Review" for 2026-03-02 at 11:00:00
-    Then on device A the journal from 2026-03-02 to 2026-03-02 lists "2026-03-02 day_focus: Review"
-    When device A writes the day focus "" for 2026-03-02 at 12:00:00
-    Then on device A the journal from 2026-03-02 to 2026-03-02 lists ""
-
-  @integration @US-UM05
-  Scenario: Two devices exchange a day focus
-    When device A writes the day focus "Ship the API" for 2026-03-02 at 10:00:00
-    And the devices exchange their state
-    Then on device B the journal from 2026-03-02 to 2026-03-02 lists "2026-03-02 day_focus: Ship the API"
-
   @integration @US-RV02
   Scenario: Text is trimmed before it is saved
     When device A writes the day note "  Calm day  " for 2026-03-02 at 10:00:00

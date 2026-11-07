@@ -239,25 +239,10 @@ export function ResultsCard({ review, today, onChanged }: JournalProps) {
 export function DayNotesCard({ review, today, onChanged }: JournalProps) {
   const t = useT();
   const { from, to } = review.period;
-  const { dayNotes, dayFocus } = review.journal;
+  const { dayNotes } = review.journal;
   const start = clampDay(today, from, to);
   return (
     <Card title={t("review.section.notes")}>
-      {dayFocus.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <h3 className="label-md text-on-surface-variant">
-            {t("review.dayFocus")}
-          </h3>
-          <ul className="flex flex-col gap-1">
-            {dayFocus.map((focus) => (
-              <li key={focus.id} className="flex gap-4">
-                <ItemDate date={focus.date} />
-                <span>{focus.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
       {dayNotes.length === 0 ? (
         <p className="text-on-surface-variant">{t("journal.noDayNotes")}</p>
       ) : (

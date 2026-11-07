@@ -9,9 +9,9 @@ Feature: Session CRDT sync
     And both readings give the same session id
 
   @domain @US-TT02
-  Scenario: A version 2 file is written back as version 11
+  Scenario: A version 2 file is written back as version 12
     When a version 2 sync file is read and written again
-    Then the written file has format 11
+    Then the written file has format 12
 
   @integration @US-TT02
   Scenario: Two devices that both know an old session do not create a duplicate

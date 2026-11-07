@@ -1,6 +1,6 @@
 # ADR 0032 – Tagesfokus
 
-- Status: vorgeschlagen
+- Status: ersetzt durch ADR 0034
 - Datum: 2026-11-06
 - Ergänzt: ADR 0026 (Journal), ADR 0027 (Tagesplaner), ADR 0031 (Informationsarchitektur)
 

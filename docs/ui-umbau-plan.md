@@ -18,7 +18,7 @@ Vier Hauptbereiche, Einstellungen/Hilfe sekundär:
 
 | Route | Inhalt | Quelle (wiederverwenden) |
 |---|---|---|
-| `/` **Heute** (Startseite) | Tab Plan / Verlauf / Notizen; Tagesfokus; Aufgaben für heute; „Aufgaben auswählen“; „Freie Tätigkeit starten“; Tag abschließen | `TodayView`, `DayNote`, `CloseDayDialog`, `Timeline` |
+| `/` **Heute** (Startseite) | Reiter Heute / Timer; Übersicht (Plan, freie Tätigkeiten, Verlauf, Notizen); Aufgaben für heute; „Aufgaben auswählen“; „Freie Tätigkeit starten“; Tag abschließen | `TodayView`, `DayNote`, `CloseDayDialog`, `Timeline` |
 | `/tasks` **Aufgaben** | ruhige Liste + Detailpane | `TodoView`, `TodoItem`, `FilterMenu` |
 | `/log` **Verlauf** | Tag / Woche / Gruppierung; Zeiten prüfen, nachtragen, korrigieren | `TimesheetPanel`, `Timeline`, `SessionDialog` |
 | `/review` **Rückblick** | Ergebnisse, Projekte, Aufgaben, Notizen, Reflexion, Folgeaufgabe; Timerstatistik als „Arbeitsweise“ | `ReviewPanel`, `ReviewJournal`, Teile von `StatsView` |
@@ -54,7 +54,7 @@ Adaptiv: `useIsWide` bleibt; neu Listen-/Detailmuster (breit nebeneinander, schm
 - „Aufgaben auswählen“-Auswahlansicht für Heute (Mehrfachauswahl, setzt `plan_todo`, verschiebt nichts).
 
 ### E4 – Android: einspaltig, untere Navigation, Liste→Detail
-- `BottomTabs` mit 4 Zielen; Heute auf Android: Tagesfokus + Segmente [Plan][Verlauf][Notizen], vertikal; Verlauf Tagesliste Standard (Wochenmatrix nur Desktop); Rückblick aufklappbare Abschnitte.
+- `BottomTabs` mit 4 Zielen; Heute auf Android: Übersicht einspaltig, Verlauf und Notizen aufklappbar; Verlauf Tagesliste Standard (Wochenmatrix nur Desktop); Rückblick aufklappbare Abschnitte.
 - `useIsWide`-Breakpoints prüfen (768 px), ggf. Medium-Rail (Icons) zwischen 600–1024.
 - Maestro-Flows `e2e/mobile/` und `features/ui/responsive.feature` aktualisieren; Edge-to-edge/Keyboard-Inset (`MainActivity.kt`) testen.
 

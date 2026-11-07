@@ -1,6 +1,6 @@
 //! Migrationsrunner, kompatibel zur Tabelle `schema_migrations` der Go-App
 //! (`nunc-go/internal/db/db.go`). Migrationen 001–005 sind unverändert aus der Go-App übernommen (006 und folgende sind nunc-eigen); neue
-//! Migrationen sind additiv (ADR 0002); Migration 017 räumt den entfernten Habit-Tracker ab (ADR 0033).
+//! Migrationen sind additiv (ADR 0002); Migration 017 räumt den entfernten Habit-Tracker ab (ADR 0033), 018 den Tagesfokus (ADR 0034).
 
 use rusqlite::{Connection, params};
 
@@ -43,6 +43,7 @@ pub const MIGRATIONS: &[Migration] = &[
     migration!(15, "015_habits.sql"),
     migration!(16, "016_journal_day_focus.sql"),
     migration!(17, "017_drop_habits.sql"),
+    migration!(18, "018_drop_day_focus.sql"),
 ];
 
 /// Wendet alle noch nicht in `schema_migrations` vermerkten Migrationen an.
@@ -137,7 +138,7 @@ mod tests {
         conn.execute("INSERT INTO schema_migrations (version) VALUES (42)", [])
             .unwrap();
         migrate(&mut conn).unwrap();
-        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 18);
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM schema_migrations"), 19);
     }
 
     #[test]
@@ -183,7 +184,7 @@ mod tests {
             .is_err()
         );
 
-        migrate(&mut conn).unwrap();
+        apply(&mut conn, &MIGRATIONS[..16]).unwrap();
 
         let text: String = conn
             .query_row(
@@ -223,6 +224,54 @@ mod tests {
                 "SELECT COUNT(*) FROM journal_field_clock WHERE sync_id = 'note:focus:2026-03-02'"
             ),
             0
+        );
+    }
+
+    #[test]
+    fn dropping_the_day_focus_removes_its_entries_and_keeps_the_other_stamps() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = ON").unwrap();
+        apply(&mut conn, &MIGRATIONS[..17]).unwrap();
+        for (id, kind, text) in [
+            ("note:day:2026-03-02", "day_note", "Calm day"),
+            ("note:focus:2026-03-02", "day_focus", "Ship the API"),
+        ] {
+            conn.execute(
+                "INSERT INTO journal_entries (sync_id, kind, date, text, deleted)
+                 VALUES (?1, ?2, '2026-03-02', ?3, 0)",
+                [id, kind, text],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO journal_field_clock (sync_id, field, hlc_ms, hlc_counter, hlc_device)
+                 VALUES (?1, 'text', 1000, 2, 'a')",
+                [id],
+            )
+            .unwrap();
+        }
+
+        migrate(&mut conn).unwrap();
+
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM journal_entries"), 1);
+        assert_eq!(
+            count(
+                &conn,
+                "SELECT COUNT(*) FROM journal_entries WHERE kind = 'day_note' AND text = 'Calm day'"
+            ),
+            1
+        );
+        assert_eq!(
+            count(&conn, "SELECT hlc_counter FROM journal_field_clock"),
+            2
+        );
+        assert_eq!(count(&conn, "SELECT COUNT(*) FROM journal_field_clock"), 1);
+        // die Art ist nicht mehr erlaubt
+        assert!(
+            conn.execute(
+                "INSERT INTO journal_entries (sync_id, kind, date) VALUES ('f', 'day_focus', '2026-03-02')",
+                [],
+            )
+            .is_err()
         );
     }
 

@@ -328,7 +328,6 @@ export const en: Record<keyof typeof de, string> = {
   "review.days": "Days",
   "review.dayValue": "{time} · {pomodoros} pomodoros",
   "review.completed": "Completed tasks",
-  "review.dayFocus": "Focus of the days",
   "review.noCompleted": "No tasks completed.",
   "journal.weekNote": "Reflection",
   "journal.weekNotes": "Week reviews",
