@@ -27,6 +27,40 @@ Feature: Today
     And I see "15m erfasst"
 
   @ui @US-TP01
+  Scenario: The day has an overview and a timer tab
+    Given the day plan for 2026-03-04 has a capacity of 240 minutes
+    When I open the app at "/"
+    Then I see the heading "Heute"
+    When I click "Timer"
+    Then I see the heading "Timer"
+
+  @ui @US-TP01
+  Scenario: Starting a task of the plan opens the timer with the task selected
+    Given the todos:
+      | rawText                          |
+      | Bericht due:2026-03-02 est:30    |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | overdue | 30       | 0     |
+    When I open the app at "/"
+    And I click "Starten: Bericht"
+    Then I see the heading "Timer"
+    And the field "Aktive Aufgabe" has the value "1"
+    And the backend did not receive "start_timer"
+
+  @ui @US-TP01
+  Scenario: Free activities of the day are listed apart from the plan
+    Given the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the timeline of "2026-03-04" has the sessions:
+      | start | end   | type | todo | note       | origin |
+      | 09:00 | 09:45 | work |      | Abstimmung | timer  |
+    When I open the app at "/"
+    Then I see "Freie Tätigkeiten"
+    And I see "Abstimmung"
+    And I see "45m"
+
+  @ui @US-TP01
   Scenario: The tracked work is shown apart from the planned effort
     Given the todos:
       | rawText                          |
@@ -75,6 +109,7 @@ Feature: Today
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
     When I open the app at "/"
+    And I click "Schätzung ändern: Bericht"
     And I enter "45" into the field "Schätzung (min): Bericht"
     And I leave the field "Schätzung (min): Bericht"
     Then the backend received "set_todo_estimate" with:
@@ -92,7 +127,8 @@ Feature: Today
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
     When I open the app at "/"
-    And I click "Auf morgen verschieben: Bericht"
+    And I click "Aktionen: Bericht"
+    And I click "Auf morgen verschieben"
     Then the backend received "plan_todo" with:
       """
       { "id": 1, "day": "2026-03-05" }
@@ -108,7 +144,8 @@ Feature: Today
       | todo | reason  | estimate | spent |
       | 1    | planned |          | 0     |
     When I open the app at "/"
-    And I click "Vom Plan nehmen: Bericht"
+    And I click "Aktionen: Bericht"
+    And I click "Vom Plan nehmen"
     Then the backend received "plan_todo" with:
       """
       { "id": 1, "day": null }
@@ -125,8 +162,7 @@ Feature: Today
       | 1    | overdue |          | 0     |
     When I open the app at "/"
     Then I see "Überfällig"
-    And I do not see the button "Auf morgen verschieben: Bericht"
-    And I do not see the button "Vom Plan nehmen: Bericht"
+    And I do not see the button "Aktionen: Bericht"
 
   @ui @US-TP01
   Scenario: Check off an entry of the plan
@@ -243,69 +279,3 @@ Feature: Today
     And I click "Tag abschließen"
     Then I see a dialog with the text "0 eingeplante Aufgaben, 0 mit Frist."
     And I do not see the button "Unverändert lassen"
-
-  @ui @US-UM05
-  Scenario: The day focus of today is shown at the top
-    Given the day plan for 2026-03-04 has a capacity of 240 minutes
-    And the day focus for 2026-03-04 is "API fertigstellen"
-    When I open the app
-    Then the field "Tagesfokus" contains "API fertigstellen"
-
-  @ui @US-UM05
-  Scenario: Without a focus the field invites to set one
-    Given the day plan for 2026-03-04 has a capacity of 240 minutes
-    When I open the app
-    Then the field "Tagesfokus" is empty
-
-  @ui @US-UM05
-  Scenario: Setting the day focus saves it for the day
-    Given the day plan for 2026-03-04 has a capacity of 240 minutes
-    When I open the app
-    And I enter "API fertigstellen" into the field "Tagesfokus"
-    And I leave the field "Tagesfokus"
-    Then the backend received "save_journal_note" with:
-      """
-      { "kind": "day_focus", "date": "2026-03-04", "text": "API fertigstellen" }
-      """
-
-  @ui @US-UM05
-  Scenario: Enter saves the day focus
-    Given the day plan for 2026-03-04 has a capacity of 240 minutes
-    When I open the app
-    And I enter "Review" into the field "Tagesfokus"
-    And I press the key "Enter" in the field "Tagesfokus"
-    Then the backend received "save_journal_note" with:
-      """
-      { "kind": "day_focus", "date": "2026-03-04", "text": "Review" }
-      """
-
-  @ui @US-UM05
-  Scenario: Clearing the day focus removes it
-    Given the day plan for 2026-03-04 has a capacity of 240 minutes
-    And the day focus for 2026-03-04 is "Review"
-    When I open the app
-    And I enter "" into the field "Tagesfokus"
-    And I leave the field "Tagesfokus"
-    Then the backend received "save_journal_note" with:
-      """
-      { "kind": "day_focus", "date": "2026-03-04", "text": "" }
-      """
-
-  @ui @US-UM05
-  Scenario: An unchanged day focus is not saved again
-    Given the day plan for 2026-03-04 has a capacity of 240 minutes
-    And the day focus for 2026-03-04 is "Review"
-    When I open the app
-    And I leave the field "Tagesfokus"
-    Then the backend did not receive "save_journal_note"
-
-  @ui @US-UM05 @mobile
-  Scenario: The day focus stays visible whichever part of the day is open on a phone
-    Given the platform is "mobile"
-    And the viewport is 390 pixels wide
-    And the day plan for 2026-03-04 has a capacity of 240 minutes
-    And the day focus for 2026-03-04 is "Review"
-    When I open the app
-    And I click "Notizen"
-    Then the field "Tagesfokus" contains "Review"
-

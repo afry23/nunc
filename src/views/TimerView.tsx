@@ -4,6 +4,7 @@ import { ActionButton, Segmented } from "../components/ui";
 import { useT } from "../i18n";
 import { NotificationHint } from "../components/NotificationHint";
 import { FreeActivityDialog } from "../components/FreeActivityDialog";
+import { DayTabs } from "../components/DayTabs";
 import { RingTimer } from "../components/RingTimer";
 import type { TimerMode } from "../lib/api";
 import { sessionLabel } from "../lib/timer";
@@ -63,6 +64,8 @@ export function TimerView() {
       <h1 id="timer-heading" className="sr-only">
         {t("timer.title")}
       </h1>
+
+      <DayTabs current="timer" />
 
       <NotificationHint />
 

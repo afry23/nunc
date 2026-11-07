@@ -29,7 +29,7 @@ Feature: One structure on phone and desktop
     And I see a navigation with the entries "Heute, Aufgaben, Verlauf, Rückblick, Einstellungen, Hilfe"
 
   @ui @US-UM04 @mobile
-  Scenario: Today shows one part at a time on a phone
+  Scenario: Today folds the day log and the notes on a phone
     Given the platform is "mobile"
     And the viewport is 390 pixels wide
     And the day plan for 2026-03-04 has a capacity of 240 minutes
@@ -38,14 +38,13 @@ Feature: One structure on phone and desktop
       | 09:05 | 10:10 | work |      | Abstimmung | timer |
     When I open the app
     Then I see the heading "Heute"
+    And I see "Erfasste Arbeit"
     And I do not see "Tagesnotiz"
-    And I do not see "Abstimmung"
+    And I do not see "Zeit nachtragen"
     When I click "Tagesverlauf"
-    Then I see "Abstimmung"
+    Then I see "Zeit nachtragen"
     When I click "Notizen"
     Then I see "Tagesnotiz"
-    When I click "Plan"
-    Then I see "Erfasste Arbeit"
 
   @ui @US-UM04
   Scenario: Today shows plan, log and notes together in a wide window
