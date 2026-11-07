@@ -10,6 +10,7 @@ import {
   titleOf,
   type TreeRow,
 } from "../lib/todos";
+import { estimateOf, formatEstimate } from "../lib/estimate";
 import { formatMinutes, toIsoDate } from "../lib/format";
 import { useTimerStore } from "../stores/timerStore";
 import { usePlanStore } from "../stores/planStore";
@@ -99,6 +100,7 @@ export function TodoItem({
     s.plan?.items.find((item) => item.todoId === todo.id),
   );
   const today = toIsoDate(new Date());
+  const estimate = estimateOf(todo.description);
   const meta = [
     progress
       ? t("todos.item.progress", {
@@ -107,6 +109,7 @@ export function TodoItem({
         })
       : null,
     planItem ? t("todos.item.today") : null,
+    estimate ? t("task.estimate", { time: formatEstimate(estimate) }) : null,
     planItem && planItem.spentMin > 0
       ? t("today.spent", { spent: formatMinutes(planItem.spentMin) })
       : null,

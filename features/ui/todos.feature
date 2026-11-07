@@ -267,6 +267,39 @@ Feature: Todo list
     When I open the app at "/tasks"
     Then I see "1/2 Teilaufgaben"
 
+  @ui @US-RV03
+  Scenario Outline: The list shows the estimate of a task
+    Given the todos:
+      | rawText      |
+      | <rawText>    |
+    When I open the app at "/tasks"
+    Then I see "<shown>"
+
+    Examples:
+      | rawText         | shown                |
+      | Bericht estp:3  | geschätzt 3 Pomodoros |
+      | Bericht est:90  | geschätzt 1h 30m     |
+
+  @ui @US-RV03
+  Scenario: A task without estimate shows no estimate
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    Then I do not see "geschätzt"
+
+  @ui @US-RV03
+  Scenario: The estimate joins today and the tracked time in the list
+    Given the todos:
+      | rawText                          |
+      | Bericht plan:2026-03-04 estp:2   |
+    And the day plan for 2026-03-04 has a capacity of 240 minutes
+    And the day plan lists:
+      | todo | reason  | estimate | spent |
+      | 1    | planned |          | 25    |
+    When I open the app at "/tasks"
+    Then I see "Heute · geschätzt 2 Pomodoros · 25m erfasst"
+
   @ui @US-UM03
   Scenario: A planned task shows today and its tracked time
     Given the todos:
@@ -289,20 +322,19 @@ Feature: Todo list
     Then I see the menu items "Importieren, Exportieren"
 
   @ui @US-UM03
-  Scenario: Clicking the title opens the details next to the list
+  Scenario: Clicking the title opens the edit dialog over the list
     Given the todos:
       | rawText                     |
       | (A) Bericht +work @office   |
       | Einkaufen                   |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    Then I see the heading "Aufgabendetails"
-    And I see "Priorität"
-    And I see "+work"
+    Then I see a dialog with the text "Aufgabe bearbeiten"
+    And the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "(A) Bericht"
     And the todo list shows "(A) Bericht +work @office, Einkaufen"
 
   @ui @US-UM03
-  Scenario: The details list the time entries of the task with their total
+  Scenario: The dialog lists the time entries of the task with their total
     Given the todos:
       | rawText |
       | Bericht |
@@ -318,13 +350,12 @@ Feature: Todo list
     And I see "1h 30m"
 
   @ui @US-RV03
-  Scenario: The details edit the task line
+  Scenario: The dialog edits the task line
     Given the todos:
       | rawText |
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     And I enter "Bericht schreiben +work" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
     And I click "Speichern"
     Then the backend received "update_todo" with:
@@ -339,7 +370,6 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     And I enter "3" into the field "Anzahl Pomodoros"
     And I click "Speichern"
     Then the backend received "update_todo" with:
@@ -354,7 +384,6 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     And I choose the option "Stunden und Minuten"
     And I enter "1" into the field "Stunden"
     And I enter "30" into the field "Minuten"
@@ -371,7 +400,6 @@ Feature: Todo list
       | Bericht estp:3  |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     And I enter "" into the field "Anzahl Pomodoros"
     And I click "Speichern"
     Then the backend received "update_todo" with:
@@ -386,7 +414,6 @@ Feature: Todo list
       | (A) Bericht +work plan:2026-11-06 estp:2 |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     Then the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "(A) Bericht plan:2026-11-06"
     And the field "Anzahl Pomodoros" contains "2"
     When I enter "3" into the field "Anzahl Pomodoros"
@@ -403,7 +430,6 @@ Feature: Todo list
       | (A) Bericht +work @office est:30  |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     Then the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "(A) Bericht"
     When I click "+work entfernen"
     And I enter "+home" into the field "Projekt hinzufügen"
@@ -423,7 +449,6 @@ Feature: Todo list
       | Bericht +work   |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     And I enter "Bericht +work @office" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
     And I click "Speichern"
     Then the backend received "update_todo" with:
@@ -438,7 +463,6 @@ Feature: Todo list
       | Bericht estp:3 |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     And I choose the option "Stunden und Minuten"
     And I enter "45" into the field "Minuten"
     And I click "Speichern"
@@ -454,7 +478,6 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     And I enter "0" into the field "Anzahl Pomodoros"
     Then the button "Speichern" is disabled
 
@@ -465,14 +488,13 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     Then I see a dialog with the text "Aufgabe bearbeiten"
     When I click "Abbrechen"
     Then I do not see a dialog
     And the backend did not receive "update_todo"
 
   @ui @US-RV03
-  Scenario: The details compare the estimate with the effort so far
+  Scenario: The dialog compares the estimate with the effort so far
     Given the todos:
       | rawText        |
       | Bericht estp:4 |
@@ -495,7 +517,7 @@ Feature: Todo list
     Then I see "Noch keine Zeit erfasst."
 
   @ui @US-UM03 @mobile
-  Scenario: On a phone the details replace the list and back returns to it with the filter
+  Scenario: On a phone the edit dialog opens over the list and cancel keeps the filter
     Given the platform is "mobile"
     And the viewport is 390 pixels wide
     And the todos:
@@ -505,19 +527,19 @@ Feature: Todo list
     When I open the app at "/tasks"
     And I enter "Bericht" into the field "Aufgaben durchsuchen"
     And I click "Details: Bericht"
-    Then I see the heading "Aufgabendetails"
-    And the field "Aufgaben durchsuchen" does not exist
-    When I click "Zurück zur Liste"
-    Then the todo list shows "Bericht"
+    Then I see a dialog with the text "Aufgabe bearbeiten"
+    When I click "Abbrechen"
+    Then I do not see a dialog
+    And the field "Aufgaben durchsuchen" contains "Bericht"
+    And the todo list shows "Bericht"
 
   @ui @US-UM03
-  Scenario: The raw todo.txt line is edited in the details
+  Scenario: The raw todo.txt line is edited in the dialog
     Given the todos:
       | rawText |
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Bearbeiten"
     And I enter "Bericht abgeben +work" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
     And I click "Speichern"
     Then the backend received "update_todo" with:
@@ -526,7 +548,7 @@ Feature: Todo list
       """
 
   @ui @US-UM03
-  Scenario: A task is started from its details
+  Scenario: A task is started from its dialog
     Given the todos:
       | rawText |
       | Bericht |
@@ -537,11 +559,6 @@ Feature: Todo list
       """
       { "mode": "pomodoro", "todoId": 1 }
       """
-
-  @ui @US-UM03
-  Scenario: The details of a task that is gone say so
-    When I open the app at "/tasks?task=99"
-    Then I see "Diese Aufgabe gibt es nicht mehr."
 
   @ui @REQ-4.3
   Scenario: A running timer for a todo shows pause instead of start
