@@ -28,11 +28,23 @@ export function TagInput({
 }) {
   const t = useT();
   const listId = useId();
+  const inputId = useId();
   const [text, setText] = useState("");
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const options = matchingSuggestions(suggestions, value, text);
 
   const commit = (): void => {
     onChange(addTag(value, text, prefix));
     setText("");
+    setActive(-1);
+  };
+
+  const pick = (tag: string): void => {
+    onChange(addTag(value, tag, prefix));
+    setText("");
+    setActive(-1);
+    setOpen(false);
   };
 
   return (
@@ -54,28 +66,78 @@ export function TagInput({
           ))}
         </ul>
       )}
-      <input
-        type="text"
-        list={listId}
-        value={text}
-        placeholder={addLabel}
-        aria-label={addLabel}
-        autoComplete="off"
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === "," || event.key === " ") {
-            event.preventDefault();
+      <div className="relative">
+        <input
+          id={inputId}
+          type="text"
+          role="combobox"
+          aria-expanded={open && options.length > 0}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          value={text}
+          placeholder={addLabel}
+          aria-label={addLabel}
+          autoComplete="off"
+          onChange={(event) => {
+            setText(event.target.value);
+            setActive(-1);
+            setOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault();
+              setOpen(true);
+              const step = event.key === "ArrowDown" ? 1 : -1;
+              setActive((i) =>
+                options.length === 0
+                  ? -1
+                  : (i + step + options.length) % options.length,
+              );
+            } else if (event.key === "Escape" && open) {
+              event.stopPropagation();
+              setOpen(false);
+            } else if (
+              event.key === "Enter" ||
+              event.key === "," ||
+              event.key === " "
+            ) {
+              event.preventDefault();
+              if (event.key === "Enter" && options[active])
+                pick(options[active]);
+              else commit();
+            }
+          }}
+          onBlur={() => {
+            setOpen(false);
             commit();
-          }
-        }}
-        onBlur={commit}
-        className="min-h-11 w-full rounded-lg bg-surface-container-highest px-3 focus:bg-secondary-container"
-      />
-      <datalist id={listId}>
-        {matchingSuggestions(suggestions, value, text).map((tag) => (
-          <option key={tag} value={tag} />
-        ))}
-      </datalist>
+          }}
+          className="min-h-11 w-full rounded-lg bg-surface-container-highest px-3 focus:bg-secondary-container"
+        />
+        {open && options.length > 0 && (
+          <ul
+            id={listId}
+            role="listbox"
+            aria-labelledby={inputId}
+            className="glass shadow-ambient absolute inset-x-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-xl p-1"
+          >
+            {options.map((tag, index) => (
+              <li
+                key={tag}
+                role="option"
+                aria-selected={index === active}
+                /* mousedown statt click: das Feld soll den Fokus (und die Liste) nicht vorher verlieren */
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  pick(tag);
+                }}
+                className={`min-h-9 cursor-pointer rounded-lg px-3 py-1.5 hover:bg-surface-bright ${index === active ? "bg-surface-bright" : ""}`}
+              >
+                {tag}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

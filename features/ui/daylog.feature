@@ -80,3 +80,17 @@ Feature: Day log grouping
     When I open the app at "/log"
     And I click "Projekt"
     Then I see the group "Nicht zugeordnet" with "1h"
+
+  @ui @US-UM04
+  Scenario: Project suggestions open only after typing
+    Given the known projects are "+Produkt, +Plattform"
+    When I open the app
+    And I click "Zeit nachtragen"
+    And I focus the field "Projekt hinzufügen"
+    Then the field "Projekt hinzufügen" offers no suggestions
+    When I enter "+Pro" into the field "Projekt hinzufügen"
+    Then the suggestions of the field "Projekt hinzufügen" are "+Produkt"
+    When I pick the suggestion "+Produkt"
+    Then the field "Projekt hinzufügen" offers no suggestions
+    When I focus the field "Projekt hinzufügen"
+    Then the field "Projekt hinzufügen" offers no suggestions

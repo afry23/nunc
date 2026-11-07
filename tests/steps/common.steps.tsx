@@ -561,6 +561,44 @@ Then(
   },
 );
 
+Given("the known projects are {string}", (world: UiWorld, list: string) => {
+  world.fake.knownTags = {
+    ...world.fake.knownTags,
+    projects: list.split(",").map((p) => p.trim()),
+  };
+});
+
+Then(
+  "the suggestions of the field {string} are {string}",
+  async (_world: UiWorld, label: string, list: string) => {
+    const expected = list.split(",").map((p) => p.trim());
+    await waitFor(() => {
+      const box = screen.getByRole("listbox", { name: label });
+      const seen = Array.from(box.querySelectorAll("[role=option]")).map((o) =>
+        normalize(o.textContent),
+      );
+      expect(seen).toEqual(expected);
+    });
+  },
+);
+
+When(
+  "I pick the suggestion {string}",
+  async (_world: UiWorld, name: string) => {
+    const option = await screen.findByRole("option", { name });
+    await act(async () => {
+      fireEvent.mouseDown(option);
+    });
+  },
+);
+
+Then(
+  "the field {string} offers no suggestions",
+  (_world: UiWorld, label: string) => {
+    expect(screen.queryByRole("listbox", { name: label })).toBeNull();
+  },
+);
+
 Then("I do not see a dialog", async () => {
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });
