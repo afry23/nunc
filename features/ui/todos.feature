@@ -317,6 +317,174 @@ Feature: Todo list
     And I see "Kickoff"
     And I see "1h 30m"
 
+  @ui @US-RV03
+  Scenario: The details edit the task line
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    And I enter "Bericht schreiben +work" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht schreiben +work" }
+      """
+
+  @ui @US-RV03
+  Scenario: The time needed is planned in pomodoros
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    And I enter "3" into the field "Anzahl Pomodoros"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht estp:3" }
+      """
+
+  @ui @US-RV03
+  Scenario: The time needed is planned in hours and minutes
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    And I choose the option "Stunden und Minuten"
+    And I enter "1" into the field "Stunden"
+    And I enter "30" into the field "Minuten"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht est:90" }
+      """
+
+  @ui @US-RV03
+  Scenario: The time needed can be removed
+    Given the todos:
+      | rawText         |
+      | Bericht estp:3  |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    And I enter "" into the field "Anzahl Pomodoros"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht" }
+      """
+
+  @ui @US-RV03
+  Scenario: Changing the time needed keeps a single estimate in the line
+    Given the todos:
+      | rawText                        |
+      | (A) Bericht +work plan:2026-11-06 estp:2 |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    Then the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "(A) Bericht plan:2026-11-06"
+    And the field "Anzahl Pomodoros" contains "2"
+    When I enter "3" into the field "Anzahl Pomodoros"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "(A) Bericht plan:2026-11-06 +work estp:3" }
+      """
+
+  @ui @US-RV03
+  Scenario: Projects and contexts are edited as tags, the text stays in the line
+    Given the todos:
+      | rawText                           |
+      | (A) Bericht +work @office est:30  |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    Then the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "(A) Bericht"
+    When I click "+work entfernen"
+    And I enter "+home" into the field "Projekt hinzufügen"
+    And I press the key "Enter" in the field "Projekt hinzufügen"
+    And I enter "@phone" into the field "Kontext hinzufügen"
+    And I press the key "Enter" in the field "Kontext hinzufügen"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "(A) Bericht +home @office @phone est:30" }
+      """
+
+  @ui @US-RV03
+  Scenario: A tag typed into the line is not duplicated by the tag input
+    Given the todos:
+      | rawText         |
+      | Bericht +work   |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    And I enter "Bericht +work @office" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht +work @office" }
+      """
+
+  @ui @US-RV03
+  Scenario: Switching the unit replaces the estimate
+    Given the todos:
+      | rawText        |
+      | Bericht estp:3 |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    And I choose the option "Stunden und Minuten"
+    And I enter "45" into the field "Minuten"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht est:45" }
+      """
+
+  @ui @US-RV03
+  Scenario: Nothing is saved with an invalid time needed
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    And I enter "0" into the field "Anzahl Pomodoros"
+    Then the button "Speichern" is disabled
+
+  @ui @US-RV03
+  Scenario: The edit dialog closes after saving and Cancel leaves the task unchanged
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    Then I see a dialog with the text "Aufgabe bearbeiten"
+    When I click "Abbrechen"
+    Then I do not see a dialog
+    And the backend did not receive "update_todo"
+
+  @ui @US-RV03
+  Scenario: The details compare the estimate with the effort so far
+    Given the todos:
+      | rawText        |
+      | Bericht estp:4 |
+    And the task time of todo 1 is:
+      """
+      { "estimateCheck": { "estimate": { "unit": "pomodoros", "value": 4 }, "actual": 5, "delta": 1, "verdict": "over" } }
+      """
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    Then I see "Bisher 5 Pomodoros von 4 Pomodoros (+1 Pomodoros)"
+    And I see "länger als geschätzt"
+
   @ui @US-UM03
   Scenario: A task without time says so
     Given the todos:
@@ -349,7 +517,8 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I enter "Bericht abgeben +work" into the field "todo.txt-Zeile"
+    And I click "Bearbeiten"
+    And I enter "Bericht abgeben +work" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
     And I click "Speichern"
     Then the backend received "update_todo" with:
       """

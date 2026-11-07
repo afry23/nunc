@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Duration, NaiveDate, Utc};
+use nunc_core::estimate::todo_check;
 use nunc_core::manual_entry::validate_entry;
 use nunc_core::model::{KnownTags, Session, known_tags, normalize_tags};
 use nunc_core::task_time::{TaskTime, task_time};
@@ -113,17 +114,23 @@ pub fn get_day_timeline(
 #[tauri::command]
 #[specta::specta]
 pub fn get_task_time(state: State<'_, AppState>, todo_id: i32) -> Result<TaskTime, AppError> {
-    let (sessions, details) = state.db.with(|conn| {
+    let (sessions, details, todos) = state.db.with(|conn| {
         Ok::<_, nunc_store::StoreError>((
             nunc_store::list_sessions(conn)?,
             nunc_store::list_session_details(conn)?,
+            nunc_store::list_all_todos(conn)?,
         ))
     })?;
     let notes: HashMap<i32, String> = details
         .into_iter()
         .map(|(id, detail)| (id, detail.note))
         .collect();
-    Ok(task_time(&sessions, todo_id, &notes))
+    let mut time = task_time(&sessions, todo_id, &notes);
+    time.estimate_check = todos
+        .iter()
+        .find(|todo| todo.id == todo_id)
+        .and_then(|todo| todo_check(todo, &sessions));
+    Ok(time)
 }
 
 /// Die Notiz einer Session (leer, wenn es keine gibt).

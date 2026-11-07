@@ -1378,3 +1378,17 @@ fn an_empty_note_deletes_the_day_note() {
     h.ok("close_day", json!({ "action": "keep", "note": "  " }));
     assert_eq!(h.ok("get_day_note", json!({ "date": today })), "");
 }
+
+#[test]
+fn setting_the_minute_estimate_replaces_a_pomodoro_estimate() {
+    let h = Harness::new();
+    let todo = h.ok("add_todo", json!({ "rawText": "Report +work estp:3" }));
+    let id = todo["id"].as_i64().unwrap();
+    let moved = h.ok("set_todo_estimate", json!({ "id": id, "estimateMin": 30 }));
+    assert_eq!(moved["rawText"], "Report +work est:30");
+    let cleared = h.ok(
+        "set_todo_estimate",
+        json!({ "id": id, "estimateMin": null }),
+    );
+    assert_eq!(cleared["rawText"], "Report +work");
+}

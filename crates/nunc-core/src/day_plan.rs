@@ -19,7 +19,12 @@ pub struct PlanFields {
     pub due: Option<NaiveDate>,
     pub plan: Option<NaiveDate>,
     pub estimate_min: Option<u32>,
+    /// Schätzung in Pomodoros (`estp:N`); je Todo gilt eine Einheit, die Aufrufer setzen nur eine der beiden.
+    pub estimate_pomodoros: Option<u32>,
 }
+
+/// Höchste Schätzung in Pomodoros.
+pub const MAX_ESTIMATE_POMODOROS: u32 = 999;
 
 /// Höchste Schätzung in Minuten (eine Woche); größere Werte gelten nicht als Schätzung.
 pub const MAX_ESTIMATE_MIN: u32 = 7 * 24 * 60;
@@ -30,6 +35,7 @@ pub enum PlanKey {
     Due,
     Plan,
     Estimate,
+    EstimatePomodoros,
 }
 
 impl PlanKey {
@@ -38,6 +44,7 @@ impl PlanKey {
             Self::Due => "due",
             Self::Plan => "plan",
             Self::Estimate => "est",
+            Self::EstimatePomodoros => "estp",
         }
     }
 }
@@ -60,6 +67,16 @@ fn parse_estimate(value: &str) -> Option<u32> {
         .filter(|minutes| (1..=MAX_ESTIMATE_MIN).contains(minutes))
 }
 
+fn parse_estimate_pomodoros(value: &str) -> Option<u32> {
+    if !value.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    value
+        .parse::<u32>()
+        .ok()
+        .filter(|count| (1..=MAX_ESTIMATE_POMODOROS).contains(count))
+}
+
 /// Liest die Planungsfelder aus der Beschreibung. Kommt ein Schlüssel mehrfach vor, gilt der erste gültige Wert;
 /// ungültige Werte (`due:morgen`, `est:0`) zählen nicht und bleiben gewöhnlicher Text.
 pub fn plan_fields(description: &str) -> PlanFields {
@@ -72,6 +89,9 @@ pub fn plan_fields(description: &str) -> PlanFields {
             "due" if fields.due.is_none() => fields.due = parse_day(value),
             "plan" if fields.plan.is_none() => fields.plan = parse_day(value),
             "est" if fields.estimate_min.is_none() => fields.estimate_min = parse_estimate(value),
+            "estp" if fields.estimate_pomodoros.is_none() => {
+                fields.estimate_pomodoros = parse_estimate_pomodoros(value);
+            }
             _ => {}
         }
     }
@@ -85,6 +105,7 @@ fn is_field(word: &str, key: PlanKey) -> bool {
     name == key.name()
         && match key {
             PlanKey::Estimate => parse_estimate(value).is_some(),
+            PlanKey::EstimatePomodoros => parse_estimate_pomodoros(value).is_some(),
             PlanKey::Due | PlanKey::Plan => parse_day(value).is_some(),
         }
 }
@@ -95,6 +116,7 @@ fn is_field(word: &str, key: PlanKey) -> bool {
 pub fn with_field(description: &str, key: PlanKey, value: Option<&str>) -> String {
     let valid = value.is_none_or(|v| match key {
         PlanKey::Estimate => parse_estimate(v).is_some(),
+        PlanKey::EstimatePomodoros => parse_estimate_pomodoros(v).is_some(),
         PlanKey::Due | PlanKey::Plan => parse_day(v).is_some(),
     });
     if !valid {
@@ -142,6 +164,10 @@ fn words(text: &str) -> Vec<(&str, &str)> {
 pub enum PlanError {
     #[error("Die Schätzung muss zwischen 1 und {MAX_ESTIMATE_MIN} Minuten liegen.")]
     InvalidEstimate,
+    #[error("Die Schätzung muss zwischen 1 und {MAX_ESTIMATE_POMODOROS} Pomodoros liegen.")]
+    InvalidEstimatePomodoros,
+    #[error("Eine Aufgabe trägt entweder eine Schätzung in Minuten oder in Pomodoros.")]
+    ConflictingEstimates,
 }
 
 /// Setzt alle drei Planungsfelder einer todo.txt-Zeile auf `fields` (`None` entfernt das Feld). Priorität, Datumsangaben
@@ -153,6 +179,15 @@ pub fn apply_plan(raw_text: &str, fields: &PlanFields) -> Result<String, PlanErr
     {
         return Err(PlanError::InvalidEstimate);
     }
+    if fields
+        .estimate_pomodoros
+        .is_some_and(|count| !(1..=MAX_ESTIMATE_POMODOROS).contains(&count))
+    {
+        return Err(PlanError::InvalidEstimatePomodoros);
+    }
+    if fields.estimate_min.is_some() && fields.estimate_pomodoros.is_some() {
+        return Err(PlanError::ConflictingEstimates);
+    }
     let mut parsed = parse_line(raw_text);
     let day = |day: Option<NaiveDate>| day.map(|d| d.format("%Y-%m-%d").to_string());
     let estimate = fields.estimate_min.map(|m| m.to_string());
@@ -163,6 +198,12 @@ pub fn apply_plan(raw_text: &str, fields: &PlanFields) -> Result<String, PlanErr
     );
     description = with_field(&description, PlanKey::Plan, day(fields.plan).as_deref());
     description = with_field(&description, PlanKey::Estimate, estimate.as_deref());
+    let pomodoros = fields.estimate_pomodoros.map(|c| c.to_string());
+    description = with_field(
+        &description,
+        PlanKey::EstimatePomodoros,
+        pomodoros.as_deref(),
+    );
     parsed.description = description;
     Ok(build_raw_text(&parsed))
 }

@@ -27,7 +27,7 @@ export function splitSegments(description: string): Segment[] {
 }
 
 /** Planungsfelder des Tagesplaners (`due:`, `plan:`, `est:`, ADR 0027); nur zum Ausblenden im Titel. */
-const PLAN_WORD = /^(?:(?:due|plan):\d{4}-\d{2}-\d{2}|est:\d+)$/;
+const PLAN_WORD = /^(?:(?:due|plan):\d{4}-\d{2}-\d{2}|estp?:\d+)$/;
 
 /** Beschreibung ohne Tags und Planungsfelder für die Anzeige im Titel (z. B. Auswahlliste); sie bleiben im Rohtext. */
 export function titleOf(todo: Pick<Todo, "description">): string {

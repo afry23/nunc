@@ -53,12 +53,31 @@ fn estimate_is(world: &mut DomainWorld, expected: String) {
     assert_eq!(world.day_plan.fields.estimate_min, expected);
 }
 
+#[then(expr = "the estimate in pomodoros is {word}")]
+fn estimate_pomodoros_is(world: &mut DomainWorld, expected: String) {
+    let expected = (expected != "none").then(|| expected.parse::<u32>().expect("Pomodoros"));
+    assert_eq!(world.day_plan.fields.estimate_pomodoros, expected);
+}
+
+#[when(
+    expr = "I apply the pomodoro estimate {string} and the minute estimate {string} to the line {string}"
+)]
+fn apply_estimates(world: &mut DomainWorld, pomodoros: String, minutes: String, line: String) {
+    let fields = PlanFields {
+        estimate_min: (!minutes.is_empty()).then(|| minutes.parse().expect("Minuten")),
+        estimate_pomodoros: (!pomodoros.is_empty()).then(|| pomodoros.parse().expect("Pomodoros")),
+        ..PlanFields::default()
+    };
+    world.day_plan.line = Some(apply_plan(&line, &fields));
+}
+
 #[when(expr = "I set {string} to {string} in {string}")]
 fn set_field(world: &mut DomainWorld, key: String, value: String, description: String) {
     let key = match key.as_str() {
         "due" => PlanKey::Due,
         "plan" => PlanKey::Plan,
         "est" => PlanKey::Estimate,
+        "estp" => PlanKey::EstimatePomodoros,
         other => panic!("unbekannter Schlüssel {other}"),
     };
     let value = (!value.is_empty()).then_some(value.as_str());
@@ -197,6 +216,7 @@ fn apply(world: &mut DomainWorld, due: String, plan: String, estimate: String, l
         due: date_or_empty(&due),
         plan: date_or_empty(&plan),
         estimate_min: (!estimate.is_empty()).then(|| estimate.parse().expect("Minuten")),
+        estimate_pomodoros: None,
     };
     world.day_plan.line = Some(apply_plan(&line, &fields));
 }
@@ -215,6 +235,17 @@ fn line_reads(world: &mut DomainWorld, expected: String) {
 fn rejected(world: &mut DomainWorld) {
     let line = world.day_plan.line.clone().expect("nichts angewendet");
     assert_eq!(line, Err(PlanError::InvalidEstimate));
+}
+
+#[then(expr = "the planning is rejected as {word}")]
+fn rejected_as(world: &mut DomainWorld, kind: String) {
+    let expected = match kind.as_str() {
+        "invalid-pomodoros" => PlanError::InvalidEstimatePomodoros,
+        "conflicting" => PlanError::ConflictingEstimates,
+        other => panic!("unbekannter Fehler {other}"),
+    };
+    let line = world.day_plan.line.clone().expect("nichts angewendet");
+    assert_eq!(line, Err(expected));
 }
 
 #[when(expr = "I close the day with the action {string}")]

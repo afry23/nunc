@@ -11,6 +11,7 @@ use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
+use crate::estimate::{Estimate, EstimateCheck, EstimateSummary, summarize, todo_check};
 use crate::journal::{JournalEntry, JournalKind};
 use crate::model::{
     Language, Session, SessionStatus, SessionType, TimerMode, Todo, effective_tags,
@@ -49,6 +50,8 @@ pub struct CompletedTodo {
     pub text: String,
     /// Erfasste Arbeitszeit an der Aufgabe im Zeitraum.
     pub minutes: u32,
+    /// Schätzung gegen den Gesamtaufwand (ganze Lebenszeit der Aufgabe); `None` ohne Schätzung.
+    pub estimate_check: Option<EstimateCheck>,
 }
 
 /// Abgeschlossene Arbeitssessions und Minuten einer Zeitmess-Technik.
@@ -143,6 +146,8 @@ pub struct Review {
     pub projects: Vec<GroupMinutes>,
     pub contexts: Vec<GroupMinutes>,
     pub completed_todos: Vec<CompletedTodo>,
+    /// Trefferquote der Schätzungen der im Zeitraum erledigten Aufgaben.
+    pub estimate_summary: EstimateSummary,
     pub journal: ReviewJournal,
 }
 
@@ -421,6 +426,16 @@ pub fn build_review(
         .map(|(id, (minutes, _, _))| (*id, *minutes))
         .collect();
 
+    let completed_todos: Vec<CompletedTodo> = finished
+        .into_iter()
+        .map(|(todo, completed_at)| CompletedTodo {
+            completed_at,
+            text: todo.description.clone(),
+            minutes: tasks_minutes.get(&todo.id).copied().unwrap_or_default(),
+            estimate_check: todo_check(todo, sessions),
+        })
+        .collect();
+
     Review {
         period,
         previous_period: previous,
@@ -457,14 +472,12 @@ pub fn build_review(
         projects: group_totals(projects),
         contexts: group_totals(contexts),
         journal: review_journal(period, journal),
-        completed_todos: finished
-            .into_iter()
-            .map(|(todo, completed_at)| CompletedTodo {
-                completed_at,
-                text: todo.description.clone(),
-                minutes: tasks_minutes.get(&todo.id).copied().unwrap_or_default(),
-            })
-            .collect(),
+        estimate_summary: summarize(
+            completed_todos
+                .iter()
+                .filter_map(|todo| todo.estimate_check),
+        ),
+        completed_todos,
     }
 }
 
@@ -489,6 +502,9 @@ struct Texts {
     day_notes: &'static str,
     sessions: &'static str,
     min: &'static str,
+    estimated: &'static str,
+    actual: &'static str,
+    pomodoro_unit: &'static str,
     none: &'static str,
     pomodoro: &'static str,
     flowtime: &'static str,
@@ -518,6 +534,9 @@ fn texts(language: Language) -> Texts {
             day_notes: "Day notes",
             sessions: "sessions",
             min: "min",
+            estimated: "estimated",
+            actual: "actual",
+            pomodoro_unit: "pomodoros",
             none: "(none)",
             pomodoro: "Pomodoro",
             flowtime: "Flowtime",
@@ -543,6 +562,9 @@ fn texts(language: Language) -> Texts {
             day_notes: "Tagesnotizen",
             sessions: "Sessions",
             min: "Min.",
+            estimated: "geschätzt",
+            actual: "tatsächlich",
+            pomodoro_unit: "Pomodoros",
             none: "(ohne Zuordnung)",
             pomodoro: "Pomodoro",
             flowtime: "Flowtime",
@@ -671,7 +693,21 @@ pub fn review_markdown(review: &Review, language: Language) -> String {
             } else {
                 String::new()
             };
-            markdown.push_str(&format!("- {}: {}{time}\n", todo.completed_at, todo.text));
+            let estimate = todo.estimate_check.map_or_else(String::new, |check| {
+                let unit = match check.estimate {
+                    Estimate::Minutes(_) => t.min,
+                    Estimate::Pomodoros(_) => t.pomodoro_unit,
+                };
+                let (Estimate::Minutes(planned) | Estimate::Pomodoros(planned)) = check.estimate;
+                format!(
+                    " [{} {planned} {unit}, {} {} {unit}]",
+                    t.estimated, t.actual, check.actual
+                )
+            });
+            markdown.push_str(&format!(
+                "- {}: {}{time}{estimate}\n",
+                todo.completed_at, todo.text
+            ));
         }
     }
     markdown

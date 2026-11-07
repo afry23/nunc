@@ -32,6 +32,57 @@ Feature: Day plan
       | Report xdue:2026-03-04                       | none       | none       | none     |
 
   @domain @US-TP01
+  Scenario Outline: The estimate in pomodoros is read from the description
+    When I read the planning fields of "<description>"
+    Then the estimate in pomodoros is <pomodoros>
+    And the estimate is <minutes>
+
+    Examples:
+      | description              | pomodoros | minutes |
+      | Report estp:4            | 4         | none    |
+      | Report estp:999          | 999       | none    |
+      | Report estp:1000         | none      | none    |
+      | Report estp:0            | none      | none    |
+      | Report estp:+3           | none      | none    |
+      | Report estp:3 estp:5     | 3         | none    |
+      | Report estp:4 est:30     | 4         | 30      |
+      | Report xestp:4           | none      | none    |
+
+  @domain @US-TP01
+  Scenario Outline: The pomodoro estimate is set, replaced or removed in the description
+    When I set "estp" to "<value>" in "<description>"
+    Then the description reads "<result>"
+
+    Examples:
+      | description               | value | result                    |
+      | Write report              | 3     | Write report estp:3       |
+      | Write report estp:3 +w    | 5     | Write report estp:5 +w    |
+      | Write report estp:3 +w    |       | Write report +w           |
+      | Write report estp:3       | 0     | Write report estp:3       |
+
+  @domain @US-TP01
+  Scenario Outline: A pomodoro estimate is applied to a line
+    When I apply the pomodoro estimate "<pomodoros>" and the minute estimate "<minutes>" to the line "<line>"
+    Then the line reads "<result>"
+
+    Examples:
+      | line                 | pomodoros | minutes | result               |
+      | Report +work         | 3         |         | Report +work estp:3  |
+      | Report est:30        | 3         |         | Report estp:3        |
+      | Report estp:3        |           | 45      | Report est:45        |
+
+  @domain @US-TP01
+  Scenario Outline: Invalid or conflicting estimates are rejected
+    When I apply the pomodoro estimate "<pomodoros>" and the minute estimate "<minutes>" to the line "Report"
+    Then the planning is rejected as <error>
+
+    Examples:
+      | pomodoros | minutes | error |
+      | 0         |         | invalid-pomodoros |
+      | 1000      |         | invalid-pomodoros |
+      | 3         | 30      | conflicting |
+
+  @domain @US-TP01
   Scenario Outline: A planning field is set, replaced or removed in the description
     When I set "<key>" to "<value>" in "<description>"
     Then the description reads "<result>"

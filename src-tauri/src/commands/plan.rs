@@ -78,7 +78,7 @@ pub fn plan_todo(
     change_plan(&state, id, |fields| fields.plan = day)
 }
 
-/// Setzt die Schätzung (Minuten, 1–10080); `null` entfernt sie. Frist und Plan-Tag bleiben.
+/// Setzt die Schätzung (Minuten, 1–10080); `null` entfernt sie samt einer Pomodoro-Schätzung. Frist und Plan-Tag bleiben.
 #[tauri::command]
 #[specta::specta]
 pub fn set_todo_estimate(
@@ -86,7 +86,11 @@ pub fn set_todo_estimate(
     id: i32,
     estimate_min: Option<u32>,
 ) -> Result<Todo, AppError> {
-    change_plan(&state, id, |fields| fields.estimate_min = estimate_min)
+    change_plan(&state, id, |fields| {
+        // je Aufgabe eine Einheit (ADR 0035): die Pomodoro-Schätzung entfällt mit
+        fields.estimate_min = estimate_min;
+        fields.estimate_pomodoros = None;
+    })
 }
 
 /// Tagesabschluss (ADR 0027): behandelt die noch eingeplanten Einträge von heute nach `action` und speichert die

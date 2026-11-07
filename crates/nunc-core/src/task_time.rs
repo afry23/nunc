@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
+use crate::estimate::EstimateCheck;
 use crate::model::{Session, SessionStatus, SessionType, TimerMode};
 
 /// Ein Zeiteintrag an einer Aufgabe.
@@ -28,6 +29,8 @@ pub struct TaskTime {
     pub todo_id: i32,
     pub total_min: u32,
     pub entries: Vec<TaskEntry>,
+    /// Schätzung gegen bisherigen Aufwand; vom Aufrufer gesetzt (`estimate::todo_check`), `None` ohne Schätzung.
+    pub estimate_check: Option<EstimateCheck>,
 }
 
 /// Die abgeschlossenen Arbeitssessions von `todo_id`; abgebrochene, übersprungene und Pausen zählen nicht.
@@ -59,5 +62,6 @@ pub fn task_time(sessions: &[Session], todo_id: i32, notes: &HashMap<i32, String
         todo_id,
         total_min: entries.iter().map(|entry| entry.minutes).sum(),
         entries,
+        estimate_check: None,
     }
 }
