@@ -612,8 +612,6 @@ export function createFakeBackend(): FakeBackend {
         .length;
     },
     plan_todo: ({ id }: { id: number; day: string | null }) => find(id),
-    set_todo_effort_estimate: ({ id }: { id: number; estimate: unknown }) =>
-      find(id),
     set_todo_estimate: ({ id }: { id: number; estimateMin: number | null }) =>
       find(id),
     get_review: ({ from, to }: { from: string; to: string }) => ({

@@ -28,6 +28,30 @@ export function estimateOf(description: string): Estimate | null {
   return pomodoros !== null ? { unit: "pomodoros", value: pomodoros } : null;
 }
 
+function isEstimateWord(word: string): boolean {
+  return (
+    parseWord(word, "est", MAX_MINUTES) !== null ||
+    parseWord(word, "estp", MAX_POMODOROS) !== null
+  );
+}
+
+/** Die todo.txt-Zeile ohne gültige `est:`/`estp:`-Wörter; der übrige Text bleibt wortgleich. */
+export function withoutEstimate(line: string): string {
+  return line
+    .replace(/(\s*)(\S+)/g, (whole: string, _lead: string, word: string) =>
+      isEstimateWord(word) ? "" : whole,
+    )
+    .trim();
+}
+
+/** Die Zeile mit genau dieser Schätzung (oder ohne): ersetzt vorhandene `est:`/`estp:`-Wörter, neue stehen am Ende. */
+export function withEstimate(line: string, estimate: Estimate | null): string {
+  const base = withoutEstimate(line);
+  if (estimate === null) return base;
+  const word = `${estimate.unit === "pomodoros" ? "estp" : "est"}:${estimate.value}`;
+  return base === "" ? word : `${base} ${word}`;
+}
+
 /** Die Schätzung aus den Eingabefeldern; `null` bei leerer oder ungültiger Eingabe. */
 export function estimateFromInput(
   mode: EstimateMode,

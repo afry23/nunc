@@ -84,7 +84,6 @@ impl Harness {
                 plan::get_day_plan,
                 plan::plan_todo,
                 plan::set_todo_estimate,
-                plan::set_todo_effort_estimate,
                 plan::close_day,
                 review::get_review,
                 review::get_day_note,
@@ -1381,37 +1380,15 @@ fn an_empty_note_deletes_the_day_note() {
 }
 
 #[test]
-fn the_effort_estimate_keeps_one_unit_and_can_be_cleared() {
+fn setting_the_minute_estimate_replaces_a_pomodoro_estimate() {
     let h = Harness::new();
-    let todo = h.ok("add_todo", json!({ "rawText": "Report +work" }));
+    let todo = h.ok("add_todo", json!({ "rawText": "Report +work estp:3" }));
     let id = todo["id"].as_i64().unwrap();
-    let set = |estimate: serde_json::Value| {
-        h.ok(
-            "set_todo_effort_estimate",
-            json!({ "id": id, "estimate": estimate }),
-        )["rawText"]
-            .as_str()
-            .unwrap()
-            .to_owned()
-    };
-    assert_eq!(
-        set(json!({ "unit": "pomodoros", "value": 3 })),
-        "Report +work estp:3"
-    );
-    assert_eq!(
-        set(json!({ "unit": "minutes", "value": 90 })),
-        "Report +work est:90"
-    );
-    assert_eq!(set(json!(null)), "Report +work");
-    assert_eq!(
-        h.err_code(
-            "set_todo_effort_estimate",
-            json!({ "id": id, "estimate": { "unit": "pomodoros", "value": 1000 } }),
-        ),
-        "invalid_input"
-    );
-    // set_todo_estimate (Minuten) räumt die Pomodoro-Schätzung ab
-    set(json!({ "unit": "pomodoros", "value": 2 }));
     let moved = h.ok("set_todo_estimate", json!({ "id": id, "estimateMin": 30 }));
     assert_eq!(moved["rawText"], "Report +work est:30");
+    let cleared = h.ok(
+        "set_todo_estimate",
+        json!({ "id": id, "estimateMin": null }),
+    );
+    assert_eq!(cleared["rawText"], "Report +work");
 }

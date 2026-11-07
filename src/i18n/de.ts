@@ -641,8 +641,6 @@ export const de = {
   "estimate.pomodoroInput": "Anzahl Pomodoros",
   "estimate.hours": "Stunden",
   "estimate.minutes": "Minuten",
-  "estimate.save": "Zeitbedarf speichern",
-  "estimate.clear": "Zeitbedarf entfernen",
   "estimate.none": "Noch nicht geschätzt.",
   "estimate.pomodoros": "{count} Pomodoros",
   "estimate.exact": "genau getroffen",
@@ -653,4 +651,7 @@ export const de = {
   "review.estimatePair": "geschätzt {estimate}, tatsächlich {actual} ({delta})",
   "review.estimateSummary":
     "Schätzungen: {onTarget} von {count} im Rahmen ({percent} %), {under} schneller, {over} länger",
+  "taskEdit.title": "Aufgabe bearbeiten",
+  "taskEdit.open": "Bearbeiten",
+  "estimate.hint": "Leer lassen, wenn die Aufgabe nicht geschätzt werden soll.",
 } as const satisfies Record<string, string>;

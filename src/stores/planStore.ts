@@ -4,7 +4,6 @@ import {
   unwrap,
   type CloseAction,
   type DayPlan,
-  type Estimate,
   type TimelineBlock,
 } from "../lib/api";
 import { trackedMinutes } from "../lib/dayPlan";
@@ -35,8 +34,6 @@ interface PlanStoreState {
   planTodo: (id: number, day: string | null) => Promise<void>;
   /** Setzt die Schätzung in Minuten; `null` entfernt sie. */
   setEstimate: (id: number, minutes: number | null) => Promise<void>;
-  /** Setzt die Schätzung in Minuten oder Pomodoros; `null` entfernt sie. */
-  setEffort: (id: number, estimate: Estimate | null) => Promise<void>;
 }
 
 export const usePlanStore = create<PlanStoreState>((set, get) => {
@@ -84,11 +81,6 @@ export const usePlanStore = create<PlanStoreState>((set, get) => {
     planTodo: (id, day) =>
       guard(async () => {
         await unwrap(commands.planTodo(id, day));
-        await reloadTodos();
-      }),
-    setEffort: (id, estimate) =>
-      guard(async () => {
-        await unwrap(commands.setTodoEffortEstimate(id, estimate));
         await reloadTodos();
       }),
     setEstimate: (id, minutes) =>

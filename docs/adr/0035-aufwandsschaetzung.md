@@ -13,8 +13,9 @@ oft in Pomodoros, und der Rückblick beantwortet nicht, ob die Schätzung gestim
 
 - **Zweites Planungswort `estp:N`** (Pomodoros, 1 bis 999) neben `est:N`, ebenfalls in der Beschreibung. Keine
   Migration, kein neues Sync-Format; der Preis ist derselbe wie bei `est:` (gemeinsames LWW-Register der Beschreibung).
-- **Eine Einheit je Aufgabe.** Die Commands `set_todo_effort_estimate` und `set_todo_estimate` entfernen die jeweils
-  andere Angabe; `apply_plan` lehnt beide zugleich ab. Steht von Hand doch beides in der Zeile, gewinnen die Minuten.
+- **Eine Einheit je Aufgabe.** Der Bearbeiten-Dialog setzt die Zeile aus Text und Zeitbedarf zusammen
+  (`withEstimate`, ein `update_todo`-Aufruf); `set_todo_estimate` (Tagesplan) entfernt eine Pomodoro-Schätzung;
+  `apply_plan` lehnt beide Angaben zugleich ab. Steht von Hand doch beides in der Zeile, gewinnen die Minuten.
 - **Vergleich in der Einheit der Schätzung** (`nunc_core::estimate`): Minuten gegen die Fokuszeit, Pomodoros gegen
   die abgeschlossenen Pomodoro-Sessions der Aufgabe. Der tatsächliche Aufwand ist der der **ganzen Lebenszeit** der
   Aufgabe (abgeschlossene Arbeitssessions, wie `task_time`); abgebrochene Sessions zählen nicht. Die Planansicht
@@ -22,7 +23,7 @@ oft in Pomodoros, und der Rückblick beantwortet nicht, ob die Schätzung gestim
   der Schätzung.
 - **Urteil:** Abweichung bis 20 % der Schätzung ist „im Rahmen“, darunter „schneller“, darüber „länger“.
 - **Anzeige:** Rückblick (erledigte Aufgaben mit Soll/Ist, Summenzeile, Markdown-Export) und Aufgabendetails
-  (Fortschritt gegen Schätzung). Das Detail bearbeitet die todo.txt-Zeile und den Zeitbedarf.
+  (Fortschritt gegen Schätzung). Ein modaler Dialog („Bearbeiten“ im Detail) bearbeitet die todo.txt-Zeile ohne Schätzung und den Zeitbedarf.
 
 ## Verworfen
 

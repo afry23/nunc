@@ -638,8 +638,6 @@ export const en: Record<keyof typeof de, string> = {
   "estimate.pomodoroInput": "Number of pomodoros",
   "estimate.hours": "Hours",
   "estimate.minutes": "Minutes",
-  "estimate.save": "Save time needed",
-  "estimate.clear": "Remove time needed",
   "estimate.none": "Not estimated yet.",
   "estimate.pomodoros": "{count} pomodoros",
   "estimate.exact": "spot on",
@@ -650,4 +648,7 @@ export const en: Record<keyof typeof de, string> = {
   "review.estimatePair": "estimated {estimate}, actual {actual} ({delta})",
   "review.estimateSummary":
     "Estimates: {onTarget} of {count} on target ({percent} %), {under} faster, {over} longer",
+  "taskEdit.title": "Edit task",
+  "taskEdit.open": "Edit",
+  "estimate.hint": "Leave empty if the task should not be estimated.",
 };

@@ -324,6 +324,7 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
+    And I click "Bearbeiten"
     And I enter "Bericht schreiben +work" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
     And I click "Speichern"
     Then the backend received "update_todo" with:
@@ -338,11 +339,12 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
+    And I click "Bearbeiten"
     And I enter "3" into the field "Anzahl Pomodoros"
-    And I click "Zeitbedarf speichern"
-    Then the backend received "set_todo_effort_estimate" with:
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
       """
-      { "id": 1, "estimate": { "unit": "pomodoros", "value": 3 } }
+      { "id": 1, "rawText": "Bericht estp:3" }
       """
 
   @ui @US-RV03
@@ -352,13 +354,14 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
+    And I click "Bearbeiten"
     And I choose the option "Stunden und Minuten"
     And I enter "1" into the field "Stunden"
     And I enter "30" into the field "Minuten"
-    And I click "Zeitbedarf speichern"
-    Then the backend received "set_todo_effort_estimate" with:
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
       """
-      { "id": 1, "estimate": { "unit": "minutes", "value": 90 } }
+      { "id": 1, "rawText": "Bericht est:90" }
       """
 
   @ui @US-RV03
@@ -368,21 +371,70 @@ Feature: Todo list
       | Bericht estp:3  |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
-    And I click "Zeitbedarf entfernen"
-    Then the backend received "set_todo_effort_estimate" with:
+    And I click "Bearbeiten"
+    And I enter "" into the field "Anzahl Pomodoros"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
       """
-      { "id": 1, "estimate": null }
+      { "id": 1, "rawText": "Bericht" }
       """
 
   @ui @US-RV03
-  Scenario: Nothing is saved without a valid time needed
+  Scenario: Changing the time needed keeps a single estimate in the line
+    Given the todos:
+      | rawText                        |
+      | (A) Bericht +work plan:2026-11-06 estp:2 |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    Then the field "Aufgabe bearbeiten (todo.txt-Zeile)" contains "(A) Bericht +work plan:2026-11-06"
+    And the field "Anzahl Pomodoros" contains "2"
+    When I enter "3" into the field "Anzahl Pomodoros"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "(A) Bericht +work plan:2026-11-06 estp:3" }
+      """
+
+  @ui @US-RV03
+  Scenario: Switching the unit replaces the estimate
+    Given the todos:
+      | rawText        |
+      | Bericht estp:3 |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    And I choose the option "Stunden und Minuten"
+    And I enter "45" into the field "Minuten"
+    And I click "Speichern"
+    Then the backend received "update_todo" with:
+      """
+      { "id": 1, "rawText": "Bericht est:45" }
+      """
+
+  @ui @US-RV03
+  Scenario: Nothing is saved with an invalid time needed
     Given the todos:
       | rawText |
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
+    And I click "Bearbeiten"
     And I enter "0" into the field "Anzahl Pomodoros"
-    Then the button "Zeitbedarf speichern" is disabled
+    Then the button "Speichern" is disabled
+
+  @ui @US-RV03
+  Scenario: The edit dialog closes after saving and Cancel leaves the task unchanged
+    Given the todos:
+      | rawText |
+      | Bericht |
+    When I open the app at "/tasks"
+    And I click "Details: Bericht"
+    And I click "Bearbeiten"
+    Then I see a dialog with the text "Aufgabe bearbeiten"
+    When I click "Abbrechen"
+    Then I do not see a dialog
+    And the backend did not receive "update_todo"
 
   @ui @US-RV03
   Scenario: The details compare the estimate with the effort so far
@@ -430,6 +482,7 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     And I click "Details: Bericht"
+    And I click "Bearbeiten"
     And I enter "Bericht abgeben +work" into the field "Aufgabe bearbeiten (todo.txt-Zeile)"
     And I click "Speichern"
     Then the backend received "update_todo" with:

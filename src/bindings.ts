@@ -118,13 +118,8 @@ export const commands = {
 	getDayPlan: () => typedError<DayPlan, AppError>(__TAURI_INVOKE("get_day_plan")),
 	/**  Plant das Todo für den Tag `day` ein; `null` nimmt es vom Plan. Frist und Schätzung bleiben. */
 	planTodo: (id: number, day: string | null) => typedError<Todo, AppError>(__TAURI_INVOKE("plan_todo", { id, day })),
-	/**  Setzt die Schätzung (Minuten, 1–10080); `null` entfernt sie. Frist und Plan-Tag bleiben. */
+	/**  Setzt die Schätzung (Minuten, 1–10080); `null` entfernt sie samt einer Pomodoro-Schätzung. Frist und Plan-Tag bleiben. */
 	setTodoEstimate: (id: number, estimateMin: number | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_estimate", { id, estimateMin })),
-	/**
-	 *  Setzt die Schätzung in Minuten (1–10080) oder Pomodoros (1–999); `null` entfernt sie. Je Aufgabe gilt eine Einheit
-	 *  (ADR 0035), die andere wird entfernt.
-	 */
-	setTodoEffortEstimate: (id: number, estimate: { unit: "minutes"; value: number } | { unit: "pomodoros"; value: number } | null) => typedError<Todo, AppError>(__TAURI_INVOKE("set_todo_effort_estimate", { id, estimate })),
 	/**
 	 *  Tagesabschluss (ADR 0027): behandelt die noch eingeplanten Einträge von heute nach `action` und speichert die
 	 *  Tagesnotiz, wenn `note` gesetzt ist (ein leerer Text löscht sie). Alles oder nichts. Liefert, wie viele Einträge

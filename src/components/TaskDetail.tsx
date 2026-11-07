@@ -14,7 +14,7 @@ import { subtaskProgress, titleOf } from "../lib/todos";
 import { usePlanStore } from "../stores/planStore";
 import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
-import { EstimateField } from "./EstimateField";
+import { TaskEditDialog } from "./TaskEditDialog";
 import { StartButton } from "./StartButton";
 import { Button } from "./ui";
 
@@ -27,6 +27,7 @@ export function TaskDetail({ id }: { id: number }) {
     s.plan?.items.find((item) => item.todoId === id),
   );
 
+  const [editing, setEditing] = useState(false);
   const timerState = useTimerStore((s) => s.snapshot.state);
   const [time, setTime] = useState<TaskTime | null>(null);
   // neu laden, wenn der Timer anhält: dann ist eine Session dazugekommen
@@ -52,6 +53,7 @@ export function TaskDetail({ id }: { id: number }) {
   }
 
   const progress = subtaskProgress(all, id);
+  const estimate = estimateOf(todo.description);
   const rows: [string, string][] = [
     [t("task.priority"), todo.priority ?? "–"],
     [t("task.projects"), todo.projectTags.join(" ") || "–"],
@@ -96,24 +98,22 @@ export function TaskDetail({ id }: { id: number }) {
         </p>
       </header>
 
-      {!todo.completed && (
-        <div>
+      <div className="flex flex-wrap items-center gap-3">
+        {!todo.completed && (
           <StartButton
             todoId={todo.id}
             title={titleOf(todo)}
             variant="button"
           />
-        </div>
-      )}
+        )}
+        <Button onClick={() => setEditing(true)}>{t("taskEdit.open")}</Button>
+      </div>
 
-      {/* neuer Schlüssel nach jedem Speichern: das Feld beginnt wieder mit der gespeicherten Zeile */}
-      <RawLine key={todo.rawText} id={todo.id} rawText={todo.rawText} />
+      <p>
+        <span className="text-on-surface-variant">{t("estimate.label")}: </span>
+        {estimate ? formatEstimate(estimate) : t("estimate.none")}
+      </p>
 
-      <EstimateField
-        key={todo.rawText}
-        id={todo.id}
-        estimate={estimateOf(todo.description)}
-      />
       {time?.estimateCheck && (
         <section
           aria-label={t("estimate.label")}
@@ -197,38 +197,9 @@ export function TaskDetail({ id }: { id: number }) {
           </>
         )}
       </section>
+      {editing && (
+        <TaskEditDialog todo={todo} onClose={() => setEditing(false)} />
+      )}
     </article>
-  );
-}
-
-function RawLine({ id, rawText }: { id: number; rawText: string }) {
-  const t = useT();
-  const [draft, setDraft] = useState(rawText);
-  const changed = draft.trim() !== rawText.trim();
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (changed) void useTodoStore.getState().update(id, draft);
-      }}
-      className="flex flex-col gap-2"
-    >
-      <label className="flex flex-col gap-1">
-        <span className="label-md text-on-surface-variant">
-          {t("task.raw")}
-        </span>
-        <textarea
-          value={draft}
-          rows={2}
-          onChange={(event) => setDraft(event.target.value)}
-          className="w-full min-w-0 rounded-lg bg-surface-container-highest p-3 font-mono text-sm text-on-surface focus:bg-secondary-container"
-        />
-      </label>
-      <div>
-        <Button type="submit" variant="primary" disabled={!changed}>
-          {t("task.save")}
-        </Button>
-      </div>
-    </form>
   );
 }
