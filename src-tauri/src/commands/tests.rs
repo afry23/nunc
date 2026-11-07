@@ -87,7 +87,6 @@ impl Harness {
                 plan::close_day,
                 review::get_review,
                 review::get_day_note,
-                review::get_day_focus,
                 review::save_journal_note,
                 review::add_achievement,
                 review::update_achievement,
@@ -913,38 +912,6 @@ fn a_timesheet_range_is_limited_to_a_year() {
 fn week_end(day: &str) -> String {
     let date: chrono::NaiveDate = day.parse().unwrap();
     nunc_core::journal::week_end(date).to_string()
-}
-
-#[test]
-fn the_day_focus_is_saved_apart_from_the_note_and_stays_out_of_the_review() {
-    let h = Harness::new();
-    let day = local_day(at(7, 0));
-    assert_eq!(h.ok("get_day_focus", json!({ "date": day })), json!(""));
-    h.ok(
-        "save_journal_note",
-        json!({ "kind": "day_focus", "date": day, "text": " Ship the API " }),
-    );
-    h.ok(
-        "save_journal_note",
-        json!({ "kind": "day_note", "date": day, "text": "Calm day" }),
-    );
-    assert_eq!(
-        h.ok("get_day_focus", json!({ "date": day })),
-        json!("Ship the API")
-    );
-    assert_eq!(
-        h.ok("get_day_note", json!({ "date": day })),
-        json!("Calm day")
-    );
-    let review = h.ok("get_review", json!({ "from": day, "to": week_end(&day) }));
-    assert_eq!(review["journal"]["dayNotes"][0]["text"], "Calm day");
-    assert_eq!(review["journal"]["dayNotes"].as_array().unwrap().len(), 1);
-
-    h.ok(
-        "save_journal_note",
-        json!({ "kind": "day_focus", "date": day, "text": "" }),
-    );
-    assert_eq!(h.ok("get_day_focus", json!({ "date": day })), json!(""));
 }
 
 #[test]

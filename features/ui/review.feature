@@ -45,17 +45,6 @@ Feature: Review in the times view
     And I see "1h 25m"
     And I see "Book hotel"
 
-  @ui @US-RV02
-  Scenario: The day focus of the period is listed with the day notes
-    Given the review is:
-      """
-      { "journal": { "achievements": [], "weekNotes": [], "dayNotes": [],
-        "dayFocus": [{ "id": "note:focus:2026-03-02", "date": "2026-03-02", "text": "Finish the report" }] } }
-      """
-    When I open the app at "/review"
-    Then I see "Fokus der Tage"
-    And I see "Finish the report"
-
   @ui @US-RV01
   Scenario: Without completed tasks the list says so
     When I open the app at "/times"
@@ -191,7 +180,7 @@ Feature: Review in the times view
   Scenario: Day notes are listed and can be added and emptied
     Given the review is:
       """
-      { "journal": { "achievements": [], "weekNotes": [], "dayFocus": [],
+      { "journal": { "achievements": [], "weekNotes": [],
         "dayNotes": [{ "id": "note:day:2026-03-02", "date": "2026-03-02", "text": "Calm day" }] } }
       """
     When I open the app at "/times"
@@ -210,7 +199,7 @@ Feature: Review in the times view
   Scenario: A month review shows the week reviews of the month read-only
     Given the review is:
       """
-      { "journal": { "achievements": [], "dayNotes": [], "dayFocus": [],
+      { "journal": { "achievements": [], "dayNotes": [],
         "weekNotes": [{ "id": "note:week:2026-03-08", "date": "2026-03-08", "text": "Good week" }] } }
       """
     When I open the app at "/times"

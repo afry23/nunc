@@ -75,3 +75,13 @@ Vier gleichrangige Hauptbereiche, auf Desktop (Seitenleiste) und Android (untere
 - Kein Backend- und kein Schema-Eingriff in dieser Stufe.
 - Maestro- und WebdriverIO-Flows starten auf „Heute“ und gehen für den Timer über „Timer“.
 - Weitere Etappen: [ui-umbau-plan.md](../ui-umbau-plan.md) (E2–E6, das Entfernen des Habit-Trackers steht in [ADR 0033](./0033-habits-entfernt.md)).
+
+## Nachtrag (ADR 0034)
+
+- „Heute“ und „Timer“ sind zwei Reiter (`DayTabs`, mittig oben): `/` zeigt die Tagesübersicht, `/focus` den Timer.
+  „Starten“ an einer Aufgabe wählt sie im Timer vor (`selectTodo`) und öffnet den Reiter „Timer“; Modus wählen und
+  Starten passiert dort. Die Schätzung in „Heute“ ist nur für die Planung, nicht die Timer-Dauer.
+- Der Tagesfokus (ADR 0032) und „Fokus der Tage“ im Rückblick entfallen.
+- **Starten (Änderung):** „Starten“ an einer Aufgabe ist ein geteilter Knopf (`StartButton`): ▶ startet sofort im zuletzt
+  benutzten Modus (`activeMode`), der Pfeil daneben wählt Pomodoro, Flowtime oder Stoppuhr, startet ebenfalls sofort und
+  merkt den Modus. Danach öffnet sich der Timer. Das ersetzt die Vorwahl der Aufgabe oben; gilt in „Heute“ und in „Aufgaben“.

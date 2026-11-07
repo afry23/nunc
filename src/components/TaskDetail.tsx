@@ -6,8 +6,8 @@ import { subtaskProgress, titleOf } from "../lib/todos";
 import { usePlanStore } from "../stores/planStore";
 import { useTimerStore } from "../stores/timerStore";
 import { useTodoStore } from "../stores/todoStore";
-import { PlayIcon } from "./icons";
-import { ActionButton, Button } from "./ui";
+import { StartButton } from "./StartButton";
+import { Button } from "./ui";
 
 /** Details einer Aufgabe: Beschreibung, Eigenschaften und die rohe todo.txt-Zeile zum Bearbeiten. */
 export function TaskDetail({ id }: { id: number }) {
@@ -89,13 +89,11 @@ export function TaskDetail({ id }: { id: number }) {
 
       {!todo.completed && (
         <div>
-          <ActionButton
-            icon={<PlayIcon />}
-            variant="primary"
-            onClick={() => void useTimerStore.getState().startTodo(todo.id)}
-          >
-            {t("task.start")}
-          </ActionButton>
+          <StartButton
+            todoId={todo.id}
+            title={titleOf(todo)}
+            variant="button"
+          />
         </div>
       )}
 

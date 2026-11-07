@@ -76,7 +76,13 @@ async function press(key: string, target: Element | Document): Promise<void> {
 }
 
 function clickable(name: string): HTMLElement {
-  for (const role of ["button", "link", "radio", "menuitem"] as const) {
+  for (const role of [
+    "button",
+    "link",
+    "radio",
+    "menuitem",
+    "menuitemradio",
+  ] as const) {
     const found = screen.queryByRole(role, { name });
     if (found) return found;
   }
@@ -515,7 +521,14 @@ Then("I see the buttons {string}", async (_world: UiWorld, list: string) => {
 });
 
 Then("I see the menu items {string}", async (_world: UiWorld, list: string) => {
-  for (const name of names(list)) await screen.findByRole("menuitem", { name });
+  for (const name of names(list)) {
+    await waitFor(() => {
+      const found =
+        screen.queryByRole("menuitem", { name }) ??
+        screen.queryByRole("menuitemradio", { name });
+      if (!found) throw new Error(`Kein Menüeintrag "${name}" gefunden`);
+    });
+  }
 });
 
 Then(
@@ -619,13 +632,6 @@ Then("the field {string} exists", async (_world: UiWorld, label: string) => {
 Then("the field {string} does not exist", (_world: UiWorld, label: string) => {
   expect(screen.queryByLabelText(label)).toBeNull();
 });
-
-Given(
-  "the day focus for {word} is {string}",
-  (world: UiWorld, day: string, text: string) => {
-    world.fake.focus[day] = text;
-  },
-);
 
 Then(
   "the field {string} contains {string}",

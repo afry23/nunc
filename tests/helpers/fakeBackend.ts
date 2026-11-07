@@ -160,8 +160,6 @@ export interface FakeBackend extends BackendMock {
   restoreError: { code: string; message: string } | null;
   /** Zeilen von `get_timesheet` je Gruppierung: Minuten für Montag bis Sonntag. */
   timesheet: Partial<Record<GroupBy, TimesheetSeed[]>>;
-  /** Tagesfokus je Tag (`get_day_focus`). */
-  focus: Record<string, string>;
   /** Notizen je Session-Id (`get_session_note`). */
   sessionNotes: Record<number, string>;
   /** Antwort von `get_task_time` je Todo-Id. */
@@ -287,14 +285,13 @@ export function createFakeBackend(): FakeBackend {
       projects: [],
       contexts: [],
       completedTodos: [],
-      journal: { achievements: [], weekNotes: [], dayNotes: [], dayFocus: [] },
+      journal: { achievements: [], weekNotes: [], dayNotes: [] },
     },
     reviewPath: null,
     timesheet: {},
     sessionNotes: {},
     taskTime: {},
     timeline: {},
-    focus: {},
     sessionError: null,
     knownTags: { projects: [], contexts: [] },
     providerError: null,
@@ -595,7 +592,6 @@ export function createFakeBackend(): FakeBackend {
     get_day_note: ({ date }: { date: string }) =>
       fake.review.journal.dayNotes.find((item) => item.date === date)?.text ??
       "",
-    get_day_focus: ({ date }: { date: string }) => fake.focus[date] ?? "",
     close_day: ({ note }: { action: string; note: string | null }) => {
       if (note !== null) {
         const date = fake.dayPlan.day;
@@ -622,14 +618,10 @@ export function createFakeBackend(): FakeBackend {
       date,
       text,
     }: {
-      kind: "day_focus" | "day_note" | "week_note";
+      kind: "day_note" | "week_note";
       date: string;
       text: string;
     }) => {
-      if (kind === "day_focus") {
-        fake.focus[date] = text.trim();
-        return null;
-      }
       const key = kind === "week_note" ? "weekNotes" : "dayNotes";
       const others = fake.review.journal[key].filter(
         (item) => item.date !== date,

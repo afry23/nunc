@@ -13,6 +13,8 @@ export type MenuAction = {
   label: string;
   onSelect: () => void;
   disabled?: boolean;
+  /** Auswahl-Eintrag (Radio): `true` markiert den aktuellen Wert. Ohne Angabe ein gewöhnlicher Eintrag. */
+  checked?: boolean;
   /** Ausgeblendete Einträge zählen nicht (bequemer als Bedingungen im Aufrufer). */
   hidden?: boolean;
 };
@@ -25,11 +27,14 @@ export function ActionMenu({
   label,
   icon,
   actions,
+  triggerClassName = "",
 }: {
   /** Zugänglicher Name des Auslösers, z. B. „Aktionen: Bericht“. */
   label: string;
   icon: ReactNode;
   actions: MenuAction[];
+  /** Zusätzliche Klassen des Auslösers (z. B. schmaler im geteilten Start-Knopf). */
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
@@ -106,6 +111,7 @@ export function ActionMenu({
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={toggle}
+        className={triggerClassName}
       >
         {icon}
       </IconButton>
@@ -126,14 +132,18 @@ export function ActionMenu({
                 <button
                   key={action.label}
                   type="button"
-                  role="menuitem"
+                  role={
+                    action.checked === undefined ? "menuitem" : "menuitemradio"
+                  }
+                  aria-checked={action.checked}
                   disabled={action.disabled}
                   onClick={() => {
                     setOpen(false);
                     action.onSelect();
                   }}
-                  className="min-h-11 rounded-lg px-3 text-left text-on-surface transition-colors hover:bg-surface-bright disabled:cursor-not-allowed disabled:opacity-40"
+                  className={`min-h-11 rounded-lg px-3 text-left text-on-surface transition-colors hover:bg-surface-bright disabled:cursor-not-allowed disabled:opacity-40 ${action.checked ? "font-semibold" : ""}`}
                 >
+                  {action.checked && <span aria-hidden>✓ </span>}
                   {action.label}
                 </button>
               ))}

@@ -304,7 +304,6 @@ fn journal_entries(world: &mut DomainWorld, step: &Step) {
         let date = day(&row[1]);
         let mut entry = match row[0].as_str() {
             "day_note" => JournalEntry::day_note(date, &row[2], &clock),
-            "day_focus" => JournalEntry::day_focus(date, &row[2], &clock),
             "week_note" => JournalEntry::week_note(date, &row[2], &clock),
             "achievement" => JournalEntry::achievement(format!("a-{index}"), date, &row[2], &clock),
             other => panic!("unbekannte Art {other}"),
@@ -331,7 +330,6 @@ fn journal_lists(world: &mut DomainWorld, group: String, expected: String) {
         "achievements" => &journal.achievements,
         "week_notes" => &journal.week_notes,
         "day_notes" => &journal.day_notes,
-        "day_focus" => &journal.day_focus,
         other => panic!("unbekannte Gruppe {other}"),
     };
     assert_eq!(lines(items), expected);

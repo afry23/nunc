@@ -332,25 +332,6 @@ Feature: Review report
     And the review day_notes are "2026-03-06: Long Friday"
 
   @domain @US-RV02
-  Scenario: The review lists the day focus of the period and the export has a section for it
-    Given the journal entries:
-      | kind      | date       | text               | deleted |
-      | day_focus | 2026-03-03 | Finish the report  |         |
-      | day_focus | 2026-03-02 | Plan the week      |         |
-      | day_focus | 2026-03-09 | After the period   |         |
-      | day_focus | 2026-03-04 | Taken back         | yes     |
-    When I build the review from 2026-03-02 to 2026-03-08
-    Then the review day_focus are "2026-03-02: Plan the week | 2026-03-03: Finish the report"
-    When I export the review as Markdown in English
-    Then the Markdown contains:
-      """
-      ## Day focus
-
-      - 2026-03-02: Plan the week
-      - 2026-03-03: Finish the report
-      """
-
-  @domain @US-RV02
   Scenario: A month review shows the week notes of weeks that end in the month
     Given the journal entries:
       | kind      | date       | text            | deleted |
