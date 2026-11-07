@@ -88,6 +88,7 @@ export function DayLog({ day }: { day: string }) {
             <>
               <Segmented<DayGroupBy>
                 label={t("daylog.group")}
+                fill
                 value={groupBy}
                 onChange={setGroupBy}
                 options={[
@@ -179,7 +180,10 @@ function EntryList({
     <ul aria-label={t("daylog.list")} className="flex flex-col gap-2">
       {blocks.map((block) => {
         const tags = [...block.projectTags, ...block.contextTags];
-        const range = `${formatTimeOfDay(block.start)}–${formatTimeOfDay(block.end)}`;
+        const range =
+          block.start === block.end
+            ? formatTimeOfDay(block.start)
+            : `${formatTimeOfDay(block.start)}–${formatTimeOfDay(block.end)}`;
         return (
           <li key={block.sessionId}>
             <button

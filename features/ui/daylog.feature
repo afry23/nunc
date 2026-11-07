@@ -25,6 +25,12 @@ Feature: Day log grouping
     And I do not see "Ohne Aufgabe"
 
   @ui @US-UM04
+  Scenario: A task is named without its tags
+    When I open the app
+    Then I see "Bericht"
+    And I do not see "Bericht +work"
+
+  @ui @US-UM04
   Scenario: Grouped by project the time per project is shown
     When I open the app
     And I click "Projekt"

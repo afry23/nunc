@@ -1,6 +1,7 @@
 import { useT } from "../i18n";
 import type { DayTimeline, TimelineBlock, Todo } from "../lib/api";
 import { formatTimeOfDay } from "../lib/format";
+import { titleOf } from "../lib/todos";
 import { blockColor, blockPlacement, timelineWindow } from "../lib/timesheet";
 
 /** Pixel je Stunde; die Spalte wird dadurch höher als der Bildschirm und scrollt mit der Seite. */
@@ -15,7 +16,7 @@ export function blockName(
   if (block.sessionType !== "work")
     return t(`timeline.type.${block.sessionType}`);
   const todo = todos.find((candidate) => candidate.id === block.todoId);
-  return todo?.description ?? t("timeline.noTodo");
+  return todo ? titleOf(todo) : t("timeline.noTodo");
 }
 
 /**
