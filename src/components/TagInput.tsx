@@ -97,6 +97,16 @@ export function TagInput({
               event.stopPropagation();
               setOpen(false);
             } else if (
+              event.key === "Tab" &&
+              !event.shiftKey &&
+              open &&
+              options.length > 0 &&
+              (active >= 0 || text.trim() !== "")
+            ) {
+              /* Tab übernimmt den markierten, sonst den ersten Vorschlag; ohne Treffer bleibt Tab ein Fokuswechsel */
+              event.preventDefault();
+              pick(options[Math.max(active, 0)]);
+            } else if (
               event.key === "Enter" ||
               event.key === "," ||
               event.key === " "
@@ -104,6 +114,13 @@ export function TagInput({
               event.preventDefault();
               if (event.key === "Enter" && options[active])
                 pick(options[active]);
+              else if (
+                event.key === "Enter" &&
+                open &&
+                options.length === 1 &&
+                text.trim() !== ""
+              )
+                pick(options[0]);
               else commit();
             }
           }}

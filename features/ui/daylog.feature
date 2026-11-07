@@ -94,3 +94,54 @@ Feature: Day log grouping
     Then the field "Projekt hinzufügen" offers no suggestions
     When I focus the field "Projekt hinzufügen"
     Then the field "Projekt hinzufügen" offers no suggestions
+
+  @ui @US-UM04
+  Scenario: Tab takes the first suggestion
+    Given the known projects are "+Bonus, +Bohrer, +Produkt"
+    When I open the app
+    And I click "Zeit nachtragen"
+    And I enter "bo" into the field "Projekt hinzufügen"
+    And I press the key "Tab" in the field "Projekt hinzufügen"
+    Then I see the buttons "+Bonus entfernen"
+    And the field "Projekt hinzufügen" is empty
+
+  @ui @US-UM04
+  Scenario Outline: The arrow keys select a suggestion that <key> takes
+    Given the known projects are "+Bonus, +Bohrer, +Produkt"
+    When I open the app
+    And I click "Zeit nachtragen"
+    And I enter "bo" into the field "Projekt hinzufügen"
+    And I press the key "ArrowDown" in the field "Projekt hinzufügen"
+    And I press the key "ArrowDown" in the field "Projekt hinzufügen"
+    And I press the key "<key>" in the field "Projekt hinzufügen"
+    Then I see the buttons "+Bohrer entfernen"
+    And I do not see the button "+Bonus entfernen"
+
+    Examples:
+      | key   |
+      | Tab   |
+      | Enter |
+
+  @ui @US-UM04
+  Scenario Outline: A single suggestion is taken by <key>
+    Given the known projects are "+Bonus, +Produkt"
+    When I open the app
+    And I click "Zeit nachtragen"
+    And I enter "pro" into the field "Projekt hinzufügen"
+    And I press the key "<key>" in the field "Projekt hinzufügen"
+    Then I see the buttons "+Produkt entfernen"
+
+    Examples:
+      | key   |
+      | Tab   |
+      | Enter |
+
+  @ui @US-UM04
+  Scenario: Enter with several suggestions and none selected keeps the typed text
+    Given the known projects are "+Bonus, +Bohrer"
+    When I open the app
+    And I click "Zeit nachtragen"
+    And I enter "bo" into the field "Projekt hinzufügen"
+    And I press the key "Enter" in the field "Projekt hinzufügen"
+    Then I see the buttons "+bo entfernen"
+
