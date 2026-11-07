@@ -39,6 +39,9 @@ Feature: Recurring tasks
       | Mail rec:1b                         | 2026-03-06 | Mail rec:1b due:2026-03-09      |
       | Mail rec:3b                         | 2026-03-04 | Mail rec:3b due:2026-03-09      |
       | Mail rec:1b                         | 2026-03-07 | Mail rec:1b due:2026-03-09      |
+      | Mail rec:1b                         | 2026-03-08 | Mail rec:1b due:2026-03-09      |
+      | Mail rec:1b                         | 2026-03-02 | Mail rec:1b due:2026-03-03      |
+      | Mail rec:5b                         | 2026-03-02 | Mail rec:5b due:2026-03-09      |
       | Water rec:1d plan:2026-03-04        | 2026-03-04 | Water rec:1d due:2026-03-05     |
       | Water                               | 2026-03-04 | none                            |
       | Water rec:0d                        | 2026-03-04 | none                            |

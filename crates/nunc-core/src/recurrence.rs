@@ -97,19 +97,18 @@ pub fn with_recurrence(description: &str, rule: Option<Recurrence>) -> String {
     )
 }
 
-fn is_weekend(day: NaiveDate) -> bool {
-    matches!(day.weekday(), Weekday::Sat | Weekday::Sun)
+/// Der nächste Werktag nach `day`: Freitag und Samstag springen auf den Montag, sonst der Folgetag.
+fn next_business_day(day: NaiveDate) -> NaiveDate {
+    let skip = match day.weekday() {
+        Weekday::Fri => 3,
+        Weekday::Sat => 2,
+        _ => 1,
+    };
+    day.checked_add_days(Days::new(skip)).unwrap_or(day)
 }
 
-fn add_business_days(mut day: NaiveDate, count: u32) -> NaiveDate {
-    let mut left = count;
-    while left > 0 {
-        day = day.succ_opt().unwrap_or(day);
-        if !is_weekend(day) {
-            left -= 1;
-        }
-    }
-    day
+fn add_business_days(day: NaiveDate, count: u32) -> NaiveDate {
+    (0..count).fold(day, |current, _| next_business_day(current))
 }
 
 /// Die nächste Frist: Basis ist bei `strict` die bisherige Frist (fehlt sie, das Abschlussdatum), sonst das
