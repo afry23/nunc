@@ -194,6 +194,8 @@ export const en: Record<keyof typeof de, string> = {
   "todos.new": "New task",
   "todos.placeholder": "(A) Finish documentation +project @context",
   "todos.add": "Add",
+  "todos.newTitle": "Create new task",
+  "todos.created": "Task added",
   "todos.import": "Import",
   "todos.export": "Export",
   "todos.import.none": "The file contains no new tasks.",

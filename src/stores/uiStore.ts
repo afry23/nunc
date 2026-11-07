@@ -18,6 +18,10 @@ interface UiState {
   notice: Notice | null;
   /** Seitenleiste auf Icons verkleinert. */
   sidebarCollapsed: boolean;
+  /** Dialog „Neue Aufgabe“ (Seitenleiste) offen. */
+  newTaskOpen: boolean;
+  openNewTask: () => void;
+  closeNewTask: () => void;
   /** Liest die gemerkten Vorlieben (beim Start). */
   restorePrefs: () => void;
   toggleSidebar: () => void;
@@ -33,6 +37,9 @@ let nextId = 1;
 export const useUiStore = create<UiState>((set) => ({
   notice: null,
   sidebarCollapsed: false,
+  newTaskOpen: false,
+  openNewTask: () => set({ newTaskOpen: true }),
+  closeNewTask: () => set({ newTaskOpen: false }),
   restorePrefs: () => set({ sidebarCollapsed: readSidebarCollapsed() }),
   toggleSidebar: () =>
     set((state) => {
