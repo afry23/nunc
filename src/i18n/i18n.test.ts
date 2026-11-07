@@ -96,8 +96,8 @@ describe("Platzhalter und Mehrzahl", () => {
     );
     expect(translate("en", "stats.days", { count: 1 })).toBe("1 day");
     expect(translate("en", "stats.days", { count: 0 })).toBe("0 days");
-    expect(translate("de", "todos.item.edit", { title: "Bericht" })).toBe(
-      "Bearbeiten: Bericht",
+    expect(translate("de", "todos.item.start", { title: "Bericht" })).toBe(
+      "Starten: Bericht",
     );
   });
 

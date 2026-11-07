@@ -151,7 +151,7 @@ Feature: Today
       | Bericht |
     When I open the app at "/tasks"
     And I click "Aktionen: Bericht"
-    And I click "Für heute einplanen: Bericht"
+    And I click "Für heute einplanen"
     Then the backend received "plan_todo" with "id" equal to "1"
 
   @ui @US-TP01

@@ -20,7 +20,7 @@ Feature: Todo list
       | Bericht +work     |
     When I open the app at "/todos"
     And I click "Aktionen: Bericht"
-    And I click "Bearbeiten: Bericht"
+    And I click "Bearbeiten"
     And I enter "Bericht abgeben +work" into the field "Aufgabe bearbeiten: Bericht"
     And I press the key "Enter" in the field "Aufgabe bearbeiten: Bericht"
     Then the backend received "update_todo" with:
@@ -52,7 +52,7 @@ Feature: Todo list
       | Einkaufen @street |
     When I open the app at "/todos"
     And I click "Aktionen: Bericht"
-    And I click "Löschen: Bericht"
+    And I click "Löschen"
     Then the backend received "delete_todo" with:
       """
       { "id": 1 }
@@ -125,7 +125,7 @@ Feature: Todo list
     When I open the app at "/todos"
     Then I see the buttons "Verschieben: Eins, Aktionen: Eins"
     When I click "Aktionen: Eins"
-    And I click "Nach unten: Eins"
+    And I click "Nach unten"
     Then the backend received "reorder_todos" with:
       """
       { "ids": [2, 1, 3] }
@@ -175,7 +175,7 @@ Feature: Todo list
       | Teil A  |
     When I open the app at "/todos"
     And I click "Aktionen: Teil A"
-    And I click "Einrücken: Teil A"
+    And I click "Einrücken"
     Then the backend received "set_todo_parent" with:
       """
       { "id": 2, "parentId": 1 }
@@ -189,7 +189,7 @@ Feature: Todo list
       | Projekt |
     When I open the app at "/todos"
     And I click "Aktionen: Projekt"
-    And I click "Unteraufgabe hinzufügen: Projekt"
+    And I click "Unteraufgabe hinzufügen"
     And I enter "Teil A" into the field "Neue Unteraufgabe zu Projekt"
     And I press the key "Enter" in the field "Neue Unteraufgabe zu Projekt"
     Then the backend received "add_subtask" with:
@@ -205,9 +205,9 @@ Feature: Todo list
       | Bericht |
     When I open the app at "/tasks"
     Then I see the buttons "Starten: Bericht, Aktionen: Bericht"
-    And I do not see the menu item "Löschen: Bericht"
+    And I do not see the menu item "Löschen"
     When I click "Aktionen: Bericht"
-    Then I see the menu items "Für heute einplanen: Bericht, Unteraufgabe hinzufügen: Bericht, Duplizieren: Bericht, Bearbeiten: Bericht, Löschen: Bericht"
+    Then I see the menu items "Für heute einplanen, Unteraufgabe hinzufügen, Duplizieren, Bearbeiten, Löschen"
 
   @ui @US-UM03
   Scenario: A task is started from its row
@@ -237,7 +237,7 @@ Feature: Todo list
       | Bericht +work est:30 |
     When I open the app at "/tasks"
     And I click "Aktionen: Bericht"
-    And I click "Duplizieren: Bericht"
+    And I click "Duplizieren"
     Then the backend received "add_todo" with:
       """
       { "rawText": "Bericht +work est:30" }
@@ -265,7 +265,7 @@ Feature: Todo list
     When I open the app at "/tasks"
     Then I see "Heute · 1h 15m erfasst"
     When I click "Aktionen: Bericht"
-    Then I see the menu items "Vom Plan nehmen: Bericht"
+    Then I see the menu items "Vom Plan nehmen"
 
   @ui @US-UM03
   Scenario: Import and export are in the overflow menu
@@ -359,4 +359,3 @@ Feature: Todo list
   Scenario: The details of a task that is gone say so
     When I open the app at "/tasks?task=99"
     Then I see "Diese Aufgabe gibt es nicht mehr."
-
