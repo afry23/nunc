@@ -1,5 +1,6 @@
 import type { ActivityEntry, TaskTotals } from "../lib/api";
 import { useT } from "../i18n";
+import { DescriptionText } from "./TodoText";
 import { formatMinutes, shortDate } from "../lib/format";
 import { formatDelta, formatEstimate, formatInUnit } from "../lib/estimate";
 
@@ -37,7 +38,9 @@ export function TaskList({
           key={task.todoId}
           className="flex flex-wrap items-baseline justify-between gap-x-4"
         >
-          <span className="min-w-0 break-words">{task.text}</span>
+          <span className="min-w-0 break-words">
+            <DescriptionText description={task.text} />
+          </span>
           <span className="flex flex-wrap gap-x-3 tabular-nums">
             {withTime && (
               <span className="text-on-surface-variant">
@@ -98,15 +101,21 @@ export function ActivityList({
               {shortDate(entry.date)}
             </span>{" "}
             {entry.text || t("work.untitled")}
-            {[...entry.projects, ...entry.contexts].length > 0 && (
-              <span className="text-on-surface-variant">
+            {entry.projects.map((tag) => (
+              <span key={tag} className="text-primary">
                 {" "}
-                {[...entry.projects, ...entry.contexts].join(" ")}
+                {tag}
               </span>
-            )}
+            ))}
+            {entry.contexts.map((tag) => (
+              <span key={tag} className="text-secondary-fixed-dim">
+                {" "}
+                {tag}
+              </span>
+            ))}
           </span>
           {withTime && (
-            <span className="text-on-surface-variant tabular-nums">
+            <span className="shrink-0 text-on-surface-variant tabular-nums">
               {formatMinutes(entry.minutes)}
             </span>
           )}

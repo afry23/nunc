@@ -173,3 +173,17 @@ Feature: Statistics view
       { "format": "json", "request": { "period": "week" } }
       """
     And I see "Export gespeichert: /tmp/nunc-export.json"
+
+  @ui @US-ST01
+  Scenario: Task text is highlighted like in the task list without planning fields
+    Given the review is:
+      """
+      { "focusMin": 30, "tasks": [
+        { "todoId": 1, "text": "Write report +work @desk plan:2026-03-04 estp:2", "minutes": 30, "pomodoros": 1,
+          "sessions": 1, "completed": false, "completedAt": null, "projects": ["+work"], "estimateCheck": null } ] }
+      """
+    When I open the app at "/stats"
+    Then I see "+work"
+    And I see "@desk"
+    And I do not see "plan:2026-03-04"
+    And I do not see "estp:2"
