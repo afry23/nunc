@@ -393,15 +393,9 @@ fn review_journal(period: Period, entries: &[JournalEntry]) -> ReviewJournal {
 
 /// Verteilt `minutes` ab `start` auf die lokalen Stunden, die die Session überspannt (über Mitternacht hinweg).
 fn add_hours(hours: &mut [u32], start: NaiveDateTime, minutes: u32) {
-    let mut hour = start.hour() as usize;
-    let mut room = 60 - start.minute();
-    let mut left = minutes;
-    while left > 0 {
-        let chunk = left.min(room);
-        hours[hour] += chunk;
-        left -= chunk;
-        hour = (hour + 1) % 24;
-        room = 60;
+    let first = start.hour() * 60 + start.minute();
+    for minute in first..first + minutes {
+        hours[(minute / 60 % 24) as usize] += 1;
     }
 }
 
