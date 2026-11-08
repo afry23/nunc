@@ -757,6 +757,8 @@ export type TaskTotals = {
 	minutes: number,
 	pomodoros: number,
 	sessions: number,
+	/**  Priorität `A`–`Z` der Aufgabe, falls vorhanden. */
+	priority: string | null,
 	/**  Ob die Aufgabe jetzt erledigt ist, und wann. */
 	completed: boolean,
 	completedAt: string | null,

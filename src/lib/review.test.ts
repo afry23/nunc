@@ -141,6 +141,7 @@ describe("openTasks", () => {
     minutes: 10,
     pomodoros: 0,
     sessions: 1,
+    priority: null,
     completed: false,
     completedAt: null,
     projects: [],

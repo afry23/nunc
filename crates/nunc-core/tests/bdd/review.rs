@@ -478,6 +478,7 @@ fn task_details_are(world: &mut DomainWorld, step: &Step) {
                 yes_no(task.completed),
                 task.completed_at.map(|d| d.to_string()).unwrap_or_default(),
                 task.projects.join(" "),
+                task.priority.map(String::from).unwrap_or_default(),
             ]
         })
         .collect();

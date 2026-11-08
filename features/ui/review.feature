@@ -212,3 +212,14 @@ Feature: Review in the times view
     When I click "Jahr"
     Then the backend received "get_review"
     And I see "Bearbeitete Aufgaben"
+
+  @ui @US-RV04
+  Scenario: The priority of a worked-on task is shown
+    Given the review is:
+      """
+      { "tasks": [
+        { "todoId": 1, "text": "Call dentist", "priority": "B", "minutes": 30, "pomodoros": 1, "sessions": 1,
+          "completed": false, "completedAt": null, "projects": [], "estimateCheck": null } ] }
+      """
+    When I open the app at "/review"
+    Then I see "(B)"

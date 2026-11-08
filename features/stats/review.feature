@@ -397,8 +397,8 @@ Feature: Review report
   Scenario: Worked-on tasks show whether they are completed and their projects
     When I build the review from 2026-03-02 to 2026-03-08
     Then the review task details are:
-      | text                                    | minutes | completed | completed at | projects |
-      | Write report +work @desk                | 85      | no        |              | +work    |
+      | text                                    | minutes | completed | completed at | projects | priority |
+      | Write report +work @desk                | 85      | no        |              | +work    |          |
 
   @domain @US-RV02
   Scenario: Sessions without a task are listed one by one as free activities
@@ -444,3 +444,16 @@ Feature: Review report
   Scenario: A single day is compared with the day before
     When I build the review from 2026-03-03 to 2026-03-03
     Then the previous period is 2026-03-02 to 2026-03-02
+
+  @domain @US-RV04
+  Scenario: A worked-on task carries its priority
+    Given the todos:
+      | id | line                         | pomodoros | position |
+      | 7  | (B) Call dentist +health     | 0         | 1        |
+    And the sessions:
+      | start            | mode      | type | status    | minutes | todo |
+      | 2026-03-02 09:00 | stopwatch | work | completed | 20      | 7    |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review task details are:
+      | text                     | minutes | completed | completed at | projects | priority |
+      | Call dentist +health     | 20      | no        |              | +health  | B        |

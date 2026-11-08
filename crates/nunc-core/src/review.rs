@@ -87,6 +87,8 @@ pub struct TaskTotals {
     pub minutes: u32,
     pub pomodoros: u32,
     pub sessions: u32,
+    /// Priorität `A`–`Z` der Aufgabe, falls vorhanden.
+    pub priority: Option<char>,
     /// Ob die Aufgabe jetzt erledigt ist, und wann.
     pub completed: bool,
     pub completed_at: Option<NaiveDate>,
@@ -276,6 +278,7 @@ fn task_totals(
                 minutes,
                 pomodoros,
                 sessions: session_count,
+                priority: todo.priority,
                 completed: todo.completed,
                 completed_at: todo.completed_at.filter(|_| todo.completed),
                 projects: sorted_tags(&todo.project_tags),

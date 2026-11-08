@@ -1,6 +1,6 @@
 import type { ActivityEntry, TaskTotals } from "../lib/api";
 import { useT } from "../i18n";
-import { DescriptionText } from "./TodoText";
+import { DescriptionText, PriorityMark } from "./TodoText";
 import { formatMinutes, shortDate } from "../lib/format";
 import { formatDelta, formatEstimate, formatInUnit } from "../lib/estimate";
 
@@ -39,6 +39,7 @@ export function TaskList({
           className="flex flex-wrap items-baseline justify-between gap-x-4"
         >
           <span className="min-w-0 break-words">
+            <PriorityMark priority={task.priority} />{" "}
             <DescriptionText description={task.text} />
           </span>
           <span className="flex flex-wrap gap-x-3 tabular-nums">

@@ -187,3 +187,15 @@ Feature: Statistics view
     And I see "@desk"
     And I do not see "plan:2026-03-04"
     And I do not see "estp:2"
+
+  @ui @US-ST01
+  Scenario: The priority of a task is shown
+    Given the review is:
+      """
+      { "focusMin": 30, "tasks": [
+        { "todoId": 1, "text": "Call dentist", "priority": "A", "minutes": 30, "pomodoros": 1,
+          "sessions": 1, "completed": false, "completedAt": null, "projects": [], "estimateCheck": null } ] }
+      """
+    When I open the app at "/stats"
+    Then I see "(A)"
+    And I see "Call dentist"
