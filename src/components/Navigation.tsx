@@ -18,24 +18,26 @@ import {
   HelpIcon,
   PlusIcon,
   SidebarIcon,
+  StarIcon,
   TimerIcon,
 } from "./icons";
 
 export const NAV_ITEMS: {
-  to: "/" | "/tasks" | "/log" | "/review" | "/settings" | "/help";
+  to: "/" | "/tasks" | "/log" | "/review" | "/stats" | "/settings" | "/help";
   label: MessageKey;
   icon: ReactNode;
 }[] = [
   { to: "/", label: "nav.today", icon: <TimerIcon /> },
   { to: "/tasks", label: "nav.tasks", icon: <CheckIcon /> },
   { to: "/log", label: "nav.log", icon: <ClockIcon /> },
-  { to: "/review", label: "nav.review", icon: <BarsIcon /> },
+  { to: "/review", label: "nav.review", icon: <StarIcon /> },
+  { to: "/stats", label: "nav.stats", icon: <BarsIcon /> },
   { to: "/settings", label: "nav.settings", icon: <GearIcon /> },
   { to: "/help", label: "nav.help", icon: <HelpIcon /> },
 ];
 
-/** Die vier Hauptbereiche; Einstellungen und Hilfe stehen mobil im Menü der Kopfzeile. */
-export const MAIN_ITEMS = NAV_ITEMS.slice(0, 4);
+/** Die fünf Hauptbereiche; Einstellungen und Hilfe stehen mobil im Menü der Kopfzeile. */
+export const MAIN_ITEMS = NAV_ITEMS.slice(0, 5);
 
 /** Seitenleiste ab 600 px Breite (bis 1023 px als Leiste); einklappbar auf reine Icons (Beschriftung bleibt für Screenreader und Tooltip). */
 export function Sidebar({ rail = false }: { rail?: boolean }) {

@@ -1,62 +1,169 @@
 Feature: Statistics view
-  Source: REQUIREMENTS 10, 11; periods, charts, streaks, export
+  Source: REQUIREMENTS 10, 11; ADR 0037
+  The statistics show how long was worked on what: tasks, free activities, projects and contexts for a day, week,
+  month, quarter or year, with the charts always visible.
 
   @ui @REQ-10
-  Scenario: Switch between day, week, month and year
+  Scenario: The period can be switched from day to year
     When I open the app at "/stats"
-    Then the statistics were requested for the period "week"
+    Then I see "Tag"
+    And I see "Woche"
+    And I see "Monat"
+    And I see "Quartal"
+    And I see "Jahr"
+    When I click "Jahr"
+    Then the backend received "get_review"
+    And the statistics were requested for the period "year"
+    When I click "Quartal"
+    Then the statistics were requested for the period "month"
     When I click "Tag"
     Then the statistics were requested for the period "day"
-    When I click "Monat"
-    Then the statistics were requested for the period "month"
-    When I click "Jahr"
-    Then the statistics were requested for the period "year"
 
   @ui @REQ-10
-  Scenario: Bar, line, heatmap calendar and pie charts render
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes |
-      | 0       | 4         | 100     |
-      | 1       | 2         | 50      |
-      | 3       | 6         | 150     |
-    And the statistics contain the projects:
-      | project | minutes |
-      | +work   | 200     |
-      | +home   | 100     |
+  Scenario: The charts are visible without opening anything
+    Given the review has the days:
+      | daysAgo | minutes | pomodoros |
+      | 0       | 100     | 4         |
+    And the review is:
+      """
+      { "projects": [{ "group": "+work", "minutes": 100 }] }
+      """
     When I open the app at "/stats"
-    Then I see the charts "bar, line, heatmap, pie"
-    And the statistic "Fokuszeit" is "5h"
+    Then I see the charts "bar, pie"
+    And I see "1h 40m"
+    And I see "+work"
+
+  @ui @REQ-10
+  Scenario: Contexts are listed with their time
+    Given the review is:
+      """
+      { "focusMin": 100, "contexts": [{ "group": "@desk", "minutes": 100 }, { "group": null, "minutes": 20 }] }
+      """
+    When I open the app at "/stats"
+    Then I see "@desk"
+    And I see "ohne Projekt"
 
   @ui @REQ-10
   Scenario: An empty period shows an empty state
     When I open the app at "/stats"
     Then I see "Keine Sitzungen im gewählten Zeitraum."
-    And I do not see the charts "bar, line, heatmap, pie"
+    And I do not see the charts "bar, pie"
+
+  @ui @REQ-10
+  Scenario: The total is compared with the period before
+    Given the review is:
+      """
+      { "focusMin": 85, "previousFocusMin": 40 }
+      """
+    When I open the app at "/stats"
+    Then I see "1h 25m"
+    And I see "+45m gegenüber der Vorperiode (40m)"
+
+  @ui @REQ-10
+  Scenario: The bars are stacked by technique
+    Given the review has the days:
+      | daysAgo | minutes | pomodoros | pomodoroMin | flowtimeMin | stopwatchMin |
+      | 0       | 160     | 4         | 100         | 40          | 20           |
+    When I open the app at "/stats"
+    And I click "Tag"
+    Then the bar chart stacks the segments "pomodoro, flowtime, stopwatch" on the last day
+
+  @ui @REQ-10
+  Scenario: The time of day is shown as hours with work
+    Given the review is:
+      """
+      { "focusMin": 90, "hours": [0,0,0,0,0,0,0,0,0,15,60,15,0,0,0,0,0,0,0,0,0,0,0,0] }
+      """
+    When I open the app at "/stats"
+    Then I see the charts "bar, hours"
+    And I see "Tageszeit"
+
+  @ui @US-ST01
+  Scenario: Tasks are listed with time and status
+    Given the review is:
+      """
+      { "focusMin": 120, "tasks": [
+        { "todoId": 1, "text": "Write report", "minutes": 90, "pomodoros": 2, "sessions": 3,
+          "completed": false, "completedAt": null, "projects": ["+work"], "estimateCheck": null },
+        { "todoId": 2, "text": "Plan trip", "minutes": 30, "pomodoros": 1, "sessions": 1,
+          "completed": true, "completedAt": "2026-03-04", "projects": ["+home"], "estimateCheck": null } ] }
+      """
+    When I open the app at "/stats"
+    Then I see "Write report"
+    And I see "1h 30m · 3 Sessions"
+    And I see "offen"
+    And I see "Plan trip"
+    And I see "erledigt am 04.03."
+
+  @ui @US-ST01
+  Scenario: Tasks and activities can be filtered by project
+    Given the review is:
+      """
+      { "focusMin": 120, "tasks": [
+        { "todoId": 1, "text": "Write report", "minutes": 90, "pomodoros": 2, "sessions": 3,
+          "completed": false, "completedAt": null, "projects": ["+work"], "estimateCheck": null },
+        { "todoId": 2, "text": "Plan trip", "minutes": 30, "pomodoros": 1, "sessions": 1,
+          "completed": false, "completedAt": null, "projects": [], "estimateCheck": null } ],
+        "activities": [
+        { "sessionId": 1, "date": "2026-03-04", "text": "Daily", "minutes": 30, "mode": "stopwatch",
+          "projects": ["+work"], "contexts": [] },
+        { "sessionId": 2, "date": "2026-03-04", "text": "Lunch talk", "minutes": 20, "mode": "stopwatch",
+          "projects": [], "contexts": [] } ] }
+      """
+    When I open the app at "/stats"
+    And I click "Projekt"
+    And I click "+work"
+    Then I see "Write report"
+    And I see "Daily"
+    And I do not see "Plan trip"
+    And I do not see "Lunch talk"
+
+  @ui @US-ST01
+  Scenario: Free activities are listed one by one with their time
+    Given the review is:
+      """
+      { "focusMin": 50, "activities": [
+        { "sessionId": 1, "date": "2026-03-04", "text": "Daily", "minutes": 30, "mode": "stopwatch",
+          "projects": ["+foo"], "contexts": ["@meeting"] },
+        { "sessionId": 2, "date": "2026-03-05", "text": "Daily", "minutes": 20, "mode": "stopwatch",
+          "projects": ["+foo"], "contexts": ["@meeting"] } ] }
+      """
+    When I open the app at "/stats"
+    Then I see "Freie Tätigkeiten"
+    And I see "04.03."
+    And I see "05.03."
+    And I see "30m"
+    And I see "20m"
 
   @ui @REQ-10.4
-  Scenario: The current and the longest streak are shown
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes |
-      | 0       | 1         | 25      |
+  Scenario: The streaks and further figures are folded
+    Given the review is:
+      """
+      { "focusMin": 25 }
+      """
     And the statistics have a current streak of 3 and a longest streak of 8
     When I open the app at "/stats"
+    Then I do not see "Aktuelle Serie"
+    When I click "Weitere Kennzahlen"
     Then the statistic "Aktuelle Serie" is "3 Tage"
     And the statistic "Längste Serie" is "8 Tage"
 
   @ui @REQ-11
   Scenario: The export button offers CSV and JSON
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes |
-      | 0       | 1         | 25      |
+    Given the review is:
+      """
+      { "focusMin": 25 }
+      """
     When I open the app at "/stats"
     And I click "Exportieren"
     Then I see the buttons "CSV, JSON"
 
   @ui @REQ-11 @desktop
   Scenario: Saving the export writes a file
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes |
-      | 0       | 1         | 25      |
+    Given the review is:
+      """
+      { "focusMin": 25 }
+      """
     And the export is saved to "/tmp/nunc-export.json"
     When I open the app at "/stats"
     And I click "Exportieren"
@@ -66,92 +173,3 @@ Feature: Statistics view
       { "format": "json", "request": { "period": "week" } }
       """
     And I see "Export gespeichert: /tmp/nunc-export.json"
-
-  @ui @REQ-10
-  Scenario: The number of pomodoros in the period is shown, not the lifetime total
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes |
-      | 0       | 4         | 100     |
-      | 1       | 2         | 50      |
-      | 3       | 6         | 150     |
-    And the statistics count 250 pomodoros over all time
-    When I open the app at "/stats"
-    Then the statistic "Pomodoros" is "12"
-    And the statistic "Ø Pomodoros / Tag" is "1.7"
-    And the statistic "Gesamt" is "250 Pomodoros"
-    When I click "Tag"
-    Then the statistic "Pomodoros" is "4"
-
-  @ui @REQ-10
-  Scenario: The pomodoros of each day are labelled in the line chart
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes |
-      | 0       | 4         | 100     |
-      | 2       | 6         | 150     |
-    When I open the app at "/stats"
-    Then the line chart labels the days with "0, 6, 0, 4"
-
-  @ui @REQ-10
-  Scenario: Pomodoros per month are listed for month and year
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes |
-      | 0       | 4         | 100     |
-    And the statistics contain monthly data:
-      | year | month | pomodoros | minutes |
-      | 2026 | 9     | 30        | 750     |
-      | 2026 | 10    | 12        | 300     |
-    When I open the app at "/stats"
-    Then I do not see the monthly table
-    When I click "Jahr"
-    Then the month "September 2026" shows 30 pomodoros
-    And the month "Oktober 2026" shows 12 pomodoros
-
-  @ui @REQ-10
-  Scenario: The pomodoros of each day are labelled above the bars
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes |
-      | 0       | 4         | 100     |
-      | 2       | 6         | 150     |
-    When I open the app at "/stats"
-    Then the bar chart labels the days with "0, 6, 0, 4"
-
-  @ui @REQ-10
-  Scenario: The bars are stacked by timer with the count of each timer above them
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes | flowtimes | flowtimeMinutes | stopwatches | stopwatchMinutes |
-      | 0       | 4         | 160     | 2         | 40              | 1           | 16               |
-    When I open the app at "/stats"
-    Then the bar chart labels the days with "0, 0, 0, 0, 0, 0, 4 · 2 · 1"
-    And the bar chart stacks the segments "pomodoro, flowtime, stopwatch" on the last day
-    And the bar chart colors the numbers of the last day with "pomodoro, flowtime, stopwatch"
-
-  @ui @REQ-10
-  Scenario: A day with only a stopwatch shows its count in the stopwatch color
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes | stopwatches | stopwatchMinutes |
-      | 0       | 0         | 16      | 1           | 16               |
-    When I open the app at "/stats"
-    Then the bar chart labels the days with "0, 0, 0, 0, 0, 0, 1"
-    And the bar chart stacks the segments "stopwatch" on the last day
-    And the bar chart colors the numbers of the last day with "stopwatch"
-
-  @ui @REQ-10
-  Scenario: The line chart draws one line per timer in the timer color
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes | flowtimes | flowtimeMinutes | stopwatches | stopwatchMinutes |
-      | 0       | 0         | 16      | 0         | 0               | 1           | 16               |
-      | 2       | 4         | 100     | 2         | 40              | 0           | 0                |
-    When I open the app at "/stats"
-    Then the line chart draws the lines "pomodoro, flowtime, stopwatch"
-    And the line chart labels the "stopwatch" line with "1"
-    And the line chart labels the "flowtime" line with "2"
-    And the chart legend lists "Pomodoro, Flowtime, Stoppuhr"
-
-  @ui @REQ-10
-  Scenario: Timers without any session in the period get no line
-    Given the statistics contain daily data:
-      | daysAgo | pomodoros | minutes |
-      | 0       | 4         | 100     |
-    When I open the app at "/stats"
-    Then the line chart draws the lines "pomodoro"
-    And the chart legend lists "Pomodoro"

@@ -15,7 +15,7 @@ Feature: Responsive layout
     When I open the app
     Then I see a sidebar
     And the sidebar is collapsed
-    And the navigation still offers "Heute, Aufgaben, Verlauf, Rückblick, Einstellungen, Hilfe"
+    And the navigation still offers "Heute, Aufgaben, Verlauf, Rückblick, Auswertung, Einstellungen, Hilfe"
     And I do not see a bottom tab bar
     And I do not see the button "Seitenleiste ausklappen"
 

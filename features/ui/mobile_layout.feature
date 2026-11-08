@@ -1,15 +1,15 @@
 Feature: One structure on phone and desktop
   Source: docs/ui-umbau-plan.md E4, ADR 0031
-  The four areas stay the same on every screen size. A phone shows them one after another; a wide window shows
+  The five areas stay the same on every screen size. A phone shows them one after another; a wide window shows
   what belongs together side by side.
 
   @ui @US-UM04 @mobile
-  Scenario: The bottom bar offers the four main areas
+  Scenario: The bottom bar offers the five main areas
     Given the platform is "mobile"
     And the viewport is 390 pixels wide
     When I open the app
     Then I see a bottom tab bar
-    And I see a navigation with the entries "Heute, Aufgaben, Verlauf, Rückblick"
+    And I see a navigation with the entries "Heute, Aufgaben, Verlauf, Rückblick, Auswertung"
 
   @ui @US-UM04 @mobile
   Scenario: Settings and help are in the menu on a phone
@@ -26,7 +26,7 @@ Feature: One structure on phone and desktop
     Given the viewport is 1024 pixels wide
     When I open the app
     Then I do not see the button "Menü"
-    And I see a navigation with the entries "Heute, Aufgaben, Verlauf, Rückblick, Einstellungen, Hilfe"
+    And I see a navigation with the entries "Heute, Aufgaben, Verlauf, Rückblick, Auswertung, Einstellungen, Hilfe"
 
   @ui @US-UM04 @mobile
   Scenario: Today folds the day log and the notes on a phone
@@ -107,24 +107,14 @@ Feature: One structure on phone and desktop
     And I do not see the button "Tag"
 
   @ui @US-UM04 @mobile
-  Scenario: The review sections of a phone fold open on demand
+  Scenario: The worked-on tasks of a review are visible on a phone without a tap
     Given the platform is "mobile"
     And the viewport is 390 pixels wide
-    And the review is:
-      """
-      { "completedTodos": [] }
-      """
     When I open the app at "/review"
-    Then I do not see "Keine Aufgaben erledigt."
-    When I click "Erledigte Aufgaben"
-    Then I see "Keine Aufgaben erledigt."
+    Then I see "Keine Aufgaben bearbeitet."
 
   @ui @US-UM04
-  Scenario: The review sections of a wide window are open
+  Scenario: The worked-on tasks of a review are visible in a wide window
     Given the viewport is 1024 pixels wide
-    And the review is:
-      """
-      { "completedTodos": [] }
-      """
     When I open the app at "/review"
-    Then I see "Keine Aufgaben erledigt."
+    Then I see "Keine Aufgaben bearbeitet."

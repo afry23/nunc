@@ -281,6 +281,8 @@ export function createFakeBackend(): FakeBackend {
       ],
       days: [],
       tasks: [],
+      activities: [],
+      hours: Array.from({ length: 24 }, () => 0),
       combinations: [],
       projects: [],
       contexts: [],
