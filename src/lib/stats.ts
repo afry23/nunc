@@ -1,18 +1,5 @@
-import { t } from "../i18n";
-import type { DailyStats, StatsPeriod } from "../bindings";
+import type { DailyStats } from "../bindings";
 import { addDays, parseIsoDate, toIsoDate } from "./format";
-
-/** Zeitraum eines Auswertungsfensters, das mit `today` endet (lokale Tage, beide Grenzen inklusive). */
-export function periodRange(
-  period: StatsPeriod,
-  today: Date,
-): { startDate: string; endDate: string } {
-  const length = { day: 1, week: 7, month: 30, year: 365 }[period];
-  return {
-    startDate: toIsoDate(addDays(today, -(length - 1))),
-    endDate: toIsoDate(today),
-  };
-}
 
 export type DayPoint = {
   date: string;
@@ -250,9 +237,4 @@ export function periodTotals(days: DayPoint[]): {
     workMinutes,
     perDay: days.length === 0 ? 0 : pomodoros / days.length,
   };
-}
-
-/** Bezeichnung des Auswertungsfensters für die Anzeige. */
-export function periodName(period: StatsPeriod): string {
-  return t(`stats.period.${period}`);
 }

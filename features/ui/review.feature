@@ -3,55 +3,6 @@ Feature: Review in the times view
   The view "Zeiten" switches to a review of a week, month or quarter with the comparison to the period before.
 
   @ui @US-RV01
-  Scenario: The review shows focus time, comparison and sessions
-    Given the review is:
-      """
-      { "focusMin": 85, "previousFocusMin": 40, "completedSessions": 2,
-        "abortedSessions": 1, "abortRatePercent": 33 }
-      """
-    When I open the app at "/times"
-    And I click "Rückblick"
-    Then the backend received "get_review"
-    And I see "1h 25m"
-    And I see "+45m gegenüber der Vorperiode (40m)"
-    When I click "Arbeitsweise"
-    Then I see "2 abgeschlossen, 1 abgebrochen (33 % Abbrüche)"
-
-  @ui @US-RV01
-  Scenario: Projects, contexts and completed tasks are listed
-    Given the review is:
-      """
-      { "projects": [{ "group": "+work", "minutes": 85 }, { "group": null, "minutes": 20 }],
-        "contexts": [{ "group": "@desk", "minutes": 60 }],
-        "completedTodos": [{ "completedAt": "2026-03-04", "text": "Plan trip +home" }] }
-      """
-    When I open the app at "/times"
-    And I click "Rückblick"
-    Then I see "+work"
-    And I see "ohne Zuordnung"
-    And I see "@desk"
-    And I see "Plan trip +home"
-
-  @ui @US-RV01
-  Scenario: Completed tasks show the time worked on them
-    Given the review is:
-      """
-      { "completedTodos": [
-        { "completedAt": "2026-03-04", "text": "Plan trip +home", "minutes": 85 },
-        { "completedAt": "2026-03-05", "text": "Book hotel", "minutes": 0 } ] }
-      """
-    When I open the app at "/review"
-    Then I see "Plan trip +home"
-    And I see "1h 25m"
-    And I see "Book hotel"
-
-  @ui @US-RV01
-  Scenario: Without completed tasks the list says so
-    When I open the app at "/times"
-    And I click "Rückblick"
-    Then I see "Keine Aufgaben erledigt."
-
-  @ui @US-RV01
   Scenario: The period can be switched to a month and moved back
     When I open the app at "/times"
     And I click "Rückblick"
@@ -69,49 +20,6 @@ Feature: Review in the times view
     And I click "Als Markdown exportieren"
     Then the backend received "save_review_markdown"
     And I see "Rückblick gespeichert: /tmp/nunc-review.md"
-
-  @ui @US-RV01
-  Scenario: The review shows pomodoros, techniques, tasks and days
-    Given the todos:
-      | rawText           | completed |
-      | Write report +work | false     |
-    And the review is:
-      """
-      { "pomodoroCount": 3,
-        "modes": [{ "mode": "pomodoro", "sessions": 3, "minutes": 75 },
-                  { "mode": "flowtime", "sessions": 1, "minutes": 40 },
-                  { "mode": "stopwatch", "sessions": 2, "minutes": 90 }],
-        "tasks": [{ "todoId": 1, "text": "Write report +work", "minutes": 100, "pomodoros": 3, "sessions": 4 }],
-        "days": [{ "date": "2026-03-02", "minutes": 65, "pomodoros": 2 }] }
-      """
-    When I open the app at "/times"
-    And I click "Rückblick"
-    Then I see "Write report +work"
-    And I see "1h 40m · 3 Pomodoros · 4 Sessions"
-    When I click "Arbeitsweise"
-    Then I see "3 Sessions, 1h 15m"
-    And I see "1 Sessions, 40m"
-    And I see "2 Sessions, 1h 30m"
-    And I see "1h 5m · 2 Pomodoros"
-
-  @ui @US-RV01
-  Scenario: Projects and contexts are shown as they occurred together
-    Given the review is:
-      """
-      { "combinations": [
-          { "projects": ["+foo"], "contexts": ["@meeting", "@work"], "sessions": 2, "minutes": 60,
-            "notes": [{ "date": "2026-03-02", "text": "Weekly planning" }] },
-          { "projects": ["+foo"], "contexts": ["@work"], "sessions": 1, "minutes": 20, "notes": [] },
-          { "projects": [], "contexts": [], "sessions": 1, "minutes": 5, "notes": [] }] }
-      """
-    When I open the app at "/times"
-    And I click "Rückblick"
-    Then I see "+foo @meeting @work"
-    And I see "1h · 2 Sessions"
-    And I see "+foo @work"
-    And I see "20m · 1 Sessions"
-    And I see "02.03. Weekly planning"
-    And I see "ohne Zuordnung"
 
   @ui @US-RV02
   Scenario: The week review is written into the review of a week
@@ -210,51 +118,6 @@ Feature: Review in the times view
     And the field "Reflexion" does not exist
 
   @ui @US-UM06
-  Scenario: The review starts with results and ends with the way of working
-    Given the review is:
-      """
-      { "projects": [{ "group": "+work", "minutes": 85 }],
-        "completedTodos": [{ "completedAt": "2026-03-04", "text": "Plan trip +home" }] }
-      """
-    When I open the app at "/review"
-    Then the sections appear in the order "Ergebnisse und Beiträge, Arbeit nach Projekten, Erledigte Aufgaben, Notizen aus den Tagen, Reflexion, Für den nächsten Zeitraum, Arbeitsweise"
-
-  @ui @US-UM06
-  Scenario: The total is the tracked work time, the focus time is a part of it
-    Given the review is:
-      """
-      { "focusMin": 150, "previousFocusMin": 100,
-        "modes": [{ "mode": "pomodoro", "sessions": 3, "minutes": 60 },
-                  { "mode": "flowtime", "sessions": 1, "minutes": 30 },
-                  { "mode": "stopwatch", "sessions": 2, "minutes": 60 }] }
-      """
-    When I open the app at "/review"
-    Then I see "Erfasste Arbeitszeit"
-    And I see "2h 30m"
-    And I see "davon Fokuszeit (Pomodoro und Flowtime): 1h 30m"
-
-  @ui @US-UM06
-  Scenario: Tasks that were worked on but are still open are listed apart
-    Given the todos:
-      | rawText      | completed |
-      | Write report | false     |
-      | Plan trip    | true      |
-    And the review is:
-      """
-      { "tasks": [{ "todoId": 1, "text": "Write report", "minutes": 90, "pomodoros": 2, "sessions": 3 },
-                  { "todoId": 2, "text": "Plan trip", "minutes": 30, "pomodoros": 1, "sessions": 1 }] }
-      """
-    When I open the app at "/review"
-    Then I see "Bearbeitet, aber noch offen"
-    And I see "Write report"
-    And I do not see "Plan trip"
-
-  @ui @US-UM06
-  Scenario: Without open work in progress there is no such section
-    When I open the app at "/review"
-    Then I do not see "Bearbeitet, aber noch offen"
-
-  @ui @US-UM06
   Scenario: The reflection of a week asks three questions
     When I open the app at "/review"
     Then I see "Was lief gut?"
@@ -290,34 +153,73 @@ Feature: Review in the times view
     And I click "Aufgabe erstellen"
     Then the backend did not receive "add_todo"
 
-  @ui @US-UM06
-  Scenario: The way of working is folded and leads to the timer statistics
+  @ui @US-RV04
+  Scenario: The review lists the tasks worked on with their status
     Given the review is:
       """
-      { "pomodoroCount": 3, "completedSessions": 4, "abortedSessions": 1, "abortRatePercent": 20 }
+      { "tasks": [
+        { "todoId": 1, "text": "Write report", "minutes": 90, "pomodoros": 2, "sessions": 3,
+          "completed": false, "completedAt": null, "projects": ["+work"], "estimateCheck": null },
+        { "todoId": 2, "text": "Plan trip", "minutes": 30, "pomodoros": 1, "sessions": 1,
+          "completed": true, "completedAt": "2026-03-04", "projects": [], "estimateCheck": null } ] }
       """
     When I open the app at "/review"
-    Then I do not see "abgebrochen"
-    When I click "Arbeitsweise"
-    Then I see "abgebrochen"
-    And I see "Zeitmessung"
-    When I click "Timerstatistik öffnen"
-    Then I see the heading "Arbeitsweise"
+    Then I see "Bearbeitete Aufgaben"
+    And I see "Write report"
+    And I see "offen"
+    And I see "Plan trip"
+    And I see "erledigt am 04.03."
+    And I do not see "1h 30m"
 
+  @ui @US-RV04
+  Scenario: Without worked-on tasks the review says so
+    When I open the app at "/review"
+    Then I see "Keine Aufgaben bearbeitet."
+    And I see "Keine freien Tätigkeiten."
 
-  @ui @US-RV03
-  Scenario: Completed tasks show the estimate against the effort
+  @ui @US-RV04
+  Scenario: The review lists free activities one by one
     Given the review is:
       """
-      { "completedTodos": [
-        { "completedAt": "2026-03-04", "text": "Plan trip", "minutes": 85,
-          "estimateCheck": { "estimate": { "unit": "minutes", "value": 60 }, "actual": 85, "delta": 25, "verdict": "over" } },
-        { "completedAt": "2026-03-05", "text": "Book hotel", "minutes": 20,
-          "estimateCheck": { "estimate": { "unit": "pomodoros", "value": 1 }, "actual": 1, "delta": 0, "verdict": "on_target" } } ],
-        "estimateSummary": { "count": 2, "onTarget": 1, "under": 0, "over": 1 } }
+      { "activities": [
+        { "sessionId": 1, "date": "2026-03-04", "text": "Daily", "minutes": 30, "mode": "stopwatch",
+          "projects": ["+foo"], "contexts": ["@meeting"] },
+        { "sessionId": 2, "date": "2026-03-04", "text": "", "minutes": 20, "mode": "stopwatch",
+          "projects": [], "contexts": [] } ] }
       """
-    When I open the app at "/times"
-    And I click "Rückblick"
-    Then I see "geschätzt 1h, tatsächlich 1h 25m (+25m)"
-    And I see "geschätzt 1 Pomodoros, tatsächlich 1 Pomodoros (genau getroffen)"
-    And I see "Schätzungen: 1 von 2 im Rahmen (50 %), 0 schneller, 1 länger"
+    When I open the app at "/review"
+    Then I see "Daily"
+    And I see "+foo @meeting"
+    And I see "(ohne Text)"
+
+  @ui @US-RV04
+  Scenario: The review starts with the work and ends with the follow-up task
+    When I open the app at "/review"
+    Then the sections appear in the order "Bearbeitete Aufgaben, Freie Tätigkeiten, Ergebnisse und Beiträge, Notizen aus den Tagen, Reflexion, Für den nächsten Zeitraum"
+
+  @ui @US-RV04
+  Scenario: The review has no charts but leads to the statistics
+    When I open the app at "/review"
+    Then I do not see the charts "bar, pie"
+    When I click "Zahlen und Diagramme ansehen"
+    Then I see the heading "Auswertung"
+
+  @ui @US-RV04
+  Scenario: The review can be switched to a day and a year
+    When I open the app at "/review"
+    And I click "Tag"
+    Then the backend received "get_review"
+    When I click "Jahr"
+    Then the backend received "get_review"
+    And I see "Bearbeitete Aufgaben"
+
+  @ui @US-RV04
+  Scenario: The priority of a worked-on task is shown
+    Given the review is:
+      """
+      { "tasks": [
+        { "todoId": 1, "text": "Call dentist", "priority": "B", "minutes": 30, "pomodoros": 1, "sessions": 1,
+          "completed": false, "completedAt": null, "projects": [], "estimateCheck": null } ] }
+      """
+    When I open the app at "/review"
+    Then I see "(B)"

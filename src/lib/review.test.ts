@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { Todo } from "../bindings";
+import type { ActivityEntry, TaskTotals, Todo } from "../bindings";
 import {
+  bucketDays,
   clampDay,
   deltaText,
+  filterActivities,
+  filterTasks,
+  granularityFor,
+  hourRange,
+  projectOptions,
   focusOnlyMinutes,
   isWeekReviewTime,
   openTasks,
@@ -135,6 +141,11 @@ describe("openTasks", () => {
     minutes: 10,
     pomodoros: 0,
     sessions: 1,
+    priority: null,
+    completed: false,
+    completedAt: null,
+    projects: [],
+    estimateCheck: null,
   });
   const todo = (id: number, completed: boolean) =>
     ({ id, completed }) as unknown as Todo;
@@ -150,5 +161,137 @@ describe("openTasks", () => {
 
   it("drops tasks whose todo is gone", () => {
     expect(openTasks([task(9)], [])).toEqual([]);
+  });
+});
+
+describe("reviewRange for day and year", () => {
+  const today = new Date(2026, 9, 4, 10);
+  it("covers one day, also in the past", () => {
+    expect(reviewRange("day", today, 0)).toEqual({
+      from: "2026-10-04",
+      to: "2026-10-04",
+    });
+    expect(reviewRange("day", today, 2)).toEqual({
+      from: "2026-10-02",
+      to: "2026-10-02",
+    });
+  });
+  it("covers a whole calendar year", () => {
+    expect(reviewRange("year", today, 0)).toEqual({
+      from: "2026-01-01",
+      to: "2026-12-31",
+    });
+    expect(reviewRange("year", today, 1)).toEqual({
+      from: "2025-01-01",
+      to: "2025-12-31",
+    });
+  });
+});
+
+describe("bucketDays", () => {
+  const day = (date: string, minutes: number, pomodoros = 0) => ({
+    date,
+    minutes,
+    pomodoros,
+    pomodoroMin: minutes,
+    flowtimeMin: 0,
+    stopwatchMin: 0,
+  });
+  it("picks the granularity from the period", () => {
+    expect(
+      ["day", "week", "month", "quarter", "year"].map((kind) =>
+        granularityFor(kind as never),
+      ),
+    ).toEqual(["day", "day", "day", "week", "month"]);
+  });
+  it("fills every day with zero", () => {
+    const points = bucketDays(
+      [day("2026-03-03", 30, 1)],
+      "2026-03-02",
+      "2026-03-04",
+      "day",
+    );
+    expect(points.map((p) => [p.date, p.workMinutes, p.pomodoroCount])).toEqual(
+      [
+        ["2026-03-02", 0, 0],
+        ["2026-03-03", 30, 1],
+        ["2026-03-04", 0, 0],
+      ],
+    );
+  });
+  it("sums weeks starting Monday", () => {
+    const points = bucketDays(
+      [day("2026-03-01", 10), day("2026-03-02", 20), day("2026-03-08", 5)],
+      "2026-03-01",
+      "2026-03-09",
+      "week",
+    );
+    expect(
+      points.map((p) => [p.date, p.workMinutes, p.pomodoroMinutes]),
+    ).toEqual([
+      ["2026-02-23", 10, 10],
+      ["2026-03-02", 25, 25],
+      ["2026-03-09", 0, 0],
+    ]);
+  });
+  it("sums months", () => {
+    const points = bucketDays(
+      [day("2026-01-31", 10), day("2026-02-01", 20)],
+      "2026-01-01",
+      "2026-02-28",
+      "month",
+    );
+    expect(points.map((p) => [p.date, p.workMinutes])).toEqual([
+      ["2026-01-01", 10],
+      ["2026-02-01", 20],
+    ]);
+  });
+});
+
+describe("project filter", () => {
+  const task = (id: number, projects: string[]) =>
+    ({ todoId: id, projects }) as unknown as TaskTotals;
+  const activity = (id: number, projects: string[]) =>
+    ({ sessionId: id, projects }) as unknown as ActivityEntry;
+  const none = "ohne";
+  const tasks = [task(1, ["+a"]), task(2, []), task(3, ["+b", "+a"])];
+  const activities = [activity(1, []), activity(2, ["+c"])];
+  it("keeps everything without a selection", () => {
+    expect(filterTasks(tasks, [], none)).toHaveLength(3);
+    expect(filterActivities(activities, [], none)).toHaveLength(2);
+  });
+  it("matches any selected project", () => {
+    expect(filterTasks(tasks, ["+a"], none).map((t) => t.todoId)).toEqual([
+      1, 3,
+    ]);
+    expect(filterTasks(tasks, ["+b", "+z"], none).map((t) => t.todoId)).toEqual(
+      [3],
+    );
+  });
+  it("matches work without a project via the none entry", () => {
+    expect(filterTasks(tasks, [none], none).map((t) => t.todoId)).toEqual([2]);
+    expect(filterActivities(activities, [none, "+c"], none)).toHaveLength(2);
+    expect(filterActivities(activities, ["+c"], none)).toHaveLength(1);
+  });
+  it("lists the projects sorted, with the none entry first when needed", () => {
+    expect(projectOptions(tasks, activities, none)).toEqual([
+      none,
+      "+a",
+      "+b",
+      "+c",
+    ]);
+    expect(projectOptions([task(1, ["+b"])], [], none)).toEqual(["+b"]);
+  });
+});
+
+describe("hourRange", () => {
+  it("spans the first to the last hour with work", () => {
+    const hours = Array<number>(24).fill(0);
+    hours[9] = 5;
+    hours[14] = 1;
+    expect(hourRange(hours)).toEqual({ first: 9, last: 14 });
+  });
+  it("is null without work", () => {
+    expect(hourRange(Array<number>(24).fill(0))).toBeNull();
   });
 });

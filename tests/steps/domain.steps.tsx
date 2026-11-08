@@ -194,6 +194,23 @@ Given(
   (world: UiWorld, table: DataTable) => dailyFrom(world, table),
 );
 
+Given("the review has the days:", (world: UiWorld, table: DataTable) => {
+  const today = new Date();
+  const days = table.hashes().map((row) => ({
+    date: toIsoDate(addDays(today, -Number(row.daysAgo))),
+    minutes: Number(row.minutes),
+    pomodoros: Number(row.pomodoros),
+    pomodoroMin: Number(row.pomodoroMin ?? row.minutes),
+    flowtimeMin: Number(row.flowtimeMin ?? 0),
+    stopwatchMin: Number(row.stopwatchMin ?? 0),
+  }));
+  world.fake.review = {
+    ...world.fake.review,
+    days,
+    focusMin: days.reduce((sum, day) => sum + day.minutes, 0),
+  };
+});
+
 Given(
   "the statistics contain the projects:",
   (world: UiWorld, table: DataTable) => {

@@ -45,9 +45,8 @@ When("the pomodoro has ended", async () => {
 });
 
 Then("the statistics show {int} pomodoro", async (count: number) => {
-  await clickByName("Rückblick");
-  await clickByName("Arbeitsweise");
-  await clickByName("Timerstatistik öffnen");
+  await clickByName("Auswertung");
+  await clickByName("Weitere Kennzahlen");
   const term = await $(
     "//dt[normalize-space(.)='Pomodoros']/following-sibling::dd[1]",
   );

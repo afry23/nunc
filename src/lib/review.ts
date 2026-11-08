@@ -1,5 +1,13 @@
 import { t } from "../i18n";
-import type { ModeTotals, Review, TaskTotals, Todo } from "../bindings";
+import type {
+  ActivityEntry,
+  DayTotals,
+  ModeTotals,
+  Review,
+  TaskTotals,
+  Todo,
+} from "../bindings";
+import type { DayPoint } from "./stats";
 import {
   addDays,
   formatMinutes,
@@ -10,11 +18,17 @@ import {
 
 /** Reine Hilfen für den Rückblick (ADR 0025). Alle Tage sind lokale Tage (`YYYY-MM-DD`). */
 
-export type ReviewKind = "week" | "month" | "quarter";
+export type ReviewKind = "day" | "week" | "month" | "quarter" | "year";
 
-export const REVIEW_KINDS: ReviewKind[] = ["week", "month", "quarter"];
+export const REVIEW_KINDS: ReviewKind[] = [
+  "day",
+  "week",
+  "month",
+  "quarter",
+  "year",
+];
 
-const MONTHS_PER_KIND = { month: 1, quarter: 3 } as const;
+const MONTHS_PER_KIND = { month: 1, quarter: 3, year: 12 } as const;
 
 /** Zeitraum, der `periodsAgo` Wochen/Monate/Quartale vor dem Zeitraum von `today` liegt (negativ: danach). */
 export function reviewRange(
@@ -22,6 +36,10 @@ export function reviewRange(
   today: Date,
   periodsAgo: number,
 ): { from: string; to: string } {
+  if (kind === "day") {
+    const day = toIsoDate(addDays(today, -periodsAgo));
+    return { from: day, to: day };
+  }
   if (kind === "week") {
     const monday = addDays(today, -((today.getDay() + 6) % 7) - 7 * periodsAgo);
     return { from: toIsoDate(monday), to: toIsoDate(addDays(monday, 6)) };
@@ -84,4 +102,118 @@ export function openTasks(
     todos.filter((todo) => !todo.completed).map((todo) => todo.id),
   );
   return tasks.filter((task) => open.has(task.todoId));
+}
+
+/** Ein Balken des Zeitverlaufs: Beginn des Abschnitts, mit den Minuten je Zeitmessung. */
+export type Granularity = "day" | "week" | "month";
+
+/** Abschnitte der Balken: Tage bis zu einem Monat, Wochen im Quartal, Monate im Jahr. */
+export function granularityFor(kind: ReviewKind): Granularity {
+  if (kind === "quarter") return "week";
+  if (kind === "year") return "month";
+  return "day";
+}
+
+function bucketStart(date: string, granularity: Granularity): string {
+  if (granularity === "day") return date;
+  const day = parseIsoDate(date);
+  if (granularity === "month")
+    return toIsoDate(new Date(day.getFullYear(), day.getMonth(), 1, 12));
+  return toIsoDate(addDays(day, -((day.getDay() + 6) % 7)));
+}
+
+/**
+ * Tage zu Balken zusammenfassen: jeder Tag von `from` bis `to` (ohne Arbeit mit 0) bei `day`, sonst Summen je
+ * Woche (Montag) oder Monat. Die Datumsangabe eines Balkens ist sein Beginn.
+ */
+export function bucketDays(
+  days: readonly DayTotals[],
+  from: string,
+  to: string,
+  granularity: Granularity,
+): DayPoint[] {
+  const byDate = new Map(days.map((d) => [d.date, d]));
+  const buckets = new Map<string, DayPoint>();
+  const last = parseIsoDate(to);
+  for (let day = parseIsoDate(from); day <= last; day = addDays(day, 1)) {
+    const date = toIsoDate(day);
+    const key = bucketStart(date, granularity);
+    const found = byDate.get(date);
+    const bucket = buckets.get(key) ?? {
+      date: key,
+      pomodoroCount: 0,
+      workMinutes: 0,
+      breakMinutes: 0,
+      pomodoroMinutes: 0,
+      flowtimeCount: 0,
+      flowtimeMinutes: 0,
+      stopwatchCount: 0,
+      stopwatchMinutes: 0,
+    };
+    bucket.pomodoroCount += found?.pomodoros ?? 0;
+    bucket.workMinutes += found?.minutes ?? 0;
+    bucket.pomodoroMinutes += found?.pomodoroMin ?? 0;
+    bucket.flowtimeMinutes += found?.flowtimeMin ?? 0;
+    bucket.stopwatchMinutes += found?.stopwatchMin ?? 0;
+    buckets.set(key, bucket);
+  }
+  return [...buckets.values()];
+}
+
+/** Gehört etwas mit diesen Projekten zur Auswahl? `none` steht in der Auswahl für „ohne Projekt“. */
+function matchesProject(
+  projects: readonly string[],
+  selected: readonly string[],
+  none: string,
+): boolean {
+  if (selected.length === 0) return true;
+  if (projects.length === 0) return selected.includes(none);
+  return projects.some((project) => selected.includes(project));
+}
+
+/** Aufgaben, die zu mindestens einem der gewählten Projekte gehören (leere Auswahl: alle). */
+export function filterTasks(
+  tasks: readonly TaskTotals[],
+  selected: readonly string[],
+  none: string,
+): TaskTotals[] {
+  return tasks.filter((task) => matchesProject(task.projects, selected, none));
+}
+
+/** Freie Tätigkeiten mit mindestens einem der gewählten Projekte (leere Auswahl: alle). */
+export function filterActivities(
+  activities: readonly ActivityEntry[],
+  selected: readonly string[],
+  none: string,
+): ActivityEntry[] {
+  return activities.filter((entry) =>
+    matchesProject(entry.projects, selected, none),
+  );
+}
+
+/** Alle Projekte der Aufgaben und Tätigkeiten, sortiert; `none` zuerst, wenn etwas ohne Projekt vorkommt. */
+export function projectOptions(
+  tasks: readonly TaskTotals[],
+  activities: readonly ActivityEntry[],
+  none: string,
+): string[] {
+  const all = [
+    ...tasks.map((task) => task.projects),
+    ...activities.map((entry) => entry.projects),
+  ];
+  const names = [...new Set(all.flat())].sort();
+  return all.some((projects) => projects.length === 0)
+    ? [none, ...names]
+    : names;
+}
+
+/** Arbeitsminuten je Stunde als Balken-Daten; zeigt nur Stunden von der ersten bis zur letzten mit Arbeit. */
+export function hourRange(hours: readonly number[]): {
+  first: number;
+  last: number;
+} | null {
+  const used = hours.flatMap((minutes, hour) => (minutes > 0 ? [hour] : []));
+  return used.length === 0
+    ? null
+    : { first: used[0], last: used[used.length - 1] };
 }

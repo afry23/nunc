@@ -8,6 +8,7 @@ export type ShortcutAction =
   | "go-todos"
   | "go-log"
   | "go-review"
+  | "go-stats"
   | "go-settings"
   | "go-help";
 
@@ -54,6 +55,8 @@ export function shortcutFor(
       return "go-log";
     case "4":
       return "go-review";
+    case "5":
+      return "go-stats";
     case ",":
       return "go-settings";
     case "?":
@@ -71,7 +74,8 @@ export const SHORTCUTS: { keys: string; label: MessageKey }[] = [
   { keys: "1", label: "help.shortcuts.timer" },
   { keys: "2", label: "help.shortcuts.todos" },
   { keys: "3", label: "help.shortcuts.times" },
-  { keys: "4", label: "help.shortcuts.stats" },
+  { keys: "4", label: "help.shortcuts.review" },
+  { keys: "5", label: "help.shortcuts.stats" },
   { keys: ",", label: "help.shortcuts.settings" },
   { keys: "?", label: "help.shortcuts.help" },
 ];

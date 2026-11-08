@@ -5,7 +5,7 @@ Feature: Navigation
   Scenario: The areas today, tasks, log and review and the settings are available
     When I open the app
     Then I see the heading "Heute"
-    And I see a navigation with the entries "Heute, Aufgaben, Verlauf, Rückblick, Einstellungen, Hilfe"
+    And I see a navigation with the entries "Heute, Aufgaben, Verlauf, Rückblick, Auswertung, Einstellungen, Hilfe"
     When I click "Aufgaben"
     Then I see the heading "Aufgaben"
     When I click "Verlauf"
@@ -94,7 +94,7 @@ Feature: Navigation
     Then the sidebar is expanded
     When I click "Seitenleiste einklappen"
     Then the sidebar is collapsed
-    And the navigation still offers "Heute, Aufgaben, Verlauf, Rückblick, Einstellungen, Hilfe"
+    And the navigation still offers "Heute, Aufgaben, Verlauf, Rückblick, Auswertung, Einstellungen, Hilfe"
     When I click "Aufgaben"
     Then I see the heading "Aufgaben"
     And the sidebar is collapsed

@@ -44,6 +44,9 @@ export function useShortcuts(): void {
         case "go-review":
           void navigate({ to: "/review" });
           return;
+        case "go-stats":
+          void navigate({ to: "/stats" });
+          return;
         case "go-settings":
           void navigate({ to: "/settings" });
           return;

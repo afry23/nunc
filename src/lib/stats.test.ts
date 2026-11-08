@@ -6,7 +6,6 @@ import {
   linePoints,
   niceMax,
   pathThrough,
-  periodRange,
   periodTotals,
   pieSlices,
   slicePath,
@@ -23,28 +22,6 @@ const timers0 = {
   stopwatchCount: 0,
   stopwatchMinutes: 0,
 };
-
-describe("periodRange", () => {
-  const today = new Date(2026, 9, 4, 15);
-  it("ends today and covers the window", () => {
-    expect(periodRange("day", today)).toEqual({
-      startDate: "2026-10-04",
-      endDate: "2026-10-04",
-    });
-    expect(periodRange("week", today)).toEqual({
-      startDate: "2026-09-28",
-      endDate: "2026-10-04",
-    });
-    expect(periodRange("month", today)).toEqual({
-      startDate: "2026-09-05",
-      endDate: "2026-10-04",
-    });
-    expect(periodRange("year", today)).toEqual({
-      startDate: "2025-10-05",
-      endDate: "2026-10-04",
-    });
-  });
-});
 
 describe("fillDays", () => {
   it("adds missing days with zeros", () => {

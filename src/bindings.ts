@@ -222,6 +222,18 @@ export const events = {
 };
 
 /* Types */
+/**  Eine Arbeitssession ohne Aufgabe (freie Tätigkeit, ADR 0023). */
+export type ActivityEntry = {
+	sessionId: number,
+	date: string,
+	/**  Notiz der Session (die Tätigkeit); leer, wenn es keine gibt. */
+	text: string,
+	minutes: number,
+	mode: TimerMode,
+	projects: string[],
+	contexts: string[],
+};
+
 /**  Zustand der Schnittstelle für die Oberfläche. */
 export type ApiStatus = {
 	/**  Der Server lauscht. */
@@ -367,6 +379,10 @@ export type DayTotals = {
 	date: string,
 	minutes: number,
 	pomodoros: number,
+	/**  Minuten je Zeitmessung (Summe = `minutes`), für gestapelte Diagramme. */
+	pomodoroMin: number,
+	flowtimeMin: number,
+	stopwatchMin: number,
 };
 
 /**  Die Schätzung einer Aufgabe in ihrer Einheit. */
@@ -503,6 +519,10 @@ export type Review = {
 	days: DayTotals[],
 	/**  Aufgaben mit Fokuszeit, meiste Zeit zuerst. */
 	tasks: TaskTotals[],
+	/**  Freie Tätigkeiten (Sessions ohne Aufgabe), chronologisch. */
+	activities: ActivityEntry[],
+	/**  Arbeitsminuten je lokaler Stunde 0–23 über den ganzen Zeitraum. */
+	hours: number[],
 	/**  Die Tag-Kombinationen der Sessions, wie sie zusammen vorkamen; meiste Zeit zuerst. */
 	combinations: TagCombination[],
 	projects: GroupMinutes[],
@@ -737,6 +757,15 @@ export type TaskTotals = {
 	minutes: number,
 	pomodoros: number,
 	sessions: number,
+	/**  Priorität `A`–`Z` der Aufgabe, falls vorhanden. */
+	priority: string | null,
+	/**  Ob die Aufgabe jetzt erledigt ist, und wann. */
+	completed: boolean,
+	completedAt: string | null,
+	/**  Projekte der Aufgabe (sortiert, leer: ohne Projekt). */
+	projects: string[],
+	/**  Schätzung gegen den Gesamtaufwand; `None` ohne Schätzung. */
+	estimateCheck: EstimateCheck | null,
 };
 
 /**  Ein Block der Timeline. */

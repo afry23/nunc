@@ -6,7 +6,7 @@ use chrono::NaiveDate;
 use nunc_core::journal::JournalKind;
 use nunc_core::model::Language;
 use nunc_core::review::{Review, build_review, review_markdown};
-use nunc_platform::to_local_date;
+use nunc_platform::to_local;
 use tauri::{AppHandle, Runtime, State};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FilePath;
@@ -47,7 +47,7 @@ fn review_for(state: &AppState, from: NaiveDate, to: NaiveDate) -> Result<Review
         &todos,
         &notes,
         &journal,
-        &to_local_date,
+        &to_local,
     ))
 }
 
