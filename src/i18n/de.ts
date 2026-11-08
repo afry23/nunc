@@ -194,6 +194,8 @@ export const de = {
   "todos.new": "Neue Aufgabe",
   "todos.placeholder": "(A) Dokumentation fertig +projekt @kontext",
   "todos.add": "Hinzufügen",
+  "todos.newTitle": "Neue Aufgabe anlegen",
+  "todos.created": "Aufgabe angelegt",
   "todos.import": "Importieren",
   "todos.export": "Exportieren",
   "todos.import.none": "Die Datei enthält keine neuen Aufgaben.",

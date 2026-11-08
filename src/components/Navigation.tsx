@@ -16,6 +16,7 @@ import {
   DotsIcon,
   GearIcon,
   HelpIcon,
+  PlusIcon,
   SidebarIcon,
   TimerIcon,
 } from "./icons";
@@ -44,6 +45,7 @@ export function Sidebar({ rail = false }: { rail?: boolean }) {
   const collapsed = rail || stored;
   const t = useT();
   const label = collapsed ? t("nav.expand") : t("nav.collapse");
+  const openNewTask = useUiStore((s) => s.openNewTask);
 
   return (
     <nav
@@ -58,6 +60,20 @@ export function Sidebar({ rail = false }: { rail?: boolean }) {
         <p className="font-display mb-8 px-3 pt-2 text-2xl font-bold">nunc</p>
       )}
       {collapsed && <div className="h-6" />}
+      <button
+        type="button"
+        data-testid="sidebar-new-task"
+        onClick={openNewTask}
+        title={collapsed ? t("todos.new") : undefined}
+        className={`mb-2 flex min-h-12 items-center rounded-lg btn-primary font-semibold ${
+          collapsed ? "justify-center" : "gap-3 px-3"
+        }`}
+      >
+        <PlusIcon />
+        <span className={collapsed ? "sr-only" : undefined}>
+          {t("todos.new")}
+        </span>
+      </button>
       {NAV_ITEMS.map((item) => (
         <Link
           key={item.to}

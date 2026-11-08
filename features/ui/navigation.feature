@@ -106,3 +106,32 @@ Feature: Navigation
     Given the sidebar was collapsed earlier
     When I open the app
     Then the sidebar is collapsed
+
+  @ui @REQ-4.2
+  Scenario: A task can be created from the sidebar in any view
+    When I open the app
+    And I click "Neue Aufgabe"
+    Then I see the heading "Neue Aufgabe anlegen"
+    When I enter "Bericht +work" into the field "Neue Aufgabe"
+    And I click "Hinzufügen"
+    Then the backend received "add_todo" with:
+      """
+      { "rawText": "Bericht +work" }
+      """
+    And I do not see a dialog
+    And I see "Aufgabe angelegt"
+
+  @ui @REQ-4.2
+  Scenario: Escape closes the new task dialog without creating a task
+    When I open the app
+    And I click "Neue Aufgabe"
+    And I press the key "Escape" in the field "Neue Aufgabe"
+    Then I do not see a dialog
+    And the backend did not receive "add_todo"
+
+  @ui @REQ-4.2
+  Scenario: The collapsed sidebar still offers the new task button
+    Given the sidebar was collapsed earlier
+    When I open the app
+    And I click "Neue Aufgabe"
+    Then I see the heading "Neue Aufgabe anlegen"
