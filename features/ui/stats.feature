@@ -199,3 +199,12 @@ Feature: Statistics view
     When I open the app at "/stats"
     Then I see "(A)"
     And I see "Call dentist"
+
+  @ui @REQ-10
+  Scenario: A pomodoro shorter than a minute still counts as a session in the period
+    Given the review is:
+      """
+      { "focusMin": 0, "pomodoroCount": 1 }
+      """
+    When I open the app at "/stats"
+    Then I do not see "Keine Sitzungen im gewählten Zeitraum."

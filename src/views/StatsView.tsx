@@ -122,7 +122,8 @@ export function StatsView() {
   };
 
   const review = data?.review;
-  const empty = review !== undefined && review.focusMin === 0;
+  const empty =
+    review !== undefined && review.focusMin === 0 && review.pomodoroCount === 0;
   const totals = periodTotals(detailDays);
   const range = review ? hourRange(review.hours) : null;
   const hourPoints: DayPoint[] =
