@@ -217,6 +217,8 @@ Feature: Review report
       | quarter | 2026-11-20 | 2026-10-01 | 2026-12-31 |
       | month   | 2026-12-10 | 2026-12-01 | 2026-12-31 |
       | week    | 2026-03-08 | 2026-03-02 | 2026-03-08 |
+      | day     | 2026-03-04 | 2026-03-04 | 2026-03-04 |
+      | year    | 2026-07-01 | 2026-01-01 | 2026-12-31 |
 
   @domain @US-RV01
   Scenario: The abort rate is rounded to whole percent
@@ -390,3 +392,55 @@ Feature: Review report
     And the Markdown does not contain "Week review"
     And the Markdown does not contain "Day notes"
 
+
+  @domain @US-RV02
+  Scenario: Worked-on tasks show whether they are completed and their projects
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review task details are:
+      | text                                    | minutes | completed | completed at | projects |
+      | Write report +work @desk                | 85      | no        |              | +work    |
+
+  @domain @US-RV02
+  Scenario: Sessions without a task are listed one by one as free activities
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo | projects | contexts |
+      | 2026-03-04 09:00 | stopwatch | work | completed | 30      |      | +foo     | @meeting |
+      | 2026-03-04 15:00 | stopwatch | work | completed | 20      |      |          |          |
+      | 2026-03-05 09:00 | stopwatch | work | aborted   | 10      |      | +foo     |          |
+    And the session notes:
+      | start            | note    |
+      | 2026-03-04 09:00 | Daily   |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the review activities are:
+      | date       | text  | minutes | projects | contexts |
+      | 2026-03-04 | Daily | 30      | +foo     | @meeting |
+      | 2026-03-04 |       | 20      |          |          |
+
+  @domain @US-RV02
+  Scenario: Work minutes are spread over the local hours they span
+    Given the sessions:
+      | start            | mode      | type | status    | minutes | todo |
+      | 2026-03-04 09:45 | stopwatch | work | completed | 90      |      |
+      | 2026-03-04 23:30 | stopwatch | work | completed | 60      |      |
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the work minutes in hour 9 are 15
+    And the work minutes in hour 10 are 60
+    And the work minutes in hour 11 are 15
+    And the work minutes in hour 23 are 30
+    And the work minutes in hour 0 are 30
+
+  @domain @US-RV02
+  Scenario: Days split the minutes by technique
+    When I build the review from 2026-03-02 to 2026-03-08
+    Then the day 2026-03-02 has 0 pomodoro, 60 flowtime and 0 stopwatch minutes
+    And the day 2026-03-03 has 25 pomodoro, 0 flowtime and 0 stopwatch minutes
+
+  @domain @US-RV02
+  Scenario: A whole year is compared with the previous year
+    When I build the review from 2026-01-01 to 2026-12-31
+    Then the previous period is 2025-01-01 to 2025-12-31
+
+  @domain @US-RV02
+  Scenario: A single day is compared with the day before
+    When I build the review from 2026-03-03 to 2026-03-03
+    Then the previous period is 2026-03-02 to 2026-03-02

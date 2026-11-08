@@ -3,11 +3,11 @@
 //! Die erfasste Arbeitszeit (`focus_min`) zählt nur **abgeschlossene** Arbeitssessions aller Modi (auch Stoppuhr und
 //! Nachgetragenes); abgebrochene gehen in die Abbruchquote ein. Die Fokuszeit im engen Sinn (Pomodoro, Flowtime) leitet
 //! die Oberfläche aus `modes` ab.
-//! Ein Tag ist der lokale Kalendertag des Beginns (`local_date` kommt vom Aufrufer).
+//! Ein Tag ist der lokale Kalendertag des Beginns (`local` liefert die lokale Zeit und kommt vom Aufrufer).
 
 use std::collections::{BTreeMap, HashMap};
 
-use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveDateTime, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
@@ -21,9 +21,11 @@ use crate::model::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum PeriodKind {
+    Day,
     Week,
     Month,
     Quarter,
+    Year,
 }
 
 /// Zeitraum in lokalen Tagen, beide Grenzen inklusive.
@@ -70,6 +72,10 @@ pub struct DayTotals {
     pub date: NaiveDate,
     pub minutes: u32,
     pub pomodoros: u32,
+    /// Minuten je Zeitmessung (Summe = `minutes`), für gestapelte Diagramme.
+    pub pomodoro_min: u32,
+    pub flowtime_min: u32,
+    pub stopwatch_min: u32,
 }
 
 /// Fokuszeit, Pomodoros und Sessions einer Aufgabe.
@@ -81,6 +87,27 @@ pub struct TaskTotals {
     pub minutes: u32,
     pub pomodoros: u32,
     pub sessions: u32,
+    /// Ob die Aufgabe jetzt erledigt ist, und wann.
+    pub completed: bool,
+    pub completed_at: Option<NaiveDate>,
+    /// Projekte der Aufgabe (sortiert, leer: ohne Projekt).
+    pub projects: Vec<String>,
+    /// Schätzung gegen den Gesamtaufwand; `None` ohne Schätzung.
+    pub estimate_check: Option<EstimateCheck>,
+}
+
+/// Eine Arbeitssession ohne Aufgabe (freie Tätigkeit, ADR 0023).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivityEntry {
+    pub session_id: i32,
+    pub date: NaiveDate,
+    /// Notiz der Session (die Tätigkeit); leer, wenn es keine gibt.
+    pub text: String,
+    pub minutes: u32,
+    pub mode: TimerMode,
+    pub projects: Vec<String>,
+    pub contexts: Vec<String>,
 }
 
 /// Fokuszeit der Sessions, die genau dieselben Projekte und Kontexte zusammen trugen
@@ -141,6 +168,10 @@ pub struct Review {
     pub days: Vec<DayTotals>,
     /// Aufgaben mit Fokuszeit, meiste Zeit zuerst.
     pub tasks: Vec<TaskTotals>,
+    /// Freie Tätigkeiten (Sessions ohne Aufgabe), chronologisch.
+    pub activities: Vec<ActivityEntry>,
+    /// Arbeitsminuten je lokaler Stunde 0–23 über den ganzen Zeitraum.
+    pub hours: Vec<u32>,
     /// Die Tag-Kombinationen der Sessions, wie sie zusammen vorkamen; meiste Zeit zuerst.
     pub combinations: Vec<TagCombination>,
     pub projects: Vec<GroupMinutes>,
@@ -168,6 +199,8 @@ pub fn period_containing(kind: PeriodKind, day: NaiveDate) -> Period {
     };
     let month0 = i32::try_from(day.month0()).unwrap_or(0);
     match kind {
+        PeriodKind::Day => Period { from: day, to: day },
+        PeriodKind::Year => months(12, 0),
         PeriodKind::Week => {
             let from = day - Duration::days(i64::from(day.weekday().num_days_from_monday()));
             Period {
@@ -180,10 +213,10 @@ pub fn period_containing(kind: PeriodKind, day: NaiveDate) -> Period {
     }
 }
 
-/// Vorperiode: bei einem ganzen Kalendermonat oder -quartal der vorherige, sonst der Zeitraum gleicher Länge davor.
+/// Vorperiode: bei einem ganzen Kalendermonat, -quartal oder -jahr der vorherige, sonst der Zeitraum gleicher Länge davor.
 fn previous_period(period: Period) -> Period {
     let day_before = period.from - Duration::days(1);
-    for kind in [PeriodKind::Month, PeriodKind::Quarter] {
+    for kind in [PeriodKind::Month, PeriodKind::Quarter, PeriodKind::Year] {
         if period_containing(kind, period.from) == period {
             return period_containing(kind, day_before);
         }
@@ -228,17 +261,25 @@ fn mode_index(mode: TimerMode) -> usize {
         .unwrap_or(0)
 }
 
-fn task_totals(tasks: BTreeMap<i32, (u32, u32, u32)>, todos: &[Todo]) -> Vec<TaskTotals> {
+fn task_totals(
+    tasks: BTreeMap<i32, (u32, u32, u32)>,
+    todos: &[Todo],
+    sessions: &[Session],
+) -> Vec<TaskTotals> {
     let mut totals: Vec<TaskTotals> = tasks
         .into_iter()
-        .filter_map(|(todo_id, (minutes, pomodoros, sessions))| {
+        .filter_map(|(todo_id, (minutes, pomodoros, session_count))| {
             let todo = todos.iter().find(|todo| todo.id == todo_id)?;
             Some(TaskTotals {
                 todo_id,
                 text: todo.description.clone(),
                 minutes,
                 pomodoros,
-                sessions,
+                sessions: session_count,
+                completed: todo.completed,
+                completed_at: todo.completed_at.filter(|_| todo.completed),
+                projects: sorted_tags(&todo.project_tags),
+                estimate_check: todo_check(todo, sessions),
             })
         })
         .collect();
@@ -265,7 +306,7 @@ fn sorted_tags(tags: &[String]) -> Vec<String> {
 /// Größte Summe zuerst; bei gleicher Summe nach Projekten, dann Kontexten, jeweils „ohne“ zuletzt.
 fn combination_totals(
     combinations: BTreeMap<(Vec<String>, Vec<String>), CombinationSum>,
-    local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
+    local: &dyn Fn(DateTime<Utc>) -> NaiveDateTime,
 ) -> Vec<TagCombination> {
     let mut totals: Vec<TagCombination> = combinations
         .into_iter()
@@ -280,7 +321,7 @@ fn combination_totals(
                     .notes
                     .into_iter()
                     .map(|(started_at, text)| SessionNote {
-                        date: local_date(started_at),
+                        date: local(started_at).date(),
                         text,
                     })
                     .collect(),
@@ -311,14 +352,14 @@ fn add_tags(totals: &mut BTreeMap<Option<String>, u32>, tags: &[String], minutes
 fn focus_minutes(
     period: Period,
     sessions: &[Session],
-    local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
+    local: &dyn Fn(DateTime<Utc>) -> NaiveDateTime,
 ) -> u32 {
     sessions
         .iter()
         .filter(|session| {
             session.session_type == SessionType::Work
                 && session.status == SessionStatus::Completed
-                && contains(period, local_date(session.started_at))
+                && contains(period, local(session.started_at).date())
         })
         .map(|session| session.actual_min.unwrap_or(0))
         .sum()
@@ -347,6 +388,20 @@ fn review_journal(period: Period, entries: &[JournalEntry]) -> ReviewJournal {
     journal
 }
 
+/// Verteilt `minutes` ab `start` auf die lokalen Stunden, die die Session überspannt (über Mitternacht hinweg).
+fn add_hours(hours: &mut [u32], start: NaiveDateTime, minutes: u32) {
+    let mut hour = start.hour() as usize;
+    let mut room = 60 - start.minute();
+    let mut left = minutes;
+    while left > 0 {
+        let chunk = left.min(room);
+        hours[hour] += chunk;
+        left -= chunk;
+        hour = (hour + 1) % 24;
+        room = 60;
+    }
+}
+
 /// Berechnet den Bericht; die Vorperiode ist der vorherige Kalendermonat/-quartal bzw. der Zeitraum gleicher Länge davor.
 pub fn build_review(
     period: Period,
@@ -354,20 +409,22 @@ pub fn build_review(
     todos: &[Todo],
     notes: &HashMap<i32, String>,
     journal: &[JournalEntry],
-    local_date: &dyn Fn(DateTime<Utc>) -> NaiveDate,
+    local: &dyn Fn(DateTime<Utc>) -> NaiveDateTime,
 ) -> Review {
     let previous = previous_period(period);
     let mut projects = BTreeMap::new();
     let mut contexts = BTreeMap::new();
     let mut combinations: BTreeMap<(Vec<String>, Vec<String>), CombinationSum> = BTreeMap::new();
     let mut modes: BTreeMap<usize, (u32, u32)> = BTreeMap::new();
-    let mut days: BTreeMap<NaiveDate, (u32, u32)> = BTreeMap::new();
+    let mut days: BTreeMap<NaiveDate, (u32, u32, [u32; 3])> = BTreeMap::new();
+    let mut activities: Vec<(DateTime<Utc>, ActivityEntry)> = Vec::new();
+    let mut hours = vec![0u32; 24];
     let mut tasks: BTreeMap<i32, (u32, u32, u32)> = BTreeMap::new();
     let mut pomodoro_count = 0u32;
     let (mut completed_sessions, mut aborted_sessions) = (0u32, 0u32);
     for session in sessions.iter().filter(|session| {
         session.session_type == SessionType::Work
-            && contains(period, local_date(session.started_at))
+            && contains(period, local(session.started_at).date())
     }) {
         match session.status {
             SessionStatus::Completed => completed_sessions += 1,
@@ -401,9 +458,29 @@ pub fn build_review(
         let mode = modes.entry(mode_index(session.mode)).or_default();
         mode.0 += 1;
         mode.1 += minutes;
-        let day = days.entry(local_date(session.started_at)).or_default();
+        let started = local(session.started_at);
+        let day = days.entry(started.date()).or_default();
         day.0 += minutes;
         day.1 += pomodoro;
+        day.2[mode_index(session.mode)] += minutes;
+        add_hours(&mut hours, started, minutes);
+        if todo.is_none() {
+            activities.push((
+                session.started_at,
+                ActivityEntry {
+                    session_id: session.id,
+                    date: started.date(),
+                    text: notes
+                        .get(&session.id)
+                        .map(|note| note.trim().to_owned())
+                        .unwrap_or_default(),
+                    minutes,
+                    mode: session.mode,
+                    projects: project_tags.to_vec(),
+                    contexts: context_tags.to_vec(),
+                },
+            ));
+        }
         if let Some(todo) = todo {
             let task = tasks.entry(todo.id).or_default();
             task.0 += minutes;
@@ -439,8 +516,8 @@ pub fn build_review(
     Review {
         period,
         previous_period: previous,
-        focus_min: focus_minutes(period, sessions, local_date),
-        previous_focus_min: focus_minutes(previous, sessions, local_date),
+        focus_min: focus_minutes(period, sessions, local),
+        previous_focus_min: focus_minutes(previous, sessions, local),
         completed_sessions,
         aborted_sessions,
         abort_rate_percent: (aborted_sessions * 100 + started / 2)
@@ -461,14 +538,22 @@ pub fn build_review(
             .collect(),
         days: days
             .into_iter()
-            .map(|(date, (minutes, pomodoros))| DayTotals {
+            .map(|(date, (minutes, pomodoros, by_mode))| DayTotals {
                 date,
                 minutes,
                 pomodoros,
+                pomodoro_min: by_mode[0],
+                flowtime_min: by_mode[1],
+                stopwatch_min: by_mode[2],
             })
             .collect(),
-        tasks: task_totals(tasks, todos),
-        combinations: combination_totals(combinations, local_date),
+        tasks: task_totals(tasks, todos, sessions),
+        activities: {
+            activities.sort_by_key(|(started_at, entry)| (*started_at, entry.session_id));
+            activities.into_iter().map(|(_, entry)| entry).collect()
+        },
+        hours,
+        combinations: combination_totals(combinations, local),
         projects: group_totals(projects),
         contexts: group_totals(contexts),
         journal: review_journal(period, journal),

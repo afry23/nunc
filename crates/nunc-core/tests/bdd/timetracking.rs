@@ -26,6 +26,13 @@ pub(crate) fn local_date_fn(world: &DomainWorld) -> impl Fn(DateTime<Utc>) -> Na
     move |time| time.with_timezone(&offset).date_naive()
 }
 
+pub(crate) fn local_fn(
+    world: &DomainWorld,
+) -> impl Fn(DateTime<Utc>) -> chrono::NaiveDateTime + use<> {
+    let offset = FixedOffset::east_opt(world.stats.offset_hours * 3600).expect("Zeitzone");
+    move |time| time.with_timezone(&offset).naive_local()
+}
+
 fn sheet(world: &DomainWorld) -> &Timesheet {
     world.timetracking.sheet.as_ref().expect("kein Timesheet")
 }

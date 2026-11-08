@@ -16,7 +16,7 @@ use nunc_core::task_time::{TaskTime, task_time};
 
 use crate::DomainWorld;
 use crate::stats::day;
-use crate::timetracking::local_date_fn;
+use crate::timetracking::local_fn;
 
 const NO_GROUP: &str = "(none)";
 
@@ -37,9 +37,11 @@ fn review(world: &DomainWorld) -> &Review {
 
 fn kind(text: &str) -> PeriodKind {
     match text {
+        "day" => PeriodKind::Day,
         "week" => PeriodKind::Week,
         "month" => PeriodKind::Month,
         "quarter" => PeriodKind::Quarter,
+        "year" => PeriodKind::Year,
         other => panic!("unbekannter Zeitraum {other}"),
     }
 }
@@ -67,7 +69,7 @@ fn session_notes(world: &mut DomainWorld, step: &Step) {
 
 #[when(expr = "I build the review from {word} to {word}")]
 fn build(world: &mut DomainWorld, from: String, to: String) {
-    let local_date = local_date_fn(world);
+    let local_date = local_fn(world);
     let period = Period {
         from: day(&from),
         to: day(&to),
@@ -458,4 +460,69 @@ fn verdict_is(world: &mut DomainWorld, verdict: String, delta: i32) {
 #[then(expr = "the estimate of {string} is {string}")]
 fn estimate_of_is(_world: &mut DomainWorld, description: String, expected: String) {
     assert_eq!(estimate_text(estimate_of(&description)), expected);
+}
+
+fn yes_no(value: bool) -> String {
+    if value { "yes" } else { "no" }.to_owned()
+}
+
+#[then("the review task details are:")]
+fn task_details_are(world: &mut DomainWorld, step: &Step) {
+    let actual: Vec<Vec<String>> = review(world)
+        .tasks
+        .iter()
+        .map(|task| {
+            vec![
+                task.text.clone(),
+                task.minutes.to_string(),
+                yes_no(task.completed),
+                task.completed_at.map(|d| d.to_string()).unwrap_or_default(),
+                task.projects.join(" "),
+            ]
+        })
+        .collect();
+    let expected: Vec<Vec<String>> = crate::stats::rows(step)
+        .into_iter()
+        .map(|mut row| {
+            row[2] = if row[2] == "yes" { "yes" } else { "no" }.to_owned();
+            row
+        })
+        .collect();
+    assert_eq!(actual, expected);
+}
+
+#[then("the review activities are:")]
+fn activities_are(world: &mut DomainWorld, step: &Step) {
+    let actual: Vec<Vec<String>> = review(world)
+        .activities
+        .iter()
+        .map(|entry| {
+            vec![
+                entry.date.to_string(),
+                entry.text.clone(),
+                entry.minutes.to_string(),
+                entry.projects.join(" "),
+                entry.contexts.join(" "),
+            ]
+        })
+        .collect();
+    assert_eq!(actual, crate::stats::rows(step));
+}
+
+#[then(expr = "the work minutes in hour {int} are {int}")]
+fn hour_minutes(world: &mut DomainWorld, hour: usize, minutes: u32) {
+    assert_eq!(review(world).hours[hour], minutes);
+}
+
+#[then(expr = "the day {word} has {int} pomodoro, {int} flowtime and {int} stopwatch minutes")]
+fn day_modes(world: &mut DomainWorld, date: String, pomodoro: u32, flowtime: u32, stopwatch: u32) {
+    let day = review(world)
+        .days
+        .iter()
+        .find(|entry| entry.date == day(&date))
+        .expect("Tag fehlt");
+    assert_eq!(
+        (day.pomodoro_min, day.flowtime_min, day.stopwatch_min),
+        (pomodoro, flowtime, stopwatch)
+    );
 }
