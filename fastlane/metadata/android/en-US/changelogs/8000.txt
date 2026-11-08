@@ -1,0 +1,6 @@
+- New layout: Today, Tasks, History, Review
+- Habit tracker removed
+- Recurring tasks (rec:) and effort estimates with planned vs. actual
+- Statistics and review separated (day to year)
+- "New task" button in the sidebar
+- Sync format 12: update all devices

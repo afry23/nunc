@@ -1,0 +1,6 @@
+- Neue Oberfläche: Heute, Aufgaben, Verlauf, Rückblick
+- Habit-Tracker entfernt
+- Wiederkehrende Aufgaben (rec:) und Aufwandsschätzung mit Soll/Ist
+- Auswertung und Rückblick getrennt (Tag bis Jahr)
+- Button "Neue Aufgabe" in der Sidebar
+- Sync-Format 12: alle Geräte aktualisieren
