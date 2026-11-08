@@ -209,6 +209,12 @@ jobs:
       - name: NDK-Pfad setzen
         run: echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
 
+      # Der Gradle-Wrapper lädt die Distribution von services.gradle.org; deren 504/Timeouts ließen den Job scheitern.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/wrapper/dists
+          key: gradle-wrapper-${{ hashFiles('src-tauri/gen/android/gradle/wrapper/gradle-wrapper.properties') }}
+
       - run: npm ci
 
       - name: Debug-APK (arm64)
