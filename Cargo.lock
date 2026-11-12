@@ -3217,8 +3217,12 @@ dependencies = [
  "chrono",
  "keyring-core",
  "nunc-core",
+ "reqwest 0.12.28",
+ "rustls",
+ "rustls-native-certs",
  "serde_json",
  "thiserror 2.0.21",
+ "webpki-roots",
  "windows-native-keyring-store",
  "zbus-secret-service-keyring-store",
 ]
@@ -3250,15 +3254,12 @@ dependencies = [
  "nunc-platform",
  "nunc-store",
  "reqwest 0.12.28",
- "rustls",
- "rustls-native-certs",
  "serde",
  "serde_json",
  "sha2 0.11.1",
  "tempfile",
  "thiserror 2.0.21",
  "tokio",
- "webpki-roots",
  "wiremock",
 ]
 
