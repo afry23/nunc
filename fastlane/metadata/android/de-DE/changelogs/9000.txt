@@ -1,0 +1,3 @@
+- Jira-Tickets direkt als Aufgaben importieren
+- Projekte, Kontexte und Fälligkeiten werden aus Jira übernommen
+- Kleinere Verbesserungen und Fehlerbehebungen

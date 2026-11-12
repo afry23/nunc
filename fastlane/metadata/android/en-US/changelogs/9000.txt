@@ -1,0 +1,3 @@
+- Import Jira tickets directly as tasks
+- Projects, contexts, and due dates are carried over from Jira
+- Minor improvements and bug fixes
