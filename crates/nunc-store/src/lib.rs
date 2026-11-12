@@ -4,6 +4,7 @@ mod backup;
 mod connection;
 mod crdt_repo;
 mod error;
+mod jira_repo;
 mod journal_repo;
 mod legacy;
 mod migrations;
@@ -24,6 +25,7 @@ pub use backup::{
 pub use connection::{open, open_in_memory};
 pub use crdt_repo::{apply_state, atomically, local_state};
 pub use error::StoreError;
+pub use jira_repo::{clear_jira_config, load_jira_config, save_jira_config};
 pub use journal_repo::{
     add_achievement, delete_achievement, list_journal, save_day_note, save_week_note,
     update_achievement,

@@ -3209,6 +3209,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "nunc-jira"
+version = "0.8.0"
+dependencies = [
+ "cucumber",
+ "log",
+ "nunc-core",
+ "nunc-platform",
+ "nunc-store",
+ "reqwest 0.12.28",
+ "thiserror 2.0.21",
+ "tokio",
+ "wiremock",
+]
+
+[[package]]
 name = "nunc-platform"
 version = "0.8.0"
 dependencies = [

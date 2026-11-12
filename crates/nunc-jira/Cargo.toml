@@ -1,0 +1,23 @@
+[package]
+name = "nunc-jira"
+version.workspace = true
+edition.workspace = true
+description = "Jira-Client für den Ticket-Import"
+license.workspace = true
+
+[dependencies]
+nunc-core.workspace = true
+nunc-store.workspace = true
+nunc-platform.workspace = true
+reqwest.workspace = true
+thiserror.workspace = true
+log = "0.4"
+
+[dev-dependencies]
+cucumber.workspace = true
+wiremock.workspace = true
+tokio = { workspace = true, features = ["rt", "macros"] }
+
+[[test]]
+name = "bdd"
+harness = false

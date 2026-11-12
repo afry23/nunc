@@ -313,8 +313,8 @@ fn selected(
     scenario: &cucumber::gherkin::Scenario,
 ) -> bool {
     let has = |tag: &str| feature.tags.iter().chain(&scenario.tags).any(|t| t == tag);
-    // `@sync`-Szenarien (WebDAV, wiremock) laufen im Runner von nunc-sync
-    has("integration") && !has("sync") && !has("api") && !has("wip")
+    // `@sync`-Szenarien (WebDAV, wiremock) laufen im Runner von nunc-sync, `@jira` in nunc-jira
+    has("integration") && !has("sync") && !has("jira") && !has("api") && !has("wip")
 }
 
 #[tokio::main(flavor = "current_thread")]
