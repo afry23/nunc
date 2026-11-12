@@ -10,6 +10,7 @@ mod backup;
 mod crdt;
 mod day_plan;
 mod export;
+mod jira;
 mod journal;
 mod properties;
 mod recurrence;
@@ -31,6 +32,7 @@ pub struct DomainWorld {
     crdt: crdt::State,
     day_plan: day_plan::State,
     export: export::State,
+    jira: jira::State,
     journal: journal::State,
     recurrence: recurrence::State,
     review: review::State,

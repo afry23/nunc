@@ -11,6 +11,7 @@ pub mod estimate;
 pub mod export;
 pub mod flowtime;
 pub mod hlc;
+pub mod jira;
 pub mod journal;
 pub mod manual_entry;
 pub mod model;
