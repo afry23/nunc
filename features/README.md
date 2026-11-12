@@ -10,6 +10,7 @@ Eine Quelle für alle Runner (siehe ADR 0006). Szenarien sind englisch, Dateien 
 | `@US-…` · `@REQ-…` | Rückverfolgbarkeit: User Story (`nunc-go/nunc-userstories`, `STORIES.md`) bzw. Abschnitt in `REQUIREMENTS.md` |
 | `@sync` | `@integration`-Szenario für WebDAV und die Sync-Steuerung: läuft im Runner von `nunc-sync` (wiremock-Server mit Zustand), nicht in `nunc-store` |
 | `@api` | Szenario der lokalen HTTP-Schnittstelle (`nunc-api`), `@domain` (pures Routing) oder `@integration` (echter Socket); läuft nur im Runner von `nunc-api` |
+| `@jira` | `@integration`-Szenario des Jira-Clients (`nunc-jira`, wiremock): läuft im Runner von `nunc-jira`, nicht in `nunc-store` (ab J-04) |
 | `@desktop` · `@mobile` | Nur auf dieser Plattformklasse |
 | `@wip` | Szenario ist nur ein Titel, Steps fehlen noch; Runner überspringen es |
 | `@property` · `@manual` | Eigenschaftstest (proptest, `Then the property "…" holds for N random cases`) · nicht automatisierbar, manueller Check |
