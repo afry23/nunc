@@ -32,6 +32,7 @@ Gherkin-Szenarien (englisch) sind Spezifikation und Test zugleich.
 crates/nunc-core      pure Fachlogik, kein I/O, kein tokio
 crates/nunc-store     rusqlite, Migrationen, Repos, Backup/Restore
 crates/nunc-sync      WebDAV-Client (reqwest), Sync-Läufe (CRDT-Merge liegt pur in nunc-core), Steuerung (Koordinator)
+crates/nunc-jira      Jira-Client (reqwest) und Zugang für den Ticket-Import (ADR 0038)
 crates/nunc-api       lokale HTTP-Schnittstelle (127.0.0.1, Token): pures Routing + hyper-Server, Desktop (ADR 0013)
 crates/nunc-platform  Traits + Fakes: Clock, EventSink, Notifier, SecretStore (Keyring)
 src-tauri/            Tauri-App: Commands, Events, Plugins, Tray (#[cfg(desktop)])
@@ -87,13 +88,14 @@ Zeitstempel neu berechnet. Tick-Events (`timer:tick`) sind nur Anzeige im Vorder
 4. `@wip` entfernen, Pflicht-Checks ausführen, committen.
 
 Tags: `@domain` (Rust, pure), `@integration` (Rust, In-Memory-SQLite + wiremock), `@ui` (Vitest, `mockIPC`),
-`@sync` (Integrationsszenario für den Sync, läuft in `nunc-sync`), `@api` (lokale HTTP-Schnittstelle, läuft nur in `nunc-api`), `@e2e`, `@desktop`/`@mobile`, `@property` (Eigenschaftstest über zufällige Eingaben, ADR 0006), `@wip`. `@wip`-Szenarien werden von den Runnern übersprungen. Keine
+`@sync` (Integrationsszenario für den Sync, läuft in `nunc-sync`), `@jira` (Jira-Client, läuft nur in `nunc-jira`), `@api` (lokale HTTP-Schnittstelle, läuft nur in `nunc-api`), `@e2e`, `@desktop`/`@mobile`, `@property` (Eigenschaftstest über zufällige Eingaben, ADR 0006), `@wip`. `@wip`-Szenarien werden von den Runnern übersprungen. Keine
 undefined/pending Steps (der Rust-Runner bricht bei übersprungenen Steps ab).
 
 ```bash
 cargo test -p nunc-core --test bdd      # @domain (NUNC_BDD_REPORT=/abs/pfad.json schreibt zusätzlich JSON)
 cargo test -p nunc-store --test bdd     # @integration (Temp-Ordner, echte SQLite-Dateien)
 cargo test -p nunc-sync --test bdd      # @integration @sync (WebDAV-Server mit Zustand per wiremock, Sync-Steuerung)
+cargo test -p nunc-jira --test bdd      # @integration @jira (Jira-Client gegen wiremock, Zugang)
 cargo test -p nunc-api --test bdd       # @api (pures Routing und Server über echten Socket)
 npm run test:bdd                        # @ui (features/ui/*.feature, features/sync)
 npm run test:e2e                        # @e2e @desktop, braucht tauri-driver (Linux/Windows)
@@ -123,11 +125,11 @@ npm run docs:report                # Abnahme: kein @wip, Traceability
 npm run tauri build -- --debug --no-bundle   # ab M3: ohne Warnungen
 ```
 
-Zusätzlich bei Änderungen an **Fachlogik** (`nunc-core`, `nunc-store`, `nunc-sync`), vor dem PR:
+Zusätzlich bei Änderungen an **Fachlogik** (`nunc-core`, `nunc-store`, `nunc-sync`, `nunc-jira`), vor dem PR:
 
 ```bash
 git diff main...HEAD > /tmp/pr.diff
-cargo mutants --in-diff /tmp/pr.diff -p nunc-core -p nunc-store -p nunc-sync
+cargo mutants --in-diff /tmp/pr.diff -p nunc-core -p nunc-store -p nunc-sync -p nunc-jira
 ```
 
 Überlebende Mutanten heißen: Szenario oder `Examples`-Zeile fehlt. Ergänzen statt ausschließen; nur äquivalente
@@ -153,7 +155,7 @@ oder specta-Typen `cargo test -p nunc export_bindings` ausführen und `src/bindi
 - `tauri-plugin-notification` (iOS): `Schedule.at` parst das UTC-Datum als Ortszeit und lehnt es still ab,
   `sendNotification` verschluckt Fehler (ADR 0004). Nicht unverändert verwenden.
 - Android: `USE_EXACT_ALARM` ist nötig, sonst feuern Timer-Notifications Minuten zu spät (ADR 0004).
-- Zugangsdaten: nur das WebDAV-Passwort, es liegt im Tresor (Dienst `nunc`, Konto `webdav`). Todoist und Google Drive gibt es nicht
+- Zugangsdaten: das WebDAV-Passwort (Dienst `nunc`, Konto `webdav`) und das Jira-Token (Konto `jira`, ADR 0038) liegen im Tresor. Todoist und Google Drive gibt es nicht
   mehr (ADR 0024); kein Workflow braucht OAuth-Secrets.
 - Keychain-Tests berühren die Login-Keychain und können einen Dialog auslösen; sie sind `#[ignore]` und nutzen nur
   eigene Wegwerf-Einträge. Secrets der Go-App werden nicht übernommen (ADR 0005).
