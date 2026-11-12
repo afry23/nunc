@@ -3149,6 +3149,7 @@ dependencies = [
  "log",
  "nunc-api",
  "nunc-core",
+ "nunc-jira",
  "nunc-platform",
  "nunc-store",
  "nunc-sync",

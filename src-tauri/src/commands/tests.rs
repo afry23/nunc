@@ -16,7 +16,7 @@ use tempfile::TempDir;
 use crate::state::{AppPaths, AppState, Platform};
 
 use super::{
-    app, backup, notifications, plan, review, sessions, settings, stats, sync, timer, todos,
+    app, backup, jira, notifications, plan, review, sessions, settings, stats, sync, timer, todos,
     todotxt,
 };
 
@@ -105,6 +105,12 @@ impl Harness {
                 sync::sync_in_background,
                 sync::save_webdav_config,
                 sync::test_webdav_connection,
+                jira::get_jira_config,
+                jira::save_jira_config,
+                jira::clear_jira_config,
+                jira::test_jira_connection,
+                jira::search_jira_issues,
+                jira::add_todo_from_jira,
                 notifications::get_notification_status,
                 notifications::request_notification_permission,
             ])
@@ -1391,4 +1397,180 @@ fn setting_the_minute_estimate_replaces_a_pomodoro_estimate() {
         json!({ "id": id, "estimateMin": null }),
     );
     assert_eq!(cleared["rawText"], "Report +work");
+}
+
+// ---- Jira-Import (ADR 0038) -------------------------------------------------------------------
+
+fn jira_config(url: &str) -> Value {
+    json!({ "baseUrl": url, "kind": "data_center", "email": "" })
+}
+
+/// Antwortet auf genau eine Anfrage mit `body` (200) und liefert die Adresse.
+fn serve_once(body: &'static str) -> String {
+    use std::io::{Read, Write};
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    std::thread::spawn(move || {
+        for _ in 0..2 {
+            let Ok((mut stream, _)) = listener.accept() else {
+                return;
+            };
+            let mut buffer = [0u8; 4096];
+            let _ = stream.read(&mut buffer);
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            let _ = stream.write_all(response.as_bytes());
+        }
+    });
+    url
+}
+
+#[test]
+fn jira_settings_are_saved_without_ever_returning_the_token() {
+    let h = Harness::new();
+    let fresh = h.ok("get_jira_config", json!({}));
+    assert_eq!(fresh["hasToken"], false);
+    assert_eq!(fresh["config"]["kind"], "cloud");
+
+    h.ok(
+        "save_jira_config",
+        json!({ "config": jira_config(" https://jira.firma.de "), "token": "s3cret" }),
+    );
+    let saved = h.ok("get_jira_config", json!({}));
+    assert_eq!(saved["hasToken"], true);
+    assert_eq!(saved["config"]["baseUrl"], "https://jira.firma.de");
+    assert_eq!(saved["config"]["kind"], "data_center");
+    assert!(!saved.to_string().contains("s3cret"));
+
+    // ohne Token bleibt das gespeicherte erhalten
+    h.ok(
+        "save_jira_config",
+        json!({ "config": jira_config("https://jira.firma.de"), "token": null }),
+    );
+    assert_eq!(h.ok("get_jira_config", json!({}))["hasToken"], true);
+
+    h.ok("clear_jira_config", json!({}));
+    let cleared = h.ok("get_jira_config", json!({}));
+    assert_eq!(cleared["hasToken"], false);
+    assert_eq!(cleared["config"]["baseUrl"], "");
+}
+
+#[test]
+fn jira_settings_with_a_bad_address_are_refused() {
+    let h = Harness::new();
+    assert_eq!(
+        h.err_code(
+            "save_jira_config",
+            json!({ "config": jira_config("jira.firma.de"), "token": "x" })
+        ),
+        "invalid_input"
+    );
+    assert_eq!(h.ok("get_jira_config", json!({}))["config"]["baseUrl"], "");
+    h.ok(
+        "save_jira_config",
+        json!({ "config": jira_config(""), "token": null }),
+    );
+}
+
+#[test]
+fn searching_jira_without_setup_reports_not_configured() {
+    let h = Harness::new();
+    assert_eq!(
+        h.err_code("search_jira_issues", json!({ "query": "" })),
+        "jira_not_configured"
+    );
+}
+
+#[test]
+fn an_unreachable_jira_is_a_coded_error_for_the_search_and_a_result_for_the_test() {
+    let h = Harness::new();
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    h.ok(
+        "save_jira_config",
+        json!({ "config": jira_config(&url), "token": "pat" }),
+    );
+    assert_eq!(
+        h.err_code("search_jira_issues", json!({ "query": "x" })),
+        "jira_unreachable"
+    );
+    let result = h.ok(
+        "test_jira_connection",
+        json!({ "config": jira_config(&url), "token": null }),
+    );
+    assert_eq!(result["success"], false);
+    assert!(!result["message"].as_str().unwrap().is_empty());
+    assert!(!result.to_string().contains("pat\""));
+
+    // ohne Token kein Netzwerkzugriff
+    let missing = h.ok(
+        "test_jira_connection",
+        json!({ "config": jira_config("https://jira.firma.de"), "token": "" }),
+    );
+    assert_eq!(missing["success"], false);
+}
+
+#[test]
+fn the_connection_test_succeeds_with_a_reachable_jira() {
+    let h = Harness::new();
+    let url = serve_once(r#"{"name":"me"}"#);
+    let result = h.ok(
+        "test_jira_connection",
+        json!({ "config": jira_config(&url), "token": "pat" }),
+    );
+    assert_eq!(result["success"], true);
+}
+
+#[test]
+fn the_search_marks_tickets_that_are_already_tasks() {
+    let h = Harness::new();
+    let url = serve_once(
+        r#"{"issues":[{"key":"PROJ-1","fields":{"summary":"First"}},{"key":"PROJ-2","fields":{"summary":"Second"}}]}"#,
+    );
+    h.ok(
+        "save_jira_config",
+        json!({ "config": jira_config(&url), "token": "pat" }),
+    );
+    h.ok(
+        "add_todo",
+        json!({ "rawText": format!("[PROJ-1]({url}/browse/PROJ-1) First") }),
+    );
+    let hits = h.ok("search_jira_issues", json!({ "query": "" }));
+    let hits = hits.as_array().unwrap();
+    assert_eq!(hits.len(), 2);
+    assert_eq!(hits[0]["issue"]["key"], "PROJ-1");
+    assert_eq!(hits[0]["issue"]["url"], format!("{url}/browse/PROJ-1"));
+    assert_eq!(hits[0]["imported"], true);
+    assert_eq!(hits[1]["imported"], false);
+}
+
+#[test]
+fn a_jira_ticket_becomes_a_task_with_a_link() {
+    let h = Harness::new();
+    let issue = json!({
+        "key": "PROJ-123",
+        "summary": "Login-Fehler\nbeheben",
+        "url": "https://firma.atlassian.net/browse/PROJ-123"
+    });
+    let todo = h.ok("add_todo_from_jira", json!({ "issue": issue }));
+    assert_eq!(
+        todo["rawText"],
+        "[PROJ-123](https://firma.atlassian.net/browse/PROJ-123) Login-Fehler beheben"
+    );
+    let todos = h.ok("get_todos", json!({}));
+    assert_eq!(texts(&todos).len(), 1);
+
+    let broken = json!({ "key": "", "summary": "x", "url": "https://x.net/browse/A-1" });
+    assert_eq!(
+        h.err_code("add_todo_from_jira", json!({ "issue": broken })),
+        "invalid_input"
+    );
+    let no_link = json!({ "key": "A-1", "summary": "x", "url": "javascript:alert(1)" });
+    assert_eq!(
+        h.err_code("add_todo_from_jira", json!({ "issue": no_link })),
+        "invalid_input"
+    );
 }

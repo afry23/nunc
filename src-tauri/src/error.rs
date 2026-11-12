@@ -7,6 +7,7 @@ use nunc_core::journal::JournalError;
 use nunc_core::manual_entry::EntryError;
 use nunc_core::model::SettingsIssue;
 use nunc_core::timer::TimerError;
+use nunc_jira::JiraError;
 use nunc_platform::{NotifyError, SecretError};
 use nunc_store::StoreError;
 use nunc_sync::SyncError;
@@ -94,6 +95,20 @@ impl From<SyncError> for AppError {
             SyncError::NotConfigured => "sync_not_configured",
             SyncError::Store(inner) => return Self::new(store_code(inner), error.to_string()),
             SyncError::Secret(_) => "secret_store",
+        };
+        Self::new(code, error.to_string())
+    }
+}
+
+impl From<JiraError> for AppError {
+    fn from(error: JiraError) -> Self {
+        let code = match &error {
+            JiraError::NotConfigured => "jira_not_configured",
+            JiraError::Unauthorized => "jira_unauthorized",
+            JiraError::Http(_) | JiraError::Transport(_) => "jira_unreachable",
+            JiraError::BadResponse(_) => "jira_bad_response",
+            JiraError::Store(inner) => return Self::new(store_code(inner), error.to_string()),
+            JiraError::Secret(_) => "secret_store",
         };
         Self::new(code, error.to_string())
     }
@@ -211,6 +226,23 @@ mod tests {
         assert_eq!(
             error.message,
             "401 Unauthorized – Benutzername oder Passwort falsch"
+        );
+    }
+
+    #[test]
+    fn jira_errors_get_stable_codes() {
+        let code = |error: JiraError| AppError::from(error).code;
+        assert_eq!(code(JiraError::NotConfigured), "jira_not_configured");
+        assert_eq!(code(JiraError::Unauthorized), "jira_unauthorized");
+        assert_eq!(code(JiraError::Http(503)), "jira_unreachable");
+        assert_eq!(code(JiraError::Transport("x".into())), "jira_unreachable");
+        assert_eq!(
+            code(JiraError::BadResponse("x".into())),
+            "jira_bad_response"
+        );
+        assert_eq!(
+            code(JiraError::Store(StoreError::InvalidBackup("x".into()))),
+            "invalid_backup"
         );
     }
 

@@ -4,6 +4,7 @@
 pub mod api;
 pub mod app;
 pub mod backup;
+pub mod jira;
 pub mod notifications;
 pub mod plan;
 pub mod review;
