@@ -3143,7 +3143,7 @@ dependencies = [
 
 [[package]]
 name = "nunc"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "chrono",
  "log",
@@ -3176,7 +3176,7 @@ dependencies = [
 
 [[package]]
 name = "nunc-api"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -3196,7 +3196,7 @@ dependencies = [
 
 [[package]]
 name = "nunc-core"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "chrono",
  "cucumber",
@@ -3211,7 +3211,7 @@ dependencies = [
 
 [[package]]
 name = "nunc-jira"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "cucumber",
  "log",
@@ -3226,7 +3226,7 @@ dependencies = [
 
 [[package]]
 name = "nunc-platform"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "android-native-keyring-store",
  "apple-native-keyring-store",
@@ -3245,7 +3245,7 @@ dependencies = [
 
 [[package]]
 name = "nunc-store"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "chrono",
  "cucumber",
@@ -3260,7 +3260,7 @@ dependencies = [
 
 [[package]]
 name = "nunc-sync"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "chrono",
  "cucumber",
