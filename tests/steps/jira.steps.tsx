@@ -27,3 +27,29 @@ Given(
     world.fake.jiraTest = { success: false, message };
   },
 );
+
+Given("Jira is set up", (world: UiWorld) => {
+  world.fake.jira = {
+    config: {
+      baseUrl: "https://firma.atlassian.net",
+      kind: "cloud",
+      email: "me@firma.de",
+    },
+    hasToken: true,
+  };
+});
+
+Given("Jira knows the tickets:", (world: UiWorld, table: DataTable) => {
+  world.fake.jiraIssues = table.hashes().map((row) => ({
+    key: row.key,
+    summary: row.summary,
+    mine: row.mine === "true",
+  }));
+});
+
+Given(
+  "the Jira search fails with {string}: {string}",
+  (world: UiWorld, code: string, message: string) => {
+    world.fake.jiraSearchError = { code, message };
+  },
+);

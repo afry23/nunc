@@ -153,6 +153,9 @@ export interface FakeBackend extends BackendMock {
   /** Gespeicherter Jira-Zugang und das Ergebnis des Verbindungstests. */
   jira: JiraSettings;
   jiraTest: ConnectionTestResult;
+  /** Tickets, die Jira kennt; `mine`: mir zugewiesen und offen (Ergebnis der leeren Suche). */
+  jiraIssues: { key: string; summary: string; mine: boolean }[];
+  jiraSearchError: { code: string; message: string } | null;
   /** Stand der Synchronisierung und was der nächste `sync_now` tut (`null` = nichts zu synchronisieren). */
   syncStatus: SyncStatus;
   syncOutcome: SyncResult | { error: string } | null;
@@ -318,6 +321,8 @@ export function createFakeBackend(): FakeBackend {
       hasToken: false,
     },
     jiraTest: { success: true, message: "" },
+    jiraIssues: [],
+    jiraSearchError: null,
     syncStatus: { state: "idle", lastSyncAt: null, errorMessage: null },
     syncOutcome: { importedTodos: 0, importedSessions: 0, conflictedTodos: 0 },
     exportTarget: "/storage/Download/nunc-backup.db",
@@ -734,6 +739,33 @@ export function createFakeBackend(): FakeBackend {
       return null;
     },
     test_jira_connection: () => fake.jiraTest,
+    search_jira_issues: ({ query }: { query: string }) => {
+      if (fake.jiraSearchError)
+        fail(fake.jiraSearchError.code, fake.jiraSearchError.message);
+      const needle = query.trim().toLowerCase();
+      const base = fake.jira.config.baseUrl;
+      return fake.jiraIssues
+        .filter((issue) =>
+          needle === ""
+            ? issue.mine
+            : issue.key.toLowerCase() === needle ||
+              issue.summary.toLowerCase().includes(needle),
+        )
+        .map((issue) => {
+          const url = `${base}/browse/${issue.key}`;
+          return {
+            issue: { key: issue.key, summary: issue.summary, url },
+            imported: fake.todos.some(
+              (todo) => !todo.completed && todo.rawText.includes(url),
+            ),
+          };
+        });
+    },
+    add_todo_from_jira: ({
+      issue,
+    }: {
+      issue: { key: string; summary: string; url: string };
+    }) => fake.addTodo(`[${issue.key}](${issue.url}) ${issue.summary}`.trim()),
     get_sync_status: () => fake.syncStatus,
     sync_in_background: () => null,
     "plugin:opener|open_url": ({ url }: { url: string }) => {
