@@ -5,3 +5,4 @@ import "./mobile.steps";
 import "./backup.steps";
 import "./sync.steps";
 import "./timetracking.steps";
+import "./jira.steps";

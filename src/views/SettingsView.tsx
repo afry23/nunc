@@ -4,6 +4,7 @@ import { ApiSection } from "../components/ApiSection";
 import { BackupSection } from "../components/BackupSection";
 import { InfoIcon } from "../components/icons";
 import { NotificationHint } from "../components/NotificationHint";
+import { JiraSection } from "../components/JiraSection";
 import { SyncSection } from "../components/SyncSection";
 import { Button, SectionLabel, Toggle } from "../components/ui";
 import {
@@ -33,6 +34,7 @@ export function SettingsView() {
       <div className="flex min-w-0 max-w-3xl flex-col gap-12 pb-10">
         <SettingsForm key={JSON.stringify(stored)} stored={stored} />
         <SyncSection />
+        <JiraSection />
         <BackupSection />
         <AboutSection />
       </div>
@@ -70,6 +72,7 @@ function SectionJumpList() {
       title: t("settings.group.data"),
       items: [
         { id: "settings-sync", label: t("sync.title") },
+        { id: "settings-jira", label: t("jira.title") },
         { id: "settings-backup", label: t("backup.title") },
         { id: "settings-about", label: t("about.title") },
       ],

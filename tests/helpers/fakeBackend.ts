@@ -13,6 +13,7 @@ import type {
   SyncResult,
   SyncStatus,
   WebDavSettings,
+  JiraSettings,
   Settings,
   StatsResponse,
   TimerMode,
@@ -149,6 +150,9 @@ export interface FakeBackend extends BackendMock {
   /** Gespeicherte WebDAV-Einstellungen und das Ergebnis des Verbindungstests. */
   webdav: WebDavSettings;
   webdavTest: ConnectionTestResult;
+  /** Gespeicherter Jira-Zugang und das Ergebnis des Verbindungstests. */
+  jira: JiraSettings;
+  jiraTest: ConnectionTestResult;
   /** Stand der Synchronisierung und was der nächste `sync_now` tut (`null` = nichts zu synchronisieren). */
   syncStatus: SyncStatus;
   syncOutcome: SyncResult | { error: string } | null;
@@ -309,6 +313,11 @@ export function createFakeBackend(): FakeBackend {
       hasPassword: false,
     },
     webdavTest: { success: true, message: "dav.example.org" },
+    jira: {
+      config: { baseUrl: "", kind: "cloud", email: "" },
+      hasToken: false,
+    },
+    jiraTest: { success: true, message: "" },
     syncStatus: { state: "idle", lastSyncAt: null, errorMessage: null },
     syncOutcome: { importedTodos: 0, importedSessions: 0, conflictedTodos: 0 },
     exportTarget: "/storage/Download/nunc-backup.db",
@@ -706,6 +715,25 @@ export function createFakeBackend(): FakeBackend {
       return null;
     },
     test_webdav_connection: () => fake.webdavTest,
+    get_jira_config: () => fake.jira,
+    save_jira_config: ({
+      config,
+      token,
+    }: {
+      config: JiraSettings["config"];
+      token: string | null;
+    }) => {
+      fake.jira = { config, hasToken: token !== null || fake.jira.hasToken };
+      return null;
+    },
+    clear_jira_config: () => {
+      fake.jira = {
+        config: { baseUrl: "", kind: "cloud", email: "" },
+        hasToken: false,
+      };
+      return null;
+    },
+    test_jira_connection: () => fake.jiraTest,
     get_sync_status: () => fake.syncStatus,
     sync_in_background: () => null,
     "plugin:opener|open_url": ({ url }: { url: string }) => {
