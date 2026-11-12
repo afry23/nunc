@@ -197,6 +197,23 @@ export const commands = {
 } | null, AppError>(__TAURI_INVOKE("sync_now")),
 	/**  Die App geht in den Hintergrund (Mobil): ein letzter Sync, bevor das Betriebssystem sie einfriert. */
 	syncInBackground: () => __TAURI_INVOKE<void>("sync_in_background"),
+	getJiraConfig: () => typedError<JiraSettings, AppError>(__TAURI_INVOKE("get_jira_config")),
+	/**
+	 *  Speichert die Einstellungen in der Datenbank und das Token im Tresor. `token: None` lässt das gespeicherte
+	 *  Token unverändert.
+	 */
+	saveJiraConfig: (config: JiraConfig, token: string | null) => typedError<null, AppError>(__TAURI_INVOKE("save_jira_config", { config, token })),
+	/**  Entfernt Einstellungen und Token. */
+	clearJiraConfig: () => typedError<null, AppError>(__TAURI_INVOKE("clear_jira_config")),
+	/**
+	 *  Prüft die Verbindung mit den übergebenen (noch nicht gespeicherten) Werten. Ohne Token gilt das gespeicherte.
+	 *  Fehler kommen als Ergebnis zurück, nicht als `AppError` (wie beim WebDAV-Test).
+	 */
+	testJiraConnection: (config: JiraConfig, token: string | null) => typedError<ConnectionTestResult, AppError>(__TAURI_INVOKE("test_jira_connection", { config, token })),
+	/**  Sucht Tickets (leer: eigene offene Tickets) und markiert bereits übernommene. */
+	searchJiraIssues: (query: string) => typedError<JiraIssueHit[], AppError>(__TAURI_INVOKE("search_jira_issues", { query })),
+	/**  Legt aus dem Ticket eine Aufgabe `[KEY](url) Titel` an. */
+	addTodoFromJira: (issue: JiraIssue) => typedError<Todo, AppError>(__TAURI_INVOKE("add_todo_from_jira", { issue })),
 	/**  Aktueller Stand, ohne den Nutzer zu fragen. */
 	getNotificationStatus: () => typedError<NotificationStatus, AppError>(__TAURI_INVOKE("get_notification_status")),
 	/**
@@ -421,6 +438,35 @@ export type GroupBy = "project" | "context" | "todo";
 export type GroupMinutes = {
 	group: string | null,
 	minutes: number,
+};
+
+/**  Zugang ohne Token (das liegt im Tresor). */
+export type JiraConfig = {
+	baseUrl: string,
+	kind: JiraKind,
+	email: string,
+};
+
+/**  Ein Ticket aus der Suche. */
+export type JiraIssue = {
+	key: string,
+	summary: string,
+	url: string,
+};
+
+/**  Ein Treffer der Suche; `imported`, wenn es schon eine offene Aufgabe mit dem Ticket-Link gibt. */
+export type JiraIssueHit = {
+	issue: JiraIssue,
+	imported: boolean,
+};
+
+/**  Jira-Art: Cloud (E-Mail + API-Token, API v3) oder Data Center/Server (PAT, API v2). */
+export type JiraKind = "cloud" | "data_center";
+
+/**  Gespeicherter Zugang. Das Token verlässt den Tresor nicht: die Oberfläche erfährt nur, ob eins gespeichert ist. */
+export type JiraSettings = {
+	config: JiraConfig,
+	hasToken: boolean,
 };
 
 /**  Ein Journal-Eintrag im Bericht. `date` ist bei Wochennotizen der Sonntag der Woche. */

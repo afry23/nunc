@@ -5,11 +5,13 @@
 
 mod clock;
 mod events;
+mod http;
 mod notify;
 mod secret;
 
 pub use clock::{ManualClock, SystemClock, to_local, to_local_date};
 pub use events::{EventSink, RecordingEventSink};
+pub use http::http_client;
 pub use notify::{Notifier, NotifyError, RecordingNotifier, Reminder};
 pub use secret::{
     KeyringSecretStore, MemorySecretStore, SecretError, SecretStore, UnavailableSecretStore,

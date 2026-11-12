@@ -23,8 +23,8 @@ const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/binding
 
 fn specta_builder() -> Builder<tauri::Wry> {
     use commands::{
-        api, app, backup, notifications, plan, review, sessions, settings, stats, sync, timer,
-        todos, todotxt,
+        api, app, backup, jira, notifications, plan, review, sessions, settings, stats, sync,
+        timer, todos, todotxt,
     };
 
     Builder::<tauri::Wry>::new()
@@ -90,6 +90,12 @@ fn specta_builder() -> Builder<tauri::Wry> {
             sync::get_sync_status,
             sync::sync_now,
             sync::sync_in_background,
+            jira::get_jira_config,
+            jira::save_jira_config,
+            jira::clear_jira_config,
+            jira::test_jira_connection,
+            jira::search_jira_issues,
+            jira::add_todo_from_jira,
             notifications::get_notification_status::<tauri::Wry>,
             notifications::request_notification_permission::<tauri::Wry>,
         ])

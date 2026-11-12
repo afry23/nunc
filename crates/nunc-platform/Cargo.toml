@@ -12,6 +12,10 @@ serde_json.workspace = true
 # "clock": nur hier darf die Systemzeit gelesen werden (SystemClock, lokale Zeitzone)
 chrono = { workspace = true, features = ["clock"] }
 keyring-core.workspace = true
+reqwest.workspace = true
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-native-certs = "0.8"
+webpki-roots = "1"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 apple-native-keyring-store = { workspace = true, features = ["keychain"] }

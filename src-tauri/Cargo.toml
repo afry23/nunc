@@ -33,6 +33,7 @@ log = "0.4"
 nunc-core.workspace = true
 nunc-store.workspace = true
 nunc-sync.workspace = true
+nunc-jira.workspace = true
 nunc-platform.workspace = true
 specta.workspace = true
 specta-typescript.workspace = true

@@ -71,7 +71,7 @@ const USER_KEY: &str = "sync.webdav.username";
 const PATH_KEY: &str = "sync.webdav.remote_path";
 const LAST_SYNC_KEY: &str = "sync.webdav.last_sync_at";
 
-fn setting(conn: &Connection, key: &str) -> Result<Option<String>, StoreError> {
+pub(crate) fn setting(conn: &Connection, key: &str) -> Result<Option<String>, StoreError> {
     Ok(conn
         .query_row("SELECT value FROM settings WHERE key = ?1", [key], |row| {
             row.get(0)

@@ -35,6 +35,7 @@ nunc/
 │   ├── nunc-store/             # rusqlite (bundled), Repos, Migrationen, VACUUM INTO, Restore-Validierung
 │   │   └── migrations/001…005  # 1:1 aus nunc-go/internal/db/migrations kopiert
 │   ├── nunc-sync/              # reqwest: Google Drive, WebDAV (PROPFIND/PUT/GET), Todoist REST
+│   ├── nunc-jira/              # reqwest: Jira Cloud/Data Center, Ticket-Import (ADR 0038)
 │   └── nunc-platform/          # Traits: Clock, SecretStore, Notifier, EventSink, FileSystem paths
 ├── src-tauri/                  # Tauri-App: Commands, Events, Plugins, Adapter, Tray (#[cfg(desktop)])
 │   ├── capabilities/           # desktop.json, mobile.json

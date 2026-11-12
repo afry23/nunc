@@ -66,6 +66,7 @@ fn property_holds(_world: &mut DomainWorld, name: String, cases: u32) {
         "the statistics do not depend on the order of the sessions" => {
             stats_order_independent(cases)
         }
+        "escaped JQL text has no unescaped quote" => jql_escape_is_quoted(cases),
         other => panic!("unbekannte Eigenschaft {other:?}"),
     };
     if let Err(message) = result {
@@ -171,6 +172,37 @@ fn parse_is_stable(cases: u32) -> Result<(), String> {
             line,
             rebuilt
         );
+        Ok(())
+    })
+}
+
+// ---- Jira ------------------------------------------------------------------
+
+fn jql_escape_is_quoted(cases: u32) -> Result<(), String> {
+    run(cases, "[a-z \"\\\\]{0,20}", |text| {
+        let escaped = nunc_core::jira::escape_jql(&text);
+        let mut chars = escaped.chars();
+        while let Some(c) = chars.next() {
+            prop_assert!(c != '"', "unmaskiertes Anführungszeichen in {:?}", escaped);
+            if c == '\\' {
+                prop_assert!(
+                    chars.next().is_some(),
+                    "Backslash am Ende von {:?}",
+                    escaped
+                );
+            }
+        }
+        // Das Maskieren ist umkehrbar: ohne die Backslashes vor `"`/`\` bleibt der Text erhalten.
+        let mut back = String::new();
+        let mut it = escaped.chars();
+        while let Some(c) = it.next() {
+            back.push(if c == '\\' {
+                it.next().unwrap_or('\\')
+            } else {
+                c
+            });
+        }
+        prop_assert_eq!(back, text);
         Ok(())
     })
 }

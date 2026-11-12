@@ -22,6 +22,10 @@ interface UiState {
   newTaskOpen: boolean;
   openNewTask: () => void;
   closeNewTask: () => void;
+  /** Auswahl „Aus Jira“ (ADR 0038) offen. */
+  jiraPickerOpen: boolean;
+  openJiraPicker: () => void;
+  closeJiraPicker: () => void;
   /** Liest die gemerkten Vorlieben (beim Start). */
   restorePrefs: () => void;
   toggleSidebar: () => void;
@@ -40,6 +44,9 @@ export const useUiStore = create<UiState>((set) => ({
   newTaskOpen: false,
   openNewTask: () => set({ newTaskOpen: true }),
   closeNewTask: () => set({ newTaskOpen: false }),
+  jiraPickerOpen: false,
+  openJiraPicker: () => set({ jiraPickerOpen: true }),
+  closeJiraPicker: () => set({ jiraPickerOpen: false }),
   restorePrefs: () => set({ sidebarCollapsed: readSidebarCollapsed() }),
   toggleSidebar: () =>
     set((state) => {

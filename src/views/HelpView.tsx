@@ -13,6 +13,7 @@ const SECTIONS: {
   { id: "todos", title: "help.todos.title", body: "help.todos.body" },
   { id: "stats", title: "help.stats.title", body: "help.stats.body" },
   { id: "sync", title: "help.sync.title", body: "help.sync.body" },
+  { id: "jira", title: "help.jira.title", body: "help.jira.body" },
   { id: "backup", title: "help.backup.title", body: "help.backup.body" },
   {
     id: "api",

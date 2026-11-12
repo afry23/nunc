@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useT } from "../i18n";
+import { isJiraConfigured } from "../lib/jira";
+import { useJiraStore } from "../stores/jiraStore";
 import { useTodoStore } from "../stores/todoStore";
 import { useUiStore } from "../stores/uiStore";
 import { Button } from "./ui";
@@ -19,7 +21,12 @@ function NewTaskForm() {
   const add = useTodoStore((s) => s.add);
   const close = useUiStore((s) => s.closeNewTask);
   const notify = useUiStore((s) => s.notify);
+  const openJira = useUiStore((s) => s.openJiraPicker);
+  const jira = useJiraStore((s) => s.settings);
   useEffect(() => field.current?.focus(), []);
+  useEffect(() => {
+    void useJiraStore.getState().load();
+  }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -61,6 +68,17 @@ function NewTaskForm() {
           className="mt-3 w-full rounded-lg bg-surface-container-high px-3 py-3 text-on-surface"
         />
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          {isJiraConfigured(jira) && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                close();
+                openJira();
+              }}
+            >
+              {t("jira.picker.open")}
+            </Button>
+          )}
           <Button variant="ghost" onClick={close}>
             {t("common.cancel")}
           </Button>

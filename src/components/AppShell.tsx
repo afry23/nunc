@@ -10,6 +10,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 import { useSyncStore } from "../stores/syncStore";
 import { useTimerStore } from "../stores/timerStore";
 import { ActiveSessionBar } from "./ActiveSessionBar";
+import { JiraPickerDialog } from "./JiraPickerDialog";
 import { NewTaskDialog } from "./NewTaskDialog";
 import { SessionEndDialog } from "./SessionEndDialog";
 import { BottomTabs, ShellMenu, Sidebar } from "./Navigation";
@@ -83,6 +84,7 @@ export function AppShell() {
       <Toast />
       <SessionEndDialog />
       <NewTaskDialog />
+      <JiraPickerDialog />
     </div>
   );
 }
