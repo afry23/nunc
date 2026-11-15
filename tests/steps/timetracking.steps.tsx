@@ -297,3 +297,23 @@ Then(
     expect(element.className).toContain(TAG_CLASS[kind]);
   },
 );
+
+const SEGMENT_CLASS: Record<string, string> = {
+  ...TAG_CLASS,
+  priority: "text-primary",
+  field: "text-on-surface-variant",
+};
+
+Then(
+  "the field {string} highlights {string} as a {word}",
+  (_world: UiWorld, label: string, text: string, kind: string) => {
+    const className = SEGMENT_CLASS[kind];
+    if (!className) throw new Error(`unknown segment kind: ${kind}`);
+    const field = screen.getByLabelText(label);
+    const mirror =
+      field.parentElement?.querySelector<HTMLElement>("[data-highlight]");
+    if (!mirror) throw new Error(`field "${label}" has no highlighting`);
+    const segment = within(mirror).getByText(text, { exact: true });
+    expect(segment.className).toContain(className);
+  },
+);

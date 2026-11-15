@@ -20,6 +20,7 @@ import { FilterMenu } from "../components/FilterMenu";
 import { TaskEditDialog } from "../components/TaskEditDialog";
 import { TodoItem } from "../components/TodoItem";
 import { ActionButton, Button, Chip } from "../components/ui";
+import { TodoTextInput } from "../components/TodoText";
 import { useT } from "../i18n";
 import type { TodoSort } from "../lib/api";
 import {
@@ -206,13 +207,14 @@ export function TodoView() {
         <label htmlFor="todo-input" className="sr-only">
           {t("todos.new")}
         </label>
-        <input
+        <TodoTextInput
           id="todo-input"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={t("todos.placeholder")}
           autoComplete="off"
-          className="min-h-11 min-w-0 flex-1 bg-transparent px-2 placeholder:text-on-surface-variant focus:outline-none"
+          className="min-w-0 flex-1"
+          fieldClassName="min-h-11 px-2 focus:outline-none"
         />
         <ActionButton
           type="submit"
