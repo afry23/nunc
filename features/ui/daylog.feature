@@ -31,6 +31,12 @@ Feature: Day log grouping
     And I do not see "Bericht +work"
 
   @ui @US-UM04
+  Scenario: Projects and contexts of an entry are highlighted like in the task list
+    When I open the app
+    Then the entry tag "+Produkt" is highlighted as a project
+    And the entry tag "@meeting" is highlighted as a context
+
+  @ui @US-UM04
   Scenario: Grouped by project the time per project is shown
     When I open the app
     And I click "Projekt"

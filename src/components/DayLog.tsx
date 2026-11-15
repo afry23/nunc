@@ -179,7 +179,16 @@ function EntryList({
   return (
     <ul aria-label={t("daylog.list")} className="flex flex-col gap-2">
       {blocks.map((block) => {
-        const tags = [...block.projectTags, ...block.contextTags];
+        const tags = [
+          ...block.projectTags.map((tag) => ({
+            tag,
+            className: "text-primary",
+          })),
+          ...block.contextTags.map((tag) => ({
+            tag,
+            className: "text-secondary-fixed-dim",
+          })),
+        ];
         const range =
           block.start === block.end
             ? formatTimeOfDay(block.start)
@@ -200,7 +209,12 @@ function EntryList({
               {tags.length > 0 && " "}
               {tags.length > 0 && (
                 <span className="text-sm text-on-surface-variant">
-                  {tags.join(" · ")}
+                  {tags.map(({ tag, className }, index) => (
+                    <span key={tag}>
+                      {index > 0 && " · "}
+                      <span className={className}>{tag}</span>
+                    </span>
+                  ))}
                 </span>
               )}
             </button>
