@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    nunc app icon, Android adaptive foreground (transparent). Motif derived from Lucide "hourglass"
+    (ISC License, Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022
+    as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022).
+    Colors: tokens from src/styles.css (surface, on-surface, primary, primary-fixed).
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c1b1b"/>
+      <stop offset="1" stop-color="#0e0e0e"/>
+    </linearGradient>
+    <clipPath id="glass">
+      <path d="M382 252 H642 V360.5 A52 52 0 0 1 626.8 397.2 L512 512 L626.8 626.8 A52 52 0 0 1 642 663.5 V772 H382 V663.5 A52 52 0 0 1 397.2 626.8 L512 512 L397.2 397.2 A52 52 0 0 1 382 360.5 Z"/>
+    </clipPath>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#6bfe9c" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#4de082" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+
+  <!-- sand -->
+  <g clip-path="url(#glass)" fill="#4de082">
+    <rect x="300" y="430" width="424" height="90"/>
+    <path d="M300 780 V712 Q512 600 724 712 V780 Z"/>
+  </g>
+  <!-- falling grain stream -->
+  <path d="M512 512 V650" stroke="#4de082" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- glass -->
+  <g fill="none" stroke="#e5e2e1" stroke-width="60" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M330 772 H694"/>
+    <path d="M330 252 H694"/>
+    <path d="M642 772 V663.5 A52 52 0 0 0 626.8 626.8 L512 512 L397.2 626.8 A52 52 0 0 0 382 663.5 V772"/>
+    <path d="M382 252 V360.5 A52 52 0 0 0 397.2 397.2 L512 512 L626.8 397.2 A52 52 0 0 0 642 360.5 V252"/>
+  </g>
+
+  <!-- "nunc": the present moment -->
+  <circle cx="512" cy="512" r="70" fill="url(#glow)"/>
+  <circle cx="512" cy="512" r="20" fill="#6bfe9c"/>
+</svg>
