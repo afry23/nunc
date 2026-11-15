@@ -281,3 +281,19 @@ Then("no field holds {string}", async (_world: UiWorld, text: string) => {
 Then("I do not see the field {string}", (_world: UiWorld, label: string) => {
   expect(screen.queryByLabelText(label)).toBeNull();
 });
+
+const TAG_CLASS = {
+  project: "text-primary",
+  context: "text-secondary-fixed-dim",
+} as const;
+
+Then(
+  "the entry tag {string} is highlighted as a {word}",
+  async (_world: UiWorld, tag: string, kind: string) => {
+    if (kind !== "project" && kind !== "context")
+      throw new Error(`unknown tag kind: ${kind}`);
+    const list = (await screen.findAllByRole("list", { name: "Einträge" }))[0];
+    const element = within(list).getByText(tag, { exact: true });
+    expect(element.className).toContain(TAG_CLASS[kind]);
+  },
+);
