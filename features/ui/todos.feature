@@ -14,6 +14,15 @@ Feature: Todo list
     And the field "Neue Aufgabe" is empty
 
   @ui @REQ-4.2
+  Scenario: Projects, contexts and the priority are highlighted while typing a new task
+    When I open the app at "/todos"
+    And I enter "(A) Bericht +work @desk due:2026-03-04" into the field "Neue Aufgabe"
+    Then the field "Neue Aufgabe" highlights "+work" as a project
+    And the field "Neue Aufgabe" highlights "@desk" as a context
+    And the field "Neue Aufgabe" highlights "(A)" as a priority
+    And the field "Neue Aufgabe" highlights "due:2026-03-04" as a field
+
+  @ui @REQ-4.2
   Scenario: Edit a todo inline
     Given the todos:
       | rawText           |

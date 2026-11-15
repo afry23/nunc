@@ -13,11 +13,16 @@ function hostOf(url: string): string {
   return url.replace(/^https?:\/\//, "").split(/[/?#]/)[0] ?? url;
 }
 
-function wordSegments(text: string): Segment[] {
+type WordSegment = {
+  text: string;
+  kind: "plain" | "project" | "context" | "field";
+};
+
+function wordSegments(text: string): WordSegment[] {
   return text
     .split(/(\s+)/)
     .filter((part) => part !== "")
-    .map((part): Segment => {
+    .map((part): WordSegment => {
       if (part.length > 1 && part.startsWith("+"))
         return { text: part, kind: "project" };
       if (part.length > 1 && part.startsWith("@"))
@@ -50,6 +55,23 @@ export function splitSegments(description: string): Segment[] {
     }
     return merged;
   }, []);
+}
+
+/** Abschnitt einer Eingabezeile in todo.txt-Syntax; `priority` ist das führende „(A)“. */
+export type RawSegment =
+  WordSegment | { text: string; kind: "priority"; priority: string };
+
+/**
+ * Zerlegt eine Eingabezeile zum Hervorheben im Eingabefeld: anders als `splitSegments` bleibt jedes Zeichen erhalten
+ * (Links ohne Anzeigetext, Planungsfelder sichtbar), damit die eingefärbte Ebene deckungsgleich unter dem Text liegt.
+ */
+export function rawSegments(text: string): RawSegment[] {
+  const priority = /^\(([A-Z])\)(?=\s|$)/.exec(text);
+  if (!priority) return wordSegments(text);
+  return [
+    { text: priority[0], kind: "priority", priority: priority[1] },
+    ...wordSegments(text.slice(priority[0].length)),
+  ];
 }
 
 /** Planungsfelder des Tagesplaners (`due:`, `plan:`, `est:`, `rec:`, ADR 0027, 0036); nur zum Ausblenden im Titel. */

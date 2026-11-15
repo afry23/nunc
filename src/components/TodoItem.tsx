@@ -19,7 +19,7 @@ import {
   PlayIcon,
 } from "./icons";
 import { ActionMenu, type MenuAction } from "./ActionMenu";
-import { DescriptionText, PriorityMark } from "./TodoText";
+import { DescriptionText, PriorityMark, TodoTextInput } from "./TodoText";
 import { StartButton } from "./StartButton";
 import { IconButton } from "./ui";
 
@@ -259,7 +259,7 @@ export function TodoItem({
               onSubmit={(event) => void submit(event)}
               className="flex flex-1 items-center gap-2"
             >
-              <input
+              <TodoTextInput
                 autoFocus
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
@@ -270,7 +270,8 @@ export function TodoItem({
                   }
                 }}
                 aria-label={t("todos.item.editLabel", { title })}
-                className="min-h-11 flex-1 rounded-sm bg-surface-container-highest px-3 focus:bg-secondary-container"
+                className="min-w-0 flex-1 rounded-sm bg-surface-container-highest focus-within:bg-secondary-container"
+                fieldClassName="min-h-11 px-3"
               />
             </form>
           ) : (
@@ -344,7 +345,7 @@ export function TodoItem({
           onSubmit={(event) => void submitSub(event)}
           className="flex items-center gap-2 bg-surface-container-low px-3 pb-2"
         >
-          <input
+          <TodoTextInput
             autoFocus
             value={subDraft}
             onChange={(event) => setSubDraft(event.target.value)}
@@ -356,7 +357,8 @@ export function TodoItem({
             }}
             placeholder={t("todos.item.subPlaceholder")}
             aria-label={t("todos.item.subLabel", { title })}
-            className="min-h-11 flex-1 rounded-sm bg-surface-container-highest px-3 focus:bg-secondary-container"
+            className="min-w-0 flex-1 rounded-sm bg-surface-container-highest focus-within:bg-secondary-container"
+            fieldClassName="min-h-11 px-3"
           />
         </form>
       )}

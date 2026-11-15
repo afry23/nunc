@@ -4,6 +4,7 @@ import { isJiraConfigured } from "../lib/jira";
 import { useJiraStore } from "../stores/jiraStore";
 import { useTodoStore } from "../stores/todoStore";
 import { useUiStore } from "../stores/uiStore";
+import { TodoTextInput } from "./TodoText";
 import { Button } from "./ui";
 
 /** Globaler Dialog „Neue Aufgabe“ (Seitenleiste): eine Zeile in todo.txt-Syntax, Escape schließt ohne Wirkung. */
@@ -59,13 +60,14 @@ function NewTaskForm() {
         <h2 id={titleId} className="headline-md">
           {t("todos.newTitle")}
         </h2>
-        <input
+        <TodoTextInput
           ref={field}
           aria-label={t("todos.new")}
           placeholder={t("todos.placeholder")}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          className="mt-3 w-full rounded-lg bg-surface-container-high px-3 py-3 text-on-surface"
+          className="mt-3 w-full rounded-lg bg-surface-container-high"
+          fieldClassName="px-3 py-3"
         />
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           {isJiraConfigured(jira) && (

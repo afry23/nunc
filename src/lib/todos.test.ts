@@ -12,6 +12,7 @@ import {
   priorityTone,
   selectableTodos,
   dueOf,
+  rawSegments,
   splitSegments,
   subtaskProgress,
   titleOf,
@@ -48,6 +49,44 @@ describe("splitSegments", () => {
       { text: "a + b @", kind: "plain" },
     ]);
     expect(splitSegments("")).toEqual([]);
+  });
+});
+
+describe("rawSegments", () => {
+  const joined = (text: string): string =>
+    rawSegments(text)
+      .map((segment) => segment.text)
+      .join("");
+
+  it("marks the leading priority, tags and planning fields", () => {
+    expect(rawSegments("(A) Bericht +work @desk due:2026-03-04")).toEqual([
+      { text: "(A)", kind: "priority", priority: "A" },
+      { text: " ", kind: "plain" },
+      { text: "Bericht", kind: "plain" },
+      { text: " ", kind: "plain" },
+      { text: "+work", kind: "project" },
+      { text: " ", kind: "plain" },
+      { text: "@desk", kind: "context" },
+      { text: " ", kind: "plain" },
+      { text: "due:2026-03-04", kind: "field" },
+    ]);
+  });
+  it("treats a priority only at the start and followed by a space as one", () => {
+    expect(rawSegments("(A)")).toEqual([
+      { text: "(A)", kind: "priority", priority: "A" },
+    ]);
+    expect(rawSegments("(A)x")[0]?.kind).toBe("plain");
+    expect(rawSegments("x (A) y").map((s) => s.kind)).not.toContain("priority");
+    expect(rawSegments("(a) y")[0]?.kind).toBe("plain");
+  });
+  it("keeps every character, including links and runs of spaces", () => {
+    for (const text of [
+      "",
+      "  Ticket  [X](https://a.b/c)  +p ",
+      "(B)  https://x.y/z @c",
+    ]) {
+      expect(joined(text)).toBe(text);
+    }
   });
 });
 
