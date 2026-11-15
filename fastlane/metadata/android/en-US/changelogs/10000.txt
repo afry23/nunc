@@ -1,0 +1,3 @@
+- New app icon: hourglass in the nunc style
+- Projects and contexts are highlighted while typing a task and in the daily history
+- Minor improvements and bug fixes
